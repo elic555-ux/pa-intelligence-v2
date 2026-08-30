@@ -19,6 +19,13 @@
             box-shadow: 0 0 0 2px #3b82f6, 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             transform: translateY(-2px);
         }
+        .hot-deal-border {
+            box-shadow: 0 0 15px -2px rgba(245, 158, 11, 0.25);
+            border-color: rgba(245, 158, 11, 0.45) !important;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
@@ -35,7 +42,7 @@
                         PA Real Estate Intelligence Hub
                         <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V2.5 Live</span>
                     </h1>
-                    <p class="text-xs text-gray-400">סוכן מודיעין נדל"ן ואיתור עסקאות בפנסילבניה</p>
+                    <p class="text-xs text-gray-400">סוכן מודיעין נדל"ן ואיתור מציאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
             </div>
 
@@ -73,9 +80,8 @@
             </div>
         </section>
 
-        <!-- Unified Interactive KPI Cards (Filters + Live Counters) -->
+        <!-- Unified Interactive KPI Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <!-- All -->
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card filter-card-active text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-gray-300">הכל</span>
@@ -84,7 +90,6 @@
                 <div class="text-2xl font-black text-white" id="count-all">0</div>
             </button>
 
-            <!-- MLS -->
             <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-cyan-400">MLS וירידות מחיר</span>
@@ -93,7 +98,6 @@
                 <div class="text-2xl font-black text-cyan-400" id="count-mls">0</div>
             </button>
 
-            <!-- Distressed / REO -->
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-amber-400">בנקים וכינוס נכסים</span>
@@ -102,7 +106,6 @@
                 <div class="text-2xl font-black text-amber-400" id="count-distressed">0</div>
             </button>
 
-            <!-- Sheriff -->
             <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-rose-400">מכירות שריף</span>
@@ -111,7 +114,6 @@
                 <div class="text-2xl font-black text-rose-400" id="count-sheriff">0</div>
             </button>
 
-            <!-- Tax Claims -->
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-purple-400">פיגורי מס (Tax Claim)</span>
@@ -120,7 +122,6 @@
                 <div class="text-2xl font-black text-purple-400" id="count-tax">0</div>
             </button>
 
-            <!-- Probate / FSBO -->
             <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-emerald-400">עיזבונות ו-FSBO</span>
@@ -131,7 +132,15 @@
         </section>
 
         <!-- Filter Dropdowns Bar -->
-        <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">מיון תוצאות</label>
+                <select id="sort-by" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-amber-400 font-bold">
+                    <option value="score_desc">🔥 מציאות חמות קודם (Deal Score)</option>
+                    <option value="price_asc">מחיר: מהנמוך לגבוה</option>
+                    <option value="price_desc">מחיר: מהגבוה לנמוך</option>
+                </select>
+            </div>
             <div>
                 <label class="block text-xs font-semibold text-gray-400 mb-1">סינון לפי עיר / מחוז</label>
                 <select id="filter-city" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
@@ -167,7 +176,85 @@
 
     </main>
 
-    <!-- Compact Full-Screen Settings Modal (No Scroll) -->
+    <!-- Property Detail Modal -->
+    <div id="property-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full p-6 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            
+            <div class="flex justify-between items-start border-b border-gray-800 pb-3">
+                <div>
+                    <div class="flex items-center gap-2 mb-1.5" id="modal-badges"></div>
+                    <h3 class="text-2xl font-black text-white" id="modal-address"></h3>
+                    <p class="text-xs text-gray-400 flex items-center gap-1 mt-1" id="modal-location"></p>
+                </div>
+                <button onclick="closePropertyModal()" class="text-gray-400 hover:text-white p-1.5 rounded-lg bg-gray-800/60"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Price & Key Stats Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center">
+                <div>
+                    <span class="text-xs text-gray-500 block mb-0.5">מחיר מבוקש</span>
+                    <strong class="text-xl font-black text-emerald-400" id="modal-price"></strong>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-500 block mb-0.5">חדרי שינה</span>
+                    <strong class="text-lg font-bold text-white" id="modal-beds"></strong>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-500 block mb-0.5">חדרי רחצה</span>
+                    <strong class="text-lg font-bold text-white" id="modal-baths"></strong>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-500 block mb-0.5">שטח בנוי</span>
+                    <strong class="text-lg font-bold text-white" id="modal-sqft"></strong>
+                </div>
+            </div>
+
+            <!-- Intelligence Analysis Section -->
+            <div class="space-y-2">
+                <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> ניתוח ותקציר מודיעיני:
+                </h4>
+                <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-800/80 text-sm text-gray-300 leading-relaxed" id="modal-summary"></div>
+            </div>
+
+            <!-- Metadata Details Grid -->
+            <div class="grid grid-cols-2 gap-3 text-xs bg-gray-950/40 p-3 rounded-xl border border-gray-800/60">
+                <div>
+                    <span class="text-gray-500">סוג עסקה:</span>
+                    <span class="text-gray-200 font-bold mr-1" id="modal-deal-type"></span>
+                </div>
+                <div>
+                    <span class="text-gray-500">מזהה תיק / נכס:</span>
+                    <span class="text-gray-300 font-mono mr-1" id="modal-docket"></span>
+                </div>
+                <div>
+                    <span class="text-gray-500">ציון איכות עסקה:</span>
+                    <span class="text-amber-400 font-bold mr-1" id="modal-score"></span>
+                </div>
+                <div>
+                    <span class="text-gray-500">מרווח משוער:</span>
+                    <span class="text-emerald-400 font-bold mr-1" id="modal-margin"></span>
+                </div>
+            </div>
+
+            <!-- Action Buttons Footer -->
+            <div class="pt-3 border-t border-gray-800 flex flex-wrap justify-between items-center gap-3">
+                <button onclick="triggerPropertyStats()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-purple-400 border border-purple-500/30 rounded-xl text-sm font-bold flex items-center gap-2 transition">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                    ניתוח פיננסי וסטטיסטיקה
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="closePropertyModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm">סגור</button>
+                    <a id="modal-external-link" href="#" target="_blank" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/30 flex items-center gap-2 transition">
+                        <span>מעבר לאתר המקור</span>
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compact Full-Screen Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl">
             
@@ -179,7 +266,7 @@
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Top Row: State, Price, SqFt, Beds, Baths -->
+            <!-- Top Row -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                 <div>
                     <label class="block font-semibold text-gray-400 mb-1">מדינה (State)</label>
@@ -257,30 +344,14 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs" id="cities-group">
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Philadelphia" onchange="onCityToggle('Philadelphia', this.checked)"> Philadelphia
-                    </label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Pittsburgh" onchange="onCityToggle('Pittsburgh', this.checked)"> Pittsburgh
-                    </label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Allentown" onchange="onCityToggle('Allentown', this.checked)"> Allentown
-                    </label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Reading" onchange="onCityToggle('Reading', this.checked)"> Reading
-                    </label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Erie" onchange="onCityToggle('Erie', this.checked)"> Erie
-                    </label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Scranton" onchange="onCityToggle('Scranton', this.checked)"> Scranton
-                    </label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Bethlehem" onchange="onCityToggle('Bethlehem', this.checked)"> Bethlehem
-                    </label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
-                        <input type="checkbox" checked class="city-box accent-blue-500" value="Lancaster" onchange="onCityToggle('Lancaster', this.checked)"> Lancaster
-                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Philadelphia" onchange="onCityToggle('Philadelphia', this.checked)"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Pittsburgh" onchange="onCityToggle('Pittsburgh', this.checked)"> Pittsburgh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Allentown" onchange="onCityToggle('Allentown', this.checked)"> Allentown</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Reading" onchange="onCityToggle('Reading', this.checked)"> Reading</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Erie" onchange="onCityToggle('Erie', this.checked)"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Scranton" onchange="onCityToggle('Scranton', this.checked)"> Scranton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Bethlehem" onchange="onCityToggle('Bethlehem', this.checked)"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="city-box accent-blue-500" value="Lancaster" onchange="onCityToggle('Lancaster', this.checked)"> Lancaster</label>
                 </div>
             </div>
 
@@ -296,89 +367,39 @@
                 </div>
                 <div class="flex flex-wrap gap-1.5 text-xs" id="hoods-group">
                     <!-- Philadelphia (7) -->
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Center City" onchange="updateCardPill(this)"> Center City
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Fishtown" onchange="updateCardPill(this)"> Fishtown
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Northern Liberties" onchange="updateCardPill(this)"> N. Liberties
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: South Philly" onchange="updateCardPill(this)"> South Philly
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: University City" onchange="updateCardPill(this)"> University City
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Chestnut Hill" onchange="updateCardPill(this)"> Chestnut Hill
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Manayunk" onchange="updateCardPill(this)"> Manayunk
-                    </label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Center City" onchange="updateCardPill(this)"> Center City</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Fishtown" onchange="updateCardPill(this)"> Fishtown</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Northern Liberties" onchange="updateCardPill(this)"> N. Liberties</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: South Philly" onchange="updateCardPill(this)"> South Philly</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: University City" onchange="updateCardPill(this)"> University City</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Chestnut Hill" onchange="updateCardPill(this)"> Chestnut Hill</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Manayunk" onchange="updateCardPill(this)"> Manayunk</label>
 
                     <!-- Pittsburgh (8) -->
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Downtown" onchange="updateCardPill(this)"> PGH Downtown
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Shadyside" onchange="updateCardPill(this)"> Shadyside
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Lawrenceville" onchange="updateCardPill(this)"> Lawrenceville
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Squirrel Hill" onchange="updateCardPill(this)"> Squirrel Hill
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: South Side" onchange="updateCardPill(this)"> South Side
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Oakland" onchange="updateCardPill(this)"> Oakland
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: East Liberty" onchange="updateCardPill(this)"> East Liberty
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Strip District" onchange="updateCardPill(this)"> Strip District
-                    </label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Downtown" onchange="updateCardPill(this)"> PGH Downtown</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Shadyside" onchange="updateCardPill(this)"> Shadyside</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Lawrenceville" onchange="updateCardPill(this)"> Lawrenceville</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Squirrel Hill" onchange="updateCardPill(this)"> Squirrel Hill</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: South Side" onchange="updateCardPill(this)"> South Side</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Oakland" onchange="updateCardPill(this)"> Oakland</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: East Liberty" onchange="updateCardPill(this)"> East Liberty</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Strip District" onchange="updateCardPill(this)"> Strip District</label>
 
                     <!-- Lancaster (3) -->
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Downtown" onchange="updateCardPill(this)"> Lancaster Downtown
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Chestnut Hill" onchange="updateCardPill(this)"> Lancaster Chestnut
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Cabbage Hill" onchange="updateCardPill(this)"> Cabbage Hill
-                    </label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Downtown" onchange="updateCardPill(this)"> Lancaster Downtown</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Chestnut Hill" onchange="updateCardPill(this)"> Lancaster Chestnut</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Cabbage Hill" onchange="updateCardPill(this)"> Cabbage Hill</label>
 
                     <!-- Bethlehem (3) -->
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: Historic District" onchange="updateCardPill(this)"> Bethlehem Historic
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: South Side" onchange="updateCardPill(this)"> Bethlehem South
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: West Bethlehem" onchange="updateCardPill(this)"> West Bethlehem
-                    </label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: Historic District" onchange="updateCardPill(this)"> Bethlehem Historic</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: South Side" onchange="updateCardPill(this)"> Bethlehem South</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: West Bethlehem" onchange="updateCardPill(this)"> West Bethlehem</label>
 
                     <!-- Erie (4) -->
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: Downtown" onchange="updateCardPill(this)"> Erie Downtown
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: Bayfront" onchange="updateCardPill(this)"> Erie Bayfront
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: East Bay" onchange="updateCardPill(this)"> East Bay
-                    </label>
-                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie">
-                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: West Bay" onchange="updateCardPill(this)"> West Bay
-                    </label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: Downtown" onchange="updateCardPill(this)"> Erie Downtown</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: Bayfront" onchange="updateCardPill(this)"> Erie Bayfront</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: East Bay" onchange="updateCardPill(this)"> East Bay</label>
+                    <label class="hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: West Bay" onchange="updateCardPill(this)"> West Bay</label>
                 </div>
             </div>
 
@@ -401,6 +422,22 @@
         let rawProperties = [];
         let activeCategory = 'all';
 
+        function calculateDealScore(p) {
+            let score = 50;
+            const dt = (p.deal_type || '').toLowerCase();
+            const margin = parseInt(p.margin_estimate || '20') || 20;
+
+            score += Math.min(30, margin * 0.8);
+
+            if (dt.includes('sheriff')) score += 15;
+            else if (dt.includes('tax')) score += 12;
+            else if (dt.includes('probate') || dt.includes('fsbo')) score += 10;
+            else if (dt.includes('foreclosure') || dt.includes('reo')) score += 8;
+
+            if (p.price && p.price < 80000) score += 5;
+            return Math.min(99, Math.round(score));
+        }
+
         async function init() {
             lucide.createIcons();
             await loadProperties();
@@ -411,6 +448,11 @@
             try {
                 const res = await fetch('properties.json?t=' + Date.now());
                 rawProperties = await res.json();
+                
+                rawProperties.forEach(p => {
+                    p.deal_score = calculateDealScore(p);
+                });
+
                 populateCityDropdown();
                 updateCounts();
                 renderCards();
@@ -464,18 +506,10 @@
 
         function getDealBadgeStyle(dealType) {
             const dt = (dealType || '').toLowerCase();
-            if (dt.includes('sheriff')) {
-                return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
-            }
-            if (dt.includes('foreclosure') || dt.includes('reo')) {
-                return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-            }
-            if (dt.includes('tax')) {
-                return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-            }
-            if (dt.includes('probate') || dt.includes('fsbo')) {
-                return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-            }
+            if (dt.includes('sheriff')) return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+            if (dt.includes('foreclosure') || dt.includes('reo')) return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+            if (dt.includes('tax')) return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+            if (dt.includes('probate') || dt.includes('fsbo')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
             return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
         }
 
@@ -484,6 +518,7 @@
             const cityFilter = document.getElementById('filter-city').value;
             const typeFilter = document.getElementById('filter-type').value;
             const priceFilter = document.getElementById('filter-price').value;
+            const sortBy = document.getElementById('sort-by').value;
 
             let filtered = rawProperties.filter(p => {
                 const dt = (p.deal_type || '').toLowerCase();
@@ -500,6 +535,14 @@
                 return true;
             });
 
+            if (sortBy === 'score_desc') {
+                filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
+            } else if (sortBy === 'price_asc') {
+                filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+            } else if (sortBy === 'price_desc') {
+                filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+            }
+
             if (filtered.length === 0) {
                 container.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-500 font-semibold">לא נמצאו נכסים התואמים את הסינון.</div>';
                 return;
@@ -507,10 +550,20 @@
 
             container.innerHTML = filtered.map(p => {
                 const badgeColor = getDealBadgeStyle(p.deal_type);
+                const isHot = (p.deal_score || 0) >= 80;
+                
                 return `
-                <div class="bg-gray-900 border border-gray-800 hover:border-blue-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between">
+                <div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isHot ? 'hot-deal-border' : 'border-gray-800'} hover:border-blue-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between relative overflow-hidden cursor-pointer group">
+                    
+                    ${isHot ? `
+                    <div class="absolute top-0 left-0 bg-gradient-to-r from-amber-500 to-rose-500 text-gray-950 font-black text-[10px] px-3 py-0.5 rounded-br-lg uppercase tracking-wider flex items-center gap-1 shadow">
+                        <span>🔥 מציאה מובילה</span>
+                        <span class="bg-black/20 px-1 rounded text-white font-mono">${p.deal_score}</span>
+                    </div>
+                    ` : ''}
+
                     <div>
-                        <div class="flex justify-between items-start gap-2 mb-3">
+                        <div class="flex justify-between items-start gap-2 mb-3 ${isHot ? 'pt-2' : ''}">
                             <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
                                 ${p.deal_type || 'Opportunity'}
                             </span>
@@ -518,7 +571,7 @@
                                 ${p.margin_estimate || 'מרווח גבוה'}
                             </span>
                         </div>
-                        <h4 class="text-lg font-bold text-white mb-1">${p.address}</h4>
+                        <h4 class="text-lg font-bold text-white group-hover:text-blue-400 transition mb-1">${p.address}</h4>
                         <p class="text-xs text-gray-400 mb-3 flex items-center gap-1">
                             <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
                             ${p.city}, ${p.county} County, PA ${p.zip || ''}
@@ -533,9 +586,9 @@
                     </div>
                     <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs">
                         <span class="text-gray-500 font-mono">${p.docket_id || p.id}</span>
-                        <a href="${p.url || '#'}" target="_blank" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-blue-400 rounded-lg font-bold flex items-center gap-1.5 transition">
-                            מקור <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        </a>
+                        <span class="px-3 py-1.5 bg-gray-800 group-hover:bg-blue-600 group-hover:text-white text-blue-400 rounded-lg font-bold flex items-center gap-1.5 transition">
+                            פרטים מלאים <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                        </span>
                     </div>
                 </div>
             `}).join('');
@@ -543,7 +596,53 @@
             lucide.createIcons();
         }
 
-        // On-Demand Manual Scan Trigger
+        // Property Detail Modal Logic
+        function openPropertyModal(propId) {
+            const p = rawProperties.find(item => String(item.id) === String(propId));
+            if (!p) return;
+
+            const badgeColor = getDealBadgeStyle(p.deal_type);
+            const isHot = (p.deal_score || 0) >= 80;
+
+            document.getElementById('modal-badges').innerHTML = `
+                <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
+                    ${p.deal_type || 'Opportunity'}
+                </span>
+                ${isHot ? `<span class="bg-gradient-to-r from-amber-500 to-rose-500 text-gray-950 font-black text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">🔥 ציון ${p.deal_score}</span>` : ''}
+            `;
+
+            document.getElementById('modal-address').textContent = p.address;
+            document.getElementById('modal-location').innerHTML = `<i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i> ${p.city}, ${p.county} County, PA ${p.zip || ''}`;
+            document.getElementById('modal-price').textContent = `$${(p.price || 0).toLocaleString()}`;
+            document.getElementById('modal-beds').textContent = p.beds || '-';
+            document.getElementById('modal-baths').textContent = p.baths || '-';
+            document.getElementById('modal-sqft').textContent = p.sqft ? `${p.sqft.toLocaleString()} sqft` : '-';
+            document.getElementById('modal-summary').textContent = p.summary || 'אין תיאור נוסף זמין עבור נכס זה.';
+            document.getElementById('modal-deal-type').textContent = p.deal_type || '-';
+            document.getElementById('modal-docket').textContent = p.docket_id || p.id;
+            document.getElementById('modal-score').textContent = `${p.deal_score} / 100`;
+            document.getElementById('modal-margin').textContent = p.margin_estimate || 'מרווח גבוה';
+            
+            const linkBtn = document.getElementById('modal-external-link');
+            linkBtn.href = p.url || '#';
+            if (!p.url || p.url === '#') {
+                linkBtn.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                linkBtn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+
+            document.getElementById('property-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closePropertyModal() {
+            document.getElementById('property-modal').classList.add('hidden');
+        }
+
+        function triggerPropertyStats() {
+            alert("מודול ניתוח פיננסי וסטטיסטיקת שוק (Comps, Rent Estimate & ROI) בהכנה.");
+        }
+
         function triggerManualScan() {
             const query = document.getElementById('manual-query-input').value.trim();
             if (!query) {
@@ -553,14 +652,8 @@
             alert(`פקודת סריקה ידנית נשלחה עבור: "${query}".`);
         }
 
-        // Settings Modal Handlers & City-Neighborhood Cascading Logic
-        function openSettingsModal() {
-            document.getElementById('settings-modal').classList.remove('hidden');
-        }
-
-        function closeSettingsModal() {
-            document.getElementById('settings-modal').classList.add('hidden');
-        }
+        function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
         function onCityToggle(cityName, isChecked) {
             const relatedHoods = document.querySelectorAll(`.hood-box[data-city="${cityName}"]`);
@@ -600,9 +693,7 @@
             const selectedCities = document.querySelectorAll('.city-box:checked').length;
             const selectedHoods = document.querySelectorAll('.hood-box:checked').length;
             const el = document.getElementById('selection-summary');
-            if (el) {
-                el.textContent = `נבחרו ${selectedCities} ערים ו-${selectedHoods} שכונות`;
-            }
+            if (el) el.textContent = `נבחרו ${selectedCities} ערים ו-${selectedHoods} שכונות`;
         }
 
         function saveScanSettings() {
