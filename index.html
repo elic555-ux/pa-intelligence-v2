@@ -15,6 +15,10 @@
             background-color: #0b0f19;
             color: #f3f4f6;
         }
+        .filter-card-active {
+            box-shadow: 0 0 0 2px #3b82f6, 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
@@ -69,40 +73,67 @@
             </div>
         </section>
 
-        <!-- KPI Metrics Ribbon -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-3.5">
-                <div class="text-xs text-gray-400 font-semibold mb-1">סה"כ נכסים במערכת</div>
-                <div class="text-2xl font-black text-white" id="kpi-total">0</div>
-            </div>
-            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-3.5">
-                <div class="text-xs text-amber-400 font-semibold mb-1">כינוס ושריף (Distressed)</div>
-                <div class="text-2xl font-black text-amber-400" id="kpi-distressed">0</div>
-            </div>
-            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-3.5">
-                <div class="text-xs text-rose-400 font-semibold mb-1">פיגורי מס (Tax Claim)</div>
-                <div class="text-2xl font-black text-rose-400" id="kpi-tax">0</div>
-            </div>
-            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-3.5">
-                <div class="text-xs text-purple-400 font-semibold mb-1">עיזבונות ו-FSBO</div>
-                <div class="text-2xl font-black text-purple-400" id="kpi-probate">0</div>
-            </div>
+        <!-- Unified Interactive KPI Cards (Filters + Live Counters) -->
+        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <!-- All -->
+            <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card filter-card-active text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-gray-300">הכל</span>
+                    <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div class="text-2xl font-black text-white" id="count-all">0</div>
+            </button>
+
+            <!-- MLS -->
+            <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-cyan-400">MLS וירידות מחיר</span>
+                    <i data-lucide="trending-down" class="w-4 h-4 text-cyan-400"></i>
+                </div>
+                <div class="text-2xl font-black text-cyan-400" id="count-mls">0</div>
+            </button>
+
+            <!-- Distressed / REO -->
+            <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-amber-400">בנקים וכינוס נכסים</span>
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
+                </div>
+                <div class="text-2xl font-black text-amber-400" id="count-distressed">0</div>
+            </button>
+
+            <!-- Sheriff -->
+            <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-rose-400">מכירות שריף</span>
+                    <i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i>
+                </div>
+                <div class="text-2xl font-black text-rose-400" id="count-sheriff">0</div>
+            </button>
+
+            <!-- Tax Claims -->
+            <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-purple-400">פיגורי מס (Tax Claim)</span>
+                    <i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i>
+                </div>
+                <div class="text-2xl font-black text-purple-400" id="count-tax">0</div>
+            </button>
+
+            <!-- Probate / FSBO -->
+            <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-emerald-400">עיזבונות ו-FSBO</span>
+                    <i data-lucide="home" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div class="text-2xl font-black text-emerald-400" id="count-probate">0</div>
+            </button>
         </section>
 
-        <!-- Category Tabs -->
-        <div class="flex border-b border-gray-800 overflow-x-auto gap-2 pb-2">
-            <button onclick="setCategory('all')" id="tab-all" class="px-4 py-2 rounded-lg text-sm font-bold bg-blue-600 text-white flex items-center gap-2">הכל <span class="bg-blue-800 text-xs px-2 py-0.5 rounded-full" id="count-all">0</span></button>
-            <button onclick="setCategory('mls')" id="tab-mls" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">MLS וירידות מחיר <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-mls">0</span></button>
-            <button onclick="setCategory('distressed')" id="tab-distressed" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">בנקים וכינוס נכסים <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-distressed">0</span></button>
-            <button onclick="setCategory('sheriff')" id="tab-sheriff" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">מכירות שריף <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-sheriff">0</span></button>
-            <button onclick="setCategory('tax')" id="tab-tax" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">פיגורי מס <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-tax">0</span></button>
-            <button onclick="setCategory('probate')" id="tab-probate" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">עיזבונות ו-FSBO <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-probate">0</span></button>
-        </div>
-
-        <!-- Filter Bar -->
+        <!-- Filter Dropdowns Bar -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-                <label class="block text-xs font-semibold text-gray-400 mb-1">סינון לפי עיר</label>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">סינון לפי עיר / מחוז</label>
                 <select id="filter-city" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
                     <option value="all">כל הערים והמחוזות</option>
                 </select>
@@ -114,6 +145,7 @@
                     <option value="Single Family">Single Family</option>
                     <option value="Townhouse">Townhouse</option>
                     <option value="Multi-Family">Multi-Family</option>
+                    <option value="Duplex / Triplex">Duplex / Triplex</option>
                     <option value="Condo">Condo</option>
                 </select>
             </div>
@@ -397,34 +429,30 @@
         }
 
         function updateCounts() {
-            document.getElementById('kpi-total').textContent = rawProperties.length;
-            document.getElementById('count-all').textContent = rawProperties.length;
+            const total = rawProperties.length;
+            const mls = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('mls') || (p.deal_type || '').toLowerCase().includes('price drop')).length;
+            const distressed = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('foreclosure') || (p.deal_type || '').toLowerCase().includes('reo')).length;
+            const sheriff = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
+            const tax = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
+            const probate = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
 
-            const distressed = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('foreclosure') || (p.deal_type || '').toLowerCase().includes('reo'));
-            const sheriff = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff'));
-            const tax = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('tax'));
-            const probate = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo'));
-            const mls = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('mls') || (p.deal_type || '').toLowerCase().includes('price drop'));
-
-            document.getElementById('kpi-distressed').textContent = distressed.length + sheriff.length;
-            document.getElementById('kpi-tax').textContent = tax.length;
-            document.getElementById('kpi-probate').textContent = probate.length;
-
-            document.getElementById('count-mls').textContent = mls.length;
-            document.getElementById('count-distressed').textContent = distressed.length;
-            document.getElementById('count-sheriff').textContent = sheriff.length;
-            document.getElementById('count-tax').textContent = tax.length;
-            document.getElementById('count-probate').textContent = probate.length;
+            document.getElementById('count-all').textContent = total;
+            document.getElementById('count-mls').textContent = mls;
+            document.getElementById('count-distressed').textContent = distressed;
+            document.getElementById('count-sheriff').textContent = sheriff;
+            document.getElementById('count-tax').textContent = tax;
+            document.getElementById('count-probate').textContent = probate;
         }
 
         function setCategory(cat) {
             activeCategory = cat;
-            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'].forEach(c => {
-                const btn = document.getElementById(`tab-${c}`);
+            const categories = ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'];
+            categories.forEach(c => {
+                const btn = document.getElementById(`btn-cat-${c}`);
                 if (c === cat) {
-                    btn.className = "px-4 py-2 rounded-lg text-sm font-bold bg-blue-600 text-white flex items-center gap-2";
+                    btn.classList.add('filter-card-active');
                 } else {
-                    btn.className = "px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2";
+                    btn.classList.remove('filter-card-active');
                 }
             });
             renderCards();
@@ -432,6 +460,23 @@
 
         function applyFilters() {
             renderCards();
+        }
+
+        function getDealBadgeStyle(dealType) {
+            const dt = (dealType || '').toLowerCase();
+            if (dt.includes('sheriff')) {
+                return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+            }
+            if (dt.includes('foreclosure') || dt.includes('reo')) {
+                return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+            }
+            if (dt.includes('tax')) {
+                return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+            }
+            if (dt.includes('probate') || dt.includes('fsbo')) {
+                return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+            }
+            return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
         }
 
         function renderCards() {
@@ -460,12 +505,18 @@
                 return;
             }
 
-            container.innerHTML = filtered.map(p => `
+            container.innerHTML = filtered.map(p => {
+                const badgeColor = getDealBadgeStyle(p.deal_type);
+                return `
                 <div class="bg-gray-900 border border-gray-800 hover:border-blue-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-start gap-2 mb-3">
-                            <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">${p.deal_type || 'Opportunity'}</span>
-                            <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">${p.margin_estimate || 'מרווח גבוה'}</span>
+                            <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
+                                ${p.deal_type || 'Opportunity'}
+                            </span>
+                            <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                ${p.margin_estimate || 'מרווח גבוה'}
+                            </span>
                         </div>
                         <h4 class="text-lg font-bold text-white mb-1">${p.address}</h4>
                         <p class="text-xs text-gray-400 mb-3 flex items-center gap-1">
@@ -487,7 +538,7 @@
                         </a>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
             lucide.createIcons();
         }
