@@ -77,9 +77,16 @@
       <!-- Top Param Row -->
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
         <div>
-          <label class="block text-slate-400 mb-1 font-medium">מדינה</label>
-          <select class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none">
-            <option>Pennsylvania (PA)</option>
+          <label class="block text-slate-400 mb-1 font-medium">מדינה (State)</label>
+          <select id="filterState" onchange="onStateChange()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
+            <option value="PA" selected>Pennsylvania (PA)</option>
+            <option value="FL">Florida (FL)</option>
+            <option value="OH">Ohio (OH)</option>
+            <option value="NJ">New Jersey (NJ)</option>
+            <option value="NY">New York (NY)</option>
+            <option value="TX">Texas (TX)</option>
+            <option value="GA">Georgia (GA)</option>
+            <option value="NC">North Carolina (NC)</option>
           </select>
         </div>
         <div>
@@ -254,19 +261,68 @@
   </div>
 
   <script>
-    const PA_CITIES = ["Philadelphia", "Allentown", "Reading", "Erie", "Scranton", "Bethlehem", "Lancaster", "Pittsburgh"];
-    
-    const PA_NEIGHBORHOODS = {
-      "Pittsburgh": ["Downtown", "Shadyside", "Lawrenceville", "Squirrel Hill", "South Side", "Oakland", "Strip District", "East Liberty"],
-      "Philadelphia": ["Center City", "Fishtown", "Northern Liberties", "South Philly", "Manayunk", "University City", "Chestnut Hill"],
-      "Allentown": ["Center City", "West End", "East Side", "South Side"],
-      "Reading": ["Downtown", "Centre Park", "College Heights"],
-      "Erie": ["Downtown", "Bayfront", "West Bay", "East Bay"],
-      "Scranton": ["Downtown", "Hill Section", "Green Ridge", "Minooka"],
-      "Bethlehem": ["Historic District", "South Side", "West Bethlehem"],
-      "Lancaster": ["Downtown", "Chestnut Hill", "Cabbage Hill"]
+    const STATE_DATA = {
+      "PA": {
+        cities: ["Philadelphia", "Allentown", "Reading", "Erie", "Scranton", "Bethlehem", "Lancaster", "Pittsburgh"],
+        neighborhoods: {
+          "Pittsburgh": ["Downtown", "Shadyside", "Lawrenceville", "Squirrel Hill", "South Side", "Oakland", "Strip District", "East Liberty"],
+          "Philadelphia": ["Center City", "Fishtown", "Northern Liberties", "South Philly", "Manayunk", "University City", "Chestnut Hill"],
+          "Allentown": ["Center City", "West End", "East Side", "South Side"],
+          "Reading": ["Downtown", "Centre Park", "College Heights"],
+          "Erie": ["Downtown", "Bayfront", "West Bay", "East Bay"],
+          "Scranton": ["Downtown", "Hill Section", "Green Ridge", "Minooka"],
+          "Bethlehem": ["Historic District", "South Side", "West Bethlehem"],
+          "Lancaster": ["Downtown", "Chestnut Hill", "Cabbage Hill"]
+        }
+      },
+      "FL": {
+        cities: ["Miami", "Orlando", "Tampa", "Jacksonville", "Fort Lauderdale"],
+        neighborhoods: {
+          "Miami": ["Brickell", "Wynwood", "Downtown", "Coral Gables"],
+          "Orlando": ["Downtown", "Winter Park", "Lake Nona"]
+        }
+      },
+      "OH": {
+        cities: ["Cleveland", "Columbus", "Cincinnati", "Akron", "Toledo"],
+        neighborhoods: {
+          "Cleveland": ["Downtown", "Ohio City", "Tremont"],
+          "Columbus": ["Short North", "German Village", "Downtown"]
+        }
+      },
+      "NJ": {
+        cities: ["Newark", "Jersey City", "Paterson", "Elizabeth", "Trenton"],
+        neighborhoods: {
+          "Jersey City": ["Downtown", "Journal Square", "The Heights"]
+        }
+      },
+      "NY": {
+        cities: ["New York", "Buffalo", "Rochester", "Yonkers", "Syracuse"],
+        neighborhoods: {
+          "New York": ["Brooklyn", "Queens", "Bronx", "Manhattan", "Staten Island"]
+        }
+      },
+      "TX": {
+        cities: ["Houston", "Dallas", "Austin", "San Antonio", "Fort Worth"],
+        neighborhoods: {
+          "Dallas": ["Downtown", "Uptown", "Deep Ellum"],
+          "Houston": ["Downtown", "Montrose", "The Heights"]
+        }
+      },
+      "GA": {
+        cities: ["Atlanta", "Savannah", "Augusta", "Athens"],
+        neighborhoods: {
+          "Atlanta": ["Midtown", "Buckhead", "Downtown", "Old Fourth Ward"]
+        }
+      },
+      "NC": {
+        cities: ["Charlotte", "Raleigh", "Greensboro", "Durham"],
+        neighborhoods: {
+          "Charlotte": ["Uptown", "South End", "NoDa"]
+        }
+      }
     };
 
+    let currentState = "PA";
     let rawProperties = [];
     let currentTab = 'all';
     let selectedProp = null;
@@ -288,9 +344,19 @@
       }
     }
 
+    function onStateChange() {
+      currentState = document.getElementById('filterState').value;
+      const data = STATE_DATA[currentState] || { cities: [], neighborhoods: {} };
+      activeCities = [...data.cities.slice(0, 4)];
+      buildCityCheckboxes();
+      updateNeighborhoods();
+      renderGrid();
+    }
+
     function buildCityCheckboxes() {
       const container = document.getElementById('citiesContainer');
-      container.innerHTML = PA_CITIES.map(c => `
+      const cities = STATE_DATA[currentState]?.cities || [];
+      container.innerHTML = cities.map(c => `
         <label class="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/60 cursor-pointer">
           <input type="checkbox" value="${c}" ${activeCities.includes(c) ? 'checked' : ''} onchange="onCityToggle('${c}', this.checked)" class="accent-blue-600 rounded">
           <span class="text-slate-300 font-medium">${c}</span>
@@ -309,7 +375,8 @@
     }
 
     function selectAllCities(status) {
-      activeCities = status ? [...PA_CITIES] : [];
+      const cities = STATE_DATA[currentState]?.cities || [];
+      activeCities = status ? [...cities] : [];
       buildCityCheckboxes();
       updateNeighborhoods();
       renderGrid();
@@ -317,17 +384,18 @@
 
     function updateNeighborhoods() {
       const container = document.getElementById('neighborhoodsContainer');
+      const stateHoods = STATE_DATA[currentState]?.neighborhoods || {};
       let hoods = [];
       activeCities.forEach(city => {
-        if (PA_NEIGHBORHOODS[city]) {
-          PA_NEIGHBORHOODS[city].forEach(n => hoods.push({ city, name: n }));
+        if (stateHoods[city]) {
+          stateHoods[city].forEach(n => hoods.push({ city, name: n }));
         }
       });
 
       activeNeighborhoods = hoods.map(h => `${h.city}: ${h.name}`);
 
       if (hoods.length === 0) {
-        container.innerHTML = '<span class="text-slate-500 text-xs">בחר לפחות עיר אחת לצפייה בשכונות.</span>';
+        container.innerHTML = '<span class="text-slate-500 text-xs">אין שכונות מוגדרות עבור הערים שנבחרו.</span>';
         updateSummary();
         return;
       }
@@ -367,7 +435,7 @@
     }
 
     function updateSummary() {
-      document.getElementById('activeFiltersSummary').innerText = `נבחרו ${activeCities.length} ערים ו-${activeNeighborhoods.length} אזורי סריקה פעילים`;
+      document.getElementById('activeFiltersSummary').innerText = `נבחרו ${activeCities.length} ערים ו-${activeNeighborhoods.length} אזורי סריקה ב-${currentState}`;
     }
 
     function getCategory(dealType) {
@@ -452,7 +520,7 @@
           <div>
             <div class="flex items-center justify-between gap-2 mb-3">
               <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${getBadgeClass(p.deal_type)}">${p.deal_type || 'Active'}</span>
-              <span class="text-xs text-slate-400 font-medium" dir="ltr">${p.city || 'PA'}, PA</span>
+              <span class="text-xs text-slate-400 font-medium" dir="ltr">${p.city || 'PA'}, ${currentState}</span>
             </div>
             <h3 class="text-2xl font-bold text-blue-400" dir="ltr">$${(p.price || 0).toLocaleString()}</h3>
             <p class="text-sm font-medium text-slate-200 mt-1 line-clamp-1" dir="ltr">${p.address || 'כתובת נכס'}</p>
@@ -478,7 +546,7 @@
       `;
       document.getElementById('modalPrice').innerText = `$${(selectedProp.price || 0).toLocaleString()}`;
       document.getElementById('modalAddress').innerText = selectedProp.address || 'כתובת לא צוינה';
-      document.getElementById('modalLocation').innerText = `${selectedProp.city || ''}, PA ${selectedProp.zip || ''} (${selectedProp.county || 'PA'} County)`;
+      document.getElementById('modalLocation').innerText = `${selectedProp.city || ''}, ${currentState} ${selectedProp.zip || ''} (${selectedProp.county || currentState} County)`;
       document.getElementById('modalBeds').innerText = selectedProp.beds || '0';
       document.getElementById('modalBaths').innerText = selectedProp.baths || '0';
       document.getElementById('modalSqft').innerText = `${(selectedProp.sqft || 0).toLocaleString()} sqft`;
@@ -498,7 +566,7 @@
       if (!selectedProp) return;
       closeOverviewModal();
 
-      document.getElementById('analyticsTitle').innerText = `${selectedProp.address}, ${selectedProp.city} PA`;
+      document.getElementById('analyticsTitle').innerText = `${selectedProp.address}, ${selectedProp.city} ${currentState}`;
       
       const sqft = selectedProp.sqft || 1;
       const price = selectedProp.price || 0;
@@ -506,7 +574,7 @@
       
       document.getElementById('analyticsAvgSqft').innerText = `$${ppsqft} / sqft`;
       document.getElementById('analyticsMargin').innerText = selectedProp.margin_estimate || '15% - 25% מתחת למחיר שוק';
-      document.getElementById('analyticsDocket').innerText = selectedProp.docket_id || `PA-${selectedProp.id || 'N/A'}`;
+      document.getElementById('analyticsDocket').innerText = selectedProp.docket_id || `${currentState}-${selectedProp.id || 'N/A'}`;
       document.getElementById('analyticsOwner').innerText = selectedProp.owner_name || 'Public Record Search Active';
       document.getElementById('analyticsSource').innerText = selectedProp.source_name || selectedProp.deal_type || 'MLS Feed';
 
