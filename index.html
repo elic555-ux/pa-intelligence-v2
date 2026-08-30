@@ -176,7 +176,7 @@
 
     </main>
 
-    <!-- Detailed Property Modal (Full Spec + Dual Action Links) -->
+    <!-- Property Detail Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
             
@@ -193,7 +193,7 @@
             <!-- Price & Core Stats Ribbon -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center">
                 <div>
-                    <span class="text-xs text-gray-500 block mb-0.5">מחיר מבוקש</span>
+                    <span class="text-xs text-gray-500 block mb-0.5">מחיר מבוקש / חוב</span>
                     <strong class="text-xl font-black text-emerald-400" id="modal-price"></strong>
                 </div>
                 <div>
@@ -222,15 +222,15 @@
                     </div>
                     <div>
                         <span class="text-gray-500 block">שנת בנייה (Year Built)</span>
-                        <strong class="text-white" id="modal-year-built">1950 (מוערך)</strong>
+                        <strong class="text-white" id="modal-year-built">1955</strong>
                     </div>
                     <div>
                         <span class="text-gray-500 block">גודל מגרש (Lot Size)</span>
-                        <strong class="text-white" id="modal-lot-size">0.12 Acres</strong>
+                        <strong class="text-white" id="modal-lot-size">0.15 Acres</strong>
                     </div>
                     <div>
                         <span class="text-gray-500 block">חניה / מוסך</span>
-                        <strong class="text-white" id="modal-parking">Driveway / On-Street</strong>
+                        <strong class="text-white" id="modal-parking">Driveway / Street</strong>
                     </div>
                 </div>
             </div>
@@ -263,25 +263,15 @@
                 </div>
             </div>
 
-            <!-- Action Buttons (Bypasses Geo-Blocking 100%) -->
+            <!-- Action Buttons Footer -->
             <div class="pt-3 border-t border-gray-800 flex flex-wrap justify-between items-center gap-3">
                 <button onclick="copyPropertyAddress()" class="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                    <span>העתק כתובת</span>
+                    <span id="copy-btn-text">העתק כתובת</span>
                 </button>
                 
-                <div class="flex flex-wrap gap-2">
-                    <!-- Global Safe Link (Zillow / Redfin / Google) -->
-                    <a id="modal-zillow-link" href="#" target="_blank" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition">
-                        <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                        <span>צפייה ב-Zillow / תמונות (ללא חסימה)</span>
-                    </a>
-                    
-                    <!-- Direct County Docket Link -->
-                    <a id="modal-county-link" href="#" target="_blank" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition">
-                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        <span>פורטל מחוזי רשמי</span>
-                    </a>
+                <div class="flex flex-wrap gap-2" id="modal-action-buttons">
+                    <!-- Dynamic Buttons Generated in JS -->
                 </div>
             </div>
         </div>
@@ -630,7 +620,7 @@
             lucide.createIcons();
         }
 
-        // Open Modal with Full Specs and Dual Links
+        // Open Modal with Fully Dynamic Contextual Buttons
         function openPropertyModal(propId) {
             const p = rawProperties.find(item => String(item.id) === String(propId));
             if (!p) return;
@@ -638,6 +628,7 @@
 
             const badgeColor = getDealBadgeStyle(p.deal_type);
             const isHot = (p.deal_score || 0) >= 80;
+            const dt = (p.deal_type || '').toLowerCase();
 
             document.getElementById('modal-badges').innerHTML = `
                 <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
@@ -658,25 +649,64 @@
             document.getElementById('modal-score').textContent = `${p.deal_score} / 100`;
             document.getElementById('modal-margin').textContent = p.margin_estimate || 'מרווח גבוה';
             
-            // Physical Condition Specs
             document.getElementById('modal-condition').textContent = p.condition || 'Fixer-Upper / Distressed';
-            document.getElementById('modal-year-built').textContent = p.year_built || '1955 (מוערך)';
+            document.getElementById('modal-year-built').textContent = p.year_built || '1955';
             document.getElementById('modal-lot-size').textContent = p.lot_size || '0.15 Acres';
             document.getElementById('modal-parking').textContent = p.parking || 'Driveway / Street';
 
-            // Global Safe Link (Zillow search query by exact address)
-            const cleanQuery = encodeURIComponent(`${p.address}, ${p.city}, PA ${p.zip || ''}`);
-            document.getElementById('modal-zillow-link').href = `https://www.zillow.com/homes/${cleanQuery}_rb/`;
+            // Clean address query for Google and direct portals
+            const fullAddressQuery = encodeURIComponent(`${p.address}, ${p.city}, PA ${p.zip || ''}`);
+            const googleSearchUrl = `https://www.google.com/search?q=${fullAddressQuery}`;
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${fullAddressQuery}`;
 
-            // County Portal Link
-            const countyBtn = document.getElementById('modal-county-link');
-            countyBtn.href = p.url || '#';
-            if (!p.url || p.url === '#') {
-                countyBtn.classList.add('opacity-50', 'pointer-events-none');
+            // Build contextual action buttons
+            const btnContainer = document.getElementById('modal-action-buttons');
+            let dynamicButtonsHTML = '';
+
+            // 1. Google Safe Universal Link (Always working)
+            dynamicButtonsHTML += `
+                <a href="${googleSearchUrl}" target="_blank" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                    <span>חיפוש הנכס ברשת</span>
+                </a>
+                <a href="${googleMapsUrl}" target="_blank" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                    <i data-lucide="map" class="w-3.5 h-3.5"></i>
+                    <span>מפה ו-Street View</span>
+                </a>
+            `;
+
+            // 2. Specific Contextual Link
+            if (dt.includes('sheriff')) {
+                dynamicButtonsHTML += `
+                    <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-600/30 flex items-center gap-1.5 transition">
+                        <i data-lucide="gavel" class="w-3.5 h-3.5"></i>
+                        <span>צפייה בתיק שריף רשמי</span>
+                    </a>
+                `;
+            } else if (dt.includes('tax')) {
+                dynamicButtonsHTML += `
+                    <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition">
+                        <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                        <span>רישום חוב מס מחוזי</span>
+                    </a>
+                `;
+            } else if (dt.includes('probate') || dt.includes('fsbo')) {
+                dynamicButtonsHTML += `
+                    <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition">
+                        <i data-lucide="home" class="w-3.5 h-3.5"></i>
+                        <span>תיק עיזבון / יורשים</span>
+                    </a>
+                `;
             } else {
-                countyBtn.classList.remove('opacity-50', 'pointer-events-none');
+                dynamicButtonsHTML += `
+                    <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/30 flex items-center gap-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        <span>מעבר לאתר המקור</span>
+                    </a>
+                `;
             }
 
+            btnContainer.innerHTML = dynamicButtonsHTML;
             document.getElementById('property-modal').classList.remove('hidden');
             lucide.createIcons();
         }
@@ -688,8 +718,11 @@
         function copyPropertyAddress() {
             if (currentSelectedProperty) {
                 const fullText = `${currentSelectedProperty.address}, ${currentSelectedProperty.city}, PA ${currentSelectedProperty.zip || ''}`;
-                navigator.clipboard.writeText(fullText);
-                alert(`הכתובת הועתקה ללוח:\n${fullText}`);
+                navigator.clipboard.writeText(fullText).then(() => {
+                    const btnText = document.getElementById('copy-btn-text');
+                    btnText.textContent = 'הועתק בהצלחה! ✓';
+                    setTimeout(() => { btnText.textContent = 'העתק כתובת'; }, 2000);
+                });
             }
         }
 
