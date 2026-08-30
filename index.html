@@ -65,7 +65,7 @@
       </button>
     </div>
 
-    <!-- Advanced Filter & Market Scan Console -->
+    <!-- Advanced Filter Console -->
     <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
@@ -74,8 +74,8 @@
         <span class="text-xs text-slate-400">סריקה רב-מקורית מלאה (MLS, כינוס נכסים, עיזבונות ו-FSBO)</span>
       </div>
 
-      <!-- Top Param Row -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+      <!-- Top Numeric Filters -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
         <div>
           <label class="block text-slate-400 mb-1 font-medium">מדינה (State)</label>
           <select id="filterState" onchange="onStateChange()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
@@ -91,25 +91,15 @@
         </div>
         <div>
           <label class="block text-slate-400 mb-1 font-medium">מחיר מקסימום ($)</label>
-          <input type="number" id="filterPrice" placeholder="ללא הגבלה" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
+          <input type="number" id="filterPrice" placeholder="ללא הגבלה" oninput="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
         </div>
         <div>
           <label class="block text-slate-400 mb-1 font-medium">שטח בית מינ' (SqFt)</label>
-          <input type="number" id="filterSqft" placeholder="ללא הגבלה" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1 font-medium">סוג נכס</label>
-          <select id="filterType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
-            <option value="all">הכל (All Types)</option>
-            <option value="Single Family">Single Family</option>
-            <option value="Townhouse">Townhouse</option>
-            <option value="Multi-Family">Multi-Family</option>
-            <option value="Condo">Condo</option>
-          </select>
+          <input type="number" id="filterSqft" placeholder="ללא הגבלה" oninput="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
         </div>
         <div>
           <label class="block text-slate-400 mb-1 font-medium">חדרי שינה מינ'</label>
-          <select id="filterBeds" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
+          <select id="filterBeds" onchange="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
             <option value="0">הכל</option>
             <option value="1">1+</option>
             <option value="2">2+</option>
@@ -119,7 +109,7 @@
         </div>
         <div>
           <label class="block text-slate-400 mb-1 font-medium">חדרי רחצה מינ'</label>
-          <select id="filterBaths" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
+          <select id="filterBaths" onchange="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
             <option value="0">הכל</option>
             <option value="1">1+</option>
             <option value="2">2+</option>
@@ -128,10 +118,25 @@
         </div>
       </div>
 
+      <!-- Property Types Multi-Select Section -->
+      <div class="space-y-2 pt-2 border-t border-slate-800/60">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-300">1. סוגי נכסים (בחירה מרובה):</span>
+          <div class="space-x-2 space-x-reverse text-blue-400">
+            <button onclick="selectAllTypes(true)" class="hover:underline">בחר הכל</button>
+            <span>|</span>
+            <button onclick="selectAllTypes(false)" class="hover:underline">נקה הכל</button>
+          </div>
+        </div>
+        <div id="typesContainer" class="flex flex-wrap gap-2 text-xs">
+          <!-- Dynamic Type Checkboxes -->
+        </div>
+      </div>
+
       <!-- Cities Multi-Select Row -->
       <div class="space-y-2 pt-2 border-t border-slate-800/60">
         <div class="flex items-center justify-between text-xs">
-          <span class="font-semibold text-slate-300">1. בחירת ערים לסריקה:</span>
+          <span class="font-semibold text-slate-300">2. בחירת ערים לסריקה:</span>
           <div class="space-x-2 space-x-reverse text-blue-400">
             <button onclick="selectAllCities(true)" class="hover:underline">בחר הכל</button>
             <span>|</span>
@@ -146,7 +151,7 @@
       <!-- Neighborhoods Dynamic Multi-Select Row -->
       <div class="space-y-2 pt-2 border-t border-slate-800/60" id="neighborhoodsSection">
         <div class="flex items-center justify-between text-xs">
-          <span class="font-semibold text-slate-300">2. סינון שכונות ואזורים:</span>
+          <span class="font-semibold text-slate-300">3. סינון שכונות ואזורים:</span>
           <div class="space-x-2 space-x-reverse text-blue-400">
             <button onclick="selectAllNeighborhoods(true)" class="hover:underline">בחר הכל</button>
             <span>|</span>
@@ -261,6 +266,16 @@
   </div>
 
   <script>
+    const PROPERTY_TYPES = [
+      { id: "Single Family", label: "Single Family (פרטי)" },
+      { id: "Townhouse", label: "Townhouse / Rowhome (טורי)" },
+      { id: "Multi-Family", label: "Multi-Family (רב-משפחתי)" },
+      { id: "Condo", label: "Condo / Co-op (דירה/קונדו)" },
+      { id: "Land", label: "Land / Vacant Lot (קרקע/מגרש)" },
+      { id: "Commercial", label: "Commercial (מסחרי)" },
+      { id: "Mobile", label: "Mobile / Manufactured (מודולרי)" }
+    ];
+
     const STATE_DATA = {
       "PA": {
         cities: ["Philadelphia", "Allentown", "Reading", "Erie", "Scranton", "Bethlehem", "Lancaster", "Pittsburgh"],
@@ -326,10 +341,12 @@
     let rawProperties = [];
     let currentTab = 'all';
     let selectedProp = null;
+    let activeTypes = ["Single Family", "Townhouse", "Multi-Family", "Condo"];
     let activeCities = ["Pittsburgh", "Philadelphia", "Allentown", "Reading"];
     let activeNeighborhoods = [];
 
     async function init() {
+      buildTypeCheckboxes();
       buildCityCheckboxes();
       updateNeighborhoods();
       try {
@@ -342,6 +359,31 @@
       } catch (e) {
         console.error("Failed to load data:", e);
       }
+    }
+
+    function buildTypeCheckboxes() {
+      const container = document.getElementById('typesContainer');
+      container.innerHTML = PROPERTY_TYPES.map(t => `
+        <label class="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/60 cursor-pointer">
+          <input type="checkbox" value="${t.id}" ${activeTypes.includes(t.id) ? 'checked' : ''} onchange="onTypeToggle('${t.id}', this.checked)" class="accent-blue-600 rounded">
+          <span class="text-slate-300 font-medium">${t.label}</span>
+        </label>
+      `).join('');
+    }
+
+    function onTypeToggle(typeId, checked) {
+      if (checked) {
+        if (!activeTypes.includes(typeId)) activeTypes.push(typeId);
+      } else {
+        activeTypes = activeTypes.filter(t => t !== typeId);
+      }
+      renderGrid();
+    }
+
+    function selectAllTypes(status) {
+      activeTypes = status ? PROPERTY_TYPES.map(t => t.id) : [];
+      buildTypeCheckboxes();
+      renderGrid();
     }
 
     function onStateChange() {
@@ -435,7 +477,7 @@
     }
 
     function updateSummary() {
-      document.getElementById('activeFiltersSummary').innerText = `נבחרו ${activeCities.length} ערים ו-${activeNeighborhoods.length} אזורי סריקה ב-${currentState}`;
+      document.getElementById('activeFiltersSummary').innerText = `נבחרו ${activeTypes.length} סוגי נכסים, ${activeCities.length} ערים ו-${activeNeighborhoods.length} אזורים ב-${currentState}`;
     }
 
     function getCategory(dealType) {
@@ -487,7 +529,6 @@
     }
 
     function renderGrid() {
-      const type = document.getElementById('filterType').value;
       const maxPrice = parseFloat(document.getElementById('filterPrice').value) || Infinity;
       const minSqft = parseFloat(document.getElementById('filterSqft').value) || 0;
       const minBeds = parseInt(document.getElementById('filterBeds').value) || 0;
@@ -497,7 +538,7 @@
       const filtered = rawProperties.filter(p => {
         if (currentTab !== 'all' && getCategory(p.deal_type) !== currentTab) return false;
         if (activeCities.length > 0 && p.city && !activeCities.includes(p.city)) return false;
-        if (type !== 'all' && p.type !== type) return false;
+        if (activeTypes.length > 0 && p.type && !activeTypes.some(t => p.type.toLowerCase().includes(t.toLowerCase()))) return false;
         if (p.price && p.price > maxPrice) return false;
         if (p.sqft && p.sqft < minSqft) return false;
         if (p.beds && p.beds < minBeds) return false;
