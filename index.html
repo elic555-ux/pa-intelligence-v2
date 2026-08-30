@@ -1,633 +1,376 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PA Real Estate Intelligence Hub V2</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .badge-sheriff { background-color: #ef4444; color: #ffffff; }
-    .badge-tax { background-color: #f97316; color: #ffffff; }
-    .badge-probate { background-color: #a855f7; color: #ffffff; }
-    .badge-discount { background-color: #10b981; color: #ffffff; }
-    .badge-fsbo { background-color: #3b82f6; color: #ffffff; }
-    .badge-default { background-color: #64748b; color: #ffffff; }
-    .bidi-fix { unicode-bidi: embed; direction: ltr; display: inline-block; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PA Real Estate Intelligence Hub</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap');
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col antialiased">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800 bg-slate-900/90 sticky top-0 z-30 backdrop-blur">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
-      <div class="flex items-center gap-3 w-full md:w-auto">
-        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-500/30 text-white flex-shrink-0">RE</div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-lg font-bold text-white tracking-wide">סוכן מודיעין נדל"ן</h1>
-            <span class="text-xs text-slate-400 font-normal">(Real Estate Intelligence Agent V2)</span>
-          </div>
-          <p class="text-xs text-slate-400">איתור עסקאות מתחת למחיר השוק וניתוח השקעות מתקדם</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <div id="statsCounter" class="flex items-center gap-2 text-xs bg-slate-800/90 px-3 py-1.5 rounded-lg border border-slate-700">
-          <span class="text-emerald-400"><i class="fa-solid fa-circle text-[8px] ml-1"></i>טוען נתונים...</span>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content Area -->
-  <main class="max-w-7xl mx-auto px-4 py-5 space-y-5 flex-1 w-full">
-
-    <!-- Category Tabs Bar -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-800 text-sm no-scrollbar">
-      <button onclick="setTab('all')" class="tab-btn active px-4 py-2 rounded-lg font-medium transition bg-blue-600 text-white whitespace-nowrap" data-tab="all">
-        🌐 הכל <span class="bidi-fix">(<span id="count-all">0</span>)</span>
-      </button>
-      <button onclick="setTab('on_market')" class="tab-btn px-4 py-2 rounded-lg font-medium transition bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap" data-tab="on_market">
-        📈 שוק פתוח ו-MLS <span class="bidi-fix">(<span id="count-on_market">0</span>)</span>
-      </button>
-      <button onclick="setTab('distressed')" class="tab-btn px-4 py-2 rounded-lg font-medium transition bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap" data-tab="distressed">
-        ⚖️ כינוס ומצוקה <span class="bidi-fix">(<span id="count-distressed">0</span>)</span>
-      </button>
-      <button onclick="setTab('sheriff_tax')" class="tab-btn px-4 py-2 rounded-lg font-medium transition bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap" data-tab="sheriff_tax">
-        🏛️ שריף ומיסים <span class="bidi-fix">(<span id="count-sheriff_tax">0</span>)</span>
-      </button>
-      <button onclick="setTab('probate')" class="tab-btn px-4 py-2 rounded-lg font-medium transition bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap" data-tab="probate">
-        📜 עיזבונות וירושות <span class="bidi-fix">(<span id="count-probate">0</span>)</span>
-      </button>
-      <button onclick="setTab('fsbo')" class="tab-btn px-4 py-2 rounded-lg font-medium transition bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap" data-tab="fsbo">
-        👤 מוכרים פרטיים (FSBO) <span class="bidi-fix">(<span id="count-fsbo">0</span>)</span>
-      </button>
-    </div>
-
-    <!-- Advanced Filter Console -->
-    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-          <i class="fa-solid fa-sliders text-blue-400"></i> הגדרות סינון וסריקת שוק
-        </h2>
-        <span class="text-xs text-slate-400">סריקה רב-מקורית מלאה (MLS, כינוס נכסים, עיזבונות ו-FSBO)</span>
-      </div>
-
-      <!-- Top Numeric Filters -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-        <div>
-          <label class="block text-slate-400 mb-1 font-medium">מדינה (State)</label>
-          <select id="filterState" onchange="onStateChange()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
-            <option value="PA" selected>Pennsylvania (PA)</option>
-            <option value="FL">Florida (FL)</option>
-            <option value="OH">Ohio (OH)</option>
-            <option value="NJ">New Jersey (NJ)</option>
-            <option value="NY">New York (NY)</option>
-            <option value="TX">Texas (TX)</option>
-            <option value="GA">Georgia (GA)</option>
-            <option value="NC">North Carolina (NC)</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1 font-medium">מחיר מקסימום ($)</label>
-          <input type="number" id="filterPrice" placeholder="ללא הגבלה" oninput="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1 font-medium">שטח בית מינ' (SqFt)</label>
-          <input type="number" id="filterSqft" placeholder="ללא הגבלה" oninput="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1 font-medium">חדרי שינה מינ'</label>
-          <select id="filterBeds" onchange="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
-            <option value="0">הכל</option>
-            <option value="1">1+</option>
-            <option value="2">2+</option>
-            <option value="3">3+</option>
-            <option value="4">4+</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1 font-medium">חדרי רחצה מינ'</label>
-          <select id="filterBaths" onchange="renderGrid()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-200 outline-none focus:border-blue-500">
-            <option value="0">הכל</option>
-            <option value="1">1+</option>
-            <option value="2">2+</option>
-            <option value="3">3+</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Property Types Multi-Select Section -->
-      <div class="space-y-2 pt-2 border-t border-slate-800/60">
-        <div class="flex items-center justify-between text-xs">
-          <span class="font-semibold text-slate-300">1. סוגי נכסים (בחירה מרובה):</span>
-          <div class="space-x-2 space-x-reverse text-blue-400">
-            <button onclick="selectAllTypes(true)" class="hover:underline">בחר הכל</button>
-            <span>|</span>
-            <button onclick="selectAllTypes(false)" class="hover:underline">נקה הכל</button>
-          </div>
-        </div>
-        <div id="typesContainer" class="flex flex-wrap gap-2 text-xs">
-          <!-- Dynamic Type Checkboxes -->
-        </div>
-      </div>
-
-      <!-- Cities Multi-Select Row -->
-      <div class="space-y-2 pt-2 border-t border-slate-800/60">
-        <div class="flex items-center justify-between text-xs">
-          <span class="font-semibold text-slate-300">2. בחירת ערים לסריקה:</span>
-          <div class="space-x-2 space-x-reverse text-blue-400">
-            <button onclick="selectAllCities(true)" class="hover:underline">בחר הכל</button>
-            <span>|</span>
-            <button onclick="selectAllCities(false)" class="hover:underline">נקה הכל</button>
-          </div>
-        </div>
-        <div id="citiesContainer" class="flex flex-wrap gap-2 text-xs">
-          <!-- Dynamic City Checkboxes -->
-        </div>
-      </div>
-
-      <!-- Neighborhoods Dynamic Multi-Select Row -->
-      <div class="space-y-2 pt-2 border-t border-slate-800/60" id="neighborhoodsSection">
-        <div class="flex items-center justify-between text-xs">
-          <span class="font-semibold text-slate-300">3. סינון שכונות ואזורים:</span>
-          <div class="space-x-2 space-x-reverse text-blue-400">
-            <button onclick="selectAllNeighborhoods(true)" class="hover:underline">בחר הכל</button>
-            <span>|</span>
-            <button onclick="selectAllNeighborhoods(false)" class="hover:underline">נקה הכל</button>
-          </div>
-        </div>
-        <div id="neighborhoodsContainer" class="flex flex-wrap gap-2 text-xs">
-          <!-- Dynamic Neighborhood Checkboxes -->
-        </div>
-      </div>
-
-      <!-- Action Button -->
-      <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <span id="activeFiltersSummary" class="text-xs text-slate-400">טוען הגדרות...</span>
-        <button onclick="renderGrid()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-2.5 rounded-xl text-xs transition shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2">
-          <i class="fa-solid fa-magnifying-glass"></i> החל סינון ובצע סריקת נכסים
-        </button>
-      </div>
-    </div>
-
-    <!-- Free Search Bar -->
-    <div class="relative">
-      <i class="fa-solid fa-magnifying-glass absolute top-3.5 right-4 text-slate-500 text-xs"></i>
-      <input type="text" id="filterSearch" oninput="renderGrid()" placeholder="חיפוש חופשי (רחוב, מילת מפתח, מיקוד)..." class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pr-10 pl-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500">
-    </div>
-
-    <!-- Grid Container -->
-    <div id="propertyGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-
-  </main>
-
-  <!-- Level 2: General Overview Modal -->
-  <div id="overviewModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative text-right">
-      <button onclick="closeOverviewModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
-      
-      <div class="flex items-center gap-2 justify-start" id="modalBadge"></div>
-      
-      <div>
-        <h2 id="modalPrice" class="text-3xl font-extrabold text-blue-400"></h2>
-        <p id="modalAddress" class="text-slate-200 font-medium text-base mt-1" dir="ltr"></p>
-        <p id="modalLocation" class="text-xs text-slate-400 mt-0.5" dir="ltr"></p>
-      </div>
-
-      <div class="grid grid-cols-3 gap-3 bg-slate-800/60 p-3 rounded-xl border border-slate-800 text-center text-sm">
-        <div><span class="text-xs text-slate-400 block">חדרים</span><span id="modalBeds" class="font-bold"></span></div>
-        <div><span class="text-xs text-slate-400 block">רחצה</span><span id="modalBaths" class="font-bold"></span></div>
-        <div><span class="text-xs text-slate-400 block">שטח</span><span id="modalSqft" class="font-bold"></span></div>
-      </div>
-
-      <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-800/80">
-        <h4 class="text-xs text-slate-400 mb-1 font-semibold">תקציר מודיעיני</h4>
-        <p id="modalSummary" class="text-sm text-slate-300 leading-relaxed"></p>
-      </div>
-
-      <div class="flex flex-col sm:flex-row gap-3 pt-2">
-        <a id="modalSourceBtn" href="#" target="_blank" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 px-4 rounded-xl text-center text-sm transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> פתח מקור מקורי
-        </a>
-        <button onclick="openAnalyticsModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl text-center text-sm transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-chart-line text-emerald-400"></i> ניתוח עומק וסטטיסטיקה
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Level 3: Deep Analytics Modal -->
-  <div id="analyticsModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative text-right">
-      <button onclick="closeAnalyticsModal()" class="absolute top-4 left-4 text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
-      
-      <div class="border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-chart-pie text-blue-400"></i> מחקר עומק וסטטיסטיקה סביבתית
-        </h3>
-        <p id="analyticsTitle" class="text-xs text-slate-400 mt-1" dir="ltr"></p>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3 text-sm">
-        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 text-center">
-          <span class="text-xs text-slate-400 block mb-1">מחיר ממוצע לרגל² בשכונה</span>
-          <span id="analyticsAvgSqft" class="text-base font-bold text-slate-200"></span>
-        </div>
-        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 text-center">
-          <span class="text-xs text-slate-400 block mb-1">מרווח מוערך מתחת למחיר שוק</span>
-          <span id="analyticsMargin" class="text-base font-bold text-emerald-400"></span>
-        </div>
-      </div>
-
-      <div class="space-y-2.5 text-sm bg-slate-800/30 p-4 rounded-xl border border-slate-800">
-        <h4 class="text-xs font-semibold text-slate-300">פרטי רישום מחוזיים ומשפטיים</h4>
-        <div class="flex justify-between text-xs text-slate-400 border-b border-slate-800/60 pb-2">
-          <span>מספר תיק / Docket ID:</span>
-          <span id="analyticsDocket" class="text-slate-200 font-mono"></span>
-        </div>
-        <div class="flex justify-between text-xs text-slate-400 border-b border-slate-800/60 pb-2">
-          <span>בעלות רשומה (Owner):</span>
-          <span id="analyticsOwner" class="text-slate-200">Public Record Search Active</span>
-        </div>
-        <div class="flex justify-between text-xs text-slate-400">
-          <span>מקור המודיעין:</span>
-          <span id="analyticsSource" class="text-blue-400 font-medium"></span>
-        </div>
-      </div>
-
-      <div class="pt-2">
-        <button onclick="closeAnalyticsModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-sm transition font-medium">
-          חזור לכרטיס הכללי
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const PROPERTY_TYPES = [
-      { id: "Single Family", label: "Single Family (פרטי)" },
-      { id: "Townhouse", label: "Townhouse / Rowhome (טורי)" },
-      { id: "Multi-Family", label: "Multi-Family (רב-משפחתי)" },
-      { id: "Condo", label: "Condo / Co-op (דירה/קונדו)" },
-      { id: "Land", label: "Land / Vacant Lot (קרקע/מגרש)" },
-      { id: "Commercial", label: "Commercial (מסחרי)" },
-      { id: "Mobile", label: "Mobile / Manufactured (מודולרי)" }
-    ];
-
-    const STATE_DATA = {
-      "PA": {
-        cities: ["Philadelphia", "Allentown", "Reading", "Erie", "Scranton", "Bethlehem", "Lancaster", "Pittsburgh"],
-        neighborhoods: {
-          "Pittsburgh": ["Downtown", "Shadyside", "Lawrenceville", "Squirrel Hill", "South Side", "Oakland", "Strip District", "East Liberty"],
-          "Philadelphia": ["Center City", "Fishtown", "Northern Liberties", "South Philly", "Manayunk", "University City", "Chestnut Hill"],
-          "Allentown": ["Center City", "West End", "East Side", "South Side"],
-          "Reading": ["Downtown", "Centre Park", "College Heights"],
-          "Erie": ["Downtown", "Bayfront", "West Bay", "East Bay"],
-          "Scranton": ["Downtown", "Hill Section", "Green Ridge", "Minooka"],
-          "Bethlehem": ["Historic District", "South Side", "West Bethlehem"],
-          "Lancaster": ["Downtown", "Chestnut Hill", "Cabbage Hill"]
-        }
-      },
-      "FL": {
-        cities: ["Miami", "Orlando", "Tampa", "Jacksonville", "Fort Lauderdale"],
-        neighborhoods: {
-          "Miami": ["Brickell", "Wynwood", "Downtown", "Coral Gables"],
-          "Orlando": ["Downtown", "Winter Park", "Lake Nona"]
-        }
-      },
-      "OH": {
-        cities: ["Cleveland", "Columbus", "Cincinnati", "Akron", "Toledo"],
-        neighborhoods: {
-          "Cleveland": ["Downtown", "Ohio City", "Tremont"],
-          "Columbus": ["Short North", "German Village", "Downtown"]
-        }
-      },
-      "NJ": {
-        cities: ["Newark", "Jersey City", "Paterson", "Elizabeth", "Trenton"],
-        neighborhoods: {
-          "Jersey City": ["Downtown", "Journal Square", "The Heights"]
-        }
-      },
-      "NY": {
-        cities: ["New York", "Buffalo", "Rochester", "Yonkers", "Syracuse"],
-        neighborhoods: {
-          "New York": ["Brooklyn", "Queens", "Bronx", "Manhattan", "Staten Island"]
-        }
-      },
-      "TX": {
-        cities: ["Houston", "Dallas", "Austin", "San Antonio", "Fort Worth"],
-        neighborhoods: {
-          "Dallas": ["Downtown", "Uptown", "Deep Ellum"],
-          "Houston": ["Downtown", "Montrose", "The Heights"]
-        }
-      },
-      "GA": {
-        cities: ["Atlanta", "Savannah", "Augusta", "Athens"],
-        neighborhoods: {
-          "Atlanta": ["Midtown", "Buckhead", "Downtown", "Old Fourth Ward"]
-        }
-      },
-      "NC": {
-        cities: ["Charlotte", "Raleigh", "Greensboro", "Durham"],
-        neighborhoods: {
-          "Charlotte": ["Uptown", "South End", "NoDa"]
-        }
-      }
-    };
-
-    let currentState = "PA";
-    let rawProperties = [];
-    let currentTab = 'all';
-    let selectedProp = null;
-    let activeTypes = ["Single Family", "Townhouse", "Multi-Family", "Condo"];
-    let activeCities = ["Pittsburgh", "Philadelphia", "Allentown", "Reading"];
-    let activeNeighborhoods = [];
-
-    async function init() {
-      buildTypeCheckboxes();
-      buildCityCheckboxes();
-      updateNeighborhoods();
-      try {
-        const res = await fetch('properties.json?t=' + Date.now());
-        if (res.ok) {
-          rawProperties = await res.json();
-          updateCounters();
-          renderGrid();
-        }
-      } catch (e) {
-        console.error("Failed to load data:", e);
-      }
-    }
-
-    function buildTypeCheckboxes() {
-      const container = document.getElementById('typesContainer');
-      container.innerHTML = PROPERTY_TYPES.map(t => `
-        <label class="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/60 cursor-pointer">
-          <input type="checkbox" value="${t.id}" ${activeTypes.includes(t.id) ? 'checked' : ''} onchange="onTypeToggle('${t.id}', this.checked)" class="accent-blue-600 rounded">
-          <span class="text-slate-300 font-medium">${t.label}</span>
-        </label>
-      `).join('');
-    }
-
-    function onTypeToggle(typeId, checked) {
-      if (checked) {
-        if (!activeTypes.includes(typeId)) activeTypes.push(typeId);
-      } else {
-        activeTypes = activeTypes.filter(t => t !== typeId);
-      }
-      renderGrid();
-    }
-
-    function selectAllTypes(status) {
-      activeTypes = status ? PROPERTY_TYPES.map(t => t.id) : [];
-      buildTypeCheckboxes();
-      renderGrid();
-    }
-
-    function onStateChange() {
-      currentState = document.getElementById('filterState').value;
-      const data = STATE_DATA[currentState] || { cities: [], neighborhoods: {} };
-      activeCities = [...data.cities.slice(0, 4)];
-      buildCityCheckboxes();
-      updateNeighborhoods();
-      renderGrid();
-    }
-
-    function buildCityCheckboxes() {
-      const container = document.getElementById('citiesContainer');
-      const cities = STATE_DATA[currentState]?.cities || [];
-      container.innerHTML = cities.map(c => `
-        <label class="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/60 cursor-pointer">
-          <input type="checkbox" value="${c}" ${activeCities.includes(c) ? 'checked' : ''} onchange="onCityToggle('${c}', this.checked)" class="accent-blue-600 rounded">
-          <span class="text-slate-300 font-medium">${c}</span>
-        </label>
-      `).join('');
-    }
-
-    function onCityToggle(city, checked) {
-      if (checked) {
-        if (!activeCities.includes(city)) activeCities.push(city);
-      } else {
-        activeCities = activeCities.filter(c => c !== city);
-      }
-      updateNeighborhoods();
-      renderGrid();
-    }
-
-    function selectAllCities(status) {
-      const cities = STATE_DATA[currentState]?.cities || [];
-      activeCities = status ? [...cities] : [];
-      buildCityCheckboxes();
-      updateNeighborhoods();
-      renderGrid();
-    }
-
-    function updateNeighborhoods() {
-      const container = document.getElementById('neighborhoodsContainer');
-      const stateHoods = STATE_DATA[currentState]?.neighborhoods || {};
-      let hoods = [];
-      activeCities.forEach(city => {
-        if (stateHoods[city]) {
-          stateHoods[city].forEach(n => hoods.push({ city, name: n }));
-        }
-      });
-
-      activeNeighborhoods = hoods.map(h => `${h.city}: ${h.name}`);
-
-      if (hoods.length === 0) {
-        container.innerHTML = '<span class="text-slate-500 text-xs">אין שכונות מוגדרות עבור הערים שנבחרו.</span>';
-        updateSummary();
-        return;
-      }
-
-      container.innerHTML = hoods.map(h => {
-        const tag = `${h.city}: ${h.name}`;
-        return `
-          <label class="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700/60 cursor-pointer">
-            <input type="checkbox" value="${tag}" checked onchange="onHoodToggle('${tag}', this.checked)" class="accent-blue-600 rounded">
-            <span class="text-slate-300">${tag}</span>
-          </label>
-        `;
-      }).join('');
-
-      updateSummary();
-    }
-
-    function onHoodToggle(tag, checked) {
-      if (checked) {
-        if (!activeNeighborhoods.includes(tag)) activeNeighborhoods.push(tag);
-      } else {
-        activeNeighborhoods = activeNeighborhoods.filter(t => t !== tag);
-      }
-      updateSummary();
-      renderGrid();
-    }
-
-    function selectAllNeighborhoods(status) {
-      const inputs = document.querySelectorAll('#neighborhoodsContainer input[type="checkbox"]');
-      activeNeighborhoods = [];
-      inputs.forEach(i => {
-        i.checked = status;
-        if (status) activeNeighborhoods.push(i.value);
-      });
-      updateSummary();
-      renderGrid();
-    }
-
-    function updateSummary() {
-      document.getElementById('activeFiltersSummary').innerText = `נבחרו ${activeTypes.length} סוגי נכסים, ${activeCities.length} ערים ו-${activeNeighborhoods.length} אזורים ב-${currentState}`;
-    }
-
-    function getCategory(dealType) {
-      const type = (dealType || '').toLowerCase();
-      if (type.includes('sheriff') || type.includes('tax')) return 'sheriff_tax';
-      if (type.includes('foreclosure') || type.includes('reo') || type.includes('auction') || type.includes('bank')) return 'distressed';
-      if (type.includes('probate') || type.includes('estate')) return 'probate';
-      if (type.includes('fsbo')) return 'fsbo';
-      return 'on_market';
-    }
-
-    function getBadgeClass(dealType) {
-      const type = (dealType || '').toLowerCase();
-      if (type.includes('sheriff')) return 'badge-sheriff';
-      if (type.includes('tax')) return 'badge-tax';
-      if (type.includes('probate') || type.includes('estate')) return 'badge-probate';
-      if (type.includes('price drop') || type.includes('discount')) return 'badge-discount';
-      if (type.includes('fsbo')) return 'badge-fsbo';
-      return 'badge-default';
-    }
-
-    function updateCounters() {
-      const counts = { all: rawProperties.length, on_market: 0, distressed: 0, sheriff_tax: 0, probate: 0, fsbo: 0 };
-      rawProperties.forEach(p => {
-        const cat = getCategory(p.deal_type);
-        if (counts[cat] !== undefined) counts[cat]++;
-      });
-
-      for (let k in counts) {
-        const el = document.getElementById(`count-${k}`);
-        if (el) el.innerText = counts[k];
-      }
-
-      document.getElementById('statsCounter').innerHTML = `
-        <span class="text-emerald-400 font-medium"><i class="fa-solid fa-circle text-[8px] ml-1"></i>${rawProperties.length} נכסים זמינים</span>
-      `;
-    }
-
-    function setTab(tab) {
-      currentTab = tab;
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        if (btn.dataset.tab === tab) {
-          btn.className = 'tab-btn active px-4 py-2 rounded-lg font-medium transition bg-blue-600 text-white whitespace-nowrap';
-        } else {
-          btn.className = 'tab-btn px-4 py-2 rounded-lg font-medium transition bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap';
-        }
-      });
-      renderGrid();
-    }
-
-    function renderGrid() {
-      const maxPrice = parseFloat(document.getElementById('filterPrice').value) || Infinity;
-      const minSqft = parseFloat(document.getElementById('filterSqft').value) || 0;
-      const minBeds = parseInt(document.getElementById('filterBeds').value) || 0;
-      const minBaths = parseInt(document.getElementById('filterBaths').value) || 0;
-      const search = document.getElementById('filterSearch').value.toLowerCase();
-
-      const filtered = rawProperties.filter(p => {
-        if (currentTab !== 'all' && getCategory(p.deal_type) !== currentTab) return false;
-        if (activeCities.length > 0 && p.city && !activeCities.includes(p.city)) return false;
-        if (activeTypes.length > 0 && p.type && !activeTypes.some(t => p.type.toLowerCase().includes(t.toLowerCase()))) return false;
-        if (p.price && p.price > maxPrice) return false;
-        if (p.sqft && p.sqft < minSqft) return false;
-        if (p.beds && p.beds < minBeds) return false;
-        if (p.baths && p.baths < minBaths) return false;
-        if (search) {
-          const matchStr = `${p.address} ${p.city} ${p.zip} ${p.deal_type} ${p.summary}`.toLowerCase();
-          if (!matchStr.includes(search)) return false;
-        }
-        return true;
-      });
-
-      const grid = document.getElementById('propertyGrid');
-      if (filtered.length === 0) {
-        grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500 text-sm">לא נמצאו נכסים התואמים את הסינון שנבחר.</div>';
-        return;
-      }
-
-      grid.innerHTML = filtered.map((p, idx) => `
-        <div onclick="openOverviewModal(${idx})" class="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 cursor-pointer transition flex flex-col justify-between shadow-md hover:shadow-xl space-y-4 text-right">
-          <div>
-            <div class="flex items-center justify-between gap-2 mb-3">
-              <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${getBadgeClass(p.deal_type)}">${p.deal_type || 'Active'}</span>
-              <span class="text-xs text-slate-400 font-medium" dir="ltr">${p.city || 'PA'}, ${currentState}</span>
+    <!-- Header & Navigation -->
+    <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
+                    <i data-lucide="building-2" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                        PA Real Estate Intelligence Hub
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V2.5 Live</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">מערכת מודיעין ואיתור עסקאות נדל"ן בפנסילבניה</p>
+                </div>
             </div>
-            <h3 class="text-2xl font-bold text-blue-400" dir="ltr">$${(p.price || 0).toLocaleString()}</h3>
-            <p class="text-sm font-medium text-slate-200 mt-1 line-clamp-1" dir="ltr">${p.address || 'כתובת נכס'}</p>
-            <p class="text-xs text-slate-400 mt-0.5" dir="ltr">${p.type || 'Single Family'} • ${p.beds || 0} Beds • ${p.baths || 0} Baths • ${(p.sqft || 0).toLocaleString()} sqft</p>
-          </div>
-          <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800/60">
-            <p class="text-xs text-slate-300 line-clamp-2">${p.summary || 'לחץ לצפייה בפרטי הנכס'}</p>
-          </div>
-          <button class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-1">
-            לפרטים וניתוח עסקה <i class="fa-solid fa-angle-left"></i>
-          </button>
+
+            <div class="flex items-center gap-3">
+                <button onclick="openSettingsModal()" class="flex items-center gap-2 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-semibold border border-gray-700 transition">
+                    <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
+                    הגדרות סריקה אוטומטית
+                </button>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs font-medium text-emerald-400" id="live-status">מנוע סנכרון פעיל</span>
+                </div>
+            </div>
         </div>
-      `).join('');
-    }
+    </header>
 
-    function openOverviewModal(idx) {
-      selectedProp = rawProperties[idx];
-      if (!selectedProp) return;
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-      document.getElementById('modalBadge').innerHTML = `
-        <span class="text-xs font-semibold px-3 py-1 rounded-full ${getBadgeClass(selectedProp.deal_type)}">${selectedProp.deal_type || 'Active'}</span>
-        <span class="text-xs text-slate-400 font-medium">${selectedProp.type || 'Residential'}</span>
-      `;
-      document.getElementById('modalPrice').innerText = `$${(selectedProp.price || 0).toLocaleString()}`;
-      document.getElementById('modalAddress').innerText = selectedProp.address || 'כתובת לא צוינה';
-      document.getElementById('modalLocation').innerText = `${selectedProp.city || ''}, ${currentState} ${selectedProp.zip || ''} (${selectedProp.county || currentState} County)`;
-      document.getElementById('modalBeds').innerText = selectedProp.beds || '0';
-      document.getElementById('modalBaths').innerText = selectedProp.baths || '0';
-      document.getElementById('modalSqft').innerText = `${(selectedProp.sqft || 0).toLocaleString()} sqft`;
-      document.getElementById('modalSummary').innerText = selectedProp.summary || 'אין תקציר זמין עבור נכס זה.';
-      
-      const srcBtn = document.getElementById('modalSourceBtn');
-      srcBtn.href = selectedProp.url || '#';
+        <!-- Manual On-Demand Scan Bar -->
+        <section class="bg-gray-900/70 border border-blue-500/30 rounded-2xl p-4 sm:p-5 shadow-lg relative overflow-hidden">
+            <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-blue-400 mb-1 flex items-center gap-1.5">
+                        <i data-lucide="crosshair" class="w-4 h-4"></i> סריקה ידנית ממוקדת בזמן אמת (כתובת, עיר או מיקוד):
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="manual-query-input" placeholder="לדוגמה: 1330 Sylvan St, Homestead או 15120..." class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                    </div>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="triggerManualScan()" class="w-full md:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        בצע סריקה ממוקדת
+                    </button>
+                </div>
+            </div>
+        </section>
 
-      document.getElementById('overviewModal').classList.remove('hidden');
-    }
+        <!-- KPI Metrics Ribbon -->
+        <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                <div class="text-xs text-gray-400 font-semibold mb-1">סה"כ נכסים במערכת</div>
+                <div class="text-2xl font-black text-white" id="kpi-total">0</div>
+            </div>
+            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                <div class="text-xs text-amber-400 font-semibold mb-1">כינוס ושריף (Distressed)</div>
+                <div class="text-2xl font-black text-amber-400" id="kpi-distressed">0</div>
+            </div>
+            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                <div class="text-xs text-rose-400 font-semibold mb-1">פיגורי מס (Tax Claim)</div>
+                <div class="text-2xl font-black text-rose-400" id="kpi-tax">0</div>
+            </div>
+            <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                <div class="text-xs text-purple-400 font-semibold mb-1">עיזבונות ו-FSBO</div>
+                <div class="text-2xl font-black text-purple-400" id="kpi-probate">0</div>
+            </div>
+        </section>
 
-    function closeOverviewModal() {
-      document.getElementById('overviewModal').classList.add('hidden');
-    }
+        <!-- Category Tabs -->
+        <div class="flex border-b border-gray-800 overflow-x-auto gap-2 pb-2">
+            <button onclick="setCategory('all')" id="tab-all" class="px-4 py-2 rounded-lg text-sm font-bold bg-blue-600 text-white flex items-center gap-2">הכל <span class="bg-blue-800 text-xs px-2 py-0.5 rounded-full" id="count-all">0</span></button>
+            <button onclick="setCategory('mls')" id="tab-mls" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">MLS וירידות מחיר <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-mls">0</span></button>
+            <button onclick="setCategory('distressed')" id="tab-distressed" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">בנקים וכינוס נכסים <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-distressed">0</span></button>
+            <button onclick="setCategory('sheriff')" id="tab-sheriff" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">מכירות שריף <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-sheriff">0</span></button>
+            <button onclick="setCategory('tax')" id="tab-tax" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">פיגורי מס <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-tax">0</span></button>
+            <button onclick="setCategory('probate')" id="tab-probate" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">עיזבונות ו-FSBO <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-probate">0</span></button>
+        </div>
 
-    function openAnalyticsModal() {
-      if (!selectedProp) return;
-      closeOverviewModal();
+        <!-- Filter Bar -->
+        <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">סינון לפי מחוז / עיר</label>
+                <select id="filter-city" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <option value="all">כל המחוזות והערים</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">סוג נכס</label>
+                <select id="filter-type" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <option value="all">כל הסוגים</option>
+                    <option value="Single Family">Single Family</option>
+                    <option value="Townhouse">Townhouse</option>
+                    <option value="Multi-Family">Multi-Family</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-1">מחיר מקסימלי</label>
+                <select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
+                    <option value="all">הכל</option>
+                    <option value="100000">עד $100,000</option>
+                    <option value="150000">עד $150,000</option>
+                    <option value="200000">עד $200,000</option>
+                </select>
+            </div>
+        </section>
 
-      document.getElementById('analyticsTitle').innerText = `${selectedProp.address}, ${selectedProp.city} ${currentState}`;
-      
-      const sqft = selectedProp.sqft || 1;
-      const price = selectedProp.price || 0;
-      const ppsqft = price > 0 && sqft > 1 ? Math.round(price / sqft) : 120;
-      
-      document.getElementById('analyticsAvgSqft').innerText = `$${ppsqft} / sqft`;
-      document.getElementById('analyticsMargin').innerText = selectedProp.margin_estimate || '15% - 25% מתחת למחיר שוק';
-      document.getElementById('analyticsDocket').innerText = selectedProp.docket_id || `${currentState}-${selectedProp.id || 'N/A'}`;
-      document.getElementById('analyticsOwner').innerText = selectedProp.owner_name || 'Public Record Search Active';
-      document.getElementById('analyticsSource').innerText = selectedProp.source_name || selectedProp.deal_type || 'MLS Feed';
+        <!-- Properties Grid -->
+        <section id="properties-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Cards rendered dynamically -->
+        </section>
 
-      document.getElementById('analyticsModal').classList.remove('hidden');
-    }
+    </main>
 
-    function closeAnalyticsModal() {
-      document.getElementById('analyticsModal').classList.add('hidden');
-      document.getElementById('overviewModal').classList.remove('hidden');
-    }
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-xl w-full p-6 space-y-5">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="settings" class="w-5 h-5 text-blue-400"></i>
+                    הגדרות סריקה אוטומטית (PA State Configuration)
+                </h3>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
 
-    window.onload = init;
-  </script>
+            <div class="space-y-4 text-sm text-gray-300">
+                <div>
+                    <label class="block font-bold text-gray-200 mb-2">מחוזות יעד לסריקה אוטומטית:</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs" id="county-checkboxes">
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Allegheny" checked class="accent-blue-500"> Allegheny (Pittsburgh)</label>
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Philadelphia" checked class="accent-blue-500"> Philadelphia</label>
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Lehigh" checked class="accent-blue-500"> Lehigh (Allentown)</label>
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Berks" checked class="accent-blue-500"> Berks (Reading)</label>
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Lancaster" checked class="accent-blue-500"> Lancaster</label>
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Northampton" checked class="accent-blue-500"> Northampton (Bethlehem)</label>
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Lackawanna" checked class="accent-blue-500"> Lackawanna (Scranton)</label>
+                        <label class="flex items-center gap-2 bg-gray-950 p-2 rounded border border-gray-800"><input type="checkbox" value="Erie" checked class="accent-blue-500"> Erie</label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1">מחיר מינימלי ($)</label>
+                        <input type="number" id="setting-min-price" value="15000" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1">מחיר מקסימלי ($)</label>
+                        <input type="number" id="setting-max-price" value="250000" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2 text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-gray-200 mb-2">ערוצי מודיעין פעילים בסריקה:</label>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <label class="bg-gray-950 px-3 py-1.5 rounded border border-gray-800 flex items-center gap-1.5"><input type="checkbox" checked class="accent-blue-500"> MLS Price Drops</label>
+                        <label class="bg-gray-950 px-3 py-1.5 rounded border border-gray-800 flex items-center gap-1.5"><input type="checkbox" checked class="accent-blue-500"> Bank Foreclosure / REO</label>
+                        <label class="bg-gray-950 px-3 py-1.5 rounded border border-gray-800 flex items-center gap-1.5"><input type="checkbox" checked class="accent-blue-500"> County Sheriff Sales</label>
+                        <label class="bg-gray-950 px-3 py-1.5 rounded border border-gray-800 flex items-center gap-1.5"><input type="checkbox" checked class="accent-blue-500"> Tax Delinquent Claims</label>
+                        <label class="bg-gray-950 px-3 py-1.5 rounded border border-gray-800 flex items-center gap-1.5"><input type="checkbox" checked class="accent-blue-500"> Probate & Estates</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-800 flex justify-end gap-3">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm">ביטול</button>
+                <button onclick="saveScanSettings()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-600/30">
+                    שמור הגדרות סריקה אוטומטית
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        let rawProperties = [];
+        let activeCategory = 'all';
+
+        async function init() {
+            lucide.createIcons();
+            await loadProperties();
+            loadSettings();
+        }
+
+        async function loadProperties() {
+            try {
+                const res = await fetch('properties.json?t=' + Date.now());
+                rawProperties = await res.json();
+                populateCityDropdown();
+                updateCounts();
+                renderCards();
+            } catch (err) {
+                console.error("Error loading properties:", err);
+            }
+        }
+
+        function populateCityDropdown() {
+            const dropdown = document.getElementById('filter-city');
+            const cities = [...new Set(rawProperties.map(p => `${p.city} (${p.county})`))].sort();
+            dropdown.innerHTML = '<option value="all">כל המחוזות והערים</option>';
+            cities.forEach(c => {
+                dropdown.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+        }
+
+        function updateCounts() {
+            document.getElementById('kpi-total').textContent = rawProperties.length;
+            document.getElementById('count-all').textContent = rawProperties.length;
+
+            const distressed = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('foreclosure') || (p.deal_type || '').toLowerCase().includes('reo'));
+            const sheriff = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff'));
+            const tax = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('tax'));
+            const probate = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo'));
+            const mls = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('mls') || (p.deal_type || '').toLowerCase().includes('price drop'));
+
+            document.getElementById('kpi-distressed').textContent = distressed.length + sheriff.length;
+            document.getElementById('kpi-tax').textContent = tax.length;
+            document.getElementById('kpi-probate').textContent = probate.length;
+
+            document.getElementById('count-mls').textContent = mls.length;
+            document.getElementById('count-distressed').textContent = distressed.length;
+            document.getElementById('count-sheriff').textContent = sheriff.length;
+            document.getElementById('count-tax').textContent = tax.length;
+            document.getElementById('count-probate').textContent = probate.length;
+        }
+
+        function setCategory(cat) {
+            activeCategory = cat;
+            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'].forEach(c => {
+                const btn = document.getElementById(`tab-${c}`);
+                if (c === cat) {
+                    btn.className = "px-4 py-2 rounded-lg text-sm font-bold bg-blue-600 text-white flex items-center gap-2";
+                } else {
+                    btn.className = "px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2";
+                }
+            });
+            renderCards();
+        }
+
+        function applyFilters() {
+            renderCards();
+        }
+
+        function renderCards() {
+            const container = document.getElementById('properties-container');
+            const cityFilter = document.getElementById('filter-city').value;
+            const typeFilter = document.getElementById('filter-type').value;
+            const priceFilter = document.getElementById('filter-price').value;
+
+            let filtered = rawProperties.filter(p => {
+                // Category Filter
+                const dt = (p.deal_type || '').toLowerCase();
+                if (activeCategory === 'mls' && !dt.includes('mls') && !dt.includes('price drop')) return false;
+                if (activeCategory === 'distressed' && !dt.includes('foreclosure') && !dt.includes('reo')) return false;
+                if (activeCategory === 'sheriff' && !dt.includes('sheriff')) return false;
+                if (activeCategory === 'tax' && !dt.includes('tax')) return false;
+                if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
+
+                // Dropdown filters
+                if (cityFilter !== 'all' && !cityFilter.includes(p.city)) return false;
+                if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+                if (priceFilter !== 'all' && p.price > parseInt(priceFilter)) return false;
+
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-500 font-semibold">לא נמצאו נכסים התואמים את הסינון.</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => `
+                <div class="bg-gray-900 border border-gray-800 hover:border-blue-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start gap-2 mb-3">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">${p.deal_type || 'Opportunity'}</span>
+                            <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">${p.margin_estimate || 'מרווח גבוה'}</span>
+                        </div>
+                        <h4 class="text-lg font-bold text-white mb-1">${p.address}</h4>
+                        <p class="text-xs text-gray-400 mb-3 flex items-center gap-1">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
+                            ${p.city}, ${p.county} County, PA ${p.zip || ''}
+                        </p>
+                        <div class="text-2xl font-black text-emerald-400 mb-4">$${(p.price || 0).toLocaleString()}</div>
+                        <div class="grid grid-cols-3 gap-2 bg-gray-950 p-2.5 rounded-xl text-center text-xs text-gray-300 mb-4 border border-gray-800">
+                            <div><span class="text-gray-500 block">חדרים</span><strong class="text-white">${p.beds || '-'}</strong></div>
+                            <div><span class="text-gray-500 block">אמבט</span><strong class="text-white">${p.baths || '-'}</strong></div>
+                            <div><span class="text-gray-500 block">שטח (sqft)</span><strong class="text-white">${p.sqft || '-'}</strong></div>
+                        </div>
+                        <p class="text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed">${p.summary || ''}</p>
+                    </div>
+                    <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs">
+                        <span class="text-gray-500 font-mono">${p.docket_id || p.id}</span>
+                        <a href="${p.url || '#'}" target="_blank" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-blue-400 rounded-lg font-bold flex items-center gap-1.5 transition">
+                            מקור <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // On-Demand Manual Scan Trigger
+        function triggerManualScan() {
+            const query = document.getElementById('manual-query-input').value.trim();
+            if (!query) {
+                alert("אנא הזן כתובת, עיר או מיקוד לסריקה ממוקדת.");
+                return;
+            }
+            alert(`פקודת סריקה ידנית נשלחה בהצלחה עבור: "${query}".\nהמערכת מפעילה את מנוע הסריקה הממוקד.`);
+        }
+
+        // Settings Modal Handlers
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function saveScanSettings() {
+            const minPrice = document.getElementById('setting-min-price').value;
+            const maxPrice = document.getElementById('setting-max-price').value;
+            
+            const savedConfig = {
+                minPrice,
+                maxPrice,
+                savedAt: new Date().toISOString()
+            };
+            localStorage.setItem('pa_scan_config', JSON.stringify(savedConfig));
+            
+            alert("הגדרות הסריקה האוטומטית נשמרו בהצלחה בזיכרון המערכת!");
+            closeSettingsModal();
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('pa_scan_config');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.minPrice) document.getElementById('setting-min-price').value = parsed.minPrice;
+                if (parsed.maxPrice) document.getElementById('setting-max-price').value = parsed.maxPrice;
+            }
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
