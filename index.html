@@ -102,7 +102,7 @@
             <button onclick="setCategory('probate')" id="tab-probate" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center gap-2">עיזבונות ו-FSBO <span class="bg-gray-900 text-xs px-2 py-0.5 rounded-full" id="count-probate">0</span></button>
         </div>
 
-        <!-- Quick Filters -->
+        <!-- Filter Bar -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
                 <label class="block text-xs font-semibold text-gray-400 mb-1">סינון לפי עיר</label>
@@ -117,6 +117,7 @@
                     <option value="Single Family">Single Family</option>
                     <option value="Townhouse">Townhouse</option>
                     <option value="Multi-Family">Multi-Family</option>
+                    <option value="Condo">Condo</option>
                 </select>
             </div>
             <div>
@@ -137,7 +138,7 @@
 
     </main>
 
-    <!-- Detailed Settings Modal (Full Configuration) -->
+    <!-- Detailed Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar p-6 space-y-6">
             
@@ -149,8 +150,8 @@
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Top Numeric and Type Criteria Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
+            <!-- Basic Criteria Controls -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                     <label class="block font-semibold text-gray-400 mb-1">מדינה (State)</label>
                     <select class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2 text-white font-bold">
@@ -159,21 +160,7 @@
                 </div>
                 <div>
                     <label class="block font-semibold text-gray-400 mb-1">מחיר מקסימום ($)</label>
-                    <input type="text" id="setting-max-price" value="250,000" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2 text-white">
-                </div>
-                <div>
-                    <label class="block font-semibold text-gray-400 mb-1">שטח בית מינ' (SqFt)</label>
-                    <input type="text" id="setting-min-sqft" value="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2 text-white">
-                </div>
-                <div>
-                    <label class="block font-semibold text-gray-400 mb-1">סוג נכס</label>
-                    <select id="setting-prop-type" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2 text-white">
-                        <option value="all">הכל (All Types)</option>
-                        <option value="Single Family">Single Family</option>
-                        <option value="Townhouse">Townhouse</option>
-                        <option value="Multi-Family">Multi-Family</option>
-                        <option value="Condo">Condo</option>
-                    </select>
+                    <input type="number" id="setting-max-price" value="250000" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2 text-white">
                 </div>
                 <div>
                     <label class="block font-semibold text-gray-400 mb-1">חדרי שינה מינ'</label>
@@ -195,66 +182,139 @@
                 </div>
             </div>
 
-            <!-- Cities Multi-Select -->
+            <!-- Property Types Multi-Select Pills -->
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-300">סוגי נכסים מבוקשים לסריקה:</label>
+                <div class="flex flex-wrap gap-2 text-xs" id="property-type-container">
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-3 py-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked value="Single Family" class="prop-type-box accent-blue-500"> Single Family
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-3 py-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked value="Townhouse" class="prop-type-box accent-blue-500"> Townhouse
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-3 py-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked value="Multi-Family" class="prop-type-box accent-blue-500"> Multi-Family
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-3 py-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked value="Condo" class="prop-type-box accent-blue-500"> Condo
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-3 py-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" value="Commercial" class="prop-type-box accent-blue-500"> Commercial
+                    </label>
+                </div>
+            </div>
+
+            <!-- Cities Selection -->
             <div class="space-y-2">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-300">1. בחירת ערים לסריקה:</span>
                     <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllCheckboxes('city-box', true)" class="text-blue-400 hover:underline">בחר הכל</button>
+                        <button onclick="toggleAllCities(true)" class="text-blue-400 hover:underline font-semibold">בחר הכל</button>
                         <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllCheckboxes('city-box', false)" class="text-blue-400 hover:underline">נקה הכל</button>
+                        <button onclick="toggleAllCities(false)" class="text-blue-400 hover:underline font-semibold">נקה הכל</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-xs" id="cities-group">
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800"><input type="checkbox" checked class="city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800"><input type="checkbox" checked class="city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800"><input type="checkbox" checked class="city-box accent-blue-500" value="Allentown"> Allentown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800"><input type="checkbox" checked class="city-box accent-blue-500" value="Reading"> Reading</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800"><input type="checkbox" checked class="city-box accent-blue-500" value="Erie"> Erie</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800"><input type="checkbox" checked class="city-box accent-blue-500" value="Scranton"> Scranton</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800"><input type="checkbox" checked class="city-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked class="city-box accent-blue-500" value="Philadelphia" onchange="onCityToggle('Philadelphia', this.checked)"> Philadelphia
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked class="city-box accent-blue-500" value="Pittsburgh" onchange="onCityToggle('Pittsburgh', this.checked)"> Pittsburgh
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked class="city-box accent-blue-500" value="Allentown" onchange="onCityToggle('Allentown', this.checked)"> Allentown
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked class="city-box accent-blue-500" value="Reading" onchange="onCityToggle('Reading', this.checked)"> Reading
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked class="city-box accent-blue-500" value="Erie" onchange="onCityToggle('Erie', this.checked)"> Erie
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked class="city-box accent-blue-500" value="Scranton" onchange="onCityToggle('Scranton', this.checked)"> Scranton
+                    </label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500">
+                        <input type="checkbox" checked class="city-box accent-blue-500" value="Bethlehem" onchange="onCityToggle('Bethlehem', this.checked)"> Bethlehem
+                    </label>
                 </div>
             </div>
 
-            <!-- Neighborhoods Multi-Select -->
+            <!-- Cascaded Neighborhoods Selection -->
             <div class="space-y-2">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-300">2. סינון שכונות ואזורים:</span>
                     <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllCheckboxes('hood-box', true)" class="text-blue-400 hover:underline">בחר הכל</button>
+                        <button onclick="toggleAllHoods(true)" class="text-blue-400 hover:underline font-semibold">בחר הכל</button>
                         <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllCheckboxes('hood-box', false)" class="text-blue-400 hover:underline">נקה הכל</button>
+                        <button onclick="toggleAllHoods(false)" class="text-blue-400 hover:underline font-semibold">נקה הכל</button>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2 text-xs" id="hoods-group">
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Philadelphia: Center City"> Philadelphia: Center City</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Philadelphia: Fishtown"> Philadelphia: Fishtown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Philadelphia: Northern Liberties"> Philadelphia: Northern Liberties</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Philadelphia: South Philly"> Philadelphia: South Philly</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Philadelphia: University City"> Philadelphia: University City</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Philadelphia: Chestnut Hill"> Philadelphia: Chestnut Hill</label>
-                    
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: Downtown"> Pittsburgh: Downtown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: Shadyside"> Pittsburgh: Shadyside</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: Lawrenceville"> Pittsburgh: Lawrenceville</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: Squirrel Hill"> Pittsburgh: Squirrel Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: South Side"> Pittsburgh: South Side</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: Oakland"> Pittsburgh: Oakland</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: East Liberty"> Pittsburgh: East Liberty</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Pittsburgh: Strip District"> Pittsburgh: Strip District</label>
-                    
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Lancaster: Downtown"> Lancaster: Downtown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Lancaster: Chestnut Hill"> Lancaster: Chestnut Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Bethlehem: Historic District"> Bethlehem: Historic District</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Bethlehem: South Side"> Bethlehem: South Side</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Erie: Bayfront"> Erie: Bayfront</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="hood-box accent-blue-500" value="Erie: Downtown"> Erie: Downtown</label>
+                    <!-- Philadelphia -->
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Philadelphia">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Center City" onchange="updateCardPill(this)"> Philadelphia: Center City
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Philadelphia">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Fishtown" onchange="updateCardPill(this)"> Philadelphia: Fishtown
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Philadelphia">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Northern Liberties" onchange="updateCardPill(this)"> Philadelphia: Northern Liberties
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Philadelphia">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: South Philly" onchange="updateCardPill(this)"> Philadelphia: South Philly
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Philadelphia">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: University City" onchange="updateCardPill(this)"> Philadelphia: University City
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Philadelphia">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Chestnut Hill" onchange="updateCardPill(this)"> Philadelphia: Chestnut Hill
+                    </label>
+
+                    <!-- Pittsburgh -->
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Downtown" onchange="updateCardPill(this)"> Pittsburgh: Downtown
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Shadyside" onchange="updateCardPill(this)"> Pittsburgh: Shadyside
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Lawrenceville" onchange="updateCardPill(this)"> Pittsburgh: Lawrenceville
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Squirrel Hill" onchange="updateCardPill(this)"> Pittsburgh: Squirrel Hill
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: South Side" onchange="updateCardPill(this)"> Pittsburgh: South Side
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Oakland" onchange="updateCardPill(this)"> Pittsburgh: Oakland
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: East Liberty" onchange="updateCardPill(this)"> Pittsburgh: East Liberty
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Pittsburgh">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Strip District" onchange="updateCardPill(this)"> Pittsburgh: Strip District
+                    </label>
+
+                    <!-- Bethlehem / Erie / Lancaster -->
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Bethlehem">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: Historic District" onchange="updateCardPill(this)"> Bethlehem: Historic District
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Bethlehem">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: South Side" onchange="updateCardPill(this)"> Bethlehem: South Side
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Erie">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: Bayfront" onchange="updateCardPill(this)"> Erie: Bayfront
+                    </label>
+                    <label class="hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer" data-city="Erie">
+                        <input type="checkbox" checked class="hood-box accent-blue-500" data-city="Erie" value="Erie: Downtown" onchange="updateCardPill(this)"> Erie: Downtown
+                    </label>
                 </div>
             </div>
 
             <!-- Footer Action Buttons -->
             <div class="pt-4 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-gray-500" id="selection-summary">נבחרו 7 ערים ו-20 שכונות לסריקה</span>
+                <span class="text-xs text-gray-400 font-semibold" id="selection-summary">נבחרו 7 ערים ו-18 שכונות</span>
                 <div class="flex gap-3">
                     <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm">ביטול</button>
                     <button onclick="saveScanSettings()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/30 flex items-center gap-2">
@@ -401,10 +461,10 @@
                 alert("אנא הזן כתובת, עיר או מיקוד לסריקה ממוקדת.");
                 return;
             }
-            alert(`פקודת סריקה ידנית נשלחה בהצלחה עבור: "${query}".\nהמערכת מפעילה את מנוע הסריקה הממוקד.`);
+            alert(`פקודת סריקה ידנית נשלחה עבור: "${query}".`);
         }
 
-        // Settings Modal Handlers
+        // Settings Modal Handlers & City-Neighborhood Cascading Logic
         function openSettingsModal() {
             document.getElementById('settings-modal').classList.remove('hidden');
         }
@@ -413,9 +473,38 @@
             document.getElementById('settings-modal').classList.add('hidden');
         }
 
-        function toggleAllCheckboxes(className, state) {
-            document.querySelectorAll('.' + className).forEach(cb => cb.checked = state);
+        function onCityToggle(cityName, isChecked) {
+            const relatedHoods = document.querySelectorAll(`.hood-box[data-city="${cityName}"]`);
+            relatedHoods.forEach(cb => {
+                cb.checked = isChecked;
+                updateCardPill(cb);
+            });
             updateSelectionSummary();
+        }
+
+        function toggleAllCities(state) {
+            document.querySelectorAll('.city-box').forEach(cb => {
+                cb.checked = state;
+                onCityToggle(cb.value, state);
+            });
+        }
+
+        function toggleAllHoods(state) {
+            document.querySelectorAll('.hood-box').forEach(cb => {
+                cb.checked = state;
+                updateCardPill(cb);
+            });
+            updateSelectionSummary();
+        }
+
+        function updateCardPill(checkbox) {
+            const label = checkbox.closest('.hood-label');
+            if (!label) return;
+            if (checkbox.checked) {
+                label.className = "hood-label flex items-center gap-1.5 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2.5 py-1.5 rounded-lg cursor-pointer";
+            } else {
+                label.className = "hood-label flex items-center gap-1.5 bg-gray-950 text-gray-400 border border-gray-800 px-2.5 py-1.5 rounded-lg cursor-pointer";
+            }
         }
 
         function updateSelectionSummary() {
@@ -423,19 +512,19 @@
             const selectedHoods = document.querySelectorAll('.hood-box:checked').length;
             const el = document.getElementById('selection-summary');
             if (el) {
-                el.textContent = `נבחרו ${selectedCities} ערים ו-${selectedHoods} שכונות לסריקה`;
+                el.textContent = `נבחרו ${selectedCities} ערים ו-${selectedHoods} שכונות`;
             }
         }
 
         function saveScanSettings() {
             const selectedCities = Array.from(document.querySelectorAll('.city-box:checked')).map(cb => cb.value);
             const selectedHoods = Array.from(document.querySelectorAll('.hood-box:checked')).map(cb => cb.value);
+            const selectedTypes = Array.from(document.querySelectorAll('.prop-type-box:checked')).map(cb => cb.value);
             
             const config = {
                 state: "PA",
                 maxPrice: document.getElementById('setting-max-price').value,
-                minSqft: document.getElementById('setting-min-sqft').value,
-                propType: document.getElementById('setting-prop-type').value,
+                propertyTypes: selectedTypes,
                 minBeds: document.getElementById('setting-min-beds').value,
                 minBaths: document.getElementById('setting-min-baths').value,
                 cities: selectedCities,
@@ -454,14 +543,11 @@
                 try {
                     const cfg = JSON.parse(saved);
                     if (cfg.maxPrice) document.getElementById('setting-max-price').value = cfg.maxPrice;
-                    if (cfg.propType) document.getElementById('setting-prop-type').value = cfg.propType;
                     if (cfg.minBeds) document.getElementById('setting-min-beds').value = cfg.minBeds;
                     if (cfg.minBaths) document.getElementById('setting-min-baths').value = cfg.minBaths;
                 } catch(e){}
             }
-            document.querySelectorAll('.city-box, .hood-box').forEach(cb => {
-                cb.addEventListener('change', updateSelectionSummary);
-            });
+            document.querySelectorAll('.hood-box').forEach(updateCardPill);
             updateSelectionSummary();
         }
 
