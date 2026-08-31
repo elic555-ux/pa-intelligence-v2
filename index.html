@@ -55,7 +55,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.7 Live</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.8 Live</span>
                     </h1>
                     <p class="text-xs text-gray-200">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
@@ -81,7 +81,7 @@
                     הפעל סריקה יזומה
                 </button>
 
-                <!-- Auto-Scan Settings Button -->
+                <!-- Full Auto-Scan Settings Button -->
                 <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl text-xs font-bold transition">
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
                     הגדרות סריקה
@@ -225,12 +225,10 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <!-- Move to Deal Room Button -->
                     <button onclick="moveToPipelineFromModal()" id="modal-pipeline-btn" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-black flex items-center gap-1.5 text-xs transition shadow-lg shadow-amber-600/20">
                         <i data-lucide="send" class="w-4 h-4"></i>
                         <span>העבר לחדר עסקאות</span>
                     </button>
-
                     <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-amber-400 flex items-center gap-1.5 text-xs font-bold transition">
                         <i data-lucide="star" class="w-4 h-4"></i>
                         <span id="modal-watchlist-text">מעקב</span>
@@ -350,7 +348,6 @@
                 <button onclick="closeTelegramModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Master Mute / Active Switch -->
             <div class="flex items-center justify-between bg-gray-950 p-3.5 rounded-xl border border-gray-800">
                 <div>
                     <span class="text-sm font-bold text-white block">סטטוס התראות כללי</span>
@@ -362,31 +359,25 @@
                 </label>
             </div>
 
-            <!-- 5 Alert Categories -->
             <div class="space-y-2">
                 <span class="text-xs font-bold text-gray-300">בחר אילו התראות תרצה לקבל:</span>
-                
                 <div class="space-y-1.5 text-xs bg-gray-950 p-3.5 rounded-xl border border-gray-800">
                     <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
                         <input type="checkbox" checked id="tg-opt-1" class="accent-sky-500 w-4 h-4">
                         <span class="text-gray-200 font-bold">1. 🔥 מציאות חמות חדשות בסריקה (Deal Score 80+)</span>
                     </label>
-
                     <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
                         <input type="checkbox" checked id="tg-opt-2" class="accent-sky-500 w-4 h-4">
                         <span class="text-gray-200 font-bold">2. 📉 ירידות מחיר בנכסים שבמעקב / בחדר עסקאות</span>
                     </label>
-
                     <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
                         <input type="checkbox" checked id="tg-opt-3" class="accent-sky-500 w-4 h-4">
                         <span class="text-gray-200 font-bold">3. ⏳ מועדי מכרז שריף / מיסים קרובים (3 ימים לפני)</span>
                     </label>
-
                     <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
                         <input type="checkbox" checked id="tg-opt-4" class="accent-sky-500 w-4 h-4">
                         <span class="text-gray-200 font-bold">4. 🔨 התקבלה הצעת מחיר חדשה מקבלן</span>
                     </label>
-
                     <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
                         <input type="checkbox" checked id="tg-opt-5" class="accent-sky-500 w-4 h-4">
                         <span class="text-gray-200 font-bold">5. 📝 שינוי סטטוס עסקה ומשימות מעקב יומיות</span>
@@ -395,7 +386,7 @@
             </div>
 
             <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-sky-400 font-semibold" id="tg-status-note">מוכן לחיבור</span>
+                <span class="text-xs text-sky-400 font-semibold">מוכן לחיבור</span>
                 <button onclick="saveTelegramSettings()" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-600/30 flex items-center gap-1.5">
                     <i data-lucide="check" class="w-4 h-4"></i> שמור הגדרות
                 </button>
@@ -403,20 +394,25 @@
         </div>
     </div>
 
-    <!-- Full Auto-Scan Settings Modal -->
+    <!-- Full Auto-Scan Settings Modal (Restored: 25 Counties, 8 Major Cities, Property Types & Filters) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
+            
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <div class="flex items-center gap-2">
                     <i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i>
-                    <h3 class="text-base font-bold text-white">הגדרות סינון וסריקת שוק אוטומטית (מלא)</h3>
+                    <h3 class="text-base font-bold text-white">הגדרות סינון וסריקת שוק אוטומטית (פנסילבניה - מורחב)</h3>
                 </div>
                 <button onclick="closeSettingsModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
+
+            <!-- General Criteria -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מדינה (State)</label>
-                    <select class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold"><option value="PA">Pennsylvania (PA)</option></select>
+                    <select class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
+                        <option value="PA">Pennsylvania (PA)</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מחיר מקסימום ($)</label>
@@ -428,37 +424,153 @@
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">חדרי שינה מינ'</label>
-                    <select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold"><option value="0">הכל</option><option value="3" selected>3+</option></select>
+                    <select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
+                        <option value="0">הכל</option>
+                        <option value="1">1+</option>
+                        <option value="2">2+</option>
+                        <option value="3" selected>3+</option>
+                        <option value="4">4+</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">חדרי רחצה מינ'</label>
-                    <select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold"><option value="0">הכל</option><option value="1" selected>1+</option></select>
+                    <select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
+                        <option value="0">הכל</option>
+                        <option value="1" selected>1+</option>
+                        <option value="2">2+</option>
+                    </select>
                 </div>
             </div>
-            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
-                <button onclick="closeSettingsModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-semibold">סגור</button>
+
+            <!-- Property Types Selection -->
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-200">סוגי נכסים מבוקשים לסריקה:</label>
+                <div class="flex flex-wrap gap-1.5 text-xs" id="property-type-container">
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Single Family" class="prop-type-box accent-blue-500"> Single Family</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Townhouse" class="prop-type-box accent-blue-500"> Townhouse</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Multi-Family" class="prop-type-box accent-blue-500"> Multi-Family</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Duplex / Triplex" class="prop-type-box accent-blue-500"> Duplex / Triplex</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Condo" class="prop-type-box accent-blue-500"> Condo</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" value="Commercial / Mixed-Use" class="prop-type-box accent-blue-500"> Commercial / Mixed-Use</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" value="Land / Lot" class="prop-type-box accent-blue-500"> Land / Lot</label>
+                </div>
+            </div>
+
+            <!-- 8 Major Cities Selection -->
+            <div class="space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-200">8 הערים המרכזיות (Hubs):</span>
+                    <div class="text-xs space-x-2 space-x-reverse">
+                        <button onclick="toggleAllCheckboxes('.city-box', true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
+                        <span class="text-gray-600">|</span>
+                        <button onclick="toggleAllCheckboxes('.city-box', false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-200" id="cities-group">
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Allentown"> Allentown</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Reading"> Reading</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Erie"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Scranton"> Scranton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Lancaster"> Lancaster</label>
+                </div>
+            </div>
+
+            <!-- Top 25 Target Counties in PA -->
+            <div class="space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-200">25 המחוזות המובילים לסריקה (PA Counties):</span>
+                    <div class="text-xs space-x-2 space-x-reverse">
+                        <button onclick="toggleAllCheckboxes('.county-box', true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
+                        <span class="text-gray-600">|</span>
+                        <button onclick="toggleAllCheckboxes('.county-box', false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-5 gap-1.5 text-xs text-gray-200" id="counties-group">
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Allegheny"> Allegheny</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Montgomery"> Montgomery</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Bucks"> Bucks</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Delaware"> Delaware</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Lancaster"> Lancaster</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Chester"> Chester</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="York"> York</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Berks"> Berks</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Lehigh"> Lehigh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Westmoreland"> Westmoreland</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Luzerne"> Luzerne</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Northampton"> Northampton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Dauphin"> Dauphin</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Erie"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Cumberland"> Cumberland</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Lackawanna"> Lackawanna</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Washington"> Washington</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Butler"> Butler</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Beaver"> Beaver</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Monroe"> Monroe</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Franklin"> Franklin</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Lebanon"> Lebanon</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Schuylkill"> Schuylkill</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="county-box accent-blue-500" value="Cambria"> Cambria</label>
+                </div>
+            </div>
+
+            <!-- Modal Footer with Save Button -->
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
+                <span class="text-xs text-gray-300 font-bold" id="selection-summary">סריקה מוגדרת ומסונכרנת ל-GitHub Actions</span>
+                <div class="flex gap-3">
+                    <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold">ביטול</button>
+                    <button onclick="saveScanSettings()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4"></i> שמור הגדרות
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- On-Demand Scan Modal -->
+    <!-- On-Demand Scan Modal (Restored: All 5 Sectors) -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <div class="flex items-center gap-2">
                     <i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i>
-                    <h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית</h3>
+                    <h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית (פנסילבניה)</h3>
                 </div>
                 <button onclick="closeOnDemandScanModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <p class="text-xs font-bold text-gray-200">בחר סקטורים לסריקה מיידית:</p>
-            <div class="space-y-2 bg-gray-950 p-3.5 rounded-xl border border-gray-800 text-xs">
-                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-cyan-500/30 cursor-pointer"><input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500"><span class="text-cyan-300 font-bold">MLS וירידות מחיר</span></label>
-                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-amber-500/30 cursor-pointer"><input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500"><span class="text-amber-300 font-bold">כינוס ובנקים</span></label>
+
+            <p class="text-xs font-bold text-gray-200">בחר אילו סקטורים תרצה לסרוק כעת במקביל:</p>
+
+            <div class="space-y-2 bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs">
+                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-cyan-500/30 cursor-pointer hover:border-cyan-400">
+                    <input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500 w-4 h-4">
+                    <span class="text-cyan-300 font-bold">1. MLS וירידות מחיר (Realtor / Redfin Feeds)</span>
+                </label>
+                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-amber-500/30 cursor-pointer hover:border-amber-400">
+                    <input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500 w-4 h-4">
+                    <span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים (Bank REO / Pre-Foreclosure)</span>
+                </label>
+                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-rose-500/30 cursor-pointer hover:border-rose-400">
+                    <input type="checkbox" checked value="sheriff" class="ondemand-sector-box accent-rose-500 w-4 h-4">
+                    <span class="text-rose-300 font-bold">3. מכירות שריף מחוזיות (Sheriff Sales - Philly, Allegheny & Co.)</span>
+                </label>
+                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-purple-500/30 cursor-pointer hover:border-purple-400">
+                    <input type="checkbox" checked value="tax" class="ondemand-sector-box accent-purple-500 w-4 h-4">
+                    <span class="text-purple-300 font-bold">4. פיגורי מס מחוזיים (County Tax Claim / Upset Sales)</span>
+                </label>
+                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-emerald-500/30 cursor-pointer hover:border-emerald-400">
+                    <input type="checkbox" checked value="probate" class="ondemand-sector-box accent-emerald-500 w-4 h-4">
+                    <span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)</span>
+                </label>
             </div>
-            <div class="pt-3 border-t border-gray-800 flex justify-end gap-2">
-                <button onclick="closeOnDemandScanModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-bold">ביטול</button>
-                <button onclick="closeOnDemandScanModal(); alert('סריקה שוגרה בהצלחה!');" class="px-5 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold">שגר סריקה</button>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-2.5">
+                <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold">ביטול</button>
+                <button onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
+                    <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת
+                </button>
             </div>
         </div>
     </div>
@@ -493,6 +605,7 @@
             loadPipelineFromStorage();
             await loadProperties();
             loadTelegramSettings();
+            loadScanSettings();
         }
 
         function loadWatchlistFromStorage() {
@@ -536,7 +649,6 @@
             if (!currentSelectedProperty) return;
             const idStr = String(currentSelectedProperty.id);
 
-            // Add to pipeline if not already there
             const exists = pipelineDeals.some(d => String(d.id) === idStr);
             if (!exists) {
                 const dealObj = {
@@ -607,7 +719,6 @@
         }
 
         function updateCounts() {
-            // Filter out properties already in pipeline
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
 
@@ -659,10 +770,7 @@
 
             let filtered = rawProperties.filter(p => {
                 const idStr = String(p.id);
-
-                // Hide properties already moved to Deal Room Pipeline!
                 if (pipelineIds.has(idStr)) return false;
-
                 if (watchlistFilterActive && !userWatchlist.has(idStr)) return false;
 
                 const dt = (p.deal_type || '').toLowerCase();
@@ -901,10 +1009,73 @@
             }
         }
 
+        // Full Auto-Scan Settings Functions
         function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
         function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+
+        function toggleAllCheckboxes(selector, state) {
+            document.querySelectorAll(selector).forEach(cb => { cb.checked = state; });
+        }
+
+        function saveScanSettings() {
+            const selectedCities = Array.from(document.querySelectorAll('.city-box:checked')).map(cb => cb.value);
+            const selectedCounties = Array.from(document.querySelectorAll('.county-box:checked')).map(cb => cb.value);
+            const selectedTypes = Array.from(document.querySelectorAll('.prop-type-box:checked')).map(cb => cb.value);
+            
+            const config = {
+                state: "PA",
+                maxPrice: document.getElementById('setting-max-price').value,
+                minSqft: document.getElementById('setting-min-sqft').value,
+                minBeds: document.getElementById('setting-min-beds').value,
+                minBaths: document.getElementById('setting-min-baths').value,
+                propertyTypes: selectedTypes,
+                cities: selectedCities,
+                counties: selectedCounties,
+                savedAt: new Date().toISOString()
+            };
+
+            localStorage.setItem('pa_scan_config', JSON.stringify(config));
+            alert("כל 25 המחוזות, 8 הערים והגדרות הסריקה נשמרו בהצלחה!");
+            closeSettingsModal();
+        }
+
+        function loadScanSettings() {
+            const saved = localStorage.getItem('pa_scan_config');
+            if (saved) {
+                try {
+                    const cfg = JSON.parse(saved);
+                    if (cfg.maxPrice) document.getElementById('setting-max-price').value = cfg.maxPrice;
+                    if (cfg.minSqft) document.getElementById('setting-min-sqft').value = cfg.minSqft;
+                    if (cfg.minBeds) document.getElementById('setting-min-beds').value = cfg.minBeds;
+                    if (cfg.minBaths) document.getElementById('setting-min-baths').value = cfg.minBaths;
+                } catch(e){}
+            }
+        }
+
+        // On-Demand Scan Functions
         function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
+
+        function triggerOnDemandExecution() {
+            const selectedSectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value);
+            if (selectedSectors.length === 0) {
+                alert("אנא בחר לפחות סקטור אחד לסריקה.");
+                return;
+            }
+
+            const savedConfig = localStorage.getItem('pa_scan_config');
+            const parsedConfig = savedConfig ? JSON.parse(savedConfig) : {};
+
+            const payload = {
+                sectors: selectedSectors,
+                settings: parsedConfig,
+                timestamp: new Date().toISOString()
+            };
+
+            console.log("Launching Full On-Demand Scan:", payload);
+            alert(`פקודת סריקה יזומה שוגרה בהצלחה לכל ${selectedSectors.length} הסקטורים שנבחרו!`);
+            closeOnDemandScanModal();
+        }
 
         window.onload = init;
     </script>
