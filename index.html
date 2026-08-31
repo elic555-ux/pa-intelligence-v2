@@ -55,7 +55,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V4.4 Final Sync</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V5.0 Fixed</span>
                     </h1>
                     <p class="text-xs text-gray-200">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
@@ -393,7 +393,7 @@
         </div>
     </div>
 
-    <!-- Full Auto-Scan Settings Modal (State-Driven Implementation) -->
+    <!-- Full Auto-Scan Settings Modal (Direct Vanilla Sync) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
@@ -455,33 +455,64 @@
                 </div>
             </div>
 
-            <!-- Dynamic 8 Major Cities Selection -->
+            <!-- 8 Major Cities Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">8 הערים המרכזיות (Hubs):</span>
                     <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="setAllHubs(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
+                        <button onclick="toggleAllHubs(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
                         <span class="text-gray-600">|</span>
-                        <button onclick="setAllHubs(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
+                        <button onclick="toggleAllHubs(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-200" id="cities-dynamic-container">
-                    <!-- Dynamic rendering -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-200">
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Philadelphia" onchange="syncDirect('c-Philadelphia', 'co-Philadelphia')" class="hub-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Pittsburgh" onchange="syncDirect('c-Pittsburgh', 'co-Allegheny')" class="hub-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Allentown" onchange="syncDirect('c-Allentown', 'co-Lehigh')" class="hub-box accent-blue-500" value="Allentown"> Allentown</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Reading" onchange="syncDirect('c-Reading', 'co-Berks')" class="hub-box accent-blue-500" value="Reading"> Reading</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Erie" onchange="syncDirect('c-Erie', 'co-Erie')" class="hub-box accent-blue-500" value="Erie"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Scranton" onchange="syncDirect('c-Scranton', 'co-Lackawanna')" class="hub-box accent-blue-500" value="Scranton"> Scranton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Bethlehem" onchange="syncDirect('c-Bethlehem', 'co-Northampton')" class="hub-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="c-Lancaster" onchange="syncDirect('c-Lancaster', 'co-Lancaster')" class="hub-box accent-blue-500" value="Lancaster"> Lancaster</label>
                 </div>
             </div>
 
-            <!-- Dynamic 25 Target Counties in PA -->
+            <!-- Top 25 Target Counties in PA -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">25 המחוזות המובילים לסריקה (PA Counties):</span>
                     <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="setAllCounties(true)" class="text-blue-400 hover:underline font-bold">בחר הכל (כל 25 המחוזות והערים)</button>
+                        <button onclick="toggleAllCounties(true)" class="text-blue-400 hover:underline font-bold">בחר הכל (כל 25 המחוזות והערים)</button>
                         <span class="text-gray-600">|</span>
-                        <button onclick="setAllCounties(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
+                        <button onclick="toggleAllCounties(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-5 gap-1.5 text-xs text-gray-200" id="counties-dynamic-container">
-                    <!-- Dynamic rendering -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-5 gap-1.5 text-xs text-gray-200">
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Philadelphia" onchange="syncDirect('co-Philadelphia', 'c-Philadelphia')" class="county-input accent-blue-500" value="Philadelphia"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Allegheny" onchange="syncDirect('co-Allegheny', 'c-Pittsburgh')" class="county-input accent-blue-500" value="Allegheny"> Allegheny</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Montgomery" class="county-input accent-blue-500" value="Montgomery"> Montgomery</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Bucks" class="county-input accent-blue-500" value="Bucks"> Bucks</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Delaware" class="county-input accent-blue-500" value="Delaware"> Delaware</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Lancaster" onchange="syncDirect('co-Lancaster', 'c-Lancaster')" class="county-input accent-blue-500" value="Lancaster"> Lancaster</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Chester" class="county-input accent-blue-500" value="Chester"> Chester</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-York" class="county-input accent-blue-500" value="York"> York</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Berks" onchange="syncDirect('co-Berks', 'c-Reading')" class="county-input accent-blue-500" value="Berks"> Berks</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Lehigh" onchange="syncDirect('co-Lehigh', 'c-Allentown')" class="county-input accent-blue-500" value="Lehigh"> Lehigh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Westmoreland" class="county-input accent-blue-500" value="Westmoreland"> Westmoreland</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Luzerne" class="county-input accent-blue-500" value="Luzerne"> Luzerne</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Northampton" onchange="syncDirect('co-Northampton', 'c-Bethlehem')" class="county-input accent-blue-500" value="Northampton"> Northampton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Dauphin" class="county-input accent-blue-500" value="Dauphin"> Dauphin</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Erie" onchange="syncDirect('co-Erie', 'c-Erie')" class="county-input accent-blue-500" value="Erie"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Cumberland" class="county-input accent-blue-500" value="Cumberland"> Cumberland</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Lackawanna" onchange="syncDirect('co-Lackawanna', 'c-Scranton')" class="county-input accent-blue-500" value="Lackawanna"> Lackawanna</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Washington" class="county-input accent-blue-500" value="Washington"> Washington</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Butler" class="county-input accent-blue-500" value="Butler"> Butler</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Beaver" class="county-input accent-blue-500" value="Beaver"> Beaver</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Monroe" class="county-input accent-blue-500" value="Monroe"> Monroe</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Franklin" class="county-input accent-blue-500" value="Franklin"> Franklin</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Lebanon" class="county-input accent-blue-500" value="Lebanon"> Lebanon</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Schuylkill" class="county-input accent-blue-500" value="Schuylkill"> Schuylkill</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked id="co-Cambria" class="county-input accent-blue-500" value="Cambria"> Cambria</label>
                 </div>
             </div>
 
@@ -543,7 +574,7 @@
         </div>
     </div>
 
-    <!-- Script Logic: Senior State Architecture -->
+    <!-- Script Logic -->
     <script>
         let rawProperties = [];
         let activeCategory = 'all';
@@ -552,82 +583,36 @@
         let pipelineDeals = [];
         let currentSelectedProperty = null;
 
-        const PA_HUBS = [
-            { city: 'Philadelphia', county: 'Philadelphia' },
-            { city: 'Pittsburgh', county: 'Allegheny' },
-            { city: 'Allentown', county: 'Lehigh' },
-            { city: 'Reading', county: 'Berks' },
-            { city: 'Erie', county: 'Erie' },
-            { city: 'Scranton', county: 'Lackawanna' },
-            { city: 'Bethlehem', county: 'Northampton' },
-            { city: 'Lancaster', county: 'Lancaster' }
-        ];
-
-        const ALL_25_COUNTIES = [
-            "Philadelphia", "Allegheny", "Montgomery", "Bucks", "Delaware", 
-            "Lancaster", "Chester", "York", "Berks", "Lehigh", 
-            "Westmoreland", "Luzerne", "Northampton", "Dauphin", "Erie", 
-            "Cumberland", "Lackawanna", "Washington", "Butler", "Beaver", 
-            "Monroe", "Franklin", "Lebanon", "Schuylkill", "Cambria"
-        ];
-
-        // Centralized State - Default: All 25 Counties Selected
-        let selectedCountiesState = new Set(ALL_25_COUNTIES);
-
-        function renderLocationCheckboxes() {
-            // Render 8 Hub Cities
-            const citiesContainer = document.getElementById('cities-dynamic-container');
-            if (citiesContainer) {
-                citiesContainer.innerHTML = PA_HUBS.map(hub => {
-                    const isChecked = selectedCountiesState.has(hub.county);
-                    return `
-                        <div onclick="toggleLocationItem('${hub.county}')" class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border ${isChecked ? 'border-blue-500/80 bg-blue-950/20' : 'border-gray-800'} cursor-pointer hover:border-blue-400 transition select-none">
-                            <input type="checkbox" ${isChecked ? 'checked' : ''} class="accent-blue-500 w-4 h-4 pointer-events-none">
-                            <span class="${isChecked ? 'text-blue-300 font-black' : 'text-gray-400 font-semibold'} text-xs">${hub.city}</span>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            // Render 25 Counties
-            const countiesContainer = document.getElementById('counties-dynamic-container');
-            if (countiesContainer) {
-                countiesContainer.innerHTML = ALL_25_COUNTIES.map(county => {
-                    const isChecked = selectedCountiesState.has(county);
-                    return `
-                        <div onclick="toggleLocationItem('${county}')" class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border ${isChecked ? 'border-blue-500/80 bg-blue-950/20' : 'border-gray-800'} cursor-pointer hover:border-blue-400 transition select-none">
-                            <input type="checkbox" ${isChecked ? 'checked' : ''} class="accent-blue-500 w-4 h-4 pointer-events-none">
-                            <span class="${isChecked ? 'text-blue-300 font-black' : 'text-gray-400 font-semibold'} text-xs">${county}</span>
-                        </div>
-                    `;
-                }).join('');
+        // Direct 1-to-1 Vanilla Sync Handler
+        function syncDirect(sourceId, targetId) {
+            const src = document.getElementById(sourceId);
+            const tgt = document.getElementById(targetId);
+            if (src && tgt) {
+                tgt.checked = src.checked;
             }
         }
 
-        function toggleLocationItem(countyName) {
-            if (selectedCountiesState.has(countyName)) {
-                selectedCountiesState.delete(countyName);
-            } else {
-                selectedCountiesState.add(countyName);
-            }
-            renderLocationCheckboxes();
-        }
-
-        function setAllHubs(state) {
-            PA_HUBS.forEach(hub => {
-                if (state) selectedCountiesState.add(hub.county);
-                else selectedCountiesState.delete(hub.county);
+        function toggleAllHubs(state) {
+            document.querySelectorAll('.hub-box').forEach(cb => { cb.checked = state; });
+            const pairs = [
+                ['c-Philadelphia', 'co-Philadelphia'],
+                ['c-Pittsburgh', 'co-Allegheny'],
+                ['c-Allentown', 'co-Lehigh'],
+                ['c-Reading', 'co-Berks'],
+                ['c-Erie', 'co-Erie'],
+                ['c-Scranton', 'co-Lackawanna'],
+                ['c-Bethlehem', 'co-Northampton'],
+                ['c-Lancaster', 'co-Lancaster']
+            ];
+            pairs.forEach(([cId, coId]) => {
+                const co = document.getElementById(coId);
+                if (co) co.checked = state;
             });
-            renderLocationCheckboxes();
         }
 
-        function setAllCounties(state) {
-            if (state) {
-                selectedCountiesState = new Set(ALL_25_COUNTIES);
-            } else {
-                selectedCountiesState.clear();
-            }
-            renderLocationCheckboxes();
+        function toggleAllCounties(state) {
+            document.querySelectorAll('.county-input').forEach(cb => { cb.checked = state; });
+            document.querySelectorAll('.hub-box').forEach(cb => { cb.checked = state; });
         }
 
         function calculateDealScore(p) {
@@ -647,11 +632,18 @@
 
         async function init() {
             lucide.createIcons();
+            cleanOldStorageArtifacts();
             loadWatchlistFromStorage();
             loadPipelineFromStorage();
             loadScanSettings();
             await loadProperties();
             loadTelegramSettings();
+        }
+
+        function cleanOldStorageArtifacts() {
+            // Remove old corrupted keys if present
+            localStorage.removeItem('pa_scan_config');
+            localStorage.removeItem('pa_scan_config_v4');
         }
 
         function loadWatchlistFromStorage() {
@@ -1056,14 +1048,13 @@
 
         // Full Auto-Scan Settings Functions
         function openSettingsModal() { 
-            renderLocationCheckboxes();
             document.getElementById('settings-modal').classList.remove('hidden'); 
         }
         function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
         function saveScanSettings() {
-            const selectedCounties = Array.from(selectedCountiesState);
-            const selectedCities = PA_HUBS.filter(h => selectedCountiesState.has(h.county)).map(h => h.city);
+            const selectedCounties = Array.from(document.querySelectorAll('.county-input:checked')).map(cb => cb.value);
+            const selectedCities = Array.from(document.querySelectorAll('.hub-box:checked')).map(cb => cb.value);
             const selectedTypes = Array.from(document.querySelectorAll('.prop-type-box:checked')).map(cb => cb.value);
             
             const config = {
@@ -1078,13 +1069,13 @@
                 savedAt: new Date().toISOString()
             };
 
-            localStorage.setItem('pa_scan_config_v4', JSON.stringify(config));
-            alert("כל 25 המחוזות, 8 הערים והגדרות הסריקה נשמרו בהצלחה!");
+            localStorage.setItem('pa_scan_config_v5', JSON.stringify(config));
+            alert("כל ההגדרות נשמרו בהצלחה!");
             closeSettingsModal();
         }
 
         function loadScanSettings() {
-            const saved = localStorage.getItem('pa_scan_config_v4');
+            const saved = localStorage.getItem('pa_scan_config_v5');
             if (saved) {
                 try {
                     const cfg = JSON.parse(saved);
@@ -1093,24 +1084,23 @@
                     if (cfg.minBeds) document.getElementById('setting-min-beds').value = cfg.minBeds;
                     if (cfg.minBaths) document.getElementById('setting-min-baths').value = cfg.minBaths;
                     
-                    if (cfg.counties && Array.isArray(cfg.counties) && cfg.counties.length > 0) {
-                        selectedCountiesState = new Set(cfg.counties);
-                    } else {
-                        selectedCountiesState = new Set(ALL_25_COUNTIES);
+                    if (cfg.counties && Array.isArray(cfg.counties)) {
+                        document.querySelectorAll('.county-input').forEach(cb => {
+                            cb.checked = cfg.counties.includes(cb.value);
+                        });
                     }
-
+                    if (cfg.cities && Array.isArray(cfg.cities)) {
+                        document.querySelectorAll('.hub-box').forEach(cb => {
+                            cb.checked = cfg.cities.includes(cb.value);
+                        });
+                    }
                     if (cfg.propertyTypes && Array.isArray(cfg.propertyTypes)) {
                         document.querySelectorAll('.prop-type-box').forEach(cb => {
                             cb.checked = cfg.propertyTypes.includes(cb.value);
                         });
                     }
-                } catch(e){
-                    selectedCountiesState = new Set(ALL_25_COUNTIES);
-                }
-            } else {
-                selectedCountiesState = new Set(ALL_25_COUNTIES);
+                } catch(e){}
             }
-            renderLocationCheckboxes();
         }
 
         // On-Demand Scan Functions
@@ -1124,7 +1114,7 @@
                 return;
             }
 
-            const savedConfig = localStorage.getItem('pa_scan_config_v4');
+            const savedConfig = localStorage.getItem('pa_scan_config_v5');
             const parsedConfig = savedConfig ? JSON.parse(savedConfig) : {};
 
             const payload = {
