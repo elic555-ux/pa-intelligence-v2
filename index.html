@@ -55,7 +55,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V5.2 Live</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V5.3 Mission Control</span>
                     </h1>
                     <p class="text-xs text-gray-200">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
@@ -145,7 +145,7 @@
             </button>
         </section>
 
-        <!-- Prominent Yellow Watchlist Strip -->
+        <!-- Watchlist Strip -->
         <section class="flex flex-wrap items-center justify-between bg-gray-900/80 border border-gray-800 rounded-2xl p-3 sm:px-5 gap-3 shadow-lg">
             <button onclick="toggleWatchlistFilter()" id="btn-watchlist-filter" class="flex items-center gap-3 px-6 py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 text-sm font-black transition-all">
                 <i data-lucide="star" class="w-5 h-5 text-amber-400 fill-amber-400"></i>
@@ -159,7 +159,7 @@
             </div>
         </section>
 
-        <!-- Filter Dropdowns Bar -->
+        <!-- Filters Bar -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-bold text-gray-200 mb-1">מיון תוצאות</label>
@@ -199,7 +199,7 @@
 
         <!-- Properties Grid -->
         <section id="properties-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Cards rendered dynamically -->
+            <!-- Dynamic Cards -->
         </section>
 
     </main>
@@ -534,47 +534,86 @@
         </div>
     </div>
 
-    <!-- On-Demand Scan Modal -->
+    <!-- On-Demand Scan Modal (Full Mission Control with Targeted Search & Sector Matrix) -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
+            
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <div class="flex items-center gap-2">
                     <i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i>
-                    <h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית (פנסילבניה)</h3>
+                    <h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית (Mission Control)</h3>
                 </div>
                 <button onclick="closeOnDemandScanModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <p class="text-xs font-bold text-gray-200">בחר אילו סקטורים תרצה לסרוק כעת במקביל:</p>
-
-            <div class="space-y-2 bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs">
-                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-cyan-500/30 cursor-pointer hover:border-cyan-400">
-                    <input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500 w-4 h-4">
-                    <span class="text-cyan-300 font-bold">1. MLS וירידות מחיר (Realtor / Redfin Feeds)</span>
+            <!-- 1. Targeted On-Demand Query Bar -->
+            <div class="bg-gray-950 p-3.5 rounded-xl border border-gray-800 space-y-1">
+                <label class="block text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                    <i data-lucide="crosshair" class="w-4 h-4"></i> סריקה ממוקדת לפי כתובת, עיר או מיקוד (אופציונלי):
                 </label>
-                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-amber-500/30 cursor-pointer hover:border-amber-400">
-                    <input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500 w-4 h-4">
-                    <span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים (Bank REO / Pre-Foreclosure)</span>
-                </label>
-                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-rose-500/30 cursor-pointer hover:border-rose-400">
-                    <input type="checkbox" checked value="sheriff" class="ondemand-sector-box accent-rose-500 w-4 h-4">
-                    <span class="text-rose-300 font-bold">3. מכירות שריף מחוזיות (Sheriff Sales - Philly, Allegheny & Co.)</span>
-                </label>
-                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-purple-500/30 cursor-pointer hover:border-purple-400">
-                    <input type="checkbox" checked value="tax" class="ondemand-sector-box accent-purple-500 w-4 h-4">
-                    <span class="text-purple-300 font-bold">4. פיגורי מס מחוזיים (County Tax Claim / Upset Sales)</span>
-                </label>
-                <label class="flex items-center gap-2.5 bg-gray-900 p-2.5 rounded-lg border border-emerald-500/30 cursor-pointer hover:border-emerald-400">
-                    <input type="checkbox" checked value="probate" class="ondemand-sector-box accent-emerald-500 w-4 h-4">
-                    <span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)</span>
-                </label>
+                <input type="text" id="ondemand-query-input" placeholder="לדוגמה: 1330 Sylvan St, Homestead או 15120 או Pittsburgh..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-bold">
             </div>
 
-            <div class="pt-3 border-t border-gray-800 flex justify-end gap-2.5">
-                <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold">ביטול</button>
-                <button onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
-                    <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת
-                </button>
+            <!-- 2. Target Sectors Matrix -->
+            <div class="space-y-1.5">
+                <span class="text-xs font-bold text-gray-200">בחר אילו סקטורים תרצה לסרוק כעת במקביל:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <label class="flex items-center gap-2 bg-gray-950 p-2.5 rounded-lg border border-cyan-500/30 cursor-pointer hover:border-cyan-400">
+                        <input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500 w-4 h-4">
+                        <span class="text-cyan-300 font-bold">1. MLS וירידות מחיר (Realtor / Redfin)</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2.5 rounded-lg border border-amber-500/30 cursor-pointer hover:border-amber-400">
+                        <input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500 w-4 h-4">
+                        <span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים (Bank REO)</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2.5 rounded-lg border border-rose-500/30 cursor-pointer hover:border-rose-400">
+                        <input type="checkbox" checked value="sheriff" class="ondemand-sector-box accent-rose-500 w-4 h-4">
+                        <span class="text-rose-300 font-bold">3. מכירות שריף (Sheriff Sales)</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2.5 rounded-lg border border-purple-500/30 cursor-pointer hover:border-purple-400">
+                        <input type="checkbox" checked value="tax" class="ondemand-sector-box accent-purple-500 w-4 h-4">
+                        <span class="text-purple-300 font-bold">4. פיגורי מס (County Tax Claim)</span>
+                    </label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2.5 rounded-lg border border-emerald-500/30 cursor-pointer hover:border-emerald-400 sm:col-span-2">
+                        <input type="checkbox" checked value="probate" class="ondemand-sector-box accent-emerald-500 w-4 h-4">
+                        <span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3. Quick Hubs Filter for this run -->
+            <div class="space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-200">ערים לסריקה בריצה זו:</span>
+                    <div class="text-xs space-x-2 space-x-reverse">
+                        <button onclick="toggleOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
+                        <span class="text-gray-600">|</span>
+                        <button onclick="toggleOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-200">
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown"> Allentown</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading"> Reading</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton"> Scranton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster"> Lancaster</label>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
+                <span class="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> מוכן לשיגור סריקה
+                </span>
+                <div class="flex gap-2.5">
+                    <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold">ביטול</button>
+                    <button onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -615,8 +654,7 @@
         function loadPipelineFromStorage() {
             try {
                 const saved = localStorage.getItem('pa_pipeline_deals');
-                if (saved) pipelineDeals = JSON.parse(saved);
-                else pipelineDeals = [];
+                pipelineDeals = saved ? JSON.parse(saved) : [];
             } catch(e) { pipelineDeals = []; }
             updatePipelineCountDisplay();
         }
@@ -644,7 +682,6 @@
             updateWatchlistCountDisplay();
         }
 
-        // FIXED: Count only properties that are in Watchlist AND NOT in Pipeline
         function updateWatchlistCountDisplay() {
             const el = document.getElementById('count-watchlist');
             if (!el) return;
@@ -668,7 +705,6 @@
                 savePipelineToStorage();
             }
 
-            // Remove from active watchlist when moved to Deal Room pipeline
             if (userWatchlist.has(idStr)) {
                 userWatchlist.delete(idStr);
                 saveWatchlistToStorage();
@@ -1024,7 +1060,7 @@
             }
         }
 
-        // Full Auto-Scan Settings Functions (Proven Cascade Engine)
+        // Full Auto-Scan Settings Functions (Cascade Engine)
         function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
         function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
@@ -1120,28 +1156,33 @@
             updateSelectionSummary();
         }
 
-        // On-Demand Scan Functions
+        // On-Demand Mission Control Functions
         function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
+        function toggleOnDemandCities(state) {
+            document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = state; });
+        }
+
         function triggerOnDemandExecution() {
+            const targetedQuery = document.getElementById('ondemand-query-input').value.trim();
             const selectedSectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value);
+            const selectedCities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value);
+
             if (selectedSectors.length === 0) {
                 alert("אנא בחר לפחות סקטור אחד לסריקה.");
                 return;
             }
 
-            const savedConfig = localStorage.getItem('pa_scan_config_final');
-            const parsedConfig = savedConfig ? JSON.parse(savedConfig) : {};
-
             const payload = {
+                query: targetedQuery || "All Targeted Locations",
                 sectors: selectedSectors,
-                settings: parsedConfig,
+                cities: selectedCities,
                 timestamp: new Date().toISOString()
             };
 
-            console.log("Launching Full On-Demand Scan:", payload);
-            alert(`פקודת סריקה יזומה שוגרה בהצלחה לכל ${selectedSectors.length} הסקטורים שנבחרו!`);
+            console.log("Launching Mission Control Scan:", payload);
+            alert(`פקודת סריקה יזומה שוגרה בהצלחה!\nמטרה: ${payload.query}\nסקטורים: ${selectedSectors.length} | ערים: ${selectedCities.length}`);
             closeOnDemandScanModal();
         }
 
