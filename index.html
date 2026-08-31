@@ -55,7 +55,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V5.1 Live</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V5.2 Live</span>
                     </h1>
                     <p class="text-xs text-gray-200">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
@@ -389,7 +389,7 @@
         </div>
     </div>
 
-    <!-- Full Auto-Scan Settings Modal (Using Your Proven Cascade Engine) -->
+    <!-- Full Auto-Scan Settings Modal (Cascade Engine) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
@@ -476,7 +476,7 @@
             <!-- 2. Cascaded Neighborhoods Selection (25 Regions) -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-200">2. סינון שכונות ומחוזות (25 אזורים מקושרים):</span>
+                    <span class="text-xs font-bold text-gray-200">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
                     <div class="text-xs space-x-2 space-x-reverse">
                         <button onclick="toggleAllHoods(true)" class="text-blue-400 hover:underline font-bold">בחר הכל (כל 25 האזורים)</button>
                         <span class="text-gray-600">|</span>
@@ -605,29 +605,11 @@
 
         async function init() {
             lucide.createIcons();
-            loadWatchlistFromStorage();
             loadPipelineFromStorage();
+            loadWatchlistFromStorage();
             await loadProperties();
             loadTelegramSettings();
             loadSettings();
-        }
-
-        function loadWatchlistFromStorage() {
-            try {
-                const saved = localStorage.getItem('pa_watchlist_ids');
-                if (saved) userWatchlist = new Set(JSON.parse(saved));
-            } catch(e) { userWatchlist = new Set(); }
-            updateWatchlistCountDisplay();
-        }
-
-        function saveWatchlistToStorage() {
-            localStorage.setItem('pa_watchlist_ids', JSON.stringify(Array.from(userWatchlist)));
-            updateWatchlistCountDisplay();
-        }
-
-        function updateWatchlistCountDisplay() {
-            const el = document.getElementById('count-watchlist');
-            if (el) el.textContent = userWatchlist.size;
         }
 
         function loadPipelineFromStorage() {
@@ -649,6 +631,28 @@
             if (el) el.textContent = pipelineDeals.length;
         }
 
+        function loadWatchlistFromStorage() {
+            try {
+                const saved = localStorage.getItem('pa_watchlist_ids');
+                if (saved) userWatchlist = new Set(JSON.parse(saved));
+            } catch(e) { userWatchlist = new Set(); }
+            updateWatchlistCountDisplay();
+        }
+
+        function saveWatchlistToStorage() {
+            localStorage.setItem('pa_watchlist_ids', JSON.stringify(Array.from(userWatchlist)));
+            updateWatchlistCountDisplay();
+        }
+
+        // FIXED: Count only properties that are in Watchlist AND NOT in Pipeline
+        function updateWatchlistCountDisplay() {
+            const el = document.getElementById('count-watchlist');
+            if (!el) return;
+            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+            const activeWatchlistCount = Array.from(userWatchlist).filter(id => !pipelineIds.has(String(id))).length;
+            el.textContent = activeWatchlistCount;
+        }
+
         function moveToPipelineFromModal() {
             if (!currentSelectedProperty) return;
             const idStr = String(currentSelectedProperty.id);
@@ -664,10 +668,17 @@
                 savePipelineToStorage();
             }
 
+            // Remove from active watchlist when moved to Deal Room pipeline
+            if (userWatchlist.has(idStr)) {
+                userWatchlist.delete(idStr);
+                saveWatchlistToStorage();
+            }
+
             alert(`הנכס "${currentSelectedProperty.address}" הועבר בהצלחה לחדר העסקאות והוסר מרשימת הסריקה!`);
             closePropertyModal();
             renderCards();
             updateCounts();
+            updateWatchlistCountDisplay();
         }
 
         function toggleWatchlist(propId, event) {
@@ -708,6 +719,7 @@
                 populateCityDropdown();
                 updateCounts();
                 renderCards();
+                updateWatchlistCountDisplay();
             } catch (err) {
                 console.error("Error loading properties:", err);
             }
