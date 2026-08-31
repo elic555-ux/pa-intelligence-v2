@@ -19,7 +19,6 @@
             box-shadow: 0 0 0 2px #3b82f6, 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             transform: translateY(-2px);
         }
-        /* Prominent Active Watchlist Style */
         .watchlist-btn-active {
             background-color: #f59e0b !important;
             color: #0f172a !important;
@@ -56,9 +55,9 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.4 Live</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.5 Live</span>
                     </h1>
-                    <p class="text-xs text-gray-400">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
+                    <p class="text-xs text-gray-300">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
             </div>
 
@@ -73,14 +72,14 @@
                     הפעל סריקה יזומה
                 </button>
 
-                <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition">
+                <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 rounded-xl text-xs font-bold transition">
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
                     הגדרות סריקה
                 </button>
 
                 <div class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span class="text-xs font-medium text-emerald-400">מנוע פעיל</span>
+                    <span class="text-xs font-bold text-emerald-400">מנוע פעיל</span>
                 </div>
             </div>
         </div>
@@ -93,7 +92,7 @@
         <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card filter-card-active text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-gray-300">הכל</span>
+                    <span class="text-xs font-bold text-gray-200">הכל</span>
                     <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i>
                 </div>
                 <div class="text-2xl font-black text-white" id="count-all">0</div>
@@ -101,42 +100,42 @@
 
             <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-cyan-400">MLS וירידות מחיר</span>
+                    <span class="text-xs font-bold text-cyan-300">MLS וירידות מחיר</span>
                     <i data-lucide="trending-down" class="w-4 h-4 text-cyan-400"></i>
                 </div>
-                <div class="text-2xl font-black text-cyan-400" id="count-mls">0</div>
+                <div class="text-2xl font-black text-cyan-300" id="count-mls">0</div>
             </button>
 
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-amber-400">בנקים וכינוס נכסים</span>
+                    <span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span>
                     <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
                 </div>
-                <div class="text-2xl font-black text-amber-400" id="count-distressed">0</div>
+                <div class="text-2xl font-black text-amber-300" id="count-distressed">0</div>
             </button>
 
             <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-rose-400">מכירות שריף</span>
+                    <span class="text-xs font-bold text-rose-300">מכירות שריף</span>
                     <i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i>
                 </div>
-                <div class="text-2xl font-black text-rose-400" id="count-sheriff">0</div>
+                <div class="text-2xl font-black text-rose-300" id="count-sheriff">0</div>
             </button>
 
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-purple-400">פיגורי מס (Tax Claim)</span>
+                    <span class="text-xs font-bold text-purple-300">פיגורי מס (Tax Claim)</span>
                     <i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i>
                 </div>
-                <div class="text-2xl font-black text-purple-400" id="count-tax">0</div>
+                <div class="text-2xl font-black text-purple-300" id="count-tax">0</div>
             </button>
 
             <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-emerald-400">עיזבונות ו-FSBO</span>
+                    <span class="text-xs font-bold text-emerald-300">עיזבונות ו-FSBO</span>
                     <i data-lucide="home" class="w-4 h-4 text-emerald-400"></i>
                 </div>
-                <div class="text-2xl font-black text-emerald-400" id="count-probate">0</div>
+                <div class="text-2xl font-black text-emerald-300" id="count-probate">0</div>
             </button>
         </section>
 
@@ -148,7 +147,7 @@
                 <span class="badge-count px-2.5 py-0.5 bg-amber-500/30 border border-amber-400/50 rounded-lg font-mono text-white text-xs font-extrabold" id="count-watchlist">0</span>
             </button>
 
-            <div class="text-xs text-gray-400 flex items-center gap-2">
+            <div class="text-xs text-gray-300 flex items-center gap-2">
                 <i data-lucide="cloud" class="w-4 h-4 text-blue-400"></i>
                 <span>כל הנכסים המסומנים בכוכב נשמרים ומסונכרנים בענן לכל המכשירים.</span>
             </div>
@@ -157,7 +156,7 @@
         <!-- Filter Dropdowns Bar -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
-                <label class="block text-xs font-semibold text-gray-400 mb-1">מיון תוצאות</label>
+                <label class="block text-xs font-bold text-gray-300 mb-1">מיון תוצאות</label>
                 <select id="sort-by" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-amber-400 font-bold">
                     <option value="score_desc">🔥 מציאות חמות קודם (Deal Score)</option>
                     <option value="price_asc">מחיר: מהנמוך לגבוה</option>
@@ -165,14 +164,14 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-400 mb-1">סינון לפי עיר / מחוז</label>
-                <select id="filter-city" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
+                <label class="block text-xs font-bold text-gray-300 mb-1">סינון לפי עיר / מחוז</label>
+                <select id="filter-city" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-semibold">
                     <option value="all">כל הערים והמחוזות</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-400 mb-1">סוג נכס</label>
-                <select id="filter-type" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
+                <label class="block text-xs font-bold text-gray-300 mb-1">סוג נכס</label>
+                <select id="filter-type" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-semibold">
                     <option value="all">כל הסוגים</option>
                     <option value="Single Family">Single Family</option>
                     <option value="Townhouse">Townhouse</option>
@@ -182,8 +181,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-400 mb-1">מחיר מקסימלי</label>
-                <select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
+                <label class="block text-xs font-bold text-gray-300 mb-1">מחיר מקסימלי</label>
+                <select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-semibold">
                     <option value="all">הכל</option>
                     <option value="100000">עד $100,000</option>
                     <option value="150000">עד $150,000</option>
@@ -199,105 +198,122 @@
 
     </main>
 
-    <!-- Detailed Property Modal -->
-    <div id="property-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
+    <!-- Detailed Property Modal (Enhanced White Text Contrast & Deep Condition Breakdown) -->
+    <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
             
-            <div class="flex justify-between items-start border-b border-gray-800 pb-3">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-start border-b border-gray-800 pb-3.5">
                 <div>
-                    <div class="flex items-center gap-2 mb-1.5" id="modal-badges"></div>
-                    <h3 class="text-2xl font-black text-white" id="modal-address"></h3>
-                    <p class="text-xs text-gray-400 flex items-center gap-1 mt-1" id="modal-location"></p>
+                    <div class="flex items-center gap-2 mb-2" id="modal-badges"></div>
+                    <h3 class="text-2xl font-black text-white tracking-wide" id="modal-address"></h3>
+                    <p class="text-sm font-semibold text-gray-300 flex items-center gap-1.5 mt-1" id="modal-location"></p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-amber-400 flex items-center gap-1.5 text-xs font-bold transition">
+                    <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-amber-400 flex items-center gap-1.5 text-xs font-bold transition">
                         <i data-lucide="star" class="w-4 h-4"></i>
                         <span id="modal-watchlist-text">הוסף למעקב</span>
                     </button>
-                    <button onclick="closePropertyModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-gray-800/60"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    <button onclick="closePropertyModal()" class="text-gray-300 hover:text-white p-2 rounded-xl bg-gray-800/80"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
             </div>
 
-            <!-- Price & Core Stats Ribbon (Vibrant Emerald Green) -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center">
+            <!-- Price & Core Stats Ribbon (High Contrast White & Bright Green) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
                 <div>
-                    <span class="text-xs text-gray-400 block mb-0.5">מחיר מבוקש / חוב</span>
+                    <span class="text-xs font-bold text-gray-300 block mb-0.5">מחיר מבוקש / חוב</span>
                     <strong class="text-2xl font-black text-emerald-300 drop-shadow" id="modal-price"></strong>
                 </div>
                 <div>
-                    <span class="text-xs text-gray-400 block mb-0.5">חדרי שינה</span>
-                    <strong class="text-lg font-bold text-white" id="modal-beds"></strong>
+                    <span class="text-xs font-bold text-gray-300 block mb-0.5">חדרי שינה</span>
+                    <strong class="text-xl font-extrabold text-white" id="modal-beds"></strong>
                 </div>
                 <div>
-                    <span class="text-xs text-gray-400 block mb-0.5">חדרי רחצה</span>
-                    <strong class="text-lg font-bold text-white" id="modal-baths"></strong>
+                    <span class="text-xs font-bold text-gray-300 block mb-0.5">חדרי רחצה</span>
+                    <strong class="text-xl font-extrabold text-white" id="modal-baths"></strong>
                 </div>
                 <div>
-                    <span class="text-xs text-gray-400 block mb-0.5">שטח בנוי</span>
-                    <strong class="text-lg font-bold text-white" id="modal-sqft"></strong>
+                    <span class="text-xs font-bold text-gray-300 block mb-0.5">שטח בנוי</span>
+                    <strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong>
                 </div>
             </div>
 
-            <!-- Physical & Condition Specs Grid -->
-            <div class="space-y-1.5">
-                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <i data-lucide="info" class="w-4 h-4 text-blue-400"></i> מפרט ומצב פיזי של הנכס:
+            <!-- Deep Physical & Systems Breakdown (Expanded Details) -->
+            <div class="space-y-2 bg-gray-950/70 p-4 rounded-xl border border-gray-800">
+                <h4 class="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="clipboard-check" class="w-4 h-4"></i> מפרט טכני מורחב ומצב מערכות הנכס:
                 </h4>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-gray-950/60 p-3 rounded-xl border border-gray-800/80">
-                    <div>
-                        <span class="text-gray-500 block">מצב הנכס (Condition)</span>
-                        <strong class="text-amber-400" id="modal-condition">Fixer-Upper / Needs Rehab</strong>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs pt-1">
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">סטטוס אכלוס</span>
+                        <strong class="text-white text-sm font-bold" id="modal-occupancy">פנוי (Vacant)</strong>
                     </div>
-                    <div>
-                        <span class="text-gray-500 block">שנת בנייה (Year Built)</span>
-                        <strong class="text-white" id="modal-year-built">1955</strong>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">הערכת שיפוץ</span>
+                        <strong class="text-amber-300 text-sm font-bold" id="modal-rehab-scope">שיפוץ בינוני ($35k)</strong>
                     </div>
-                    <div>
-                        <span class="text-gray-500 block">גודל מגרש (Lot Size)</span>
-                        <strong class="text-white" id="modal-lot-size">0.15 Acres</strong>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">מצב גג ומבנה</span>
+                        <strong class="text-white text-sm font-bold" id="modal-roof">גג תקין (Asphalt Shingle)</strong>
                     </div>
-                    <div>
-                        <span class="text-gray-500 block">חניה / מוסך</span>
-                        <strong class="text-white" id="modal-parking">Driveway / Street</strong>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">חימום / HVAC</span>
+                        <strong class="text-white text-sm font-bold" id="modal-hvac">גז טבעי מרכזי (Forced Air)</strong>
+                    </div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">שנת בנייה</span>
+                        <strong class="text-white text-sm font-bold" id="modal-year-built">1955</strong>
+                    </div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">גודל מגרש</span>
+                        <strong class="text-white text-sm font-bold" id="modal-lot-size">0.15 Acres</strong>
+                    </div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">חניה / מוסך</span>
+                        <strong class="text-white text-sm font-bold" id="modal-parking">Driveway / Street</strong>
+                    </div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800">
+                        <span class="text-gray-400 block font-semibold">צפי שכירות חודשית</span>
+                        <strong class="text-emerald-300 text-sm font-bold" id="modal-rent">$1,350 / חודש</strong>
                     </div>
                 </div>
             </div>
 
-            <!-- Intelligence Analysis Section -->
+            <!-- Intelligence Analysis Section (Bright, Crisp White Text) -->
             <div class="space-y-1.5">
-                <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 class="text-xs font-black text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
                     <i data-lucide="file-text" class="w-4 h-4"></i> ניתוח ותקציר מודיעיני:
                 </h4>
-                <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-800/80 text-sm text-gray-300 leading-relaxed" id="modal-summary"></div>
+                <div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm font-medium text-gray-100 leading-relaxed" id="modal-summary"></div>
             </div>
 
             <!-- Legal, Docket & Margin Details -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-gray-950/40 p-3 rounded-xl border border-gray-800/60">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-gray-950/60 p-3 rounded-xl border border-gray-800">
                 <div>
-                    <span class="text-gray-500 block">סוג עסקה</span>
-                    <span class="text-gray-200 font-bold" id="modal-deal-type"></span>
+                    <span class="text-gray-400 block font-semibold">סוג עסקה</span>
+                    <span class="text-white font-bold" id="modal-deal-type"></span>
                 </div>
                 <div>
-                    <span class="text-gray-500 block">מזהה תיק / Docket</span>
-                    <span class="text-gray-300 font-mono" id="modal-docket"></span>
+                    <span class="text-gray-400 block font-semibold">מזהה תיק / Docket</span>
+                    <span class="text-blue-300 font-mono font-bold" id="modal-docket"></span>
                 </div>
                 <div>
-                    <span class="text-gray-500 block">ציון איכות עסקה</span>
-                    <span class="text-amber-400 font-bold" id="modal-score"></span>
+                    <span class="text-gray-400 block font-semibold">ציון איכות עסקה</span>
+                    <span class="text-amber-300 font-black text-sm" id="modal-score"></span>
                 </div>
                 <div>
-                    <span class="text-gray-500 block">מרווח משוער</span>
-                    <span class="text-emerald-300 font-black" id="modal-margin"></span>
+                    <span class="text-gray-400 block font-semibold">מרווח משוער</span>
+                    <span class="text-emerald-300 font-black text-sm" id="modal-margin"></span>
                 </div>
             </div>
 
             <!-- Action Buttons Footer -->
-            <div class="pt-3 border-t border-gray-800 flex flex-wrap justify-between items-center gap-3">
-                <button onclick="copyPropertyAddress()" class="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
-                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <div class="pt-3.5 border-t border-gray-800 flex flex-wrap justify-between items-center gap-3">
+                <button onclick="copyPropertyAddress()" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
                     <span id="copy-btn-text">העתק כתובת</span>
                 </button>
-                <div class="flex flex-wrap gap-2" id="modal-action-buttons"></div>
+                <div class="flex flex-wrap gap-2.5" id="modal-action-buttons"></div>
             </div>
         </div>
     </div>
@@ -311,27 +327,27 @@
                     <i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i>
                     <h3 class="text-base font-bold text-white">הגדרות סינון וסריקת שוק אוטומטית (מלא)</h3>
                 </div>
-                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeSettingsModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-1">מדינה (State)</label>
+                    <label class="block font-bold text-gray-300 mb-1">מדינה (State)</label>
                     <select class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
                         <option value="PA">Pennsylvania (PA)</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-1">מחיר מקסימום ($)</label>
+                    <label class="block font-bold text-gray-300 mb-1">מחיר מקסימום ($)</label>
                     <input type="number" id="setting-max-price" value="250000" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-emerald-300 font-bold">
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-1">שטח מינ' (SqFt)</label>
+                    <label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label>
                     <input type="number" id="setting-min-sqft" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white">
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-1">חדרי שינה מינ'</label>
-                    <select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white">
+                    <label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label>
+                    <select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
                         <option value="0">הכל</option>
                         <option value="1">1+</option>
                         <option value="2">2+</option>
@@ -340,8 +356,8 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-1">חדרי רחצה מינ'</label>
-                    <select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white">
+                    <label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label>
+                    <select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
                         <option value="0">הכל</option>
                         <option value="1" selected>1+</option>
                         <option value="2">2+</option>
@@ -350,27 +366,27 @@
             </div>
 
             <div class="space-y-1.5">
-                <label class="block text-xs font-bold text-gray-300">סוגי נכסים מבוקשים לסריקה:</label>
+                <label class="block text-xs font-bold text-gray-200">סוגי נכסים מבוקשים לסריקה:</label>
                 <div class="flex flex-wrap gap-1.5 text-xs" id="property-type-container">
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked value="Single Family" class="prop-type-box accent-blue-500"> Single Family</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked value="Townhouse" class="prop-type-box accent-blue-500"> Townhouse</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked value="Multi-Family" class="prop-type-box accent-blue-500"> Multi-Family</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked value="Duplex / Triplex" class="prop-type-box accent-blue-500"> Duplex / Triplex</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked value="Condo" class="prop-type-box accent-blue-500"> Condo</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" value="Land / Lot" class="prop-type-box accent-blue-500"> Land / Lot</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Single Family" class="prop-type-box accent-blue-500"> Single Family</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Townhouse" class="prop-type-box accent-blue-500"> Townhouse</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Multi-Family" class="prop-type-box accent-blue-500"> Multi-Family</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Duplex / Triplex" class="prop-type-box accent-blue-500"> Duplex / Triplex</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Condo" class="prop-type-box accent-blue-500"> Condo</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" value="Land / Lot" class="prop-type-box accent-blue-500"> Land / Lot</label>
                 </div>
             </div>
 
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-300">בחירת ערים לסריקה:</span>
+                    <span class="text-xs font-bold text-gray-200">בחירת ערים לסריקה:</span>
                     <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllCities(true)" class="text-blue-400 hover:underline font-semibold">בחר הכל</button>
+                        <button onclick="toggleAllCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
                         <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllCities(false)" class="text-blue-400 hover:underline font-semibold">נקה הכל</button>
+                        <button onclick="toggleAllCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs" id="cities-group">
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-200" id="cities-group">
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Allentown"> Allentown</label>
@@ -383,9 +399,9 @@
             </div>
 
             <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-gray-400 font-semibold" id="selection-summary">מוגדר ומסונכרן</span>
+                <span class="text-xs text-gray-300 font-bold" id="selection-summary">מוגדר ומסונכרן</span>
                 <div class="flex gap-3">
-                    <button onclick="closeSettingsModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm">ביטול</button>
+                    <button onclick="closeSettingsModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-semibold">ביטול</button>
                     <button onclick="saveScanSettings()" class="px-5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/30 flex items-center gap-2">
                         <i data-lucide="check" class="w-4 h-4"></i> שמור הגדרות
                     </button>
@@ -402,10 +418,10 @@
                     <i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i>
                     <h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית</h3>
                 </div>
-                <button onclick="closeOnDemandScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeOnDemandScanModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <p class="text-xs text-gray-300">בחר אילו סקטורים לסרוק כעת:</p>
+            <p class="text-xs font-semibold text-gray-200">בחר אילו סקטורים לסרוק כעת:</p>
 
             <div class="space-y-2 bg-gray-950 p-3.5 rounded-xl border border-gray-800 text-xs">
                 <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-cyan-500/30 cursor-pointer">
@@ -431,7 +447,7 @@
             </div>
 
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-2">
-                <button onclick="closeOnDemandScanModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs">ביטול</button>
+                <button onclick="closeOnDemandScanModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold">ביטול</button>
                 <button onclick="triggerOnDemandExecution()" class="px-5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
                     <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-300"></i> שגר סריקה
                 </button>
@@ -526,7 +542,6 @@
                 
                 rawProperties.forEach(p => {
                     p.deal_score = calculateDealScore(p);
-                    // Default listing date fallback if not present
                     if (!p.listed_date) {
                         p.listed_date = '28/08/2026';
                     }
@@ -585,11 +600,11 @@
 
         function getDealBadgeStyle(dealType) {
             const dt = (dealType || '').toLowerCase();
-            if (dt.includes('sheriff')) return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
-            if (dt.includes('foreclosure') || dt.includes('reo')) return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-            if (dt.includes('tax')) return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-            if (dt.includes('probate') || dt.includes('fsbo')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-            return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
+            if (dt.includes('sheriff')) return 'bg-rose-500/10 text-rose-300 border-rose-500/30';
+            if (dt.includes('foreclosure') || dt.includes('reo')) return 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+            if (dt.includes('tax')) return 'bg-purple-500/10 text-purple-300 border-purple-500/30';
+            if (dt.includes('probate') || dt.includes('fsbo')) return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+            return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
         }
 
         function renderCards() {
@@ -626,7 +641,7 @@
             }
 
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-500 font-semibold">לא נמצאו נכסים התואמים את הסינון.</div>';
+                container.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-300 font-bold">לא נמצאו נכסים התואמים את הסינון.</div>';
                 return;
             }
 
@@ -660,24 +675,24 @@
                             </span>
                         </div>
                         <h4 class="text-lg font-bold text-white group-hover:text-blue-400 transition mb-1">${p.address}</h4>
-                        <p class="text-xs text-gray-400 mb-3 flex items-center gap-1">
+                        <p class="text-xs font-semibold text-gray-300 mb-3 flex items-center gap-1">
                             <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
                             ${p.city}, ${p.county} County, PA ${p.zip || ''}
                         </p>
                         <div class="text-2xl font-black text-emerald-300 mb-4 drop-shadow-sm">$${(p.price || 0).toLocaleString()}</div>
-                        <div class="grid grid-cols-3 gap-2 bg-gray-950 p-2.5 rounded-xl text-center text-xs text-gray-300 mb-4 border border-gray-800">
-                            <div><span class="text-gray-500 block">חדרים</span><strong class="text-white">${p.beds || '-'}</strong></div>
-                            <div><span class="text-gray-500 block">אמבט</span><strong class="text-white">${p.baths || '-'}</strong></div>
-                            <div><span class="text-gray-500 block">שטח (sqft)</span><strong class="text-white">${p.sqft || '-'}</strong></div>
+                        <div class="grid grid-cols-3 gap-2 bg-gray-950 p-2.5 rounded-xl text-center text-xs text-gray-200 mb-4 border border-gray-800">
+                            <div><span class="text-gray-400 font-semibold block">חדרים</span><strong class="text-white text-sm">${p.beds || '-'}</strong></div>
+                            <div><span class="text-gray-400 font-semibold block">אמבט</span><strong class="text-white text-sm">${p.baths || '-'}</strong></div>
+                            <div><span class="text-gray-400 font-semibold block">שטח (sqft)</span><strong class="text-white text-sm">${p.sqft || '-'}</strong></div>
                         </div>
-                        <p class="text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed">${p.summary || ''}</p>
+                        <p class="text-xs text-gray-300 line-clamp-2 mb-4 leading-relaxed">${p.summary || ''}</p>
                     </div>
 
                     <!-- Card Footer with Publication Date & Docket ID -->
                     <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs">
-                        <div class="flex flex-col text-[11px] text-gray-400 space-y-0.5">
-                            <span class="font-mono text-gray-500">${p.docket_id || p.id}</span>
-                            <span class="text-gray-400 font-medium">📅 פורסם: ${p.listed_date}</span>
+                        <div class="flex flex-col text-[11px] text-gray-300 space-y-0.5">
+                            <span class="font-mono text-gray-400 font-semibold">${p.docket_id || p.id}</span>
+                            <span class="text-gray-300 font-medium">📅 פורסם: ${p.listed_date}</span>
                         </div>
                         <span class="px-3 py-1.5 bg-gray-800 group-hover:bg-blue-600 group-hover:text-white text-blue-400 rounded-lg font-bold flex items-center gap-1.5 transition">
                             פרטים מלאים <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
@@ -698,11 +713,12 @@
             const isHot = (p.deal_score || 0) >= 80;
             const dt = (p.deal_type || '').toLowerCase();
 
+            // Refined Header Badges (Subtle Amber Gradient)
             document.getElementById('modal-badges').innerHTML = `
                 <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
                     ${p.deal_type || 'Opportunity'}
                 </span>
-                ${isHot ? `<span class="bg-amber-600 text-gray-950 font-black text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1">🔥 ציון ${p.deal_score}</span>` : ''}
+                ${isHot ? `<span class="bg-amber-600/90 border border-amber-400/40 text-gray-950 font-black text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1.5"><span class="text-white">🔥 ציון עסקה</span><span class="bg-gray-950 text-amber-300 px-1 rounded font-mono font-bold">${p.deal_score}</span></span>` : ''}
             `;
 
             document.getElementById('modal-address').textContent = p.address;
@@ -717,10 +733,15 @@
             document.getElementById('modal-score').textContent = `${p.deal_score} / 100`;
             document.getElementById('modal-margin').textContent = p.margin_estimate || 'מרווח גבוה';
             
-            document.getElementById('modal-condition').textContent = p.condition || 'Fixer-Upper / Distressed';
+            // Physical & Systems Data Binding
+            document.getElementById('modal-occupancy').textContent = p.occupancy || 'פנוי (Vacant)';
+            document.getElementById('modal-rehab-scope').textContent = p.rehab_scope || 'שיפוץ בינוני ($35k)';
+            document.getElementById('modal-roof').textContent = p.roof_condition || 'גג תקין (Asphalt)';
+            document.getElementById('modal-hvac').textContent = p.hvac_type || 'גז טבעי (Forced Air)';
             document.getElementById('modal-year-built').textContent = p.year_built || '1955';
             document.getElementById('modal-lot-size').textContent = p.lot_size || '0.15 Acres';
             document.getElementById('modal-parking').textContent = p.parking || 'Driveway / Street';
+            document.getElementById('modal-rent').textContent = p.projected_rent || '$1,350 / חודש';
 
             updateModalWatchlistState();
 
@@ -783,10 +804,10 @@
             
             if (isWatchlisted) {
                 btnText.textContent = 'במעקב פעיל ✓';
-                btn.className = 'p-2 rounded-xl bg-amber-500 text-gray-950 font-black border border-amber-400 flex items-center gap-1.5 text-xs transition shadow-md';
+                btn.className = 'p-2.5 rounded-xl bg-amber-500 text-gray-950 font-black border border-amber-400 flex items-center gap-1.5 text-xs transition shadow-md';
             } else {
                 btnText.textContent = 'הוסף למעקב';
-                btn.className = 'p-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-amber-400 flex items-center gap-1.5 text-xs font-bold transition';
+                btn.className = 'p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-amber-400 flex items-center gap-1.5 text-xs font-bold transition';
             }
         }
 
