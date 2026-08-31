@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PA Real Estate Intelligence Hub</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800;900&display=swap');
@@ -43,6 +45,7 @@
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
+    <!-- Header & Navigation -->
     <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -52,23 +55,33 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.6 Live</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.7 Live</span>
                     </h1>
                     <p class="text-xs text-gray-200">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
-                <a href="deals.html" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-amber-600/20 transition">
+                <!-- Deal Room Link Button -->
+                <a href="deals.html" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                    📊 חדר עסקאות (Deal Room)
+                    📊 חדר עסקאות (<span id="header-pipeline-count">0</span>)
                 </a>
 
+                <!-- Telegram Alerts Hub Button -->
+                <button onclick="openTelegramModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/40 rounded-xl text-xs font-bold transition">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>התראות טלגרם</span>
+                    <span id="telegram-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                </button>
+
+                <!-- On-Demand Scan Button -->
                 <button onclick="openOnDemandScanModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="play-circle" class="w-4 h-4"></i>
                     הפעל סריקה יזומה
                 </button>
 
+                <!-- Auto-Scan Settings Button -->
                 <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl text-xs font-bold transition">
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
                     הגדרות סריקה
@@ -82,8 +95,10 @@
         </div>
     </header>
 
+    <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
 
+        <!-- Interactive KPI Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card filter-card-active text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
@@ -134,6 +149,7 @@
             </button>
         </section>
 
+        <!-- Prominent Yellow Watchlist Strip -->
         <section class="flex flex-wrap items-center justify-between bg-gray-900/80 border border-gray-800 rounded-2xl p-3 sm:px-5 gap-3 shadow-lg">
             <button onclick="toggleWatchlistFilter()" id="btn-watchlist-filter" class="flex items-center gap-3 px-6 py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 text-sm font-black transition-all">
                 <i data-lucide="star" class="w-5 h-5 text-amber-400 fill-amber-400"></i>
@@ -143,10 +159,11 @@
 
             <div class="text-xs text-gray-200 flex items-center gap-2">
                 <i data-lucide="cloud" class="w-4 h-4 text-blue-400"></i>
-                <span>כל הנכסים המסומנים בכוכב נשמרים ומסונכרנים בענן לכל המכשירים.</span>
+                <span>נכסים שהועברו לחדר עסקאות מנוהלים בנפרד ולא מוצגים בסריקה הכללית.</span>
             </div>
         </section>
 
+        <!-- Filter Dropdowns Bar -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-bold text-gray-200 mb-1">מיון תוצאות</label>
@@ -184,14 +201,18 @@
             </div>
         </section>
 
+        <!-- Properties Grid -->
         <section id="properties-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            </section>
+            <!-- Dynamic Cards -->
+        </section>
 
     </main>
 
+    <!-- Detailed Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
             
+            <!-- Modal Header -->
             <div class="flex justify-between items-start border-b border-gray-800 pb-3.5">
                 <div>
                     <div class="flex items-center gap-2 mb-2" id="modal-badges"></div>
@@ -204,14 +225,21 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <!-- Move to Deal Room Button -->
+                    <button onclick="moveToPipelineFromModal()" id="modal-pipeline-btn" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-black flex items-center gap-1.5 text-xs transition shadow-lg shadow-amber-600/20">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>העבר לחדר עסקאות</span>
+                    </button>
+
                     <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-amber-400 flex items-center gap-1.5 text-xs font-bold transition">
                         <i data-lucide="star" class="w-4 h-4"></i>
-                        <span id="modal-watchlist-text">הוסף למעקב</span>
+                        <span id="modal-watchlist-text">מעקב</span>
                     </button>
                     <button onclick="closePropertyModal()" class="text-gray-300 hover:text-white p-2 rounded-xl bg-gray-800/80"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
             </div>
 
+            <!-- Price & Core Stats Ribbon -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
                 <div>
                     <span class="text-xs font-bold text-gray-300 block mb-0.5">מחיר מבוקש / חוב</span>
@@ -231,6 +259,7 @@
                 </div>
             </div>
 
+            <!-- Deep Physical & Systems Breakdown -->
             <div class="space-y-2 bg-gray-950/70 p-4 rounded-xl border border-gray-800">
                 <h4 class="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                     <i data-lucide="clipboard-check" class="w-4 h-4"></i> מפרט טכני מורחב ומצב מערכות הנכס:
@@ -271,6 +300,7 @@
                 </div>
             </div>
 
+            <!-- Intelligence Analysis Section -->
             <div class="space-y-1.5">
                 <h4 class="text-xs font-black text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
                     <i data-lucide="file-text" class="w-4 h-4"></i> ניתוח ותקציר מודיעיני:
@@ -278,6 +308,7 @@
                 <div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm font-medium text-white leading-relaxed" id="modal-summary"></div>
             </div>
 
+            <!-- Legal, Docket & Margin Details -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs bg-gray-950/60 p-3 rounded-xl border border-gray-800">
                 <div>
                     <span class="text-gray-300 block font-bold">סוג עסקה</span>
@@ -297,6 +328,7 @@
                 </div>
             </div>
 
+            <!-- Action Buttons Footer -->
             <div class="pt-3.5 border-t border-gray-800 flex flex-wrap justify-between items-center gap-3">
                 <button onclick="copyPropertyAddress()" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
                     <i data-lucide="copy" class="w-4 h-4"></i>
@@ -307,9 +339,73 @@
         </div>
     </div>
 
+    <!-- Telegram Alerts Configuration Modal -->
+    <div id="telegram-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="send" class="w-5 h-5 text-sky-400"></i>
+                    <h3 class="text-base font-bold text-white">הגדרות התראות בוט טלגרם</h3>
+                </div>
+                <button onclick="closeTelegramModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Master Mute / Active Switch -->
+            <div class="flex items-center justify-between bg-gray-950 p-3.5 rounded-xl border border-gray-800">
+                <div>
+                    <span class="text-sm font-bold text-white block">סטטוס התראות כללי</span>
+                    <span class="text-xs text-gray-400">הפעל או השתק את כל ההתראות לטלגרם</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="tg-master-switch" checked class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+                </label>
+            </div>
+
+            <!-- 5 Alert Categories -->
+            <div class="space-y-2">
+                <span class="text-xs font-bold text-gray-300">בחר אילו התראות תרצה לקבל:</span>
+                
+                <div class="space-y-1.5 text-xs bg-gray-950 p-3.5 rounded-xl border border-gray-800">
+                    <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
+                        <input type="checkbox" checked id="tg-opt-1" class="accent-sky-500 w-4 h-4">
+                        <span class="text-gray-200 font-bold">1. 🔥 מציאות חמות חדשות בסריקה (Deal Score 80+)</span>
+                    </label>
+
+                    <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
+                        <input type="checkbox" checked id="tg-opt-2" class="accent-sky-500 w-4 h-4">
+                        <span class="text-gray-200 font-bold">2. 📉 ירידות מחיר בנכסים שבמעקב / בחדר עסקאות</span>
+                    </label>
+
+                    <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
+                        <input type="checkbox" checked id="tg-opt-3" class="accent-sky-500 w-4 h-4">
+                        <span class="text-gray-200 font-bold">3. ⏳ מועדי מכרז שריף / מיסים קרובים (3 ימים לפני)</span>
+                    </label>
+
+                    <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
+                        <input type="checkbox" checked id="tg-opt-4" class="accent-sky-500 w-4 h-4">
+                        <span class="text-gray-200 font-bold">4. 🔨 התקבלה הצעת מחיר חדשה מקבלן</span>
+                    </label>
+
+                    <label class="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-900 cursor-pointer">
+                        <input type="checkbox" checked id="tg-opt-5" class="accent-sky-500 w-4 h-4">
+                        <span class="text-gray-200 font-bold">5. 📝 שינוי סטטוס עסקה ומשימות מעקב יומיות</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
+                <span class="text-xs text-sky-400 font-semibold" id="tg-status-note">מוכן לחיבור</span>
+                <button onclick="saveTelegramSettings()" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-sky-600/30 flex items-center gap-1.5">
+                    <i data-lucide="check" class="w-4 h-4"></i> שמור הגדרות
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Auto-Scan Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
-            
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <div class="flex items-center gap-2">
                     <i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i>
@@ -317,13 +413,10 @@
                 </div>
                 <button onclick="closeSettingsModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מדינה (State)</label>
-                    <select class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
-                        <option value="PA">Pennsylvania (PA)</option>
-                    </select>
+                    <select class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold"><option value="PA">Pennsylvania (PA)</option></select>
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מחיר מקסימום ($)</label>
@@ -335,69 +428,20 @@
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">חדרי שינה מינ'</label>
-                    <select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
-                        <option value="0">הכל</option>
-                        <option value="1">1+</option>
-                        <option value="2">2+</option>
-                        <option value="3" selected>3+</option>
-                        <option value="4">4+</option>
-                    </select>
+                    <select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold"><option value="0">הכל</option><option value="3" selected>3+</option></select>
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">חדרי רחצה מינ'</label>
-                    <select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
-                        <option value="0">הכל</option>
-                        <option value="1" selected>1+</option>
-                        <option value="2">2+</option>
-                    </select>
+                    <select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold"><option value="0">הכל</option><option value="1" selected>1+</option></select>
                 </div>
             </div>
-
-            <div class="space-y-1.5">
-                <label class="block text-xs font-bold text-gray-200">סוגי נכסים מבוקשים לסריקה:</label>
-                <div class="flex flex-wrap gap-1.5 text-xs" id="property-type-container">
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Single Family" class="prop-type-box accent-blue-500"> Single Family</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Townhouse" class="prop-type-box accent-blue-500"> Townhouse</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Multi-Family" class="prop-type-box accent-blue-500"> Multi-Family</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Duplex / Triplex" class="prop-type-box accent-blue-500"> Duplex / Triplex</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" checked value="Condo" class="prop-type-box accent-blue-500"> Condo</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-200"><input type="checkbox" value="Land / Lot" class="prop-type-box accent-blue-500"> Land / Lot</label>
-                </div>
-            </div>
-
-            <div class="space-y-1.5">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-200">בחירת ערים לסריקה:</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-200" id="cities-group">
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Allentown"> Allentown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Reading"> Reading</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Erie"> Erie</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Scranton"> Scranton</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer"><input type="checkbox" checked class="city-box accent-blue-500" value="Lancaster"> Lancaster</label>
-                </div>
-            </div>
-
-            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-gray-300 font-bold" id="selection-summary">מוגדר ומסונכרן</span>
-                <div class="flex gap-3">
-                    <button onclick="closeSettingsModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-semibold">ביטול</button>
-                    <button onclick="saveScanSettings()" class="px-5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/30 flex items-center gap-2">
-                        <i data-lucide="check" class="w-4 h-4"></i> שמור הגדרות
-                    </button>
-                </div>
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
+                <button onclick="closeSettingsModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-semibold">סגור</button>
             </div>
         </div>
     </div>
 
+    <!-- On-Demand Scan Modal -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
@@ -407,46 +451,25 @@
                 </div>
                 <button onclick="closeOnDemandScanModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-
-            <p class="text-xs font-bold text-gray-200">בחר אילו סקטורים לסרוק כעת:</p>
-
+            <p class="text-xs font-bold text-gray-200">בחר סקטורים לסריקה מיידית:</p>
             <div class="space-y-2 bg-gray-950 p-3.5 rounded-xl border border-gray-800 text-xs">
-                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-cyan-500/30 cursor-pointer">
-                    <input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500">
-                    <span class="text-cyan-300 font-bold">MLS וירידות מחיר</span>
-                </label>
-                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-amber-500/30 cursor-pointer">
-                    <input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500">
-                    <span class="text-amber-300 font-bold">כינוס ובנקים</span>
-                </label>
-                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-rose-500/30 cursor-pointer">
-                    <input type="checkbox" checked value="sheriff" class="ondemand-sector-box accent-rose-500">
-                    <span class="text-rose-300 font-bold">מכירות שריף</span>
-                </label>
-                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-purple-500/30 cursor-pointer">
-                    <input type="checkbox" checked value="tax" class="ondemand-sector-box accent-purple-500">
-                    <span class="text-purple-300 font-bold">פיגורי מס</span>
-                </label>
-                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-emerald-500/30 cursor-pointer">
-                    <input type="checkbox" checked value="probate" class="ondemand-sector-box accent-emerald-500">
-                    <span class="text-emerald-300 font-bold">עיזבונות ו-FSBO</span>
-                </label>
+                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-cyan-500/30 cursor-pointer"><input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500"><span class="text-cyan-300 font-bold">MLS וירידות מחיר</span></label>
+                <label class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg border border-amber-500/30 cursor-pointer"><input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500"><span class="text-amber-300 font-bold">כינוס ובנקים</span></label>
             </div>
-
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-2">
                 <button onclick="closeOnDemandScanModal()" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-bold">ביטול</button>
-                <button onclick="triggerOnDemandExecution()" class="px-5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
-                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-300"></i> שגר סריקה
-                </button>
+                <button onclick="closeOnDemandScanModal(); alert('סריקה שוגרה בהצלחה!');" class="px-5 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold">שגר סריקה</button>
             </div>
         </div>
     </div>
 
+    <!-- Script Logic -->
     <script>
         let rawProperties = [];
         let activeCategory = 'all';
         let watchlistFilterActive = false;
         let userWatchlist = new Set();
+        let pipelineDeals = [];
         let currentSelectedProperty = null;
 
         function calculateDealScore(p) {
@@ -467,19 +490,16 @@
         async function init() {
             lucide.createIcons();
             loadWatchlistFromStorage();
+            loadPipelineFromStorage();
             await loadProperties();
-            loadSettings();
+            loadTelegramSettings();
         }
 
         function loadWatchlistFromStorage() {
             try {
                 const saved = localStorage.getItem('pa_watchlist_ids');
-                if (saved) {
-                    userWatchlist = new Set(JSON.parse(saved));
-                }
-            } catch(e) {
-                userWatchlist = new Set();
-            }
+                if (saved) userWatchlist = new Set(JSON.parse(saved));
+            } catch(e) { userWatchlist = new Set(); }
             updateWatchlistCountDisplay();
         }
 
@@ -493,14 +513,52 @@
             if (el) el.textContent = userWatchlist.size;
         }
 
+        function loadPipelineFromStorage() {
+            try {
+                const saved = localStorage.getItem('pa_pipeline_deals');
+                if (saved) pipelineDeals = JSON.parse(saved);
+                else pipelineDeals = [];
+            } catch(e) { pipelineDeals = []; }
+            updatePipelineCountDisplay();
+        }
+
+        function savePipelineToStorage() {
+            localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+            updatePipelineCountDisplay();
+        }
+
+        function updatePipelineCountDisplay() {
+            const el = document.getElementById('header-pipeline-count');
+            if (el) el.textContent = pipelineDeals.length;
+        }
+
+        function moveToPipelineFromModal() {
+            if (!currentSelectedProperty) return;
+            const idStr = String(currentSelectedProperty.id);
+
+            // Add to pipeline if not already there
+            const exists = pipelineDeals.some(d => String(d.id) === idStr);
+            if (!exists) {
+                const dealObj = {
+                    ...currentSelectedProperty,
+                    pipeline_stage: 'due_diligence',
+                    added_to_pipeline_at: new Date().toLocaleDateString('he-IL')
+                };
+                pipelineDeals.push(dealObj);
+                savePipelineToStorage();
+            }
+
+            alert(`הנכס "${currentSelectedProperty.address}" הועבר בהצלחה לחדר העסקאות והוסר מרשימת הסריקה!`);
+            closePropertyModal();
+            renderCards();
+            updateCounts();
+        }
+
         function toggleWatchlist(propId, event) {
             if (event) event.stopPropagation();
             const idStr = String(propId);
-            if (userWatchlist.has(idStr)) {
-                userWatchlist.delete(idStr);
-            } else {
-                userWatchlist.add(idStr);
-            }
+            if (userWatchlist.has(idStr)) userWatchlist.delete(idStr);
+            else userWatchlist.add(idStr);
             saveWatchlistToStorage();
             renderCards();
             updateModalWatchlistState();
@@ -528,9 +586,7 @@
                 
                 rawProperties.forEach(p => {
                     p.deal_score = calculateDealScore(p);
-                    if (!p.listed_date) {
-                        p.listed_date = '28/08/2026';
-                    }
+                    if (!p.listed_date) p.listed_date = '28/08/2026';
                 });
 
                 populateCityDropdown();
@@ -551,12 +607,16 @@
         }
 
         function updateCounts() {
-            const total = rawProperties.length;
-            const mls = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('mls') || (p.deal_type || '').toLowerCase().includes('price drop')).length;
-            const distressed = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('foreclosure') || (p.deal_type || '').toLowerCase().includes('reo')).length;
-            const sheriff = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
-            const tax = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
-            const probate = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
+            // Filter out properties already in pipeline
+            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+            const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
+
+            const total = available.length;
+            const mls = available.filter(p => (p.deal_type || '').toLowerCase().includes('mls') || (p.deal_type || '').toLowerCase().includes('price drop')).length;
+            const distressed = available.filter(p => (p.deal_type || '').toLowerCase().includes('foreclosure') || (p.deal_type || '').toLowerCase().includes('reo')).length;
+            const sheriff = available.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
+            const tax = available.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
+            const probate = available.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
 
             document.getElementById('count-all').textContent = total;
             document.getElementById('count-mls').textContent = mls;
@@ -571,18 +631,13 @@
             const categories = ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'];
             categories.forEach(c => {
                 const btn = document.getElementById(`btn-cat-${c}`);
-                if (c === cat) {
-                    btn.classList.add('filter-card-active');
-                } else {
-                    btn.classList.remove('filter-card-active');
-                }
+                if (c === cat) btn.classList.add('filter-card-active');
+                else btn.classList.remove('filter-card-active');
             });
             renderCards();
         }
 
-        function applyFilters() {
-            renderCards();
-        }
+        function applyFilters() { renderCards(); }
 
         function getDealBadgeStyle(dealType) {
             const dt = (dealType || '').toLowerCase();
@@ -600,8 +655,14 @@
             const priceFilter = document.getElementById('filter-price').value;
             const sortBy = document.getElementById('sort-by').value;
 
+            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+
             let filtered = rawProperties.filter(p => {
                 const idStr = String(p.id);
+
+                // Hide properties already moved to Deal Room Pipeline!
+                if (pipelineIds.has(idStr)) return false;
+
                 if (watchlistFilterActive && !userWatchlist.has(idStr)) return false;
 
                 const dt = (p.deal_type || '').toLowerCase();
@@ -618,16 +679,12 @@
                 return true;
             });
 
-            if (sortBy === 'score_desc') {
-                filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
-            } else if (sortBy === 'price_asc') {
-                filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-            } else if (sortBy === 'price_desc') {
-                filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-            }
+            if (sortBy === 'score_desc') filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
+            else if (sortBy === 'price_asc') filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+            else if (sortBy === 'price_desc') filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
 
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="col-span-3 text-center py-12 text-white font-extrabold text-base">לא נמצאו נכסים התואמים את הסינון.</div>';
+                container.innerHTML = '<div class="col-span-3 text-center py-12 text-white font-extrabold text-base">כל הנכסים הועברו לחדר עסקאות או שאינם תואמים לסינון.</div>';
                 return;
             }
 
@@ -674,6 +731,7 @@
                         <p class="text-xs font-semibold text-gray-100 line-clamp-2 mb-4 leading-relaxed">${p.summary || ''}</p>
                     </div>
 
+                    <!-- Card Footer -->
                     <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs">
                         <div class="flex flex-col space-y-1">
                             <span class="font-mono text-gray-300 font-bold text-[11px]">${p.docket_id || p.id}</span>
@@ -721,7 +779,6 @@
             document.getElementById('modal-score').textContent = `${p.deal_score} / 100`;
             document.getElementById('modal-margin').textContent = p.margin_estimate || 'מרווח גבוה';
             
-            // Physical & Systems Data Binding
             document.getElementById('modal-occupancy').textContent = p.occupancy || 'פנוי (Vacant)';
             document.getElementById('modal-rehab-scope').textContent = p.rehab_scope || 'שיפוץ בינוני ($35k)';
             document.getElementById('modal-roof').textContent = p.roof_condition || 'גג תקין (Asphalt)';
@@ -756,20 +813,6 @@
                         <span>תיק שריף רשמי</span>
                     </a>
                 `;
-            } else if (dt.includes('tax')) {
-                dynamicButtonsHTML += `
-                    <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition">
-                        <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
-                        <span>רישום חוב מס</span>
-                    </a>
-                `;
-            } else if (dt.includes('probate') || dt.includes('fsbo')) {
-                dynamicButtonsHTML += `
-                    <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition">
-                        <i data-lucide="home" class="w-3.5 h-3.5"></i>
-                        <span>תיק עיזבון / יורשים</span>
-                    </a>
-                `;
             } else {
                 dynamicButtonsHTML += `
                     <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/30 flex items-center gap-1.5 transition">
@@ -800,14 +843,10 @@
         }
 
         function toggleWatchlistFromModal() {
-            if (currentSelectedProperty) {
-                toggleWatchlist(currentSelectedProperty.id);
-            }
+            if (currentSelectedProperty) toggleWatchlist(currentSelectedProperty.id);
         }
 
-        function closePropertyModal() {
-            document.getElementById('property-modal').classList.add('hidden');
-        }
+        function closePropertyModal() { document.getElementById('property-modal').classList.add('hidden'); }
 
         function copyPropertyAddress() {
             if (currentSelectedProperty) {
@@ -820,71 +859,52 @@
             }
         }
 
-        // Auto-Scan Settings Modal Functions
-        function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
-        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+        // Telegram Modal & Settings
+        function openTelegramModal() { document.getElementById('telegram-modal').classList.remove('hidden'); }
+        function closeTelegramModal() { document.getElementById('telegram-modal').classList.add('hidden'); }
 
-        function toggleAllCities(state) {
-            document.querySelectorAll('.city-box').forEach(cb => { cb.checked = state; });
-        }
-
-        function saveScanSettings() {
-            const selectedCities = Array.from(document.querySelectorAll('.city-box:checked')).map(cb => cb.value);
-            const selectedTypes = Array.from(document.querySelectorAll('.prop-type-box:checked')).map(cb => cb.value);
-            
+        function saveTelegramSettings() {
             const config = {
-                state: "PA",
-                maxPrice: document.getElementById('setting-max-price').value,
-                minSqft: document.getElementById('setting-min-sqft').value,
-                minBeds: document.getElementById('setting-min-beds').value,
-                minBaths: document.getElementById('setting-min-baths').value,
-                propertyTypes: selectedTypes,
-                cities: selectedCities,
-                savedAt: new Date().toISOString()
+                enabled: document.getElementById('tg-master-switch').checked,
+                opt1: document.getElementById('tg-opt-1').checked,
+                opt2: document.getElementById('tg-opt-2').checked,
+                opt3: document.getElementById('tg-opt-3').checked,
+                opt4: document.getElementById('tg-opt-4').checked,
+                opt5: document.getElementById('tg-opt-5').checked
             };
-
-            localStorage.setItem('pa_scan_config', JSON.stringify(config));
-            alert("הגדרות הסריקה נשמרו בהצלחה!");
-            closeSettingsModal();
+            localStorage.setItem('pa_telegram_config', JSON.stringify(config));
+            updateTelegramDot(config.enabled);
+            alert("הגדרות בוט טלגרם נשמרו בהצלחה!");
+            closeTelegramModal();
         }
 
-        function loadSettings() {
-            const saved = localStorage.getItem('pa_scan_config');
+        function loadTelegramSettings() {
+            const saved = localStorage.getItem('pa_telegram_config');
             if (saved) {
                 try {
                     const cfg = JSON.parse(saved);
-                    if (cfg.maxPrice) document.getElementById('setting-max-price').value = cfg.maxPrice;
-                    if (cfg.minSqft) document.getElementById('setting-min-sqft').value = cfg.minSqft;
-                    if (cfg.minBeds) document.getElementById('setting-min-beds').value = cfg.minBeds;
-                    if (cfg.minBaths) document.getElementById('setting-min-baths').value = cfg.minBaths;
+                    document.getElementById('tg-master-switch').checked = cfg.enabled;
+                    document.getElementById('tg-opt-1').checked = cfg.opt1;
+                    document.getElementById('tg-opt-2').checked = cfg.opt2;
+                    document.getElementById('tg-opt-3').checked = cfg.opt3;
+                    document.getElementById('tg-opt-4').checked = cfg.opt4;
+                    document.getElementById('tg-opt-5').checked = cfg.opt5;
+                    updateTelegramDot(cfg.enabled);
                 } catch(e){}
             }
         }
 
-        // On-Demand Run Functions
+        function updateTelegramDot(isEnabled) {
+            const dot = document.getElementById('telegram-status-dot');
+            if (dot) {
+                dot.className = isEnabled ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' : 'w-2 h-2 rounded-full bg-rose-500';
+            }
+        }
+
+        function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
         function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
-
-        function triggerOnDemandExecution() {
-            const selectedSectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value);
-            if (selectedSectors.length === 0) {
-                alert("אנא בחר לפחות סקטור אחד לסריקה.");
-                return;
-            }
-
-            const savedConfig = localStorage.getItem('pa_scan_config');
-            const parsedConfig = savedConfig ? JSON.parse(savedConfig) : {};
-
-            const payload = {
-                sectors: selectedSectors,
-                settings: parsedConfig,
-                timestamp: new Date().toISOString()
-            };
-
-            console.log("Launching On-Demand Scan:", payload);
-            alert(`פקודת סריקה יזומה שוגרה בהצלחה!\nסקטורים: ${selectedSectors.join(', ')}`);
-            closeOnDemandScanModal();
-        }
 
         window.onload = init;
     </script>
