@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PA Real Estate - Deal Room</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800;900&display=swap');
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #080c14;
+            color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- Deal Room Header -->
+    <header class="bg-gray-950/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="p-2 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl text-gray-300 hover:text-white transition flex items-center gap-1.5 text-xs font-bold">
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i> חזרה לסורק
+                </a>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                        📊 חדר עסקאות פעיל (Deal Pipeline)
+                    </h1>
+                    <p class="text-xs text-gray-400">ניהול עסקאות מועברות, שלבי רכישה ותיקיית ארכיון</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl text-xs font-black">
+                    סה"כ בצנרת: <span id="pipeline-total-badge" class="font-mono text-white text-sm">0</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Active Deals Grid -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-black text-white flex items-center gap-2">
+                    <i data-lucide="folder-kanban" class="w-5 h-5 text-amber-400"></i>
+                    עסקאות פעילות בבדיקה ומשא ומתן
+                </h2>
+            </div>
+            
+            <div id="pipeline-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Deals render dynamically -->
+            </div>
+        </section>
+
+        <!-- Archived Deals Section -->
+        <section class="pt-6 border-t border-gray-900">
+            <h3 class="text-xs font-black text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <i data-lucide="archive" class="w-4 h-4 text-gray-400"></i> עסקאות שלא צלחו / ארכיון:
+            </h3>
+            <div id="archived-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 opacity-60">
+                <!-- Archived Deals render dynamically -->
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let pipelineDeals = [];
+        let archivedDeals = [];
+
+        function init() {
+            lucide.createIcons();
+            loadPipelineData();
+            renderPipeline();
+        }
+
+        function loadPipelineData() {
+            try {
+                const pSaved = localStorage.getItem('pa_pipeline_deals');
+                pipelineDeals = pSaved ? JSON.parse(pSaved) : [];
+
+                const aSaved = localStorage.getItem('pa_archived_deals');
+                archivedDeals = aSaved ? JSON.parse(aSaved) : [];
+            } catch(e) {
+                pipelineDeals = [];
+                archivedDeals = [];
+            }
+            document.getElementById('pipeline-total-badge').textContent = pipelineDeals.length;
+        }
+
+        function savePipelineData() {
+            localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+            localStorage.setItem('pa_archived_deals', JSON.stringify(archivedDeals));
+            document.getElementById('pipeline-total-badge').textContent = pipelineDeals.length;
+        }
+
+        function moveToArchive(dealId) {
+            const index = pipelineDeals.findIndex(d => String(d.id) === String(dealId));
+            if (index !== -1) {
+                const [item] = pipelineDeals.splice(index, 1);
+                item.archived_at = new Date().toLocaleDateString('he-IL');
+                archivedDeals.push(item);
+                savePipelineData();
+                renderPipeline();
+            }
+        }
+
+        function restoreFromArchive(dealId) {
+            const index = archivedDeals.findIndex(d => String(d.id) === String(dealId));
+            if (index !== -1) {
+                const [item] = archivedDeals.splice(index, 1);
+                pipelineDeals.push(item);
+                savePipelineData();
+                renderPipeline();
+            }
+        }
+
+        function renderPipeline() {
+            const container = document.getElementById('pipeline-cards-container');
+            const archiveContainer = document.getElementById('archived-cards-container');
+
+            if (pipelineDeals.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-3 text-center py-16 bg-gray-950/60 rounded-2xl border border-gray-900 text-gray-400">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-gray-400"></i>
+                        <p class="font-bold text-white text-base">אין כרגע נכסים בחדר העסקאות.</p>
+                        <p class="text-xs text-gray-300 mt-1">חזור לסורק הראשי, פתח כרטיסיית נכס ולחץ "העבר לחדר עסקאות".</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = pipelineDeals.map(d => `
+                    <div class="bg-gray-950 border border-gray-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-xl transition flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start gap-2 mb-2">
+                                <span class="px-2.5 py-0.5 rounded text-[11px] font-black uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                                    ${d.deal_type || 'Opportunity'}
+                                </span>
+                                <span class="text-xs font-bold text-gray-400">הועבר: ${d.added_to_pipeline_at || 'היום'}</span>
+                            </div>
+
+                            <h3 class="text-lg font-black text-white mb-1">${d.address}</h3>
+                            <p class="text-xs font-bold text-gray-200 mb-3">${d.city}, ${d.county} County, PA ${d.zip || ''}</p>
+                            
+                            <div class="text-2xl font-black text-emerald-300 mb-4">$${(d.price || 0).toLocaleString()}</div>
+
+                            <div class="grid grid-cols-3 gap-2 bg-gray-900 p-2.5 rounded-xl text-center text-xs text-gray-200 mb-4 border border-gray-800">
+                                <div><span class="text-gray-300 block font-bold">חדרים</span><strong class="text-white text-sm">${d.beds || '-'}</strong></div>
+                                <div><span class="text-gray-300 block font-bold">אמבט</span><strong class="text-white text-sm">${d.baths || '-'}</strong></div>
+                                <div><span class="text-gray-300 block font-bold">שטח</span><strong class="text-white text-sm">${d.sqft || '-'}</strong></div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-gray-900 flex justify-between items-center gap-2">
+                            <span class="text-xs text-amber-400 font-bold">● בשלב בדיקת נאותות</span>
+                            <button onclick="moveToArchive('${d.id}')" class="px-3 py-1.5 bg-gray-900 hover:bg-rose-950 hover:text-rose-300 text-gray-300 rounded-lg text-xs font-bold border border-gray-800 transition flex items-center gap-1">
+                                <i data-lucide="archive" class="w-3.5 h-3.5"></i> העבר לארכיון
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            if (archivedDeals.length === 0) {
+                archiveContainer.innerHTML = '<div class="col-span-4 text-xs text-gray-400">אין עסקאות בארכיון.</div>';
+            } else {
+                archiveContainer.innerHTML = archivedDeals.map(d => `
+                    <div class="bg-gray-950 border border-gray-900 p-3.5 rounded-xl text-xs flex justify-between items-center">
+                        <div>
+                            <span class="text-white font-bold block">${d.address}</span>
+                            <span class="text-gray-400 text-[11px]">$${(d.price || 0).toLocaleString()} • ${d.city}</span>
+                        </div>
+                        <button onclick="restoreFromArchive('${d.id}')" class="text-amber-400 hover:underline font-bold text-[11px]">החזר לפעיל</button>
+                    </div>
+                `).join('');
+            }
+
+            lucide.createIcons();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
