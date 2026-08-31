@@ -20,8 +20,9 @@
             transform: translateY(-2px);
         }
         .watchlist-card-active {
-            box-shadow: 0 0 0 2px #f59e0b, 0 10px 15px -3px rgba(245, 158, 11, 0.3);
-            background-color: rgba(245, 158, 11, 0.1) !important;
+            box-shadow: 0 0 0 2px #f59e0b, 0 10px 20px -3px rgba(245, 158, 11, 0.4);
+            background-color: rgba(245, 158, 11, 0.18) !important;
+            border-color: #f59e0b !important;
         }
         .hot-deal-border {
             box-shadow: 0 0 15px -2px rgba(245, 158, 11, 0.25);
@@ -44,26 +45,23 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.2 Live</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V3.3 Live</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
-                <!-- Deal Room Link Button -->
                 <a href="deals.html" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-amber-600/20 transition">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                     📊 חדר עסקאות (Deal Room)
                 </a>
 
-                <!-- On-Demand Run Button -->
                 <button onclick="openOnDemandScanModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="play-circle" class="w-4 h-4"></i>
                     הפעל סריקה יזומה
                 </button>
 
-                <!-- Full Auto-Scan Settings Button -->
                 <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition">
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
                     הגדרות סריקה
@@ -131,15 +129,16 @@
             </button>
         </section>
 
-        <!-- Level 1 Watchlist Quick Filter Strip -->
-        <section class="flex items-center justify-between bg-gray-900/60 border border-gray-800 rounded-xl px-4 py-2.5">
-            <button onclick="toggleWatchlistFilter()" id="btn-watchlist-filter" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold transition">
-                <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+        <!-- Prominent Watchlist Strip (Enlarged Button) -->
+        <section class="flex flex-wrap items-center justify-between bg-gray-900/70 border border-gray-800 rounded-2xl p-3 sm:px-5 gap-3 shadow-md">
+            <button onclick="toggleWatchlistFilter()" id="btn-watchlist-filter" class="flex items-center gap-3 px-5 py-2.5 rounded-xl border-2 border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-sm font-extrabold transition shadow-lg shadow-amber-500/10">
+                <i data-lucide="star" class="w-5 h-5 text-amber-400 fill-amber-400"></i>
                 <span>נכסים במעקב פעיל (Watchlist)</span>
-                <span class="px-1.5 py-0.2 bg-amber-500/20 rounded font-mono text-white text-[11px]" id="count-watchlist">0</span>
+                <span class="px-2.5 py-0.5 bg-amber-500/25 border border-amber-500/40 rounded-lg font-mono text-white text-xs font-bold" id="count-watchlist">0</span>
             </button>
 
-            <div class="text-xs text-gray-400 hidden sm:block">
+            <div class="text-xs text-gray-400 flex items-center gap-2">
+                <i data-lucide="cloud" class="w-4 h-4 text-blue-400"></i>
                 <span>כל הנכסים המסומנים בכוכב נשמרים ומסונכרנים בענן לכל המכשירים.</span>
             </div>
         </section>
@@ -184,12 +183,12 @@
 
         <!-- Properties Grid -->
         <section id="properties-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Cards rendered dynamically -->
+            <!-- Dynamic Cards -->
         </section>
 
     </main>
 
-    <!-- Property Detail Modal -->
+    <!-- Detailed Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
             
@@ -282,7 +281,6 @@
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                     <span id="copy-btn-text">העתק כתובת</span>
                 </button>
-                
                 <div class="flex flex-wrap gap-2" id="modal-action-buttons"></div>
             </div>
         </div>
@@ -624,7 +622,6 @@
                     </div>
                     ` : ''}
 
-                    <!-- Star Button on Card -->
                     <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 border border-gray-800 hover:border-amber-500/50 text-gray-400 hover:text-amber-400 z-10 transition">
                         <i data-lucide="star" class="w-4 h-4 ${isWatchlisted ? 'text-amber-400 fill-amber-400' : ''}"></i>
                     </button>
@@ -706,7 +703,7 @@
             let dynamicButtonsHTML = `
                 <a href="${googleSearchUrl}" target="_blank" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
                     <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                    <span>חיפוש הנכס ברשת</span>
+                    <span>חיפוש ברשת</span>
                 </a>
                 <a href="${googleMapsUrl}" target="_blank" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
                     <i data-lucide="map" class="w-3.5 h-3.5"></i>
@@ -718,14 +715,14 @@
                 dynamicButtonsHTML += `
                     <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-600/30 flex items-center gap-1.5 transition">
                         <i data-lucide="gavel" class="w-3.5 h-3.5"></i>
-                        <span>צפייה בתיק שריף רשמי</span>
+                        <span>תיק שריף רשמי</span>
                     </a>
                 `;
             } else if (dt.includes('tax')) {
                 dynamicButtonsHTML += `
                     <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition">
                         <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
-                        <span>רישום חוב מס מחוזי</span>
+                        <span>רישום חוב מס</span>
                     </a>
                 `;
             } else if (dt.includes('probate') || dt.includes('fsbo')) {
@@ -739,7 +736,7 @@
                 dynamicButtonsHTML += `
                     <a href="${p.url || googleSearchUrl}" target="_blank" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/30 flex items-center gap-1.5 transition">
                         <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                        <span>מעבר לאתר המקור</span>
+                        <span>אתר המקור</span>
                     </a>
                 `;
             }
