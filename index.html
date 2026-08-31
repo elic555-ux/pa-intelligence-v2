@@ -55,7 +55,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V4.3 Clean Engine</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">V4.4 Final Sync</span>
                     </h1>
                     <p class="text-xs text-gray-200">מודיעין נדל"ן ואיתור עסקאות מתחת למחיר שוק בפנסילבניה</p>
                 </div>
@@ -455,7 +455,7 @@
                 </div>
             </div>
 
-            <!-- Dynamic 8 Major Cities Selection (Rendered via State) -->
+            <!-- Dynamic 8 Major Cities Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">8 הערים המרכזיות (Hubs):</span>
@@ -466,11 +466,11 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-200" id="cities-dynamic-container">
-                    <!-- Injected dynamically via state -->
+                    <!-- Dynamic rendering -->
                 </div>
             </div>
 
-            <!-- Dynamic 25 Target Counties in PA (Rendered via State) -->
+            <!-- Dynamic 25 Target Counties in PA -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">25 המחוזות המובילים לסריקה (PA Counties):</span>
@@ -481,7 +481,7 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-5 gap-1.5 text-xs text-gray-200" id="counties-dynamic-container">
-                    <!-- Injected dynamically via state -->
+                    <!-- Dynamic rendering -->
                 </div>
             </div>
 
@@ -543,7 +543,7 @@
         </div>
     </div>
 
-    <!-- Script Logic: Senior Architecture -->
+    <!-- Script Logic: Senior State Architecture -->
     <script>
         let rawProperties = [];
         let activeCategory = 'all';
@@ -552,7 +552,6 @@
         let pipelineDeals = [];
         let currentSelectedProperty = null;
 
-        // SINGLE SOURCE OF TRUTH: 25 Counties & 8 Cities
         const PA_HUBS = [
             { city: 'Philadelphia', county: 'Philadelphia' },
             { city: 'Pittsburgh', county: 'Allegheny' },
@@ -572,45 +571,40 @@
             "Monroe", "Franklin", "Lebanon", "Schuylkill", "Cambria"
         ];
 
-        // Centralized Selection State
+        // Centralized State - Default: All 25 Counties Selected
         let selectedCountiesState = new Set(ALL_25_COUNTIES);
 
         function renderLocationCheckboxes() {
-            // Render 8 Cities
+            // Render 8 Hub Cities
             const citiesContainer = document.getElementById('cities-dynamic-container');
-            citiesContainer.innerHTML = PA_HUBS.map(hub => {
-                const isChecked = selectedCountiesState.has(hub.county);
-                return `
-                    <div onclick="toggleHubDirectly('${hub.county}')" class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 transition select-none">
-                        <input type="checkbox" ${isChecked ? 'checked' : ''} class="accent-blue-500 w-4 h-4 pointer-events-none">
-                        <span class="text-white font-bold text-xs">${hub.city}</span>
-                    </div>
-                `;
-            }).join('');
+            if (citiesContainer) {
+                citiesContainer.innerHTML = PA_HUBS.map(hub => {
+                    const isChecked = selectedCountiesState.has(hub.county);
+                    return `
+                        <div onclick="toggleLocationItem('${hub.county}')" class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border ${isChecked ? 'border-blue-500/80 bg-blue-950/20' : 'border-gray-800'} cursor-pointer hover:border-blue-400 transition select-none">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} class="accent-blue-500 w-4 h-4 pointer-events-none">
+                            <span class="${isChecked ? 'text-blue-300 font-black' : 'text-gray-400 font-semibold'} text-xs">${hub.city}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
 
             // Render 25 Counties
             const countiesContainer = document.getElementById('counties-dynamic-container');
-            countiesContainer.innerHTML = ALL_25_COUNTIES.map(county => {
-                const isChecked = selectedCountiesState.has(county);
-                return `
-                    <div onclick="toggleCountyDirectly('${county}')" class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 transition select-none">
-                        <input type="checkbox" ${isChecked ? 'checked' : ''} class="accent-blue-500 w-4 h-4 pointer-events-none">
-                        <span class="text-white font-bold text-xs">${county}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function toggleHubDirectly(countyName) {
-            if (selectedCountiesState.has(countyName)) {
-                selectedCountiesState.delete(countyName);
-            } else {
-                selectedCountiesState.add(countyName);
+            if (countiesContainer) {
+                countiesContainer.innerHTML = ALL_25_COUNTIES.map(county => {
+                    const isChecked = selectedCountiesState.has(county);
+                    return `
+                        <div onclick="toggleLocationItem('${county}')" class="flex items-center gap-1.5 bg-gray-950 p-2 rounded-lg border ${isChecked ? 'border-blue-500/80 bg-blue-950/20' : 'border-gray-800'} cursor-pointer hover:border-blue-400 transition select-none">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} class="accent-blue-500 w-4 h-4 pointer-events-none">
+                            <span class="${isChecked ? 'text-blue-300 font-black' : 'text-gray-400 font-semibold'} text-xs">${county}</span>
+                        </div>
+                    `;
+                }).join('');
             }
-            renderLocationCheckboxes();
         }
 
-        function toggleCountyDirectly(countyName) {
+        function toggleLocationItem(countyName) {
             if (selectedCountiesState.has(countyName)) {
                 selectedCountiesState.delete(countyName);
             } else {
@@ -1084,13 +1078,13 @@
                 savedAt: new Date().toISOString()
             };
 
-            localStorage.setItem('pa_scan_config', JSON.stringify(config));
-            alert("הגדרות הסריקה נשמרו בהצלחה!");
+            localStorage.setItem('pa_scan_config_v4', JSON.stringify(config));
+            alert("כל 25 המחוזות, 8 הערים והגדרות הסריקה נשמרו בהצלחה!");
             closeSettingsModal();
         }
 
         function loadScanSettings() {
-            const saved = localStorage.getItem('pa_scan_config');
+            const saved = localStorage.getItem('pa_scan_config_v4');
             if (saved) {
                 try {
                     const cfg = JSON.parse(saved);
@@ -1099,15 +1093,22 @@
                     if (cfg.minBeds) document.getElementById('setting-min-beds').value = cfg.minBeds;
                     if (cfg.minBaths) document.getElementById('setting-min-baths').value = cfg.minBaths;
                     
-                    if (cfg.counties && Array.isArray(cfg.counties)) {
+                    if (cfg.counties && Array.isArray(cfg.counties) && cfg.counties.length > 0) {
                         selectedCountiesState = new Set(cfg.counties);
+                    } else {
+                        selectedCountiesState = new Set(ALL_25_COUNTIES);
                     }
+
                     if (cfg.propertyTypes && Array.isArray(cfg.propertyTypes)) {
                         document.querySelectorAll('.prop-type-box').forEach(cb => {
                             cb.checked = cfg.propertyTypes.includes(cb.value);
                         });
                     }
-                } catch(e){}
+                } catch(e){
+                    selectedCountiesState = new Set(ALL_25_COUNTIES);
+                }
+            } else {
+                selectedCountiesState = new Set(ALL_25_COUNTIES);
             }
             renderLocationCheckboxes();
         }
@@ -1123,7 +1124,7 @@
                 return;
             }
 
-            const savedConfig = localStorage.getItem('pa_scan_config');
+            const savedConfig = localStorage.getItem('pa_scan_config_v4');
             const parsedConfig = savedConfig ? JSON.parse(savedConfig) : {};
 
             const payload = {
