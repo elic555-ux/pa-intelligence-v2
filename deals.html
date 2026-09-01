@@ -34,7 +34,7 @@
                         חדר עסקאות וניהול צנרת (Deal Room Pipeline)
                         <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">עצמאי</span>
                     </h1>
-                    <p class="text-xs text-gray-400">ניהול שלבי עסקאות, מחקר מעמיק ומעקב רכישה</p>
+                    <p class="text-xs text-gray-400">ניהול שלבי עסקאות, מחקר מעמיק, אומדן שיפוץ ובקרת קבלנים</p>
                 </div>
             </div>
 
@@ -158,16 +158,29 @@
                                 <div><span class="text-gray-500 block">אמבט</span><strong class="text-white">${d.baths || '-'}</strong></div>
                                 <div><span class="text-gray-500 block">שטח</span><strong class="text-white">${d.sqft ? d.sqft + ' sqft' : '-'}</strong></div>
                             </div>
+
+                            ${d.rehab_scope ? `
+                            <div class="mt-2.5 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs font-bold text-amber-300">
+                                ${d.rehab_scope}
+                            </div>` : ''}
                         </div>
 
                         <!-- Action Buttons in Deal Room -->
                         <div class="space-y-2 pt-3 border-t border-gray-800">
-                            <button onclick="runDeepResearch('${d.id}')" class="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition">
+                            <!-- Button 1: Research Engine -->
+                            <button onclick="runDeepResearch('${d.id}')" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition">
                                 <i data-lucide="microscope" class="w-4 h-4 text-amber-300"></i>
-                                <span>🔬 בצע מחקר מעמיק (Deep Due Diligence)</span>
+                                <span>🔬 בצע מחקר מעמיק (Due Diligence)</span>
                             </button>
 
-                            <div class="flex gap-2">
+                            <!-- Button 2: Rehab Estimator & Contractor Checker -->
+                            <button onclick="runRehabEstimator('${d.id}')" class="w-full py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition">
+                                <i data-lucide="hammer" class="w-4 h-4 text-amber-200"></i>
+                                <span>🔨 מחירון שיפוץ ובקרת קבלנים</span>
+                            </button>
+
+                            <!-- Stage Select & Delete -->
+                            <div class="flex gap-2 pt-1">
                                 <select onchange="updateStage('${d.id}', this.value)" class="flex-1 bg-gray-950 border border-gray-700 text-gray-200 text-xs rounded-xl px-2.5 py-1.5 font-bold">
                                     <option value="due_diligence" ${(!d.pipeline_stage || d.pipeline_stage === 'due_diligence') ? 'selected' : ''}>בדיקת נאותות</option>
                                     <option value="offer" ${d.pipeline_stage === 'offer' ? 'selected' : ''}>הגשת הצעה / מו"מ</option>
@@ -209,10 +222,17 @@
             }
         }
 
+        function runRehabEstimator(id) {
+            if (typeof openRehabEstimator === 'function') {
+                openRehabEstimator(id);
+            }
+        }
+
         window.onload = init;
     </script>
 
-    <!-- Connect Research Engine File -->
+    <!-- Connect External Modules -->
     <script src="research_engine.js"></script>
+    <script src="rehab_estimator.js"></script>
 </body>
 </html>
