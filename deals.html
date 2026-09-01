@@ -365,23 +365,29 @@
                     </div>
                 </div>
 
-                <button onclick="runContractorAudit()" class="w-full py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 flex items-center justify-center gap-1.5 transition">
-                    <i data-lucide="check-circle" class="w-4 h-4"></i> בצע בדיקת נאותות להצעה מול מחירי השוק
-                </button>
+                <!-- Action Buttons: Run Audit & Always-Visible Save Button -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button onclick="runContractorAudit()" class="py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 flex items-center justify-center gap-1.5 transition">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> בצע בדיקת נאותות להצעה
+                    </button>
+                    <button onclick="saveCurrentAuditedQuote()" class="py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition">
+                        <i data-lucide="bookmark" class="w-4 h-4 text-blue-400"></i> שמור בדיקת הצעה זו
+                    </button>
+                </div>
 
-                <!-- Audit Output with Save Button -->
+                <!-- Audit Output Box -->
                 <div id="audit-results-box" class="hidden bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2.5">
                     <!-- Dynamic analysis injected here -->
                 </div>
 
-                <!-- Saved Audited Quotes Section -->
-                <div id="saved-quotes-section" class="pt-2 border-t border-gray-800 space-y-2">
+                <!-- Saved Audited Quotes Section (Always Visible) -->
+                <div id="saved-quotes-section" class="pt-2.5 border-t border-gray-800 space-y-2">
                     <div class="flex justify-between items-center">
                         <span class="font-extrabold text-white text-xs flex items-center gap-1.5">
                             <i data-lucide="bookmark" class="w-3.5 h-3.5 text-blue-400"></i>
-                            הצעות מחיר שנבדקו ונשמרו:
+                            הצעות מחיר שנבדקו ונשמרו במערכת:
                         </span>
-                        <button onclick="clearSavedQuotes()" class="text-[11px] text-gray-500 hover:text-rose-400">נקה הכל</button>
+                        <button onclick="clearSavedQuotes()" class="text-[11px] text-gray-500 hover:text-rose-400 transition">נקה הכל</button>
                     </div>
                     <div id="saved-quotes-list" class="space-y-1.5">
                         <!-- Populated dynamically -->
@@ -654,7 +660,7 @@
             renderSavedCustomResearches();
         }
 
-        // Saved Audited Quotes Store
+        // Saved Audited Quotes Store (Persistent)
         function loadSavedAuditedQuotes() {
             try {
                 const saved = localStorage.getItem('pa_saved_audited_quotes');
@@ -670,22 +676,24 @@
             if (!listEl) return;
 
             if (savedAuditedQuotes.length === 0) {
-                listEl.innerHTML = `<span class="text-[11px] text-gray-500">אין עדיין הצעות שנשמרו. בצע בדיקת הצעה ולחץ "שמור בדיקת הצעה זו".</span>`;
+                listEl.innerHTML = `<span class="text-[11px] text-gray-500">אין עדיין הצעות שנשמרו. הזן סכום, לחץ "שמור בדיקת הצעה זו", ותוכל לחזור אליה בכל זמן.</span>`;
                 return;
             }
 
             listEl.innerHTML = savedAuditedQuotes.map((item, idx) => `
-                <div class="flex items-center justify-between bg-gray-900 px-3 py-2 rounded-lg border border-gray-800 text-[11px]">
+                <div class="flex items-center justify-between bg-gray-900 px-3 py-2 rounded-xl border border-gray-800 text-[11px]">
                     <div class="space-y-0.5">
                         <div class="flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                            <strong class="text-white">${item.city}, PA</strong>
-                            <span class="text-emerald-400 font-bold">הצעת קבלן: $${item.total.toLocaleString()}</span>
-                            <span class="text-gray-400 text-[10px]">(${item.date})</span>
+                            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <strong class="text-white text-xs">${item.city}, PA</strong>
+                            <span class="text-emerald-400 font-black">הצעת קבלן: $${(item.total || 0).toLocaleString()}</span>
+                            <span class="text-gray-500 font-mono text-[10px]">[${item.date}]</span>
                         </div>
-                        <p class="text-gray-400 text-[10px] truncate max-w-md">${item.summary}</p>
+                        <p class="text-gray-300 text-[11px] truncate max-w-md">${item.summary || item.text || 'נשמרה הצעת מחיר'}</p>
                     </div>
-                    <button onclick="deleteSavedQuote(${idx})" class="text-gray-500 hover:text-rose-400 p-1" title="מחק"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteSavedQuote(${idx})" class="text-gray-500 hover:text-rose-400 p-1.5 transition" title="מחק הצעה שמורה">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
                 </div>
             `).join('');
 
@@ -693,8 +701,24 @@
         }
 
         function saveCurrentAuditedQuote() {
-            if (!latestAuditData) return;
-            savedAuditedQuotes.unshift(latestAuditData);
+            const text = document.getElementById('quote-text-input')?.value.trim() || '';
+            const total = Number(document.getElementById('quote-total-amount')?.value) || 0;
+            const city = document.getElementById('quote-city')?.value || 'Wilkes-Barre';
+
+            if (total <= 0 && text.length === 0) {
+                alert("אנא הזן סכום או טקסט של הצעת המחיר לפני השמירה.");
+                return;
+            }
+
+            const quoteObj = latestAuditData || {
+                city: city,
+                total: total,
+                text: text || "הצעת מחיר כללית",
+                summary: text ? `סעיפים: ${text.slice(0, 45)}...` : `הצעת מחיר ב-${city}`,
+                date: new Date().toLocaleDateString('he-IL')
+            };
+
+            savedAuditedQuotes.unshift(quoteObj);
             localStorage.setItem('pa_saved_audited_quotes', JSON.stringify(savedAuditedQuotes));
             renderSavedAuditedQuotes();
             alert("הצעת המחיר נשמרה בהצלחה במערכת.");
@@ -707,9 +731,11 @@
         }
 
         function clearSavedQuotes() {
-            savedAuditedQuotes = [];
-            localStorage.setItem('pa_saved_audited_quotes', JSON.stringify([]));
-            renderSavedAuditedQuotes();
+            if (confirm("האם למחוק את כל הצעות המחיר השמורות?")) {
+                savedAuditedQuotes = [];
+                localStorage.setItem('pa_saved_audited_quotes', JSON.stringify([]));
+                renderSavedAuditedQuotes();
+            }
         }
 
         function updateSummaryCounters() {
@@ -928,6 +954,7 @@
                 city: city,
                 total: total,
                 summary: verdict,
+                text: text,
                 date: new Date().toLocaleDateString('he-IL')
             };
 
@@ -936,12 +963,7 @@
             resBox.innerHTML = `
                 <div class="flex justify-between items-center border-b border-gray-800 pb-2">
                     <strong class="text-white text-sm">תוצאות בדיקת נאותות להצעה:</strong>
-                    <div class="flex items-center gap-2">
-                        ${statusBadge}
-                        <button onclick="saveCurrentAuditedQuote()" class="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-lg text-xs font-bold flex items-center gap-1 transition">
-                            <i data-lucide="bookmark" class="w-3.5 h-3.5"></i> שמור בדיקת הצעה זו
-                        </button>
-                    </div>
+                    ${statusBadge}
                 </div>
                 <p class="text-gray-200 text-xs font-bold leading-relaxed">${verdict}</p>
                 <div class="space-y-1 pt-1 border-t border-gray-800 text-[11px] text-gray-400">
