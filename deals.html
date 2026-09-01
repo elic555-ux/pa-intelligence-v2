@@ -243,7 +243,7 @@
                 </button>
             </div>
 
-            <!-- Tab 1: Catalog & Dynamic Query -->
+            <!-- Tab 1: Clean Catalog & Dynamic Query (No clutter) -->
             <div id="tab-item-check" class="space-y-3.5 text-xs">
                 
                 <!-- City Selector for Pricing Adjustment -->
@@ -318,27 +318,13 @@
                     </div>
                 </div>
 
-                <!-- Display Result Box -->
+                <!-- Display Result Box with Clear Subtle SqFt / Unit Rates -->
                 <div id="item-pricing-details" class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2.5">
                     <!-- Populated dynamically -->
                 </div>
-
-                <!-- Saved Estimates Section Inside Modal -->
-                <div id="saved-estimates-section" class="pt-2 border-t border-gray-800 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="font-extrabold text-white text-xs flex items-center gap-1.5">
-                            <i data-lucide="bookmark" class="w-3.5 h-3.5 text-blue-400"></i>
-                            אומדנים שמורים במערכת:
-                        </span>
-                        <button onclick="clearSavedEstimates()" class="text-[11px] text-gray-500 hover:text-rose-400">נקה הכל</button>
-                    </div>
-                    <div id="saved-estimates-list" class="space-y-1.5">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
             </div>
 
-            <!-- Tab 2: Quote / Document Audit -->
+            <!-- Tab 2: Quote / Document Audit with Dedicated Save Facility -->
             <div id="tab-quote-audit" class="space-y-3.5 text-xs hidden">
                 <div>
                     <label class="block font-bold text-gray-200 mb-1.5">העלה קובץ הצעה (PDF / תמונה / צילום מסמך בכתב יד):</label>
@@ -373,6 +359,8 @@
                             <option value="Lancaster">Lancaster</option>
                             <option value="Wilkes-Barre" selected>Wilkes-Barre</option>
                             <option value="Harrisburg">Harrisburg</option>
+                            <option value="York">York</option>
+                            <option value="Altoona">Altoona</option>
                         </select>
                     </div>
                 </div>
@@ -381,8 +369,23 @@
                     <i data-lucide="check-circle" class="w-4 h-4"></i> בצע בדיקת נאותות להצעה מול מחירי השוק
                 </button>
 
-                <div id="audit-results-box" class="hidden bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2">
+                <!-- Audit Output with Save Button -->
+                <div id="audit-results-box" class="hidden bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2.5">
                     <!-- Dynamic analysis injected here -->
+                </div>
+
+                <!-- Saved Audited Quotes Section -->
+                <div id="saved-quotes-section" class="pt-2 border-t border-gray-800 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-extrabold text-white text-xs flex items-center gap-1.5">
+                            <i data-lucide="bookmark" class="w-3.5 h-3.5 text-blue-400"></i>
+                            הצעות מחיר שנבדקו ונשמרו:
+                        </span>
+                        <button onclick="clearSavedQuotes()" class="text-[11px] text-gray-500 hover:text-rose-400">נקה הכל</button>
+                    </div>
+                    <div id="saved-quotes-list" class="space-y-1.5">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
             </div>
 
@@ -396,10 +399,10 @@
     <script>
         let pipelineDeals = [];
         let savedCustomResearches = [];
-        let savedRehabEstimates = [];
+        let savedAuditedQuotes = [];
         let showArchive = false;
         let currentResearchProperty = null;
-        let activeItemData = null;
+        let latestAuditData = null;
 
         // Pennsylvania Macro Data
         const COUNTY_AI_MACRO_DATA = {
@@ -452,7 +455,6 @@
             "Wilkes-Barre": 85000, "Harrisburg": 125000, "York": 115000, "Altoona": 78000
         };
 
-        // City cost multipliers relative to Wilkes-Barre baseline
         const CITY_COST_MULTIPLIER = {
             "Philadelphia": 1.25,
             "Pittsburgh": 1.15,
@@ -468,38 +470,38 @@
             "Altoona": 0.92
         };
 
-        // Comprehensive 25+ Item Rehab Catalog
+        // Comprehensive 25+ Item Rehab Catalog with Subtle Unit Rates
         const REHAB_PRICE_CATALOG = {
-            "roof_full": { title: "החלפת גג אספלט מלא (Asphalt Shingles)", baseMin: 6500, baseMax: 9500, paRate: "$3.60 – $4.80 ל-SqFt כולל פירוק ישן", proAlternative: "הזמנת לוחות GAF Timberline ישירות מחנות חומרי גגות (ABC Supply) מוזילה ב-20% לעומת קבלן שמספק חומרים." },
-            "roof_repair": { title: "תיקון גג מקומי ונזילות (Roof Leak Repair)", baseMin: 450, baseMax: 1200, paRate: "$450 – $1,200 לתיקון מוקדי נזילה ופלאשינג", proAlternative: "החלפת פלאשינג סביב ארובה וצינורות אוורור עם מסטיק גגות מקצועי של Henry פותרת 80% מהנזילות." },
-            "gutters": { title: "החלפת מרזבים לכל הבית (Seamless Gutters)", baseMin: 1100, baseMax: 2200, paRate: "$8.50 – $12.00 ל-Linear Foot כולל התקנה", proAlternative: "מרזבי אלומיניום 5-אינץ' רציפים ללא חיבורים מונעים חדירת מים לקירות ומרתפים לאורך שנים." },
-            "siding": { title: "התקנת סיידינג ויניל חיצוני (Vinyl Siding)", baseMin: 7500, baseMax: 13500, paRate: "$5.50 – $8.00 ל-SqFt כולל בידוד Foam", proAlternative: "מותג CertainTeed MainStreet מעניק עמידות מעולה במזג אוויר קר של PA במחיר סיטונאי נגיש." },
-            "windows_10": { title: "החלפת 10 חלונות כפולים (Double-Hung Vinyl)", baseMin: 4500, baseMax: 7800, paRate: "$450 – $750 לחלון כולל עבודה ואיטום", proAlternative: "חלונות מבודדים של Andersen 100 Series או Simonton מ-Home Depot Pro Desk חוסכים כ-$200 לחלון." },
-            "entry_door": { title: "החלפת דלת כניסה ראשית מבודדת (Steel Door)", baseMin: 650, baseMax: 1450, paRate: "$700 – $1,400 כולל משקוף חדש וידית", proAlternative: "דלת פלדה מבודדת של Masonite מגיעה צבועה ומוכנה להתקנה מהירה של שעתיים." },
+            "roof_full": { title: "החלפת גג אספלט מלא (Asphalt Shingles)", baseMin: 6500, baseMax: 9500, paRate: "$3.60 – $4.80 ל-SqFt גג כולל פירוק ופינוי פסולת", proAlternative: "הזמנת לוחות GAF Timberline ישירות מחנות חומרי גגות (ABC Supply) מוזילה ב-20% לעומת קבלן שמספק חומרים." },
+            "roof_repair": { title: "תיקון גג מקומי ונזילות (Roof Leak Repair)", baseMin: 450, baseMax: 1200, paRate: "$450 – $1,200 לתיקון מוקדי נזילה ופלאשינג סביב ארובה", proAlternative: "החלפת פלאשינג סביב ארובה וצינורות אוורור עם מסטיק גגות מקצועי של Henry פותרת 80% מהנזילות." },
+            "gutters": { title: "החלפת מרזבים לכל הבית (Seamless Gutters)", baseMin: 1100, baseMax: 2200, paRate: "$8.50 – $12.00 ל-Linear Foot (מטר אורך) כולל התקנה", proAlternative: "מרזבי אלומיניום 5-אינץ' רציפים ללא חיבורים מונעים חדירת מים לקירות ומרתפים לאורך שנים." },
+            "siding": { title: "התקנת סיידינג ויניל חיצוני (Vinyl Siding)", baseMin: 7500, baseMax: 13500, paRate: "$5.50 – $8.00 ל-SqFt קיר כולל שכבת בידוד Foam", proAlternative: "מותג CertainTeed MainStreet מעניק עמידות מעולה במזג אוויר קר של PA במחיר סיטונאי נגיש." },
+            "windows_10": { title: "החלפת 10 חלונות כפולים (Double-Hung Vinyl)", baseMin: 4500, baseMax: 7800, paRate: "$450 – $750 לחלון כולל עבודה, פירוק ישן ואיטום", proAlternative: "חלונות מבודדים של Andersen 100 Series או Simonton מ-Home Depot Pro Desk חוסכים כ-$200 לחלון." },
+            "entry_door": { title: "החלפת דלת כניסה ראשית מבודדת (Steel Door)", baseMin: 650, baseMax: 1450, paRate: "$700 – $1,400 לדלת כולל משקוף חדש, איטום וידית", proAlternative: "דלת פלדה מבודדת של Masonite מגיעה צבועה ומוכנה להתקנה מהירה של שעתיים." },
             "garage_door": { title: "דלת מוסך חשמלית כולל מנוע (Garage Door)", baseMin: 1200, baseMax: 2200, paRate: "$1,300 – $2,100 לדלת מבודדת כולל מנוע Chamberlain", proAlternative: "רכישת דלת Clopay מבודדת עם מנוע שקט של LiftMaster ישירות מחנות דלתות." },
             
-            "hvac": { title: "מערכת חימום ומיזוג מרכזי חדשה (HVAC System)", baseMin: 7200, baseMax: 11000, paRate: "התקנה מלאה כולל תעלות: $8,000 – $10,500", proAlternative: "מערכות Goodman או Gree בדירוג SEER2 14.3 מספקות אחריות 10 שנים בעלות של כ-$4,200 בחנות סיטונאית." },
-            "water_heater_50": { title: "דוד מים 50 גלון (Water Heater)", baseMin: 1200, baseMax: 1850, paRate: "$1,400 ממוצע כולל פינוי הישן", proAlternative: "רכישת דוד Rheem ב-Home Depot Pro Desk ($620) והעסקת שרברב עצמאי ב-$450 חוסכת כ-$700." },
-            "tankless_heater": { title: "דוד מים ללא מיכל בגז (Tankless Water Heater)", baseMin: 2400, baseMax: 3800, paRate: "$2,800 ממוצע כולל חיבורי גז וצנרת", proAlternative: "יחידות Rinnai או Navien חוסכות מקום ומעלות את שווי השכירות של הנכס." },
-            "electric_panel": { title: "שדרוג לוח חשמל ל-200 אמפר (Panel 200A)", baseMin: 2200, baseMax: 3400, paRate: "$2,500 ממוצע ב-PA", proAlternative: "וודא שההצעה כוללת את תיאום הניתוק מול PPL / PECO ואישור בודק מוסמך (Underwriter Certificate)." },
-            "rewire_full": { title: "חיווט חשמל מלא לבית (Full Rewire Romex)", baseMin: 6500, baseMax: 11500, paRate: "$5.00 – $7.50 ל-SqFt", proAlternative: "החלפת חוטי בד/קנוב-אנד-טיוב ישנים לחוטי Romex מודרניים מאפשרת קבלת ביטוח נכס זול בחצי." },
-            "plumbing_pex": { title: "החלפת צנרת מים מלאה ל-PEX (Repipe)", baseMin: 3200, baseMax: 5800, paRate: "$3,500 – $5,500 לבית סטנדרטי", proAlternative: "צנרת PEX-A גמישה חוסכת חצי מזמן העבודה של נחושת ואינה מתבקעת בקפיאות חורף." },
-            "sewer_line": { title: "תיקון / החלפת קו ביוב ראשי (Main Sewer)", baseMin: 3500, baseMax: 7500, paRate: "$85 – $150 ל-Foot חפירה והחלפת קו", proAlternative: "בדיקת מצלמה מקדימה (Sewer Scope) בעלות $150 תמנע חפירה מיותרת ותאתר את מיקום הסתימה המדויק." },
-            "french_drain": { title: "איטום מרתף ומשאבת ניקוז (French Drain)", baseMin: 3800, baseMax: 7200, paRate: "$55 – $80 ל-Linear Foot היקפי", proAlternative: "התקנת משאבת גיבוי מופעלת סוללה (Battery Backup Pump) מונעת הצפות בזמן הפסקות חשמל בסופות." },
+            "hvac": { title: "מערכת חימום ומיזוג מרכזי חדשה (HVAC System)", baseMin: 7200, baseMax: 11000, paRate: "$8,000 – $10,500 ליחידת 2.5–3 טון כולל חיבור תעלות", proAlternative: "מערכות Goodman או Gree בדירוג SEER2 14.3 מספקות אחריות 10 שנים בעלות של כ-$4,200 בחנות סיטונאית." },
+            "water_heater_50": { title: "דוד מים 50 גלון (Water Heater)", baseMin: 1200, baseMax: 1850, paRate: "$1,400 ממוצע כולל דוד, התקנה ופינוי הישן", proAlternative: "רכישת דוד Rheem ב-Home Depot Pro Desk ($620) והעסקת שרברב עצמאי ב-$450 חוסכת כ-$700." },
+            "tankless_heater": { title: "דוד מים ללא מיכל בגז (Tankless Water Heater)", baseMin: 2400, baseMax: 3800, paRate: "$2,800 ממוצע כולל אספקת יחידה וחיבורי גז וצנרת", proAlternative: "יחידות Rinnai או Navien חוסכות מקום ומעלות את שווי השכירות של הנכס." },
+            "electric_panel": { title: "שדרוג לוח חשמל ל-200 אמפר (Panel 200A)", baseMin: 2200, baseMax: 3400, paRate: "$2,500 ממוצע כולל מפסקים, הארקה ותיאום חברת חשמל", proAlternative: "וודא שההצעה כוללת את תיאום הניתוק מול PPL / PECO ואישור בודק מוסמך (Underwriter Certificate)." },
+            "rewire_full": { title: "חיווט חשמל מלא לבית (Full Rewire Romex)", baseMin: 6500, baseMax: 11500, paRate: "$5.00 – $7.50 ל-SqFt שטח רצפה כולל פתיחת וסגירת גבס", proAlternative: "החלפת חוטי בד/קנוב-אנד-טיוב ישנים לחוטי Romex מודרניים מאפשרת קבלת ביטוח נכס זול בחצי." },
+            "plumbing_pex": { title: "החלפת צנרת מים מלאה ל-PEX (Repipe)", baseMin: 3200, baseMax: 5800, paRate: "$3,500 – $5,500 לבית שלם כולל קווי מים חמים/קרים", proAlternative: "צנרת PEX-A גמישה חוסכת חצי מזמן העבודה של נחושת ואינה מתבקעת בקפיאות חורף." },
+            "sewer_line": { title: "תיקון / החלפת קו ביוב ראשי (Main Sewer)", baseMin: 3500, baseMax: 7500, paRate: "$85 – $150 ל-Linear Foot חפירה, הנחת צינור וכיסוי", proAlternative: "בדיקת מצלמה מקדימה (Sewer Scope) בעלות $150 תמנע חפירה מיותרת ותאתר את מיקום הסתימה המדויק." },
+            "french_drain": { title: "איטום מרתף ומשאבת ניקוז (French Drain)", baseMin: 3800, baseMax: 7200, paRate: "$55 – $80 ל-Linear Foot תעלה היקפית בבטון", proAlternative: "התקנת משאבת גיבוי מופעלת סוללה (Battery Backup Pump) מונעת הצפות בזמן הפסקות חשמל בסופות." },
 
-            "kitchen_full": { title: "שיפוץ מטבח קומפלט (ארונות עץ מלא + קוורץ)", baseMin: 9500, baseMax: 15500, paRate: "מטבח סטנדרטי 10x10: כ-$11,500", proAlternative: "ארונות RTA (Ready-To-Assemble) מעץ מלא בייבוא ישיר יחד עם משטחי קוורץ חתוכים מראש (Prefab) חוסכים עד 45%." },
-            "countertops_only": { title: "משטח קוורץ / גרניט בלבד למטבח", baseMin: 1800, baseMax: 3200, paRate: "$45 – $70 ל-SqFt כולל מדידת לייזר והתקנה", proAlternative: "רכישת לוח עודפים (Remnant / Prefab) אצל ספקי שיש מקומיים חוסכת כ-$1,000." },
-            "bathroom_full": { title: "שיפוץ חדר רחצה מלא (Full Bath)", baseMin: 4500, baseMax: 7800, paRate: "$5,500 לחדר רחצה מלא סטנדרטי", proAlternative: "שימוש בפנלים עמידים למים (Acrylic Wall Surround) במקום קרמיקה מקצר ימי עבודה ב-60% וחוסך $2,000." },
-            "bathroom_half": { title: "שדרוג שירותי אורחים (Half Bath)", baseMin: 1500, baseMax: 2800, paRate: "$1,800 כולל החלפת אסלה, ארון כיור וברז", proAlternative: "סט ארון כיור קומפלט מ-Home Depot ($280) והתקנה עצמאית או הנדימן." },
-            "flooring_lvp": { title: "ריצוף LVP עמיד למים לכל הבית", baseMin: 3200, baseMax: 5800, paRate: "$3.50 – $4.50 ל-SqFt כולל חומר ועבודה", proAlternative: "רכישת LVP בעובי 12mil ב-Floor & Decor ($1.79 ל-SqFt) והתקנה בלחיצה (Click-Lock)." },
-            "hardwood_refinish": { title: "ליטוש וחידוש פרקט עץ מקורי (Refinish)", baseMin: 2200, baseMax: 3800, paRate: "$2.50 – $3.50 ל-SqFt ליטוש + 3 שכבות לכה", proAlternative: "שמירה על רצפות העץ המקוריות מעלה את ערך המכירה יותר מכל ריצוף סינטטי." },
-            "paint_interior": { title: "צביעת פנים מלאה (כולל תקרות ומשקופים)", baseMin: 2800, baseMax: 4800, paRate: "$1.80 – $2.60 ל-SqFt שטח רצפה", proAlternative: "צבע Behr Pro i300 במבצעי קבלנים (5 גלון בכ-$110) עם צוות צבעים יומי חוסך כ-$1,500." },
-            "drywall_repair": { title: "תיקוני גבס ושפכטל (Drywall Repair)", baseMin: 800, baseMax: 2400, paRate: "$60 – $90 לשעה / לפי כמות לוחות", proAlternative: "תיקון חורים נקודתיים במקום החלפת קירות שלמים מוזיל משמעותית את עלות העבודה." },
+            "kitchen_full": { title: "שיפוץ מטבח קומפלט (ארונות עץ מלא + קוורץ)", baseMin: 9500, baseMax: 15500, paRate: "כ-$1,100 – $1,500 ל-Linear Foot ארונות עליונים/תחתונים", proAlternative: "ארונות RTA (Ready-To-Assemble) מעץ מלא בייבוא ישיר יחד עם משטחי קוורץ חתוכים מראש (Prefab) חוסכים עד 45%." },
+            "countertops_only": { title: "משטח קוורץ / גרניט בלבד למטבח", baseMin: 1800, baseMax: 3200, paRate: "$45 – $70 ל-SqFt משטח כולל חיתוך כיור והתקנה", proAlternative: "רכישת לוח עודפים (Remnant / Prefab) אצל ספקי שיש מקומיים חוסכת כ-$1,000." },
+            "bathroom_full": { title: "שיפוץ חדר רחצה מלא (Full Bath)", baseMin: 4500, baseMax: 7800, paRate: "$5,500 קומפלט לחדר רחצה 5x8 סטנדרטי", proAlternative: "שימוש בפנלים עמידים למים (Acrylic Wall Surround) במקום קרמיקה מקצר ימי עבודה ב-60% וחוסך $2,000." },
+            "bathroom_half": { title: "שדרוג שירותי אורחים (Half Bath)", baseMin: 1500, baseMax: 2800, paRate: "$1,800 כולל החלפת אסלה, ארון כיור, ברז ותאורה", proAlternative: "סט ארון כיור קומפלט מ-Home Depot ($280) והתקנה עצמאית או הנדימן." },
+            "flooring_lvp": { title: "ריצוף LVP עמיד למים לכל הבית", baseMin: 3200, baseMax: 5800, paRate: "$3.50 – $4.50 ל-SqFt כולל פנלים (Shoe Molding) ועבודה", proAlternative: "רכישת LVP בעובי 12mil ב-Floor & Decor ($1.79 ל-SqFt) והתקנה בלחיצה (Click-Lock)." },
+            "hardwood_refinish": { title: "ליטוש וחידוש פרקט עץ מקורי (Refinish)", baseMin: 2200, baseMax: 3800, paRate: "$2.50 – $3.50 ל-SqFt ליטוש + 3 שכבות לכה פוליאוריטן", proAlternative: "שמירה על רצפות העץ המקוריות מעלה את ערך המכירה יותר מכל ריצוף סינטטי." },
+            "paint_interior": { title: "צביעת פנים מלאה (כולל תקרות ומשקופים)", baseMin: 2800, baseMax: 4800, paRate: "$1.80 – $2.60 ל-SqFt שטח רצפה (כולל קירות, תקרות ומשקופים)", proAlternative: "צבע Behr Pro i300 במבצעי קבלנים (5 גלון בכ-$110) עם צוות צבעים יומי חוסך כ-$1,500." },
+            "drywall_repair": { title: "תיקוני גבס ושפכטל (Drywall Repair)", baseMin: 800, baseMax: 2400, paRate: "$60 – $90 לשעת עבודה / כ-$120 ללוח גבס מותקן ושפכטל", proAlternative: "תיקון חורים נקודתיים במקום החלפת קירות שלמים מוזיל משמעותית את עלות העבודה." },
 
-            "driveway": { title: "סלילת חניה באספלט חם (Asphalt Driveway)", baseMin: 2500, baseMax: 4800, paRate: "$3.80 – $5.20 ל-SqFt אספלט חם", proAlternative: "ציפוי איטום (Sealcoating) ותיקון סדקים ב-$600 עשוי להספיק במקום סלילה מלאה מחדש." },
-            "concrete_walkway": { title: "יציקת שביל או משטח בטון (Concrete Patio)", baseMin: 1800, baseMax: 3800, paRate: "$9 – $14 ל-SqFt בטון יצוק ומיושר", proAlternative: "הזמנת משאית מיקסר מוכן לחצר במקום ערבוב ידני חוסכת יום עבודה שלם." },
-            "fence_privacy": { title: "גדר עץ או ויניל לפרטיות (Privacy Fence)", baseMin: 2800, baseMax: 5400, paRate: "$24 – $38 ל-Linear Foot כולל עמודים בבטון", proAlternative: "לוחות גדר מעץ מטופל (Pressure Treated) מ-Lowe's מספקים עמידות מעולה בחיסכון של 40% מוויניל." },
-            "dumpster": { title: "מכולת פינוי פסולת שיפוץ (30-Yard Dumpster)", baseMin: 450, baseMax: 650, paRate: "$480 ממוצע לשבועיים כולל 4 טון פסולת", proAlternative: "הזמנה ישירה מחברות פינוי פסולת מקומיות ב-PA זולה בכ-$100 מחברות תיווך ארציות." }
+            "driveway": { title: "סלילת חניה באספלט חם (Asphalt Driveway)", baseMin: 2500, baseMax: 4800, paRate: "$3.80 – $5.20 ל-SqFt אספלט חם מהודק בעובי 2.5 אינץ'", proAlternative: "ציפוי איטום (Sealcoating) ותיקון סדקים ב-$600 עשוי להספיק במקום סלילה מלאה מחדש." },
+            "concrete_walkway": { title: "יציקת שביל או משטח בטון (Concrete Patio)", baseMin: 1800, baseMax: 3800, paRate: "$9.00 – $14.00 ל-SqFt בטון יצוק ומיושר כולל רשת ברזל", proAlternative: "הזמנת משאית מיקסר מוכן לחצר במקום ערבוב ידני חוסכת יום עבודה שלם." },
+            "fence_privacy": { title: "גדר עץ או ויניל לפרטיות (Privacy Fence)", baseMin: 2800, baseMax: 5400, paRate: "$24 – $38 ל-Linear Foot כולל עמודים בבטון ושער", proAlternative: "לוחות גדר מעץ מטופל (Pressure Treated) מ-Lowe's מספקים עמידות מעולה בחיסכון של 40% מוויניל." },
+            "dumpster": { title: "מכולת פינוי פסולת שיפוץ (30-Yard Dumpster)", baseMin: 450, baseMax: 650, paRate: "$480 ממוצע לשבועיים כולל הובלה ו-4 טון פסולת", proAlternative: "הזמנה ישירה מחברות פינוי פסולת מקומיות ב-PA זולה בכ-$100 מחברות תיווך ארציות." }
         };
 
         // Precise Rehab Calculation based on text description and defects
@@ -568,7 +570,7 @@
         async function init() {
             loadPipelineDeals();
             loadSavedCustomResearches();
-            loadSavedRehabEstimates();
+            loadSavedAuditedQuotes();
             onCustomCityChange();
             updateItemPricingDetails();
         }
@@ -652,57 +654,62 @@
             renderSavedCustomResearches();
         }
 
-        // Saved Rehab Estimates Store
-        function loadSavedRehabEstimates() {
+        // Saved Audited Quotes Store
+        function loadSavedAuditedQuotes() {
             try {
-                const saved = localStorage.getItem('pa_saved_rehab_estimates');
-                savedRehabEstimates = saved ? JSON.parse(saved) : [];
+                const saved = localStorage.getItem('pa_saved_audited_quotes');
+                savedAuditedQuotes = saved ? JSON.parse(saved) : [];
             } catch(e) {
-                savedRehabEstimates = [];
+                savedAuditedQuotes = [];
             }
-            renderSavedRehabEstimates();
+            renderSavedAuditedQuotes();
         }
 
-        function renderSavedRehabEstimates() {
-            const listEl = document.getElementById('saved-estimates-list');
+        function renderSavedAuditedQuotes() {
+            const listEl = document.getElementById('saved-quotes-list');
             if (!listEl) return;
 
-            if (savedRehabEstimates.length === 0) {
-                listEl.innerHTML = `<span class="text-[11px] text-gray-500">אין עדיין אומדנים שמורים. בחר רכיב ולחץ "שמור אומדן זה".</span>`;
+            if (savedAuditedQuotes.length === 0) {
+                listEl.innerHTML = `<span class="text-[11px] text-gray-500">אין עדיין הצעות שנשמרו. בצע בדיקת הצעה ולחץ "שמור בדיקת הצעה זו".</span>`;
                 return;
             }
 
-            listEl.innerHTML = savedRehabEstimates.map((item, idx) => `
-                <div class="flex items-center justify-between bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-800 text-[11px]">
-                    <div class="flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                        <strong class="text-white">${item.title} (${item.city})</strong>
-                        <span class="text-emerald-400 font-bold">${item.range}</span>
+            listEl.innerHTML = savedAuditedQuotes.map((item, idx) => `
+                <div class="flex items-center justify-between bg-gray-900 px-3 py-2 rounded-lg border border-gray-800 text-[11px]">
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                            <strong class="text-white">${item.city}, PA</strong>
+                            <span class="text-emerald-400 font-bold">הצעת קבלן: $${item.total.toLocaleString()}</span>
+                            <span class="text-gray-400 text-[10px]">(${item.date})</span>
+                        </div>
+                        <p class="text-gray-400 text-[10px] truncate max-w-md">${item.summary}</p>
                     </div>
-                    <button onclick="deleteSavedEstimate(${idx})" class="text-gray-500 hover:text-rose-400 p-1" title="מחק"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteSavedQuote(${idx})" class="text-gray-500 hover:text-rose-400 p-1" title="מחק"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                 </div>
             `).join('');
 
             lucide.createIcons();
         }
 
-        function saveCurrentRehabEstimate() {
-            if (!activeItemData) return;
-            savedRehabEstimates.unshift(activeItemData);
-            localStorage.setItem('pa_saved_rehab_estimates', JSON.stringify(savedRehabEstimates));
-            renderSavedRehabEstimates();
+        function saveCurrentAuditedQuote() {
+            if (!latestAuditData) return;
+            savedAuditedQuotes.unshift(latestAuditData);
+            localStorage.setItem('pa_saved_audited_quotes', JSON.stringify(savedAuditedQuotes));
+            renderSavedAuditedQuotes();
+            alert("הצעת המחיר נשמרה בהצלחה במערכת.");
         }
 
-        function deleteSavedEstimate(index) {
-            savedRehabEstimates.splice(index, 1);
-            localStorage.setItem('pa_saved_rehab_estimates', JSON.stringify(savedRehabEstimates));
-            renderSavedRehabEstimates();
+        function deleteSavedQuote(index) {
+            savedAuditedQuotes.splice(index, 1);
+            localStorage.setItem('pa_saved_audited_quotes', JSON.stringify(savedAuditedQuotes));
+            renderSavedAuditedQuotes();
         }
 
-        function clearSavedEstimates() {
-            savedRehabEstimates = [];
-            localStorage.setItem('pa_saved_rehab_estimates', JSON.stringify([]));
-            renderSavedRehabEstimates();
+        function clearSavedQuotes() {
+            savedAuditedQuotes = [];
+            localStorage.setItem('pa_saved_audited_quotes', JSON.stringify([]));
+            renderSavedAuditedQuotes();
         }
 
         function updateSummaryCounters() {
@@ -917,18 +924,31 @@
                 verdict = `האומדן הכולל לסעיפים אלה ב-${city}: $${estMin.toLocaleString()} – $${estMax.toLocaleString()}`;
             }
 
+            latestAuditData = {
+                city: city,
+                total: total,
+                summary: verdict,
+                date: new Date().toLocaleDateString('he-IL')
+            };
+
             const resBox = document.getElementById('audit-results-box');
             resBox.classList.remove('hidden');
             resBox.innerHTML = `
                 <div class="flex justify-between items-center border-b border-gray-800 pb-2">
                     <strong class="text-white text-sm">תוצאות בדיקת נאותות להצעה:</strong>
-                    ${statusBadge}
+                    <div class="flex items-center gap-2">
+                        ${statusBadge}
+                        <button onclick="saveCurrentAuditedQuote()" class="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-lg text-xs font-bold flex items-center gap-1 transition">
+                            <i data-lucide="bookmark" class="w-3.5 h-3.5"></i> שמור בדיקת הצעה זו
+                        </button>
+                    </div>
                 </div>
                 <p class="text-gray-200 text-xs font-bold leading-relaxed">${verdict}</p>
                 <div class="space-y-1 pt-1 border-t border-gray-800 text-[11px] text-gray-400">
                     ${breakdown.map(b => `<div>• ${b}</div>`).join('')}
                 </div>
             `;
+            lucide.createIcons();
         }
 
         function updateItemPricingDetails() {
@@ -944,31 +964,18 @@
             const adjMax = Math.round(item.baseMax * mult);
             const rangeStr = `$${adjMin.toLocaleString()} – $${adjMax.toLocaleString()}`;
 
-            activeItemData = {
-                title: item.title,
-                city: city,
-                range: rangeStr,
-                date: new Date().toLocaleDateString('he-IL')
-            };
-
             box.innerHTML = `
-                <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <div class="flex justify-between items-start border-b border-gray-800 pb-2">
                     <div>
                         <strong class="text-white text-sm block">${item.title}</strong>
                         <span class="text-gray-400 text-[11px]">מותאם לעיר: <strong class="text-amber-300">${city}, PA</strong></span>
                     </div>
                     <div class="text-left">
                         <span class="text-emerald-400 font-black text-base block">${rangeStr}</span>
-                        <button onclick="saveCurrentRehabEstimate()" class="mt-1 px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-lg text-xs font-bold flex items-center gap-1 transition">
-                            <i data-lucide="bookmark" class="w-3.5 h-3.5"></i> שמור אומדן זה
-                        </button>
+                        <span class="text-gray-400 text-[11px] font-mono block mt-0.5">תחשיב שטח / יחידה: ${item.paRate}</span>
                     </div>
                 </div>
-                <div class="bg-gray-900 p-2.5 rounded-lg border border-gray-800 space-y-1">
-                    <span class="text-gray-400 block font-bold">מחיר ממוצע ועבודה ב-${city}:</span>
-                    <strong class="text-amber-300 text-xs">${item.paRate}</strong>
-                </div>
-                <div class="bg-blue-950/40 p-2.5 rounded-lg border border-blue-500/30 space-y-1">
+                <div class="bg-blue-950/40 p-2.5 rounded-lg border border-blue-500/30 space-y-1 mt-2">
                     <span class="text-blue-300 block font-black flex items-center gap-1">
                         <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> טיפ מקצועי להוזלת עלויות (Pro Savings):
                     </span>
@@ -1014,31 +1021,18 @@
             const adjMax = Math.round(estMax * mult);
             const rangeStr = `$${adjMin.toLocaleString()} – $${adjMax.toLocaleString()}`;
 
-            activeItemData = {
-                title: estTitle,
-                city: city,
-                range: rangeStr,
-                date: new Date().toLocaleDateString('he-IL')
-            };
-
             box.innerHTML = `
-                <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <div class="flex justify-between items-start border-b border-gray-800 pb-2">
                     <div>
                         <strong class="text-white text-sm block">${estTitle}</strong>
                         <span class="text-gray-400 text-[11px]">אומדן חי ב-${city}, PA</span>
                     </div>
                     <div class="text-left">
                         <span class="text-emerald-400 font-black text-base block">${rangeStr}</span>
-                        <button onclick="saveCurrentRehabEstimate()" class="mt-1 px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-lg text-xs font-bold flex items-center gap-1 transition">
-                            <i data-lucide="bookmark" class="w-3.5 h-3.5"></i> שמור אומדן זה
-                        </button>
+                        <span class="text-gray-400 text-[11px] font-mono block mt-0.5">תחשיב שטח / יחידה: ${paRate}</span>
                     </div>
                 </div>
-                <div class="bg-gray-900 p-2.5 rounded-lg border border-gray-800 space-y-1">
-                    <span class="text-gray-400 block font-bold">תחשיב שוק משוער ב-${city}:</span>
-                    <strong class="text-amber-300 text-xs">${paRate}</strong>
-                </div>
-                <div class="bg-blue-950/40 p-2.5 rounded-lg border border-blue-500/30 space-y-1">
+                <div class="bg-blue-950/40 p-2.5 rounded-lg border border-blue-500/30 space-y-1 mt-2">
                     <span class="text-blue-300 block font-black flex items-center gap-1">
                         <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> המלצה להוזלה:
                     </span>
