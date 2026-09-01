@@ -227,22 +227,28 @@
                     <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
                         
                         <div class="space-y-3">
+                            <!-- Top Field: למי הנכס מיועד (Large Font Header) -->
                             <div class="flex justify-between items-center gap-2">
-                                <div class="bg-gray-950 px-3 py-1.5 rounded-xl border border-blue-500/30 flex-1">
-                                    <label class="block text-xs font-black text-blue-300 mb-1 flex items-center gap-1.5">
-                                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-blue-400"></i> למי הנכס מיועד:
+                                <div class="bg-gray-950 px-3.5 py-2.5 rounded-xl border border-blue-500/40 flex-1">
+                                    <label class="block text-sm font-black text-blue-300 mb-1 flex items-center gap-1.5">
+                                        <i data-lucide="user-check" class="w-4 h-4 text-blue-400"></i> למי הנכס מיועד:
                                     </label>
-                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח / משקיע / שותף..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1 text-sm text-white font-bold focus:border-blue-400">
+                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח / משקיע / שותף..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:border-blue-400 focus:outline-none">
                                 </div>
 
-                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2 bg-gray-950 rounded-xl border border-gray-800 transition" title="הסר מחדר עסקאות">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2.5 bg-gray-950 rounded-xl border border-gray-800 transition" title="הסר מחדר עסקאות">
+                                    <i data-lucide="trash-2" class="w-5 h-5"></i>
                                 </button>
                             </div>
 
-                            <!-- Property Overview -->
-                            <div>
-                                <h3 class="text-lg font-black text-white mb-0.5">${d.address}</h3>
+                            <!-- Property Address & Sheriff / Deal Badge -->
+                            <div class="pt-1">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <h3 class="text-lg font-black text-white">${d.address}</h3>
+                                    <span class="px-2.5 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-300 border border-rose-500/30 shrink-0">
+                                        ${d.deal_type || 'Opportunity'}
+                                    </span>
+                                </div>
                                 <p class="text-xs font-bold text-gray-300 flex items-center gap-1">
                                     <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
                                     ${d.city}, ${d.county} County, PA ${d.zip || ''}
@@ -322,7 +328,7 @@
                                     </div>
                                 </div>
 
-                                <!-- 7. סטטוס העסקה (Unified Row) -->
+                                <!-- 7. סטטוס העסקה -->
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
                                     <label class="block font-extrabold text-gray-100">7. סטטוס העסקה:</label>
                                     <div class="grid grid-cols-2 gap-2">
