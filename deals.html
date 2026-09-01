@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- HTML2PDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
         body {
@@ -40,10 +42,10 @@
 
             <!-- Top Tools & Actions -->
             <div class="flex items-center gap-2.5 flex-wrap">
-                <!-- Research Engine Tool (Top Bar) -->
-                <button onclick="alert('בחר כרטיס עסקה להרצת מחקר מעמיק')" class="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition">
+                <!-- Free / Custom Property Research Engine (Top Bar) -->
+                <button onclick="openCustomResearchModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition">
                     <i data-lucide="microscope" class="w-4 h-4 text-blue-400"></i>
-                    <span>🔬 מחקר מעמיק</span>
+                    <span>🔬 מחקר לנכס חופשי</span>
                 </button>
 
                 <!-- Rehab Estimator Tool (Top Bar) -->
@@ -105,6 +107,67 @@
         </section>
 
     </main>
+
+    <!-- Custom Property Research Modal (For Properties not in pipeline) -->
+    <div id="custom-research-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-blue-500/40 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative text-right">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="microscope" class="w-5 h-5 text-blue-400"></i>
+                    הפקת דוח מחקר מעמיק לנכס חופשי
+                </h3>
+                <button onclick="closeCustomResearchModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-gray-300 mb-1">למי הנכס מיועד (לקוח / שותף):</label>
+                    <input type="text" id="cr-target-buyer" placeholder="שם הלקוח..." class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-300 mb-1">כתובת הנכס:</label>
+                    <input type="text" id="cr-address" placeholder="לדוגמה: 1420 Main St" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-gray-300 mb-1">עיר:</label>
+                        <input type="text" id="cr-city" placeholder="לדוגמה: Wilkes-Barre" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-300 mb-1">מחוז (County):</label>
+                        <select id="cr-county" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                            <option value="Luzerne">Luzerne (מרכז Data Center של אמזון)</option>
+                            <option value="Bucks">Bucks (קמפוס AI Falls Twp)</option>
+                            <option value="Allegheny">Allegheny (פיטסבורג - רובוטיקה)</option>
+                            <option value="Northampton">Northampton (Lehigh Valley Hub)</option>
+                            <option value="Lehigh">Lehigh (ייצור מתקדם ולוגיסטיקה)</option>
+                            <option value="Washington">Washington (אנרגיה Alpha Compute)</option>
+                            <option value="Dauphin">Dauphin (האריסברג)</option>
+                            <option value="Berks">Berks (רדינג)</option>
+                            <option value="Philadelphia">Philadelphia</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-gray-300 mb-1">מחיר מבוקש ($):</label>
+                        <input type="number" id="cr-price" placeholder="85000" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-emerald-400 font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-300 mb-1">שטח בנוי (SqFt):</label>
+                        <input type="number" id="cr-sqft" placeholder="1250" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
+                <button onclick="closeCustomResearchModal()" class="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl text-xs font-bold">ביטול</button>
+                <button onclick="generateCustomResearch()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> הפק דוח PDF
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Script Logic -->
     <script>
@@ -175,7 +238,6 @@
             lucide.createIcons();
         }
 
-        // Automatic instant background save
         function updateField(id, key, value) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
@@ -206,6 +268,38 @@
             if (confirm("האם להסיר את הנכס לחלוטין מחדר העסקאות? (הנכס יחזור לרשימת הסריקה הראשית)")) {
                 pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
                 savePipelineDeals();
+            }
+        }
+
+        function runDeepResearch(id) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            if (deal && typeof executeDueDiligenceResearch === 'function') {
+                executeDueDiligenceResearch(deal);
+            }
+        }
+
+        function openCustomResearchModal() {
+            document.getElementById('custom-research-modal').classList.remove('hidden');
+        }
+
+        function closeCustomResearchModal() {
+            document.getElementById('custom-research-modal').classList.add('hidden');
+        }
+
+        function generateCustomResearch() {
+            const customDeal = {
+                id: 'custom_' + Date.now(),
+                address: document.getElementById('cr-address').value || 'נכס בהתאמה אישית',
+                city: document.getElementById('cr-city').value || 'PA Hub',
+                county: document.getElementById('cr-county').value || 'Luzerne',
+                price: Number(document.getElementById('cr-price').value) || 100000,
+                sqft: Number(document.getElementById('cr-sqft').value) || 1200,
+                tracker: { target_buyer: document.getElementById('cr-target-buyer').value || 'משקיע כללי' }
+            };
+
+            closeCustomResearchModal();
+            if (typeof executeDueDiligenceResearch === 'function') {
+                executeDueDiligenceResearch(customDeal);
             }
         }
 
@@ -263,7 +357,15 @@
                                     <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
                                     ${d.city}, ${d.county} County, PA ${d.zip || ''}
                                 </p>
-                                <div class="text-2xl font-black text-emerald-400 my-1.5">$${(Number(d.price) || 0).toLocaleString()}</div>
+                                <div class="flex justify-between items-center my-1.5">
+                                    <div class="text-2xl font-black text-emerald-400">$${(Number(d.price) || 0).toLocaleString()}</div>
+                                    
+                                    <!-- Research & PDF Report Button -->
+                                    <button onclick="runDeepResearch('${d.id}')" class="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-black flex items-center gap-1.5 transition">
+                                        <i data-lucide="file-text" class="w-3.5 h-3.5 text-blue-400"></i>
+                                        <span>${d.last_researched_at ? '📄 דוח מחקר (מעודכן)' : '🔬 הפק דוח מחקר'}</span>
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Sequential Action Points Tracker -->
@@ -390,5 +492,8 @@
 
         window.onload = init;
     </script>
+
+    <!-- Connect External Modules -->
+    <script src="research_engine.js"></script>
 </body>
 </html>
