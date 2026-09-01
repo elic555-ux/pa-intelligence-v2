@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PA Real Estate - Deal Room</title>
+    <title>חדר עסקאות - PA Real Estate Intelligence Hub</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -12,176 +12,199 @@
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800;900&display=swap');
         body {
             font-family: 'Assistant', sans-serif;
-            background-color: #080c14;
+            background-color: #0b0f19;
             color: #f3f4f6;
         }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
-    <!-- Deal Room Header -->
-    <header class="bg-gray-950/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center gap-4">
+    <!-- Header & Navigation -->
+    <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-3">
-                <a href="index.html" class="p-2 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl text-gray-300 hover:text-white transition flex items-center gap-1.5 text-xs font-bold">
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i> חזרה לסורק
-                </a>
+                <div class="p-2 bg-amber-600/20 border border-amber-500/40 rounded-xl text-amber-400">
+                    <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+                </div>
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                        📊 חדר עסקאות פעיל (Deal Pipeline)
+                        חדר עסקאות וניהול צנרת (Deal Room Pipeline)
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">עצמאי</span>
                     </h1>
-                    <p class="text-xs text-gray-400">ניהול עסקאות מועברות, שלבי רכישה ותיקיית ארכיון</p>
+                    <p class="text-xs text-gray-400">ניהול שלבי עסקאות, מחקר מעמיק ומעקב רכישה</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-3">
-                <span class="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl text-xs font-black">
-                    סה"כ בצנרת: <span id="pipeline-total-badge" class="font-mono text-white text-sm">0</span>
-                </span>
+                <!-- Return to Scanner Hub Button (Opens in New Tab) -->
+                <a href="index.html" target="_blank" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
+                    <i data-lucide="scan" class="w-4 h-4"></i>
+                    <span>מעבר למערכת הסריקה הראשית</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <!-- Main Workspace -->
+    <!-- Main Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- Active Deals Grid -->
-        <section>
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-base font-black text-white flex items-center gap-2">
-                    <i data-lucide="folder-kanban" class="w-5 h-5 text-amber-400"></i>
-                    עסקאות פעילות בבדיקה ומשא ומתן
-                </h2>
+        <!-- Top Summary Bar -->
+        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
+                <span class="text-xs font-bold text-gray-400 block mb-1">סה"כ עסקאות בצנרת</span>
+                <span class="text-2xl font-black text-amber-400" id="deals-total-count">0</span>
             </div>
-            
-            <div id="pipeline-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Deals render dynamically -->
+            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
+                <span class="text-xs font-bold text-gray-400 block mb-1">בבדיקת נאותות (Due Diligence)</span>
+                <span class="text-2xl font-black text-blue-400" id="deals-dd-count">0</span>
+            </div>
+            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
+                <span class="text-xs font-bold text-gray-400 block mb-1">במשא ומתן / הצעת מחיר</span>
+                <span class="text-2xl font-black text-purple-400" id="deals-offer-count">0</span>
+            </div>
+            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
+                <span class="text-xs font-bold text-gray-400 block mb-1">שווי השקעה כולל מבוקש</span>
+                <span class="text-2xl font-black text-emerald-400" id="deals-total-volume">$0</span>
             </div>
         </section>
 
-        <!-- Archived Deals Section -->
-        <section class="pt-6 border-t border-gray-900">
-            <h3 class="text-xs font-black text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <i data-lucide="archive" class="w-4 h-4 text-gray-400"></i> עסקאות שלא צלחו / ארכיון:
-            </h3>
-            <div id="archived-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 opacity-60">
-                <!-- Archived Deals render dynamically -->
-            </div>
+        <!-- Deals Container -->
+        <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Dynamic Deal Cards -->
         </section>
 
     </main>
 
+    <!-- Script Logic -->
     <script>
         let pipelineDeals = [];
-        let archivedDeals = [];
 
-        function init() {
+        async function init() {
             lucide.createIcons();
-            loadPipelineData();
-            renderPipeline();
+            loadPipelineDeals();
         }
 
-        function loadPipelineData() {
+        function loadPipelineDeals() {
             try {
-                const pSaved = localStorage.getItem('pa_pipeline_deals');
-                pipelineDeals = pSaved ? JSON.parse(pSaved) : [];
-
-                const aSaved = localStorage.getItem('pa_archived_deals');
-                archivedDeals = aSaved ? JSON.parse(aSaved) : [];
+                const saved = localStorage.getItem('pa_pipeline_deals');
+                pipelineDeals = saved ? JSON.parse(saved) : [];
             } catch(e) {
                 pipelineDeals = [];
-                archivedDeals = [];
             }
-            document.getElementById('pipeline-total-badge').textContent = pipelineDeals.length;
+            updateSummaryCounters();
+            renderDeals();
         }
 
-        function savePipelineData() {
+        function savePipelineDeals() {
             localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
-            localStorage.setItem('pa_archived_deals', JSON.stringify(archivedDeals));
-            document.getElementById('pipeline-total-badge').textContent = pipelineDeals.length;
+            updateSummaryCounters();
+            renderDeals();
         }
 
-        function moveToArchive(dealId) {
-            const index = pipelineDeals.findIndex(d => String(d.id) === String(dealId));
-            if (index !== -1) {
-                const [item] = pipelineDeals.splice(index, 1);
-                item.archived_at = new Date().toLocaleDateString('he-IL');
-                archivedDeals.push(item);
-                savePipelineData();
-                renderPipeline();
-            }
+        function updateSummaryCounters() {
+            document.getElementById('deals-total-count').textContent = pipelineDeals.length;
+            const ddCount = pipelineDeals.filter(d => !d.pipeline_stage || d.pipeline_stage === 'due_diligence').length;
+            document.getElementById('deals-dd-count').textContent = ddCount;
+            const offerCount = pipelineDeals.filter(d => d.pipeline_stage === 'offer').length;
+            document.getElementById('deals-offer-count').textContent = offerCount;
+
+            const totalVol = pipelineDeals.reduce((sum, d) => sum + (Number(d.price) || 0), 0);
+            document.getElementById('deals-total-volume').textContent = '$' + totalVol.toLocaleString();
         }
 
-        function restoreFromArchive(dealId) {
-            const index = archivedDeals.findIndex(d => String(d.id) === String(dealId));
-            if (index !== -1) {
-                const [item] = archivedDeals.splice(index, 1);
-                pipelineDeals.push(item);
-                savePipelineData();
-                renderPipeline();
-            }
-        }
-
-        function renderPipeline() {
-            const container = document.getElementById('pipeline-cards-container');
-            const archiveContainer = document.getElementById('archived-cards-container');
-
+        function renderDeals() {
+            const container = document.getElementById('pipeline-deals-grid');
             if (pipelineDeals.length === 0) {
                 container.innerHTML = `
-                    <div class="col-span-3 text-center py-16 bg-gray-950/60 rounded-2xl border border-gray-900 text-gray-400">
-                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-gray-400"></i>
-                        <p class="font-bold text-white text-base">אין כרגע נכסים בחדר העסקאות.</p>
-                        <p class="text-xs text-gray-300 mt-1">חזור לסורק הראשי, פתח כרטיסיית נכס ולחץ "העבר לחדר עסקאות".</p>
+                    <div class="col-span-full text-center py-16 bg-gray-900/40 border border-gray-800 rounded-3xl space-y-3">
+                        <i data-lucide="folder-open" class="w-12 h-12 text-gray-600 mx-auto"></i>
+                        <h3 class="text-base font-bold text-white">אין כרגע עסקאות פעילות בחדר העסקאות</h3>
+                        <p class="text-xs text-gray-400">העבר נכסים ממערכת הסריקה הראשית כדי להתחיל מחקר מעמיק וניהול מו"מ.</p>
+                        <a href="index.html" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition">
+                            <i data-lucide="scan" class="w-4 h-4"></i> עבור למערכת הסריקה
+                        </a>
                     </div>
                 `;
-            } else {
-                container.innerHTML = pipelineDeals.map(d => `
-                    <div class="bg-gray-950 border border-gray-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-xl transition flex flex-col justify-between">
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = pipelineDeals.map((d) => {
+                return `
+                    <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
                         <div>
                             <div class="flex justify-between items-start gap-2 mb-2">
-                                <span class="px-2.5 py-0.5 rounded text-[11px] font-black uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                                    ${d.deal_type || 'Opportunity'}
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                                    ${d.deal_type || 'Deal'}
                                 </span>
-                                <span class="text-xs font-bold text-gray-400">הועבר: ${d.added_to_pipeline_at || 'היום'}</span>
+                                <span class="text-xs font-bold text-gray-400">
+                                    נוסף: ${d.added_to_pipeline_at || 'לאחרונה'}
+                                </span>
                             </div>
 
                             <h3 class="text-lg font-black text-white mb-1">${d.address}</h3>
-                            <p class="text-xs font-bold text-gray-200 mb-3">${d.city}, ${d.county} County, PA ${d.zip || ''}</p>
-                            
-                            <div class="text-2xl font-black text-emerald-300 mb-4">$${(d.price || 0).toLocaleString()}</div>
+                            <p class="text-xs font-bold text-gray-400 mb-3 flex items-center gap-1.5">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
+                                ${d.city}, ${d.county} County, PA ${d.zip || ''}
+                            </p>
 
-                            <div class="grid grid-cols-3 gap-2 bg-gray-900 p-2.5 rounded-xl text-center text-xs text-gray-200 mb-4 border border-gray-800">
-                                <div><span class="text-gray-300 block font-bold">חדרים</span><strong class="text-white text-sm">${d.beds || '-'}</strong></div>
-                                <div><span class="text-gray-300 block font-bold">אמבט</span><strong class="text-white text-sm">${d.baths || '-'}</strong></div>
-                                <div><span class="text-gray-300 block font-bold">שטח</span><strong class="text-white text-sm">${d.sqft || '-'}</strong></div>
+                            <div class="text-2xl font-black text-emerald-400 mb-3">$${(Number(d.price) || 0).toLocaleString()}</div>
+
+                            <div class="grid grid-cols-3 gap-2 bg-gray-950 p-2.5 rounded-xl text-center text-xs text-gray-300 border border-gray-800">
+                                <div><span class="text-gray-500 block">חדרים</span><strong class="text-white">${d.beds || '-'}</strong></div>
+                                <div><span class="text-gray-500 block">אמבט</span><strong class="text-white">${d.baths || '-'}</strong></div>
+                                <div><span class="text-gray-500 block">שטח</span><strong class="text-white">${d.sqft ? d.sqft + ' sqft' : '-'}</strong></div>
                             </div>
                         </div>
 
-                        <div class="pt-3 border-t border-gray-900 flex justify-between items-center gap-2">
-                            <span class="text-xs text-amber-400 font-bold">● בשלב בדיקת נאותות</span>
-                            <button onclick="moveToArchive('${d.id}')" class="px-3 py-1.5 bg-gray-900 hover:bg-rose-950 hover:text-rose-300 text-gray-300 rounded-lg text-xs font-bold border border-gray-800 transition flex items-center gap-1">
-                                <i data-lucide="archive" class="w-3.5 h-3.5"></i> העבר לארכיון
+                        <!-- Action Buttons in Deal Room -->
+                        <div class="space-y-2 pt-3 border-t border-gray-800">
+                            <button onclick="runDeepResearch('${d.id}')" class="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition">
+                                <i data-lucide="microscope" class="w-4 h-4 text-amber-300"></i>
+                                <span>🔬 בצע מחקר מעמיק (Deep Due Diligence)</span>
                             </button>
-                        </div>
-                    </div>
-                `).join('');
-            }
 
-            if (archivedDeals.length === 0) {
-                archiveContainer.innerHTML = '<div class="col-span-4 text-xs text-gray-400">אין עסקאות בארכיון.</div>';
-            } else {
-                archiveContainer.innerHTML = archivedDeals.map(d => `
-                    <div class="bg-gray-950 border border-gray-900 p-3.5 rounded-xl text-xs flex justify-between items-center">
-                        <div>
-                            <span class="text-white font-bold block">${d.address}</span>
-                            <span class="text-gray-400 text-[11px]">$${(d.price || 0).toLocaleString()} • ${d.city}</span>
+                            <div class="flex gap-2">
+                                <select onchange="updateStage('${d.id}', this.value)" class="flex-1 bg-gray-950 border border-gray-700 text-gray-200 text-xs rounded-xl px-2.5 py-1.5 font-bold">
+                                    <option value="due_diligence" ${(!d.pipeline_stage || d.pipeline_stage === 'due_diligence') ? 'selected' : ''}>בדיקת נאותות</option>
+                                    <option value="offer" ${d.pipeline_stage === 'offer' ? 'selected' : ''}>הגשת הצעה / מו"מ</option>
+                                    <option value="contract" ${d.pipeline_stage === 'contract' ? 'selected' : ''}>בחוזה (Under Contract)</option>
+                                    <option value="closed" ${d.pipeline_stage === 'closed' ? 'selected' : ''}>נסגר / נרכש (Closed)</option>
+                                </select>
+
+                                <button onclick="removeDeal('${d.id}')" class="p-2 bg-gray-800 hover:bg-rose-900/40 text-gray-400 hover:text-rose-300 border border-gray-700 rounded-xl text-xs transition" title="הסר מחדר עסקאות">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
-                        <button onclick="restoreFromArchive('${d.id}')" class="text-amber-400 hover:underline font-bold text-[11px]">החזר לפעיל</button>
                     </div>
-                `).join('');
-            }
+                `;
+            }).join('');
 
             lucide.createIcons();
+        }
+
+        function updateStage(id, newStage) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            if (deal) {
+                deal.pipeline_stage = newStage;
+                savePipelineDeals();
+            }
+        }
+
+        function removeDeal(id) {
+            if (confirm("האם להסיר את הנכס מחדר העסקאות? (הנכס יחזור לרשימת הסריקה הראשית)")) {
+                pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
+                savePipelineDeals();
+            }
+        }
+
+        function runDeepResearch(id) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            alert(`מנוע המחקר המעמיק מופעל כעת עבור:\n${deal.address}, ${deal.city}\n\nבשלב הבא נחבר את קובץ research_engine.js שיציג את הדו"ח המלא!`);
         }
 
         window.onload = init;
