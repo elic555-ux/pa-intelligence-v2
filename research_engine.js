@@ -1,4 +1,4 @@
-// Research Engine - Deep Due Diligence & PDF Generator for PA Real Estate
+// Research Engine - Deep Due Diligence & Decision-Based PDF Generator
 
 const COUNTY_AI_MACRO_DATA = {
     "Luzerne": {
@@ -121,25 +121,18 @@ function executeDueDiligenceResearch(property) {
     const county = property.county || "Luzerne";
     const macro = COUNTY_AI_MACRO_DATA[county] || DEFAULT_MACRO_DATA;
     
-    // Auto-fallback calculations if price or sqft are missing
     const askPrice = Number(property.price) > 0 ? Number(property.price) : 120000;
     const sqft = Number(property.sqft) > 0 ? Number(property.sqft) : 1300;
     
-    const estimatedRehab = Math.round(sqft * 45); // Standard estimate
+    const estimatedRehab = Math.round(sqft * 45);
     const estimatedArv = Math.round(askPrice * 1.75);
-
-    // Save timestamp to deal if it's an existing pipeline deal
-    if (property.id && !String(property.id).startsWith('custom_')) {
-        property.last_researched_at = new Date().toLocaleDateString('he-IL');
-        if (typeof savePipelineDeals === 'function') savePipelineDeals();
-    }
 
     const modalHTML = `
     <div id="research-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5">
         <div class="bg-gray-900 border border-blue-500/40 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar text-right">
             
-            <!-- Modal Header with Print / Download Buttons -->
-            <div class="flex justify-between items-start border-b border-gray-800 pb-3.5">
+            <!-- Modal Header with 3 Decision Actions -->
+            <div class="flex flex-wrap justify-between items-center border-b border-gray-800 pb-3.5 gap-3">
                 <div>
                     <span class="px-2.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-black">
                         🔬 דוח מחקר מעמיק ובדיקת נאותות (Due Diligence Report)
@@ -147,12 +140,18 @@ function executeDueDiligenceResearch(property) {
                     <h2 class="text-2xl font-black text-white mt-1">${property.address}</h2>
                     <p class="text-xs text-gray-300">${property.city}, ${property.county} County, PA</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="downloadResearchPDF()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>הורד כ-PDF</span>
+                
+                <!-- Decision Buttons (Top) -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="closeResearchModal(false)" class="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="סגור ללא שמירה">
+                        <i data-lucide="x" class="w-4 h-4"></i> סגור ללא שמירה
                     </button>
-                    <button onclick="closeResearchModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-gray-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    <button onclick="handleSaveResearchOnly()" class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-black flex items-center gap-1.5 transition">
+                        <i data-lucide="bookmark" class="w-4 h-4"></i> שמור מחקר בלבד
+                    </button>
+                    <button onclick="handleSaveAndDownloadPDF()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
+                        <i data-lucide="download" class="w-4 h-4"></i> שמור והפק PDF
+                    </button>
                 </div>
             </div>
 
@@ -255,7 +254,7 @@ function executeDueDiligenceResearch(property) {
                 </div>
             </div>
 
-            <!-- External Verification Quick Links -->
+            <!-- External Verification Quick Links & Bottom Actions -->
             <div class="pt-2 border-t border-gray-800 flex flex-wrap justify-between items-center gap-2">
                 <div class="flex flex-wrap gap-2">
                     <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address + ', ' + property.city + ', PA')}" target="_blank" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
@@ -265,9 +264,15 @@ function executeDueDiligenceResearch(property) {
                         <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-blue-400"></i> בתי ספר (GreatSchools)
                     </a>
                 </div>
-                <button onclick="closeResearchModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black transition">
-                    סגור
-                </button>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="handleSaveResearchOnly()" class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-black transition">
+                        שמור מחקר
+                    </button>
+                    <button onclick="handleSaveAndDownloadPDF()" class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/20 transition">
+                        שמור והפק PDF
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -280,9 +285,46 @@ function executeDueDiligenceResearch(property) {
     lucide.createIcons();
 }
 
-function downloadResearchPDF() {
+function persistCurrentResearch() {
+    if (!currentResearchProperty) return;
+
+    if (currentResearchProperty.is_custom || String(currentResearchProperty.id).startsWith('custom_')) {
+        // Save to saved custom researches list
+        let list = [];
+        try {
+            list = JSON.parse(localStorage.getItem('pa_custom_researches')) || [];
+        } catch(e) { list = []; }
+
+        const exists = list.some(i => i.id === currentResearchProperty.id);
+        if (!exists) {
+            list.unshift(currentResearchProperty);
+            localStorage.setItem('pa_custom_researches', JSON.stringify(list));
+            if (typeof loadSavedCustomResearches === 'function') {
+                loadSavedCustomResearches();
+            }
+        }
+    } else {
+        // Save to existing pipeline deal
+        currentResearchProperty.last_researched_at = new Date().toLocaleDateString('he-IL');
+        if (typeof savePipelineDeals === 'function') {
+            savePipelineDeals();
+        }
+    }
+}
+
+function handleSaveResearchOnly() {
+    persistCurrentResearch();
+    closeResearchModal();
+}
+
+function handleSaveAndDownloadPDF() {
+    persistCurrentResearch();
+    
     const element = document.getElementById('pdf-printable-area');
-    if (!element) return;
+    if (!element) {
+        closeResearchModal();
+        return;
+    }
 
     const opt = {
         margin:       10,
@@ -292,7 +334,9 @@ function downloadResearchPDF() {
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(element).save();
+    html2pdf().set(opt).from(element).save().then(() => {
+        closeResearchModal();
+    });
 }
 
 function closeResearchModal() {
