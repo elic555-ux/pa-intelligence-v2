@@ -204,10 +204,15 @@
 
         function runDeepResearch(id) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
-            alert(`מנוע המחקר המעמיק מופעל כעת עבור:\n${deal.address}, ${deal.city}\n\nבשלב הבא נחבר את קובץ research_engine.js שיציג את הדו"ח המלא!`);
+            if (deal && typeof executeDueDiligenceResearch === 'function') {
+                executeDueDiligenceResearch(deal);
+            }
         }
 
         window.onload = init;
     </script>
+
+    <!-- Connect Research Engine File -->
+    <script src="research_engine.js"></script>
 </body>
 </html>
