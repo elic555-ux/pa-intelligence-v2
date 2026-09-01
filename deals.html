@@ -74,10 +74,16 @@
 
             <!-- Top Tools & Actions -->
             <div class="flex items-center gap-2.5 flex-wrap">
-                <!-- Free / Custom Property Research Engine (Top Bar) -->
+                <!-- Free / Custom Property Research Engine -->
                 <button onclick="openCustomResearchModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition">
                     <i data-lucide="microscope" class="w-4 h-4 text-blue-400"></i>
                     <span>🔬 מחקר לנכס חופשי</span>
+                </button>
+
+                <!-- Rehab Estimator Tool (Restored) -->
+                <button onclick="alert('מחירון השיפוץ יחובר בשלב הבא')" class="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition">
+                    <i data-lucide="hammer" class="w-4 h-4 text-amber-400"></i>
+                    <span>🔨 מחירון שיפוץ ובקרת קבלנים</span>
                 </button>
 
                 <!-- Archive Toggle -->
@@ -119,7 +125,7 @@
             </div>
         </section>
 
-        <!-- Saved Custom Researches Area (Compact Table / Rows) -->
+        <!-- Saved Custom Researches Area -->
         <section id="custom-researches-container" class="hidden bg-gray-900/70 border border-blue-500/30 rounded-2xl p-4 space-y-2.5">
             <h3 class="text-sm font-black text-blue-300 flex items-center gap-1.5">
                 <i data-lucide="file-text" class="w-4 h-4 text-blue-400"></i>
@@ -190,12 +196,12 @@
                     <div>
                         <label class="block font-bold text-gray-200 mb-1">שכונה / אזור:</label>
                         <select id="cr-neighborhood" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-blue-400">
-                            <!-- Populated dynamically based on chosen city -->
+                            <!-- Populated dynamically -->
                         </select>
                     </div>
                 </div>
 
-                <!-- Price & SqFt (Optional with automatic defaults) -->
+                <!-- Price & SqFt -->
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
                         <label class="block font-bold text-gray-200 mb-1">מחיר מבוקש ($): <span class="text-gray-500 font-normal">(אופציונלי)</span></label>
@@ -208,17 +214,11 @@
                 </div>
             </div>
 
-            <div class="pt-3 border-t border-gray-800 flex flex-wrap justify-between items-center gap-2">
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
                 <button onclick="closeCustomResearchModal()" class="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl text-xs font-bold">ביטול</button>
-                
-                <div class="flex items-center gap-2">
-                    <button onclick="saveAndRunCustomResearch(true)" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-black flex items-center gap-1.5 transition">
-                        <i data-lucide="bookmark" class="w-4 h-4"></i> שמור מחקר
-                    </button>
-                    <button onclick="saveAndRunCustomResearch(false)" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition">
-                        <i data-lucide="file-text" class="w-4 h-4"></i> הפק דוח PDF
-                    </button>
-                </div>
+                <button onclick="previewCustomResearch()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
+                    <i data-lucide="eye" class="w-4 h-4"></i> הצג דוח מחקר
+                </button>
             </div>
         </div>
     </div>
@@ -357,7 +357,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick='openCustomResearchItem(${JSON.stringify(item)})' class="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-lg font-bold flex items-center gap-1 transition">
-                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> צפה ב-PDF
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> פתח דוח
                         </button>
                         <button onclick="deleteCustomResearchItem('${item.id}')" class="p-1 hover:text-rose-400 text-gray-500 transition" title="מחק שורה">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -475,7 +475,7 @@
             document.getElementById('custom-research-modal').classList.add('hidden');
         }
 
-        function saveAndRunCustomResearch(shouldSaveOnly) {
+        function previewCustomResearch() {
             const city = document.getElementById('cr-city').value || 'Philadelphia';
             const hood = document.getElementById('cr-neighborhood').value || '';
             const county = CITY_COUNTY_MAP[city] || 'Luzerne';
@@ -496,18 +496,13 @@
                 county: county,
                 price: price,
                 sqft: sqft,
+                is_custom: true,
                 created_at: new Date().toLocaleDateString('he-IL'),
                 tracker: { target_buyer: 'מחקר חופשי' }
             };
 
-            // Save to Saved Researches list
-            savedCustomResearches.unshift(customDeal);
-            localStorage.setItem('pa_custom_researches', JSON.stringify(savedCustomResearches));
-            renderSavedCustomResearches();
-
             closeCustomResearchModal();
 
-            // Run Research & PDF
             if (typeof executeDueDiligenceResearch === 'function') {
                 executeDueDiligenceResearch(customDeal);
             }
@@ -540,7 +535,6 @@
                 const badgeStyle = getDealBadgeStyle(d.deal_type);
                 const hasReport = !!d.last_researched_at;
 
-                // Check completion status for each field
                 const isSeenDone = tr.inspector_seen && tr.inspector_seen !== 'none';
                 const isConditionDone = !!tr.condition && tr.condition !== '';
                 const isOfferDone = tr.offer_made === 'yes' || (!!tr.offer_amount && Number(tr.offer_amount) > 0);
