@@ -31,15 +31,20 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                        חדר עסקאות וניהול צנרת (Deal Room Pipeline)
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">עצמאי</span>
+                        חדר עסקאות וניהול צנרת (Deal Room)
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">פעיל</span>
                     </h1>
-                    <p class="text-xs text-gray-400">ניהול שלבי עסקאות, מחקר מעמיק, אומדן שיפוץ ובקרת קבלנים</p>
+                    <p class="text-xs text-gray-400">מעקב וניהול תהליך רכישה מדויק לכל נכס</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-3">
-                <!-- Return to Scanner Hub Button (Opens in New Tab) -->
+                <button onclick="toggleArchiveView()" id="btn-toggle-archive" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition">
+                    <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
+                    <span id="archive-btn-text">צפה בארכיון עסקאות</span>
+                    <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
+                </button>
+
                 <a href="index.html" target="_blank" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>מעבר למערכת הסריקה הראשית</span>
@@ -54,25 +59,33 @@
         <!-- Top Summary Bar -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
-                <span class="text-xs font-bold text-gray-400 block mb-1">סה"כ עסקאות בצנרת</span>
+                <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות פעילות בצנרת</span>
                 <span class="text-2xl font-black text-amber-400" id="deals-total-count">0</span>
             </div>
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
-                <span class="text-xs font-bold text-gray-400 block mb-1">בבדיקת נאותות (Due Diligence)</span>
-                <span class="text-2xl font-black text-blue-400" id="deals-dd-count">0</span>
+                <span class="text-xs font-bold text-gray-400 block mb-1">הוגשו הצעות מחיר</span>
+                <span class="text-2xl font-black text-blue-400" id="deals-offered-count">0</span>
             </div>
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
-                <span class="text-xs font-bold text-gray-400 block mb-1">במשא ומתן / הצעת מחיר</span>
-                <span class="text-2xl font-black text-purple-400" id="deals-offer-count">0</span>
+                <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות שנסגרו בהצלחה</span>
+                <span class="text-2xl font-black text-emerald-400" id="deals-closed-count">0</span>
             </div>
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
-                <span class="text-xs font-bold text-gray-400 block mb-1">שווי השקעה כולל מבוקש</span>
-                <span class="text-2xl font-black text-emerald-400" id="deals-total-volume">$0</span>
+                <span class="text-xs font-bold text-gray-400 block mb-1">שווי השקעה כולל בצנרת</span>
+                <span class="text-2xl font-black text-purple-400" id="deals-total-volume">$0</span>
             </div>
         </section>
 
+        <!-- View Title Indicator -->
+        <div class="flex justify-between items-center">
+            <h2 class="text-lg font-black text-white flex items-center gap-2" id="view-title">
+                <i data-lucide="list-checks" class="w-5 h-5 text-amber-400"></i>
+                רשימת עסקאות פעילות
+            </h2>
+        </div>
+
         <!-- Deals Container -->
-        <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Dynamic Deal Cards -->
         </section>
 
@@ -81,6 +94,7 @@
     <!-- Script Logic -->
     <script>
         let pipelineDeals = [];
+        let showArchive = false;
 
         async function init() {
             lucide.createIcons();
@@ -105,111 +119,66 @@
         }
 
         function updateSummaryCounters() {
-            document.getElementById('deals-total-count').textContent = pipelineDeals.length;
-            const ddCount = pipelineDeals.filter(d => !d.pipeline_stage || d.pipeline_stage === 'due_diligence').length;
-            document.getElementById('deals-dd-count').textContent = ddCount;
-            const offerCount = pipelineDeals.filter(d => d.pipeline_stage === 'offer').length;
-            document.getElementById('deals-offer-count').textContent = offerCount;
+            const activeDeals = pipelineDeals.filter(d => !d.is_archived);
+            const archivedDeals = pipelineDeals.filter(d => d.is_archived);
 
-            const totalVol = pipelineDeals.reduce((sum, d) => sum + (Number(d.price) || 0), 0);
+            document.getElementById('deals-total-count').textContent = activeDeals.length;
+            document.getElementById('archive-badge-count').textContent = archivedDeals.length;
+
+            const offeredCount = activeDeals.filter(d => d.tracker?.offer_made === 'yes').length;
+            document.getElementById('deals-offered-count').textContent = offeredCount;
+
+            const closedCount = activeDeals.filter(d => d.tracker?.deal_closed === 'closed').length;
+            document.getElementById('deals-closed-count').textContent = closedCount;
+
+            const totalVol = activeDeals.reduce((sum, d) => sum + (Number(d.price) || 0), 0);
             document.getElementById('deals-total-volume').textContent = '$' + totalVol.toLocaleString();
         }
 
-        function renderDeals() {
-            const container = document.getElementById('pipeline-deals-grid');
-            if (pipelineDeals.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-16 bg-gray-900/40 border border-gray-800 rounded-3xl space-y-3">
-                        <i data-lucide="folder-open" class="w-12 h-12 text-gray-600 mx-auto"></i>
-                        <h3 class="text-base font-bold text-white">אין כרגע עסקאות פעילות בחדר העסקאות</h3>
-                        <p class="text-xs text-gray-400">העבר נכסים ממערכת הסריקה הראשית כדי להתחיל מחקר מעמיק וניהול מו"מ.</p>
-                        <a href="index.html" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition">
-                            <i data-lucide="scan" class="w-4 h-4"></i> עבור למערכת הסריקה
-                        </a>
-                    </div>
-                `;
-                lucide.createIcons();
-                return;
+        function toggleArchiveView() {
+            showArchive = !showArchive;
+            const btnText = document.getElementById('archive-btn-text');
+            const viewTitle = document.getElementById('view-title');
+            
+            if (showArchive) {
+                btnText.textContent = 'חזור לעסקאות פעילות';
+                viewTitle.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-amber-400"></i> ארכיון עסקאות`;
+            } else {
+                btnText.textContent = 'צפה בארכיון עסקאות';
+                viewTitle.innerHTML = `<i data-lucide="list-checks" class="w-5 h-5 text-amber-400"></i> רשימת עסקאות פעילות`;
             }
-
-            container.innerHTML = pipelineDeals.map((d) => {
-                return `
-                    <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
-                        <div>
-                            <div class="flex justify-between items-start gap-2 mb-2">
-                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                                    ${d.deal_type || 'Deal'}
-                                </span>
-                                <span class="text-xs font-bold text-gray-400">
-                                    נוסף: ${d.added_to_pipeline_at || 'לאחרונה'}
-                                </span>
-                            </div>
-
-                            <h3 class="text-lg font-black text-white mb-1">${d.address}</h3>
-                            <p class="text-xs font-bold text-gray-400 mb-3 flex items-center gap-1.5">
-                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
-                                ${d.city}, ${d.county} County, PA ${d.zip || ''}
-                            </p>
-
-                            <div class="text-2xl font-black text-emerald-400 mb-3">$${(Number(d.price) || 0).toLocaleString()}</div>
-
-                            <div class="grid grid-cols-3 gap-2 bg-gray-950 p-2.5 rounded-xl text-center text-xs text-gray-300 border border-gray-800">
-                                <div><span class="text-gray-500 block">חדרים</span><strong class="text-white">${d.beds || '-'}</strong></div>
-                                <div><span class="text-gray-500 block">אמבט</span><strong class="text-white">${d.baths || '-'}</strong></div>
-                                <div><span class="text-gray-500 block">שטח</span><strong class="text-white">${d.sqft ? d.sqft + ' sqft' : '-'}</strong></div>
-                            </div>
-
-                            ${d.rehab_scope ? `
-                            <div class="mt-2.5 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs font-bold text-amber-300">
-                                ${d.rehab_scope}
-                            </div>` : ''}
-                        </div>
-
-                        <!-- Action Buttons in Deal Room -->
-                        <div class="space-y-2 pt-3 border-t border-gray-800">
-                            <!-- Button 1: Research Engine -->
-                            <button onclick="runDeepResearch('${d.id}')" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition">
-                                <i data-lucide="microscope" class="w-4 h-4 text-amber-300"></i>
-                                <span>🔬 בצע מחקר מעמיק (Due Diligence)</span>
-                            </button>
-
-                            <!-- Button 2: Rehab Estimator & Contractor Checker -->
-                            <button onclick="runRehabEstimator('${d.id}')" class="w-full py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition">
-                                <i data-lucide="hammer" class="w-4 h-4 text-amber-200"></i>
-                                <span>🔨 מחירון שיפוץ ובקרת קבלנים</span>
-                            </button>
-
-                            <!-- Stage Select & Delete -->
-                            <div class="flex gap-2 pt-1">
-                                <select onchange="updateStage('${d.id}', this.value)" class="flex-1 bg-gray-950 border border-gray-700 text-gray-200 text-xs rounded-xl px-2.5 py-1.5 font-bold">
-                                    <option value="due_diligence" ${(!d.pipeline_stage || d.pipeline_stage === 'due_diligence') ? 'selected' : ''}>בדיקת נאותות</option>
-                                    <option value="offer" ${d.pipeline_stage === 'offer' ? 'selected' : ''}>הגשת הצעה / מו"מ</option>
-                                    <option value="contract" ${d.pipeline_stage === 'contract' ? 'selected' : ''}>בחוזה (Under Contract)</option>
-                                    <option value="closed" ${d.pipeline_stage === 'closed' ? 'selected' : ''}>נסגר / נרכש (Closed)</option>
-                                </select>
-
-                                <button onclick="removeDeal('${d.id}')" class="p-2 bg-gray-800 hover:bg-rose-900/40 text-gray-400 hover:text-rose-300 border border-gray-700 rounded-xl text-xs transition" title="הסר מחדר עסקאות">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
+            renderDeals();
             lucide.createIcons();
         }
 
-        function updateStage(id, newStage) {
+        function updateField(id, key, value) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
-                deal.pipeline_stage = newStage;
+                if (!deal.tracker) deal.tracker = {};
+                deal.tracker[key] = value;
+                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                updateSummaryCounters();
+            }
+        }
+
+        function moveToArchive(id) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            if (deal) {
+                deal.is_archived = true;
                 savePipelineDeals();
             }
         }
 
-        function removeDeal(id) {
-            if (confirm("האם להסיר את הנכס מחדר העסקאות? (הנכס יחזור לרשימת הסריקה הראשית)")) {
+        function restoreFromArchive(id) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            if (deal) {
+                deal.is_archived = false;
+                savePipelineDeals();
+            }
+        }
+
+        function removeDealCompletely(id) {
+            if (confirm("האם להסיר את הנכס לחלוטין מחדר העסקאות? (הנכס יחזור לרשימת הסריקה הראשית)")) {
                 pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
                 savePipelineDeals();
             }
@@ -226,6 +195,191 @@
             if (typeof openRehabEstimator === 'function') {
                 openRehabEstimator(id);
             }
+        }
+
+        function renderDeals() {
+            const container = document.getElementById('pipeline-deals-grid');
+            const displayList = pipelineDeals.filter(d => showArchive ? d.is_archived : !d.is_archived);
+
+            if (displayList.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-16 bg-gray-900/40 border border-gray-800 rounded-3xl space-y-3">
+                        <i data-lucide="${showArchive ? 'archive' : 'folder-open'}" class="w-12 h-12 text-gray-600 mx-auto"></i>
+                        <h3 class="text-base font-bold text-white">${showArchive ? 'אין כרגע עסקאות בארכיון' : 'אין כרגע עסקאות פעילות בחדר העסקאות'}</h3>
+                        <p class="text-xs text-gray-400">${showArchive ? 'עסקאות שתעביר לארכיון יוצגו כאן.' : 'העבר נכסים ממערכת הסריקה הראשית כדי לנהל את תהליך הרכישה.'}</p>
+                        ${!showArchive ? `
+                        <a href="index.html" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition">
+                            <i data-lucide="scan" class="w-4 h-4"></i> עבור למערכת הסריקה
+                        </a>` : ''}
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = displayList.map((d) => {
+                const tr = d.tracker || {};
+                
+                return `
+                    <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
+                        
+                        <!-- Header & Target Buyer -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-start gap-2">
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                                    ${d.deal_type || 'Deal'}
+                                </span>
+                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-1" title="הסר מחדר עסקאות">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <!-- Target Buyer Field (At the very top) -->
+                            <div class="bg-gray-950 p-2.5 rounded-xl border border-blue-500/30">
+                                <label class="block text-xs font-bold text-blue-300 mb-1 flex items-center gap-1.5">
+                                    <i data-lucide="user-check" class="w-3.5 h-3.5 text-blue-400"></i> למי הנכס מיועד:
+                                </label>
+                                <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח / משקיע / שותף..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1 text-xs text-white font-bold focus:border-blue-400">
+                            </div>
+
+                            <!-- Property Overview -->
+                            <div>
+                                <h3 class="text-lg font-black text-white mb-0.5">${d.address}</h3>
+                                <p class="text-xs font-bold text-gray-400 flex items-center gap-1">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
+                                    ${d.city}, ${d.county} County, PA ${d.zip || ''}
+                                </p>
+                                <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
+                            </div>
+
+                            <!-- Sequential 9 Action Points Tracker -->
+                            <div class="space-y-2 pt-2 border-t border-gray-800 text-xs">
+
+                                <!-- 1. מי ראה את הדירה -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800">
+                                    <label class="block font-bold text-gray-300 mb-1">1. מי ראה את הדירה:</label>
+                                    <select onchange="updateField('${d.id}', 'inspector_seen', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold">
+                                        <option value="none" ${tr.inspector_seen === 'none' || !tr.inspector_seen ? 'selected' : ''}>טרם נבדק בשטח</option>
+                                        <option value="agent" ${tr.inspector_seen === 'agent' ? 'selected' : ''}>מתווך</option>
+                                        <option value="contractor" ${tr.inspector_seen === 'contractor' ? 'selected' : ''}>קבלן</option>
+                                        <option value="handyman" ${tr.inspector_seen === 'handyman' ? 'selected' : ''}>איש אחזקה</option>
+                                    </select>
+                                </div>
+
+                                <!-- 2. מצב הדירה -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800">
+                                    <label class="block font-bold text-gray-300 mb-1">2. מצב הדירה:</label>
+                                    <select onchange="updateField('${d.id}', 'condition', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold">
+                                        <option value="excellent" ${tr.condition === 'excellent' ? 'selected' : ''}>מעולה</option>
+                                        <option value="light_cosmetic" ${tr.condition === 'light_cosmetic' ? 'selected' : ''}>דורש קוסמטיקה קלה</option>
+                                        <option value="partial_rehab" ${tr.condition === 'partial_rehab' || !tr.condition ? 'selected' : ''}>דורש שיפוץ חלקי</option>
+                                        <option value="leaks" ${tr.condition === 'leaks' ? 'selected' : ''}>סובל מנזילות</option>
+                                        <option value="full_gut" ${tr.condition === 'full_gut' ? 'selected' : ''}>דורש שיפוץ מלא</option>
+                                    </select>
+                                </div>
+
+                                <!-- 3. הוגשה הצעה על הנכס -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800 space-y-1">
+                                    <label class="block font-bold text-gray-300">3. הוגשה הצעה על הנכס:</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'offer_made', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold">
+                                            <option value="no" ${tr.offer_made === 'no' || !tr.offer_made ? 'selected' : ''}>לא</option>
+                                            <option value="yes" ${tr.offer_made === 'yes' ? 'selected' : ''}>כן</option>
+                                        </select>
+                                        <input type="number" placeholder="מחיר שהוצע ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-md px-2 py-1 font-bold">
+                                    </div>
+                                </div>
+
+                                <!-- 4. הפקדת דמי רצינות -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800 space-y-1">
+                                    <label class="block font-bold text-gray-300">4. הפקדת דמי רצינות (EMD):</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'emd_deposited', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold">
+                                            <option value="no" ${tr.emd_deposited === 'no' || !tr.emd_deposited ? 'selected' : ''}>לא</option>
+                                            <option value="yes" ${tr.emd_deposited === 'yes' ? 'selected' : ''}>כן</option>
+                                        </select>
+                                        <input type="number" placeholder="סכום שהופקד ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value)" class="bg-gray-900 border border-gray-700 text-blue-300 rounded-md px-2 py-1 font-bold">
+                                    </div>
+                                </div>
+
+                                <!-- 5. נשלח בודק לבית -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800">
+                                    <label class="block font-bold text-gray-300 mb-1">5. נשלח בודק לבית:</label>
+                                    <select onchange="updateField('${d.id}', 'inspector_sent', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold">
+                                        <option value="no" ${tr.inspector_sent === 'no' || !tr.inspector_sent ? 'selected' : ''}>לא</option>
+                                        <option value="yes" ${tr.inspector_sent === 'yes' ? 'selected' : ''}>כן</option>
+                                    </select>
+                                </div>
+
+                                <!-- 6. הצעת מחיר קבלן שיפוץ -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800 space-y-1">
+                                    <label class="block font-bold text-gray-300">6. הצעת מחיר קבלן שיפוץ:</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'contractor_quote_status', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold">
+                                            <option value="no" ${tr.contractor_quote_status === 'no' || !tr.contractor_quote_status ? 'selected' : ''}>לא</option>
+                                            <option value="yes" ${tr.contractor_quote_status === 'yes' ? 'selected' : ''}>כן</option>
+                                        </select>
+                                        <input type="number" placeholder="סכום ההצעה ($)" value="${tr.contractor_quote_amount || ''}" oninput="updateField('${d.id}', 'contractor_quote_amount', this.value)" class="bg-gray-900 border border-gray-700 text-amber-300 rounded-md px-2 py-1 font-bold">
+                                    </div>
+                                </div>
+
+                                <!-- 7. סטטוס העסקה -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800 space-y-1">
+                                    <label class="block font-bold text-gray-300">7. סטטוס העסקה:</label>
+                                    <select onchange="updateField('${d.id}', 'deal_status', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold mb-1">
+                                        <option value="under_review" ${tr.deal_status === 'under_review' || !tr.deal_status ? 'selected' : ''}>בבדיקה</option>
+                                        <option value="negotiating_new_price" ${tr.deal_status === 'negotiating_new_price' ? 'selected' : ''}>משא ומתן במחיר חדש</option>
+                                        <option value="awaiting_client" ${tr.deal_status === 'awaiting_client' ? 'selected' : ''}>ממתין לתשובת הלקוח</option>
+                                    </select>
+                                    <input type="number" placeholder="מחיר חדש במו&quot;מ ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value)" class="w-full bg-gray-900 border border-gray-700 text-purple-300 rounded-md px-2 py-1 font-bold">
+                                </div>
+
+                                <!-- 8. נסגרה עסקה -->
+                                <div class="bg-gray-950 p-2 rounded-lg border border-gray-800 space-y-1">
+                                    <label class="block font-bold text-gray-300">8. סגירת עסקה:</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'deal_closed', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-md px-2 py-1 font-bold">
+                                            <option value="not_closed" ${tr.deal_closed === 'not_closed' || !tr.deal_closed ? 'selected' : ''}>לא נסגרה עסקה</option>
+                                            <option value="closed" ${tr.deal_closed === 'closed' ? 'selected' : ''}>נסגרה עסקה</option>
+                                        </select>
+                                        <input type="number" placeholder="מחיר סגירה סופי ($)" value="${tr.final_closing_price || ''}" oninput="updateField('${d.id}', 'final_closing_price', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-md px-2 py-1 font-bold">
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons & 9. כפתור העברה לארכיון -->
+                        <div class="space-y-2 pt-2 border-t border-gray-800">
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="runDeepResearch('${d.id}')" class="py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition">
+                                    <i data-lucide="microscope" class="w-3.5 h-3.5 text-amber-300"></i>
+                                    <span>🔬 מחקר מעמיק</span>
+                                </button>
+                                <button onclick="runRehabEstimator('${d.id}')" class="py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition">
+                                    <i data-lucide="hammer" class="w-3.5 h-3.5 text-amber-200"></i>
+                                    <span>🔨 מחירון שיפוץ</span>
+                                </button>
+                            </div>
+
+                            <!-- 9. כפתור העברה לארכיון / שחזור -->
+                            ${showArchive ? `
+                                <button onclick="restoreFromArchive('${d.id}')" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                                    <span>החזר לעסקאות פעילות</span>
+                                </button>
+                            ` : `
+                                <button onclick="moveToArchive('${d.id}')" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-amber-300 border border-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                                    <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+                                    <span>9. העבר לארכיון</span>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
         }
 
         window.onload = init;
