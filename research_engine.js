@@ -88,6 +88,17 @@ const COUNTY_AI_MACRO_DATA = {
         safetyGrade: "B-",
         schoolsGrade: "6.5/10",
         marketTrend: "+4.0% שנתי"
+    },
+    "Philadelphia": {
+        tier: "Tier A",
+        aiScore: 89,
+        growthDriver: "מרכז רפואי, ביוטק ואוניברסיטאות מובילות",
+        permitStatus: "Metro Core Hub",
+        rentDemand: "גבוה מאוד",
+        medianRent: "$1,750",
+        safetyGrade: "B",
+        schoolsGrade: "7.5/10",
+        marketTrend: "+5.0% שנתי"
     }
 };
 
@@ -109,14 +120,16 @@ function executeDueDiligenceResearch(property) {
     currentResearchProperty = property;
     const county = property.county || "Luzerne";
     const macro = COUNTY_AI_MACRO_DATA[county] || DEFAULT_MACRO_DATA;
-    const targetBuyer = property.tracker?.target_buyer || "משקיע / שותף";
-    const askPrice = Number(property.price) || 0;
-    const sqft = Number(property.sqft) || 1200;
+    
+    // Auto-fallback calculations if price or sqft are missing
+    const askPrice = Number(property.price) > 0 ? Number(property.price) : 120000;
+    const sqft = Number(property.sqft) > 0 ? Number(property.sqft) : 1300;
+    
     const estimatedRehab = Math.round(sqft * 45); // Standard estimate
     const estimatedArv = Math.round(askPrice * 1.75);
 
-    // Save timestamp to deal if it's an existing deal
-    if (property.id && !property.id.startsWith('custom_')) {
+    // Save timestamp to deal if it's an existing pipeline deal
+    if (property.id && !String(property.id).startsWith('custom_')) {
         property.last_researched_at = new Date().toLocaleDateString('he-IL');
         if (typeof savePipelineDeals === 'function') savePipelineDeals();
     }
@@ -132,7 +145,7 @@ function executeDueDiligenceResearch(property) {
                         🔬 דוח מחקר מעמיק ובדיקת נאותות (Due Diligence Report)
                     </span>
                     <h2 class="text-2xl font-black text-white mt-1">${property.address}</h2>
-                    <p class="text-xs text-gray-300">${property.city}, ${property.county} County, PA | <strong>מיועד עבור:</strong> ${targetBuyer}</p>
+                    <p class="text-xs text-gray-300">${property.city}, ${property.county} County, PA</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="downloadResearchPDF()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
@@ -153,8 +166,8 @@ function executeDueDiligenceResearch(property) {
                         <p class="text-xs text-gray-400">${property.city}, ${property.county} County, PA</p>
                     </div>
                     <div class="text-left">
-                        <span class="text-xs text-gray-400 block">מיועד עבור:</span>
-                        <strong class="text-blue-400 text-sm font-black">${targetBuyer}</strong>
+                        <span class="text-xs text-gray-400 block">תאריך הפקה:</span>
+                        <strong class="text-blue-400 text-sm font-mono font-bold">${new Date().toLocaleDateString('he-IL')}</strong>
                     </div>
                 </div>
 
@@ -223,11 +236,11 @@ function executeDueDiligenceResearch(property) {
                     </h4>
                     <div class="grid grid-cols-3 gap-2">
                         <div class="bg-gray-950 p-2 rounded border border-gray-800">
-                            <span class="text-gray-400 block font-bold">מחיר מבוקש</span>
+                            <span class="text-gray-400 block font-bold">מחיר מבוקש / מוערך</span>
                             <strong class="text-white text-sm font-black">$${askPrice.toLocaleString()}</strong>
                         </div>
                         <div class="bg-gray-950 p-2 rounded border border-gray-800">
-                            <span class="text-gray-400 block font-bold">אומדן שיפוץ משוער</span>
+                            <span class="text-gray-400 block font-bold">אומדן שיפוץ משוער (${sqft.toLocaleString()} SqFt)</span>
                             <strong class="text-amber-300 text-sm font-black">$${estimatedRehab.toLocaleString()}</strong>
                         </div>
                         <div class="bg-gray-950 p-2 rounded border border-gray-800">
@@ -248,7 +261,7 @@ function executeDueDiligenceResearch(property) {
                     <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address + ', ' + property.city + ', PA')}" target="_blank" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
                         <i data-lucide="map" class="w-3.5 h-3.5 text-emerald-400"></i> מפת רחוב
                     </a>
-                    <a href="https://www.greatschools.org/search/search.page?q=${encodeURIComponent(property.city + ' ' + (property.zip || ''))}" target="_blank" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                    <a href="https://www.greatschools.org/search/search.page?q=${encodeURIComponent(property.city)}" target="_blank" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
                         <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-blue-400"></i> בתי ספר (GreatSchools)
                     </a>
                 </div>
