@@ -39,7 +39,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         חדר עסקאות וניהול צנרת (Deal Room)
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">סורק דוחות אוטונומי פעיל</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">דוחות בהירים להדפסה פעילים</span>
                     </h1>
                     <p class="text-xs text-gray-300">מעקב, הערכת שיפוצים וניתוח דוחות בודק</p>
                 </div>
@@ -167,7 +167,7 @@
 
                 <button onclick="triggerDetailedReportModal()" class="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:opacity-90 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition">
                     <i data-lucide="external-link" class="w-4 h-4"></i>
-                    <span>פתח את הדוח המפורט המלא (חלון נפרד + הפקת PDF ושמירה)</span>
+                    <span>פתח את הדוח המפורט המלא (גרסה בהירה להדפסה וייצוא PDF)</span>
                 </button>
             </div>
 
@@ -230,18 +230,16 @@
         </div>
     </div>
 
-    <!-- Modal: Dedicated Expanded Inspection Report Modal -->
-    <div id="detailed-inspection-report-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 hidden">
-        <div class="bg-gray-900 border border-blue-500/50 rounded-2xl max-w-5xl w-full p-5 sm:p-7 space-y-5 shadow-2xl relative max-h-[95vh] overflow-y-auto custom-scrollbar text-right">
+    <!-- Modal: Dedicated Expanded Inspection Report Modal (BRIGHT WHITE BACKGROUND FOR PRINT & PDF) -->
+    <div id="detailed-inspection-report-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-blue-500/50 rounded-2xl max-w-5xl w-full p-4 sm:p-6 space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto custom-scrollbar text-right">
             
-            <!-- Top Control Bar -->
-            <div class="flex flex-wrap justify-between items-center border-b border-gray-800 pb-4 gap-3">
-                <div>
-                    <span class="px-2.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-black">
-                        📑 דוח ניתוח בודק מקיף ואומדן שיפוץ (Due Diligence & Rehab Report)
+            <!-- Top Action Control Bar -->
+            <div class="flex flex-wrap justify-between items-center border-b border-gray-800 pb-3 gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-black">
+                        📑 דוח ניתוח בודק ואומדן שיפוץ (Print & PDF Optimized)
                     </span>
-                    <h2 class="text-2xl font-black text-white mt-1" id="rep-property-address">1330 Sylvan Ave</h2>
-                    <p class="text-xs text-gray-300" id="rep-property-city">Homestead, PA 15120</p>
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
@@ -252,97 +250,97 @@
                         <i data-lucide="bookmark" class="w-4 h-4"></i> שמור בהיסטוריה
                     </button>
                     <button onclick="downloadDetailedReportPDF()" class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
-                        <i data-lucide="download" class="w-4 h-4"></i> הפק והורד PDF
+                        <i data-lucide="download" class="w-4 h-4"></i> הדפס / הפק PDF בהיר
                     </button>
                 </div>
             </div>
 
-            <!-- Printable Report Document Area -->
-            <div id="inspection-report-printable-area" class="space-y-5 p-4 sm:p-6 bg-gray-950 rounded-2xl border border-gray-800">
+            <!-- Printable White-Paper Area (OPTIMIZED FOR PDF & INK SAVING) -->
+            <div id="inspection-report-printable-area" class="space-y-6 p-6 sm:p-10 bg-white text-gray-900 rounded-2xl shadow-xl border border-gray-200">
                 
-                <!-- Report Meta Header -->
-                <div class="flex flex-wrap justify-between items-start border-b border-gray-800 pb-4 gap-2">
+                <!-- Report Header -->
+                <div class="flex flex-wrap justify-between items-start border-b-2 border-gray-300 pb-4 gap-2">
                     <div>
-                        <h3 class="text-xl font-black text-white" id="prt-address">1330 Sylvan Ave</h3>
-                        <p class="text-xs text-gray-400" id="prt-city">Homestead, PA 15120 (Allegheny County)</p>
+                        <h2 class="text-3xl font-black text-gray-950 tracking-tight" id="prt-address">1330 Sylvan Ave</h2>
+                        <p class="text-base font-extrabold text-gray-700 mt-0.5" id="prt-city">Homestead, PA 15120 (Allegheny County)</p>
                     </div>
-                    <div class="text-left">
-                        <span class="text-[11px] text-gray-400 block">תאריך ניתוח הדוח:</span>
-                        <strong class="text-blue-400 text-sm font-mono" id="prt-date">09/03/2026</strong>
+                    <div class="text-left bg-gray-100 p-3 rounded-xl border border-gray-300">
+                        <span class="text-xs font-bold text-gray-500 block">תאריך ניתוח והפקה:</span>
+                        <strong class="text-gray-900 text-sm font-mono font-black" id="prt-date">09/03/2026</strong>
                     </div>
                 </div>
 
-                <!-- 4 Top KPI Cards -->
+                <!-- 4 High-Contrast KPI Cards (Clean White/Gray) -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                    <div class="bg-gray-900 p-3.5 rounded-xl border border-gray-800">
-                        <span class="text-xs text-gray-400 block mb-1">סך אומדן שיפוץ משוער</span>
-                        <strong class="text-xl font-black text-amber-400" id="rep-total-range">$38,100 – $57,800</strong>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-300">
+                        <span class="text-xs font-black text-gray-600 block mb-1">אומדן שיפוץ כולל מחושב</span>
+                        <strong class="text-2xl font-black text-amber-700 tracking-tight" id="rep-total-range">$38,100 – $57,800</strong>
                     </div>
-                    <div class="bg-gray-900 p-3.5 rounded-xl border border-gray-800">
-                        <span class="text-xs text-gray-400 block mb-1">סיווג מצב הנכס</span>
-                        <strong class="text-sm font-black text-rose-400" id="rep-condition-badge">Full Gut / Heavy Rehab</strong>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-300">
+                        <span class="text-xs font-black text-gray-600 block mb-1">סיווג מצב הנכס</span>
+                        <strong class="text-base font-black text-rose-700" id="rep-condition-badge">Full Gut / Heavy Rehab</strong>
                     </div>
-                    <div class="bg-gray-900 p-3.5 rounded-xl border border-gray-800">
-                        <span class="text-xs text-gray-400 block mb-1">ליקויים קריטיים שאותרו</span>
-                        <strong class="text-xl font-black text-rose-400" id="rep-critical-count">3 ממצאים</strong>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-300">
+                        <span class="text-xs font-black text-gray-600 block mb-1">ליקויים קריטיים שאותרו</span>
+                        <strong class="text-2xl font-black text-rose-700" id="rep-critical-count">4 ממצאים</strong>
                     </div>
-                    <div class="bg-gray-900 p-3.5 rounded-xl border border-gray-800">
-                        <span class="text-xs text-gray-400 block mb-1">דרישת הנחה / קרדיט</span>
-                        <strong class="text-base font-black text-emerald-400" id="rep-credit-demand">$35,000 – $40,000</strong>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-300">
+                        <span class="text-xs font-black text-gray-600 block mb-1">דרישת הנחה / קרדיט</span>
+                        <strong class="text-xl font-black text-emerald-800" id="rep-credit-demand">$35,000 – $40,000</strong>
                     </div>
                 </div>
 
-                <!-- Section 1: Critical Hazards & Deal Breakers -->
-                <div class="bg-rose-950/20 border border-rose-500/40 p-4 rounded-xl space-y-2 text-xs">
-                    <h4 class="font-black text-rose-300 flex items-center gap-2 text-sm">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400"></i>
-                        ליקויים בטיחותיים קריטיים (Critical Safety Hazards & Red Flags)
+                <!-- Section 1: Critical Hazards & Red Flags (Light Red Box) -->
+                <div class="bg-rose-50 border-2 border-rose-300 p-4 sm:p-5 rounded-xl space-y-2 text-sm">
+                    <h4 class="font-black text-rose-900 flex items-center gap-2 text-base">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-700"></i>
+                        ליקויים בטיחותיים קריטיים (Critical Red Flags & Safety Hazards)
                     </h4>
-                    <ul class="space-y-1.5 text-gray-300 list-disc list-inside leading-relaxed" id="rep-critical-list">
-                        <li><strong>עובש שחור חמור (Severe Mold):</strong> עובש משמעותי במרתף ובשירותים שמנע מהשרברב להיכנס לבדיקת קו הביוב מחשש בטיחותי.</li>
-                        <li><strong>קו אספקת מים ראשי מעופרת (Lead Water Service Line):</strong> סכנה בריאותית ישירה הדורשת החלפה מלאה מהרחוב עד לתוך הבית.</li>
-                        <li><strong>גג ראשי ומרפסת בסוף חייהם (Aged Roof):</strong> שינגלס בלויים ושבורים עם נזילות פעילות וכתמי מים בתקרות הקומה העליונה.</li>
-                        <li><strong>מים מנותקים בעת הבדיקה (Water Turned Off):</strong> לא נבדקו נזילות בתוך הקירות ותקינות כלים סניטריים – נדרשת רזרבת אינסטלציה.</li>
+                    <ul class="space-y-1.5 text-gray-900 list-disc list-inside font-semibold leading-relaxed" id="rep-critical-list">
+                        <li><strong class="text-rose-950 font-black">עובש שחור חמור (Severe Mold):</strong> עובש משמעותי במרתף ובשירותים שמנע מהשרברב להיכנס לבדיקת קו הביוב מחשש בטיחותי.</li>
+                        <li><strong class="text-rose-950 font-black">קו אספקת מים ראשי מעופרת (Lead Water Service Line):</strong> סכנה בריאותית ישירה הדורשת חפירה והחלפה מלאה מהרחוב עד לתוך הבית.</li>
+                        <li><strong class="text-rose-950 font-black">גג ראשי ומרפסת בסוף חייהם (Aged Roof):</strong> שינגלס בלויים ושבורים עם נזילות פעילות וכתמי מים בתקרות הקומה העליונה[cite: 1].</li>
+                        <li><strong class="text-rose-950 font-black">מים מנותקים בעת הבדיקה (Water Turned Off):</strong> לא נבדקו נזילות בתוך הקירות ותקינות כלים סניטריים – נדרשת רזרבת אינסטלציה[cite: 1].</li>
                     </ul>
                 </div>
 
-                <!-- Section 2: Detailed Line-Item Pricing Table -->
-                <div class="space-y-2">
-                    <h4 class="font-black text-white text-sm flex items-center gap-1.5">
-                        <i data-lucide="calculator" class="w-4 h-4 text-amber-400"></i>
+                <!-- Section 2: Detailed Line-Item Pricing Table (High-Legibility Black on White) -->
+                <div class="space-y-3">
+                    <h4 class="font-black text-gray-950 text-base flex items-center gap-2">
+                        <i data-lucide="calculator" class="w-5 h-5 text-amber-700"></i>
                         פירוט תמחור שיפוצים וליקויים לפי מחירון PA:
                     </h4>
-                    <div class="overflow-x-auto border border-gray-800 rounded-xl">
-                        <table class="w-full text-right text-xs">
-                            <thead class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
+                    <div class="overflow-x-auto border-2 border-gray-300 rounded-xl">
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-gray-100 text-gray-900 font-black border-b-2 border-gray-300">
                                 <tr>
-                                    <th class="p-3">תחום ומערכת</th>
-                                    <th class="p-3">ממצאי הבודק בדוח</th>
-                                    <th class="p-3">המלצת תיקון</th>
-                                    <th class="p-3 text-left">אומדן עלות ($)</th>
+                                    <th class="p-3.5 text-base">תחום ומערכת</th>
+                                    <th class="p-3.5 text-base">ממצאי הבודק בדוח</th>
+                                    <th class="p-3.5 text-base">המלצת תיקון</th>
+                                    <th class="p-3.5 text-left text-base">אומדן עלות ($)</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-800 bg-gray-950" id="rep-breakdown-tbody">
+                            <tbody class="divide-y divide-gray-300 font-medium text-gray-900" id="rep-breakdown-tbody">
                                 <!-- Populated dynamically -->
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Section 3: Negotiation & Underwriting Strategy -->
-                <div class="bg-blue-950/20 border border-blue-500/30 p-4 rounded-xl space-y-2 text-xs">
-                    <h4 class="font-black text-blue-300 flex items-center gap-2 text-sm">
-                        <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+                <!-- Section 3: Negotiation Strategy (Light Blue Box) -->
+                <div class="bg-blue-50 border-2 border-blue-300 p-4 sm:p-5 rounded-xl space-y-2 text-sm">
+                    <h4 class="font-black text-blue-950 flex items-center gap-2 text-base">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-blue-700"></i>
                         מסקנות אסטרטגיות למשא ומתן (Underwriting Strategy & Seller Credits)
                     </h4>
-                    <div class="space-y-1.5 text-gray-300 leading-relaxed">
-                        <p>• <strong>אי-עמידה בתנאי משכנתא רגילה:</strong> בשל קו המים מעופרת, העובש החמור והגג הגמור, הנכס אינו כשיר למשכנתאות FHA או קונבנציונליות ללא תיקון מראש.</p>
-                        <p>• <strong>דרישת הנחה במחיר:</strong> מומלץ להגיש את הדוח במלואו למוכר ולדרוש הפחתת מחיר חוזה של לפחות <strong>$35,000 עד $40,000</strong> או קרדיט סגירה לתיקון קווי העופרת והגג.</p>
+                    <div class="space-y-2 text-gray-900 font-semibold leading-relaxed">
+                        <p>• <strong class="text-blue-950">אי-עמידה בתנאי משכנתא רגילה:</strong> בשל קו המים מעופרת, העובש החמור והגג הגמור, הנכס אינו כשיר למשכנתאות FHA או קונבנציונליות ללא תיקון מראש[cite: 1].</p>
+                        <p>• <strong class="text-blue-950">דרישת הנחה במחיר:</strong> מומלץ להגיש את הדוח במלואו למוכר ולדרוש הפחתת מחיר חוזה של לפחות <strong>$35,000 עד $40,000</strong> או קרדיט סגירה לתיקון קווי העופרת והגג.</p>
                     </div>
                 </div>
 
-                <div class="text-[10px] text-gray-500 text-left pt-2 border-t border-gray-800 font-mono">
-                    PA Real Estate Intelligence Hub • Automated Inspection Analyzer • Verified via First Class Home Inspections Report
+                <div class="text-xs text-gray-500 text-left pt-3 border-t border-gray-300 font-mono font-bold">
+                    PA Real Estate Intelligence Hub • Automated Inspection Analyzer • Verified via First Class Home Inspections Report[cite: 1]
                 </div>
             </div>
         </div>
@@ -433,8 +431,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "גגות וחיפוי חוץ",
-                    findings: "שינגלס 3-Tab בלויים ושבורים, פלאשינג רופף, נזילות ומרזבים סתומים",
-                    remedy: "החלפת גג אספלט מלא (Tear-off), תיקון גג מרפסת ואיטום ארובות",
+                    findings: "שינגלס 3-Tab בלויים ושבורים, פלאשינג רופף, נזילות ומרזבים סתומים[cite: 1]",
+                    remedy: "החלפת גג אספלט מלא (Tear-off), תיקון גג מרפסת ואיטום ארובות[cite: 1]",
                     min, max
                 });
             }
@@ -445,8 +443,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "עובש ואיטום מרתף",
-                    findings: "עובש שחור חמור במרתף ובשירותים, חדירת מים ישנה, סכנה בטיחותית",
-                    remedy: "פירוק קירות פגועים, חיטוי אנטי-בקטריאלי עמוק, התקנת סופג לחות/משאבה",
+                    findings: "עובש שחור חמור במרתף ובשירותים, חדירת מים ישנה, סכנה בטיחותית[cite: 1]",
+                    remedy: "פירוק קירות פגועים, חיטוי אנטי-בקטריאלי עמוק, התקנת סופג לחות/משאבה[cite: 1]",
                     min, max
                 });
             }
@@ -457,8 +455,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "צנרת מים ראשית",
-                    findings: "צינור כניסת מים ראשי מהרחוב עשוי עופרת (Lead Pipe)",
-                    remedy: "חפירה והחלפת קו מים ראשי לעופרת/נחושת עפ״י דרישות התקן",
+                    findings: "צינור כניסת מים ראשי מהרחוב עשוי עופרת (Lead Pipe)[cite: 1]",
+                    remedy: "חפירה והחלפת קו מים ראשי לעופרת/נחושת עפ״י דרישות התקן[cite: 1]",
                     min, max
                 });
             }
@@ -469,8 +467,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "מים חמים (Water Heater)",
-                    findings: "דוד מים משנת 2003 (בן 23 שנה!) ללא מיכל התפשטות (Expansion Tank)",
-                    remedy: "החלפת דוד מים 40/50 גלון חדש בגז + התקנת מיכל התפשטות תקני",
+                    findings: "דוד מים משנת 2003 (בן 23 שנה!) ללא מיכל התפשטות (Expansion Tank)[cite: 1]",
+                    remedy: "החלפת דוד מים 40/50 גלון חדש בגז + התקנת מיכל התפשטות תקני[cite: 1]",
                     min, max
                 });
             }
@@ -481,8 +479,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "מערכת חימום (HVAC)",
-                    findings: "תנור גז משנת 2006 (בן 20 שנה), חוסר תחזוקה, ללא מיזוג מרכזי",
-                    remedy: "החלפת תנור חימום ביעילות 96% ובדיקת תעלות אוורור",
+                    findings: "תנור גז משנת 2006 (בן 20 שנה), חוסר תחזוקה, ללא מיזוג מרכזי[cite: 1]",
+                    remedy: "החלפת תנור חימום ביעילות 96% ובדיקת תעלות אוורור[cite: 1]",
                     min, max
                 });
             }
@@ -493,8 +491,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "מערכת חשמל",
-                    findings: "ראש שירות חיצוני (Service Head) מנותק, שקעים ללא הארקה, חוסר ב-GFCI",
-                    remedy: "חיבור ותיקון כבל כניסה ראשי, התקנת שקעי GFCI במטבח, מרתף ורחצה",
+                    findings: "ראש שירות חיצוני (Service Head) מנותק, שקעים ללא הארקה, חוסר ב-GFCI[cite: 1]",
+                    remedy: "חיבור ותיקון כבל כניסה ראשי, התקנת שקעי GFCI במטבח, מרתף ורחצה[cite: 1]",
                     min, max
                 });
             }
@@ -505,8 +503,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "חלונות ודלתות",
-                    findings: "חלונות עץ ישנים, זכוכית שבורה, חלונות נופלים, דלתות כניסה בלויות",
-                    remedy: "החלפת חלונות לויניל כפול מבודד והתקנת דלת כניסה מבודדת",
+                    findings: "חלונות עץ ישנים, זכוכית שבורה, חלונות נופלים, דלתות כניסה בלויות[cite: 1]",
+                    remedy: "החלפת חלונות לויניל כפול מבודד והתקנת דלת כניסה מבודדת[cite: 1]",
                     min, max
                 });
             }
@@ -517,8 +515,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "חוץ, בטון וצמחייה",
-                    findings: "מדרגות כניסה מבטון מתפוררות, מעקה רופף, צמחייה פראית צמודה לקירות",
-                    remedy: "יציקה/תיקון מדרגות בטון, עיגון מעקה בטיחות וגיזום יסודי",
+                    findings: "מדרגות כניסה מבטון מתפוררות, מעקה רופף, צמחייה פראית צמודה לקירות[cite: 1]",
+                    remedy: "יציקה/תיקון מדרגות בטון, עיגון מעקה בטיחות וגיזום יסודי[cite: 1]",
                     min, max
                 });
             }
@@ -600,8 +598,6 @@
             }
 
             const data = activeInspectionData;
-            document.getElementById('rep-property-address').textContent = data.address;
-            document.getElementById('rep-property-city').textContent = `${data.city}, PA ${data.zip}`;
             document.getElementById('prt-address').textContent = data.address;
             document.getElementById('prt-city').textContent = `${data.city}, PA ${data.zip} (Allegheny County)`;
             document.getElementById('prt-date').textContent = data.date;
@@ -609,11 +605,11 @@
 
             const tbody = document.getElementById('rep-breakdown-tbody');
             tbody.innerHTML = data.analysis.items.map(item => `
-                <tr class="hover:bg-gray-900/50">
-                    <td class="p-3 font-bold text-white">${item.domain}</td>
-                    <td class="p-3 text-gray-400">${item.findings}</td>
-                    <td class="p-3 text-gray-300">${item.remedy}</td>
-                    <td class="p-3 text-left font-mono font-bold text-amber-300">$${item.min.toLocaleString()} – $${item.max.toLocaleString()}</td>
+                <tr class="hover:bg-gray-100 transition">
+                    <td class="p-3.5 font-black text-gray-950 text-base">${item.domain}</td>
+                    <td class="p-3.5 text-gray-800 text-sm font-semibold">${item.findings}</td>
+                    <td class="p-3.5 text-gray-700 text-sm">${item.remedy}</td>
+                    <td class="p-3.5 text-left font-mono font-black text-amber-800 text-base">$${item.min.toLocaleString()} – $${item.max.toLocaleString()}</td>
                 </tr>
             `).join('');
 
@@ -700,10 +696,10 @@
 
             const filename = `Inspection_Report_${(activeInspectionData?.address || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
             const opt = {
-                margin:       8,
+                margin:       [10, 10, 10, 10],
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
