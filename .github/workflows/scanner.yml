@@ -2,51 +2,48 @@ name: PA Real Estate Scheduled Intelligence Scan
 
 on:
   schedule:
-    - cron: '0 16 * * 1-6'
+    - cron: '0 8 * * *' # פועל אוטומטית כל יום ב-08:00 בבוקר
   workflow_dispatch:
     inputs:
       scanner_id:
-        description: 'Select Scanner ID (e.g., 06_probate_estates)'
+        description: 'Scanner ID (e.g., 06_probate_estates)'
         required: true
         default: '06_probate_estates'
       target_county:
         description: 'Target County (e.g., Allegheny)'
-        required: true
+        required: false
         default: 'Allegheny'
       target_city:
-        description: 'Target City (e.g., Homestead)'
-        required: true
-        default: 'Homestead'
+        description: 'Target City or Cities'
+        required: false
+        default: 'Pittsburgh'
+      neighborhoods:
+        description: 'Selected Neighborhoods'
+        required: false
+        default: 'All'
 
 jobs:
-  run-scanners:
+  run-scraper:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytz requests beautifulsoup4
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Execute Orchestrator
+      - name: Execute Scraper Engine
         env:
-          INPUT_SCANNER: ${{ github.event.inputs.scanner_id }}
-          INPUT_COUNTY: ${{ github.event.inputs.target_county }}
-          INPUT_CITY: ${{ github.event.inputs.target_city }}
+          SCANNER_ID: ${{ github.event.inputs.scanner_id }}
+          TARGET_COUNTY: ${{ github.event.inputs.target_county }}
+          TARGET_CITY: ${{ github.event.inputs.target_city }}
+          SELECTED_NEIGHBORHOODS: ${{ github.event.inputs.neighborhoods }}
         run: |
           python orchestrator.py
-
-      - name: Commit and Push Updated Data
-        run: |
-          git config --global user.name "PA-RealEstate-Bot"
-          git config --global user.email "bot@parealestate.local"
-          git add properties.json history.json || true
-          git diff-index --quiet HEAD || git commit -m "Auto-update leads from UI params [skip ci]"
-          git push
