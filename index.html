@@ -62,10 +62,10 @@
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
-                <!-- Multi-Window Open Button with target="_blank" -->
-                <a href="deals.html" target="_blank" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
+                <!-- Multi-Window Open Button without misleading count badge -->
+                <a href="deals.html" target="_blank" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                    📊 חדר עסקאות (<span id="header-pipeline-count">0</span>)
+                    <span>📊 מעבר לחדר העסקאות (Deal Room)</span>
                 </a>
 
                 <button onclick="openTelegramModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/40 rounded-xl text-xs font-bold transition">
@@ -160,7 +160,7 @@
             </div>
         </section>
 
-        <!-- Filters Bar -->
+        <!-- Filters Bar (כולל סינון מחיר מינימום ומקסימום) -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             <div>
                 <label class="block text-xs font-bold text-gray-200 mb-1">מיון תוצאות</label>
@@ -758,17 +758,10 @@
                 const saved = localStorage.getItem('pa_pipeline_deals');
                 pipelineDeals = saved ? JSON.parse(saved) : [];
             } catch(e) { pipelineDeals = []; }
-            updatePipelineCountDisplay();
         }
 
         function savePipelineToStorage() {
             localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
-            updatePipelineCountDisplay();
-        }
-
-        function updatePipelineCountDisplay() {
-            const el = document.getElementById('header-pipeline-count');
-            if (el) el.textContent = pipelineDeals.length;
         }
 
         function loadWatchlistFromStorage() {
