@@ -160,7 +160,7 @@
             </div>
         </section>
 
-        <!-- Filters Bar (כולל סינון מחיר מינימום ומקסימום) -->
+        <!-- Filters Bar -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             <div>
                 <label class="block text-xs font-bold text-gray-200 mb-1">מיון תוצאות</label>
@@ -395,7 +395,7 @@
         </div>
     </div>
 
-    <!-- 1. Full Auto-Scan Settings Modal (Cascade Engine) -->
+    <!-- 1. Full Auto-Scan Settings Modal (עם מחיר מינימום ומקסימום) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
@@ -407,13 +407,17 @@
                 <button onclick="closeSettingsModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Top Controls Row -->
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+            <!-- Top Controls Row (כולל מינימום ומקסימום) -->
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs">
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מדינה (State)</label>
                     <select class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
                         <option value="PA">Pennsylvania (PA)</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">מחיר מינימום ($)</label>
+                    <input type="number" id="setting-min-price" placeholder="0" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-emerald-300 font-bold">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מחיר מקסימום ($)</label>
@@ -457,7 +461,7 @@
                 </div>
             </div>
 
-            <!-- 1. Cities Selection (8 Cities) -->
+            <!-- Cities Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">1. בחירת ערים לסריקה (Hubs):</span>
@@ -479,7 +483,7 @@
                 </div>
             </div>
 
-            <!-- 2. Cascaded Neighborhoods Selection (25 Regions) -->
+            <!-- Neighborhoods Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
@@ -535,7 +539,7 @@
         </div>
     </div>
 
-    <!-- 2. On-Demand Scan Modal (Full Mirror of Settings + Targeted Search + Sectors) -->
+    <!-- 2. On-Demand Scan Modal (עם מחיר מינימום ומקסימום) -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
@@ -582,13 +586,17 @@
                 </div>
             </div>
 
-            <!-- 3. Full Criteria Controls Row -->
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+            <!-- 3. Full Criteria Controls Row (כולל מינימום ומקסימום) -->
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs">
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מדינה (State)</label>
                     <select class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-bold">
                         <option value="PA">Pennsylvania (PA)</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">מחיר מינימום ($)</label>
+                    <input type="number" id="ondemand-min-price" placeholder="0" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-emerald-300 font-bold">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מחיר מקסימום ($)</label>
@@ -632,7 +640,7 @@
                 </div>
             </div>
 
-            <!-- 5. Cities Selection (8 Cities) -->
+            <!-- 5. Cities Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">ערים לסריקה (Hubs):</span>
@@ -654,7 +662,7 @@
                 </div>
             </div>
 
-            <!-- 6. Cascaded Neighborhoods Selection (25 Regions) -->
+            <!-- 6. Neighborhoods Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-200">שכונות ואזורים לסריקה (25 אזורים מקושרים):</span>
@@ -1212,6 +1220,7 @@
             
             const config = {
                 state: "PA",
+                minPrice: document.getElementById('setting-min-price').value || 0,
                 maxPrice: document.getElementById('setting-max-price').value,
                 propertyTypes: selectedTypes,
                 minBeds: document.getElementById('setting-min-beds').value,
@@ -1231,6 +1240,13 @@
             if (saved) {
                 try {
                     const cfg = JSON.parse(saved);
+                    if (cfg.minPrice) {
+                        document.getElementById('setting-min-price').value = cfg.minPrice;
+                        document.getElementById('ondemand-min-price').value = cfg.minPrice;
+                        if (document.getElementById('filter-min-price')) {
+                            document.getElementById('filter-min-price').value = cfg.minPrice;
+                        }
+                    }
                     if (cfg.maxPrice) {
                         document.getElementById('setting-max-price').value = cfg.maxPrice;
                         document.getElementById('ondemand-max-price').value = cfg.maxPrice;
@@ -1314,6 +1330,7 @@
             const payload = {
                 query: targetedQuery || "סריקת שוק מקיפה",
                 sectors: selectedSectors,
+                minPrice: document.getElementById('ondemand-min-price').value || 0,
                 maxPrice: document.getElementById('ondemand-max-price').value,
                 minBeds: document.getElementById('ondemand-min-beds').value,
                 minBaths: document.getElementById('ondemand-min-baths').value,
@@ -1324,7 +1341,7 @@
             };
 
             console.log("Launching Full Mission Control Scan:", payload);
-            alert(`פקודת סריקה יזומה שוגרה בהצלחה!\nמטרה: ${payload.query}\nסקטורים: ${selectedSectors.length} | אזורים: ${selectedHoods.length}`);
+            alert(`פקודת סריקה יזומה שוגרה בהצלחה!\nמטרה: ${payload.query}\nטווח מחיר: $${Number(payload.minPrice).toLocaleString()} עד $${Number(payload.maxPrice).toLocaleString()}\nסקטורים: ${selectedSectors.length} | אזורים: ${selectedHoods.length}`);
             closeOnDemandScanModal();
         }
 
