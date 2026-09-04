@@ -1,10 +1,9 @@
 import json
 import os
 import sys
+import importlib
 from datetime import datetime
 import pytz
-# ייבוא סוכן העיזבונות בלבד מתוך תיקיית scrapers
-from scrapers import _06_probate_estates as probate_agent
 
 def get_pa_time():
     pa_tz = pytz.timezone('US/Eastern')
@@ -17,7 +16,9 @@ def run_orchestrator(manual_sectors=None):
 
     try:
         print("[RUNNER] Executing 06_probate_estates.py...")
-        # הרצת פונקציית הסריקה של סוכן העיזבונות (מותאם למבנה הקוד שלך)
+        # טעינה דינמית של מודול המתחיל במספר
+        probate_agent = importlib.import_module('scrapers.06_probate_estates')
+        
         if hasattr(probate_agent, 'run'):
             probate_agent.run()
         else:
