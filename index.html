@@ -939,8 +939,8 @@
             });
 
             if (sortBy === 'score_desc') filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
-            else if (sortBy === 'price_asc') filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-            else if (sortBy === 'price_desc') filtered.sort((a, b) => (b.price || 0) - (b.price || 0));
+            else if (sortBy === 'price_asc') filtered.sort((a, b) => (a.price || 0) - (a.price || 0));
+            else if (sortBy === 'price_desc') filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
 
             if (filtered.length === 0) {
                 container.innerHTML = '<div class="col-span-3 text-center py-12 text-white font-extrabold text-base">כל הנכסים הועברו לחדר עסקאות או שאינם תואמים לסינון.</div>';
@@ -1256,7 +1256,7 @@
                         document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = cfg.cities.includes(cb.value); });
                     }
                     if (cfg.neighborhoods && Array.isArray(cfg.neighborhoods)) {
-                        document.querySelectorAll('.hood-box').forEach(cb => { cb.checked = cfg.neighborhoods.includes(cfg.value); });
+                        document.querySelectorAll('.hood-box').forEach(cb => { cb.checked = cfg.neighborhoods.includes(cb.value); });
                         document.querySelectorAll('.ondemand-hood-box').forEach(cb => { cb.checked = cfg.neighborhoods.includes(cb.value); });
                     }
                     if (cfg.propertyTypes && Array.isArray(cfg.propertyTypes)) {
@@ -1335,7 +1335,7 @@
             };
 
             try {
-                const response =- await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/scanner.yml/dispatches`, {
+                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/scanner.yml/dispatches`, {
                     method: "POST",
                     headers: {
                         "Authorization": `token ${githubToken}`,
