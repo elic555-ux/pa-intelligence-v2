@@ -4,12 +4,12 @@ import sys
 from datetime import datetime
 
 def run(target_county="Allegheny", target_city="Homestead"):
-    print(f"[AGENT 09 - PROBATE] Starting scan for County: {target_county}, City/Focus: {target_city}...")
+    print(f"[AGENT 06 - PROBATE] Scanning County: {target_county}, City: {target_city}...")
     
     output_path = "properties.json"
     history_path = "history.json"
     
-    # מאגר תוצאות המדמה שליפה חיה לפי מחוז/עיר שנבחרה
+    # מאגר תוצאות המדמה שליפה חיה לפי מחוז/עיר
     all_leads_pool = [
         {
             "id": "homestead_pr_1",
@@ -89,13 +89,13 @@ def run(target_county="Allegheny", target_city="Homestead"):
         }
     ]
 
-    # סינון התוצאות לפי המחוז או העיר שהתקבלו
+    # סינון התוצאות לפי הפרמטרים שהתקבלו
     scanned_leads = [
         lead for lead in all_leads_pool 
         if target_county.lower() in lead["county"].lower() or target_city.lower() in lead["city"].lower()
     ]
 
-    # 1. טעינת לוג ההיסטוריה המרכזי (כדי לדעת איזה נכסים כבר ראינו בעבר)
+    # טעינת לוג ההיסטוריה כדי למנוע כפילויות
     seen_ids = set()
     if os.path.exists(history_path):
         try:
@@ -105,16 +105,16 @@ def run(target_county="Allegheny", target_city="Homestead"):
         except Exception as e:
             print(f"[WARNING] Could not read history.json: {e}")
 
-    # 2. טעינת נכסים פעילים קיימים ב-properties.json
+    # טעינת נכסים קיימים במסך
     existing_properties = []
     if os.path.exists(output_path):
         try:
             with open(output_path, "r", encoding="utf-8") as f:
                 existing_properties = json.load(f)
         except Exception as e:
-            print(f"[WARNING] Could not read existing properties.json: {e}")
+            print(f"[WARNING] Could not read properties.json: {e}")
 
-    # 3. הצלבה: הוספת נכסים חדשים בלבד שאינם מופיעים בהיסטוריה
+    # הצלבה והוספת חדשים בלבד
     new_leads_added = 0
     all_history_records = existing_properties.copy()
 
@@ -125,22 +125,20 @@ def run(target_county="Allegheny", target_city="Homestead"):
             all_history_records.insert(0, lead)
             seen_ids.add(lead_id)
             new_leads_added += 1
-            print(f"[NEW LEAD ADDED] {lead['address']}, {lead['city']}")
+            print(f"[NEW LEAD] Added: {lead['address']}, {lead['city']}")
         else:
-            print(f"[SKIPPED - ALREADY IN HISTORY] {lead['address']}")
+            print(f"[SKIPPED] Already in history: {lead['address']}")
 
-    # שמירת קובץ התצוגה המעודכן לממשק
+    # שמירת קבצים מעודכנים
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(existing_properties, f, ensure_ascii=False, indent=4)
 
-    # שמירת קובץ ההיסטוריה המרכזי למניעת כפילויות עתידיות
     with open(history_path, "w", encoding="utf-8") as f:
         json.dump(all_history_records, f, ensure_ascii=False, indent=4)
 
-    print(f"[AGENT 09] Scan complete. Added {new_leads_added} new unique probate leads.")
+    print(f"[AGENT 06] Scan complete. Added {new_leads_added} new leads.")
 
 if __name__ == "__main__":
-    # אפשר לקבל פרמטרים משורת הפקודה או להשתמש בברירת מחדל
     county_arg = sys.argv[1] if len(sys.argv) > 1 else "Allegheny"
     city_arg = sys.argv[2] if len(sys.argv) > 2 else "Homestead"
     run(target_county=county_arg, target_city=city_arg)
