@@ -62,7 +62,6 @@
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
-                <!-- Multi-Window Open Button without misleading count badge -->
                 <a href="deals.html" target="_blank" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                     <span>📊 מעבר לחדר העסקאות (Deal Room)</span>
@@ -160,7 +159,7 @@
             </div>
         </section>
 
-        <!-- Filters Bar (כולל סינון מחיר מינימום ומקסימום) -->
+        <!-- Filters Bar -->
         <section class="bg-gray-900/40 border border-gray-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             <div>
                 <label class="block text-xs font-bold text-gray-200 mb-1">מיון תוצאות</label>
@@ -395,7 +394,7 @@
         </div>
     </div>
 
-    <!-- 1. Full Auto-Scan Settings Modal (עם מחיר מינימום ומקסימום) -->
+    <!-- 1. Full Auto-Scan Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
@@ -407,7 +406,7 @@
                 <button onclick="closeSettingsModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Top Controls Row (כולל מינימום ומקסימום) -->
+            <!-- Top Controls Row -->
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs">
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מדינה (State)</label>
@@ -539,7 +538,7 @@
         </div>
     </div>
 
-    <!-- 2. On-Demand Scan Modal (עם מחיר מינימום ומקסימום) -->
+    <!-- 2. On-Demand Scan Modal -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
@@ -580,13 +579,13 @@
                         <span class="text-purple-300 font-bold">4. פיגורי מס (County Tax Claim)</span>
                     </label>
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 cursor-pointer hover:border-emerald-400 sm:col-span-2">
-                        <input type="checkbox" checked value="probate" class="ondemand-sector-box accent-emerald-500 w-4 h-4">
+                        <input type="checkbox" checked value="06_probate_estates" class="ondemand-sector-box accent-emerald-500 w-4 h-4">
                         <span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)</span>
                     </label>
                 </div>
             </div>
 
-            <!-- 3. Full Criteria Controls Row (כולל מינימום ומקסימום) -->
+            <!-- 3. Full Criteria Controls Row -->
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs">
                 <div>
                     <label class="block font-bold text-gray-200 mb-1">מדינה (State)</label>
@@ -932,7 +931,6 @@
                 if (cityFilter !== 'all' && !cityFilter.includes(p.city)) return false;
                 if (typeFilter !== 'all' && p.type !== typeFilter) return false;
                 
-                // בדיקת מחיר מינימום ומחיר מקסימום
                 const price = Number(p.price) || 0;
                 if (price < minPrice) return false;
                 if (priceFilter !== 'all' && price > parseInt(priceFilter)) return false;
@@ -1161,7 +1159,7 @@
             }
         }
 
-        // Full Auto-Scan Settings Functions (Cascade Engine)
+        // Full Auto-Scan Settings Functions
         function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
         function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
@@ -1272,7 +1270,7 @@
             updateSelectionSummary();
         }
 
-        // On-Demand Control Functions (Matching Engine)
+        // On-Demand Control Functions (Connected to GitHub Actions API)
         function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
@@ -1308,34 +1306,54 @@
             }
         }
 
-        function triggerOnDemandExecution() {
-            const targetedQuery = document.getElementById('ondemand-query-input').value.trim();
+        async function triggerOnDemandExecution() {
+            const githubToken = "YOUR_GITHUB_TOKEN_HERE"; // <-- הדבק כאן את הטוקן שיצרת ב-GitHub
+            const owner = "elic555-ux";
+            const repo = "pa-intelligence-v2";
+
             const selectedSectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value);
             const selectedCities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value);
             const selectedHoods = Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value);
-            const selectedTypes = Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb => cb.value);
 
             if (selectedSectors.length === 0) {
                 alert("אנא בחר לפחות סקטור אחד לסריקה.");
                 return;
             }
 
+            // לוקחים את הסקטור הראשון שנבחר (למשל 06_probate_estates) להפעלה הראשית
+            const chosenScanner = selectedSectors[0];
+            const targetCityName = selectedCities.length > 0 ? selectedCities[0] : "Homestead";
+
             const payload = {
-                query: targetedQuery || "סריקת שוק מקיפה",
-                sectors: selectedSectors,
-                minPrice: document.getElementById('ondemand-min-price').value || 0,
-                maxPrice: document.getElementById('ondemand-max-price').value,
-                minBeds: document.getElementById('ondemand-min-beds').value,
-                minBaths: document.getElementById('ondemand-min-baths').value,
-                propertyTypes: selectedTypes,
-                cities: selectedCities,
-                neighborhoods: selectedHoods,
-                timestamp: new Date().toISOString()
+                ref: "main",
+                inputs: {
+                    scanner_id: chosenScanner,
+                    target_county: "Allegheny",
+                    target_city: targetCityName
+                }
             };
 
-            console.log("Launching Full Mission Control Scan:", payload);
-            alert(`פקודת סריקה יזומה שוגרה בהצלחה!\nמטרה: ${payload.query}\nטווח מחיר: $${Number(payload.minPrice).toLocaleString()} עד $${Number(payload.maxPrice).toLocaleString()}\nסקטורים: ${selectedSectors.length} | אזורים: ${selectedHoods.length}`);
-            closeOnDemandScanModal();
+            try {
+                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/scanner.yml/dispatches`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `token ${githubToken}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok || response.status === 204) {
+                    alert("פקודת סריקה יזומה שוגרה בהצלחה ל-GitHub! המערכת תתעדכן בדקות הקרובות.");
+                    closeOnDemandScanModal();
+                } else {
+                    alert("שגיאה בשיגור הסריקה מול GitHub. בדוק את תקינות הטוקן.");
+                }
+            } catch (error) {
+                console.error("Error triggering GitHub workflow:", error);
+                alert("שגיאת תקשורת מול השרת.");
+            }
         }
 
         window.onload = init;
