@@ -2,11 +2,21 @@ name: PA Real Estate Scheduled Intelligence Scan
 
 on:
   schedule:
-    # 16:00 UTC = 12:00 PM EST (PA Time) - Mon to Sat
     - cron: '0 16 * * 1-6'
-    # 17:00 UTC = 13:00 PM EST (PA Time) - Mon and Thu
-    - cron: '0 17 * * 1,4'
-  workflow_dispatch: # מאפשר הפעלה ידנית בלחיצת כפתור
+  workflow_dispatch:
+    inputs:
+      scanner_id:
+        description: 'Select Scanner ID (e.g., 06_probate_estates)'
+        required: true
+        default: '06_probate_estates'
+      target_county:
+        description: 'Target County (e.g., Allegheny)'
+        required: true
+        default: 'Allegheny'
+      target_city:
+        description: 'Target City (e.g., Homestead)'
+        required: true
+        default: 'Homestead'
 
 jobs:
   run-scanners:
@@ -26,6 +36,10 @@ jobs:
           pip install pytz requests beautifulsoup4
 
       - name: Execute Orchestrator
+        env:
+          INPUT_SCANNER: ${{ github.event.inputs.scanner_id }}
+          INPUT_COUNTY: ${{ github.event.inputs.target_county }}
+          INPUT_CITY: ${{ github.event.inputs.target_city }}
         run: |
           python orchestrator.py
 
@@ -33,6 +47,6 @@ jobs:
         run: |
           git config --global user.name "PA-RealEstate-Bot"
           git config --global user.email "bot@parealestate.local"
-          git add properties.json || true
-          git diff-index --quiet HEAD || git commit -m "Auto-update real estate data [skip ci]"
+          git add properties.json history.json || true
+          git diff-index --quiet HEAD || git commit -m "Auto-update leads from UI params [skip ci]"
           git push
