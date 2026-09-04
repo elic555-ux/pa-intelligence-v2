@@ -134,14 +134,14 @@
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
-        <!-- Top Metrics (4 Balanced Cards Row) -->
+        <!-- Top Metrics (4 Balanced Cards Row - Clickable 4th Card) -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות פעילות בצנרת</span>
                     <span class="text-2xl font-black text-amber-400" id="deals-total-count">0</span>
                 </div>
-                <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400"><i data-lucide="building-2" class="w-5 h-5"></i></div>
+                <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400"><i data-lucide="building-2" class="w-6 h-6"></i></div>
             </div>
 
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
@@ -149,7 +149,7 @@
                     <span class="text-xs font-bold text-gray-400 block mb-1">הוגשו הצעות מחיר</span>
                     <span class="text-2xl font-black text-blue-400" id="deals-offered-count">0</span>
                 </div>
-                <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400"><i data-lucide="send" class="w-5 h-5"></i></div>
+                <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400"><i data-lucide="send" class="w-6 h-6"></i></div>
             </div>
 
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
@@ -160,25 +160,16 @@
                 <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
+            <div onclick="openSavedReportsModal()" class="bg-gray-900/80 border border-emerald-500/30 hover:border-emerald-400 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-lg hover:shadow-emerald-950/40">
                 <div>
-                    <span class="text-xs font-bold text-gray-400 block mb-1">דוחות בודק שנשמרו</span>
+                    <span class="text-xs font-bold text-gray-300 block mb-1 flex items-center gap-1">
+                        דוחות בודק שנשמרו
+                        <i data-lucide="external-link" class="w-3 h-3 text-emerald-400"></i>
+                    </span>
                     <span class="text-2xl font-black text-emerald-400" id="reports-saved-count">0</span>
                 </div>
-                <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400"><i data-lucide="file-check-2" class="w-5 h-5"></i></div>
+                <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400"><i data-lucide="file-check-2" class="w-6 h-6"></i></div>
             </div>
-        </section>
-
-        <!-- Saved Inspection Reports Block (Full Width) -->
-        <section id="saved-inspection-reports-container" class="bg-gray-900/70 border border-blue-500/30 rounded-2xl p-4 sm:p-5 space-y-3">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
-                <h3 class="text-sm font-black text-blue-300 flex items-center gap-1.5">
-                    <i data-lucide="file-check-2" class="w-4 h-4 text-blue-400"></i>
-                    דוחות בודק שנבדקו ונשמרו בהיסטוריה (כולל פירוש מלא ותמחור)
-                </h3>
-                <button onclick="clearSavedReports()" class="text-xs text-gray-500 hover:text-rose-400 transition">נקה היסטוריית דוחות</button>
-            </div>
-            <div id="saved-reports-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
         </section>
 
         <!-- Saved Custom Researches Area -->
@@ -202,6 +193,28 @@
         <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></section>
 
     </main>
+
+    <!-- Modal: Saved Inspection Reports Viewer Modal (Replaces the long clutter bar) -->
+    <div id="saved-reports-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-emerald-500/40 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative text-right max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="file-check-2" class="w-5 h-5 text-emerald-400"></i>
+                    דוחות בודק שנבדקו ונשמרו בהיסטוריה
+                </h3>
+                <div class="flex items-center gap-3">
+                    <button onclick="clearSavedReports()" class="text-xs text-gray-500 hover:text-rose-400 transition">נקה היסטוריה</button>
+                    <button onclick="closeSavedReportsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+
+            <div id="saved-reports-modal-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+            <div class="pt-2 border-t border-gray-800 text-left">
+                <button onclick="closeSavedReportsModal()" class="px-4 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-xs font-bold">סגור</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal 1: Custom Property Research Modal -->
     <div id="custom-research-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
@@ -469,7 +482,7 @@
                         ליקויים בטיחותיים קריטיים (Critical Red Flags & Safety Hazards)
                     </h4>
                     <ul class="space-y-2 text-gray-900 list-disc list-inside font-bold text-base leading-relaxed" id="rep-critical-list">
-                        <li><strong class="text-highlight-red">עובש שחור חמור (Severe Mold):</strong> עובש משמעותי במרתף ובשירותים שמנע מהשרברב להיכנס לבדיקת קו הביוב מחשש בטיחותי.</li>
+                        <li><strong class="text-highlight-red">עובש שחור חמור (Severe Mold):</strong> עובש משמעותי במרתף ובשירותים שמנע מהשרברב להיכנס לבדיקת קו הביוב מחשש בטיחותי[cite: 1].</li>
                         <li><strong class="text-highlight-red">קו אספקת מים ראשי מעופרת (Lead Water Service Line):</strong> סכנה בריאותית ישירה הדורשת חפירה והחלפה מלאה מהרחוב עד לתוך הבית[cite: 1].</li>
                         <li><strong class="text-highlight-red">גג ראשי ומרפסת בסוף חייהם (Aged Roof):</strong> שינגלס בלויים ושבורים עם נזילות פעילות וכתמי מים בתקרות הקומה העליונה[cite: 1].</li>
                         <li><strong class="text-highlight-red">מים מנותקים בעת הבדיקה (Water Turned Off):</strong> לא נבדקו נזילות בתוך הקירות ותקינות כלים סניטריים – נדרשת רזרבת אינסטלציה[cite: 1].</li>
@@ -921,8 +934,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "גגות וחיפוי חוץ",
-                    findings: "שינגלס 3-Tab בלויים ושבורים, פלאשינג רופף, נזילות ומרזבים סתומים",
-                    remedy: "החלפת גג אספלט מלא (Tear-off), תיקון גג מרפסת ואיטום ארובות",
+                    findings: "שינגלס 3-Tab בלויים ושבורים, פלאשינג רופף, נזילות ומרזבים סתומים[cite: 1]",
+                    remedy: "החלפת גג אספלט מלא (Tear-off), תיקון גג מרפסת ואיטום ארובות[cite: 1]",
                     min, max
                 });
             }
@@ -933,8 +946,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "עובש ואיטום מרתף",
-                    findings: "עובש שחור חמור במרתף ובשירותים, חדירת מים ישנה, סכנה בטיחותית",
-                    remedy: "פירוק קירות פגועים, חיטוי אנטי-בקטריאלי עמוק, התקנת סופג לחות/משאבה",
+                    findings: "עובש שחור חמור במרתף ובשירותים, חדירת מים ישנה, סכנה בטיחותית[cite: 1]",
+                    remedy: "פירוק קירות פגועים, חיטוי אנטי-בקטריאלי עמוק, התקנת סופג לחות/משאבה[cite: 1]",
                     min, max
                 });
             }
@@ -945,8 +958,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "צנרת מים ראשית",
-                    findings: "צינור כניסת מים ראשי מהרחוב עשוי עופרת (Lead Pipe)",
-                    remedy: "חפירה והחלפת קו מים ראשי לעופרת/נחושת עפ״י דרישות התקן",
+                    findings: "צינור כניסת מים ראשי מהרחוב עשוי עופרת (Lead Pipe)[cite: 1]",
+                    remedy: "חפירה והחלפת קו מים ראשי לעופרת/נחושת עפ״י דרישות התקן[cite: 1]",
                     min, max
                 });
             }
@@ -957,8 +970,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "מים חמים (Water Heater)",
-                    findings: "דוד מים משנת 2003 (בן 23 שנה!) ללא מיכל התפשטות (Expansion Tank)",
-                    remedy: "החלפת דוד מים 40/50 גלון חדש בגז + התקנת מיכל התפשטות תקני",
+                    findings: "דוד מים משנת 2003 (בן 23 שנה!) ללא מיכל התפשטות (Expansion Tank)[cite: 1]",
+                    remedy: "החלפת דוד מים 40/50 גלון חדש בגז + התקנת מיכל התפשטות תקני[cite: 1]",
                     min, max
                 });
             }
@@ -969,8 +982,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "מערכת חימום (HVAC)",
-                    findings: "תנור גז משנת 2006 (בן 20 שנה), חוסר תחזוקה, ללא מיזוג מרכזי",
-                    remedy: "החלפת תנור חימום ביעילות 96% ובדיקת תעלות אוורור",
+                    findings: "תנור גז משנת 2006 (בן 20 שנה), חוסר תחזוקה, ללא מיזוג מרכזי[cite: 1]",
+                    remedy: "החלפת תנור חימום ביעילות 96% ובדיקת תעלות אוורור[cite: 1]",
                     min, max
                 });
             }
@@ -981,8 +994,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "מערכת חשמל",
-                    findings: "ראש שירות חיצוני (Service Head) מנותק, שקעים ללא הארקה, חוסר ב-GFCI",
-                    remedy: "חיבור ותיקון כבל כניסה ראשי, התקנת שקעי GFCI במטבח, מרתף ורחצה",
+                    findings: "ראש שירות חיצוני (Service Head) מנותק, שקעים ללא הארקה, חוסר ב-GFCI[cite: 1]",
+                    remedy: "חיבור ותיקון כבל כניסה ראשי, התקנת שקעי GFCI במטבח, מרתף ורחצה[cite: 1]",
                     min, max
                 });
             }
@@ -993,8 +1006,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "חלונות ודלתות",
-                    findings: "חלונות עץ ישנים, זכוכית שבורה, חלונות נופלים, דלתות כניסה בלויות",
-                    remedy: "החלפת חלונות לויניל כפול מבודד והתקנת דלת כניסה מבודדת",
+                    findings: "חלונות עץ ישנים, זכוכית שבורה, חלונות נופלים, דלתות כניסה בלויות[cite: 1]",
+                    remedy: "החלפת חלונות לויניל כפול מבודד והתקנת דלת כניסה מבודדת[cite: 1]",
                     min, max
                 });
             }
@@ -1005,8 +1018,8 @@
                 totalMin += min; totalMax += max;
                 items.push({
                     domain: "חוץ, בטון וצמחייה",
-                    findings: "מדרגות כניסה מבטון מתפוררות, מעקה רופף, צמחייה פראית צמודה לקירות",
-                    remedy: "יציקה/תיקון מדרגות בטון, עיגון מעקה בטיחות וגיזום יסודי",
+                    findings: "מדרגות כניסה מבטון מתפוררות, מעקה רופף, צמחייה פראית צמודה לקירות[cite: 1]",
+                    remedy: "יציקה/תיקון מדרגות בטון, עיגון מעקה בטיחות וגיזום יסודי[cite: 1]",
                     min, max
                 });
             }
@@ -1131,11 +1144,11 @@
             const counter = document.getElementById('reports-saved-count');
             if (counter) counter.textContent = savedInspectionReports.length;
 
-            const grid = document.getElementById('saved-reports-grid');
+            const grid = document.getElementById('saved-reports-modal-grid');
             if (!grid) return;
 
             if (savedInspectionReports.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-3 text-center">אין עדיין דוחות בודק שנשמרו. העלה דוח PDF ותוכל לשמור אותו כאן עם הפירוש המלא באופן קבוע.</div>`;
+                grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-6 text-center">אין עדיין דוחות בודק שנשמרו. העלה דוח PDF ותוכל לשמור אותו כאן עם הפירוש המלא.</div>`;
                 return;
             }
 
@@ -1166,7 +1179,17 @@
             lucide.createIcons();
         }
 
+        function openSavedReportsModal() {
+            loadSavedReports();
+            document.getElementById('saved-reports-modal').classList.remove('hidden');
+        }
+
+        function closeSavedReportsModal() {
+            document.getElementById('saved-reports-modal').classList.add('hidden');
+        }
+
         function openSavedReportModal(idx) {
+            closeSavedReportsModal();
             activeInspectionData = savedInspectionReports[idx];
             triggerDetailedReportModal();
         }
