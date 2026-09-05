@@ -19,7 +19,9 @@
             font-family: 'JetBrains Mono', monospace;
         }
         .filter-card-active {
-            box-shadow: 0 0 0 2px #3b82f6, 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            background-color: rgba(59, 130, 246, 0.15) !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
             transform: translateY(-2px);
         }
         .watchlist-btn-active {
@@ -58,7 +60,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.27</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.28</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -101,7 +103,7 @@
         <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card filter-card-active text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold text-gray-400">הכל</span>
+                    <span class="text-xs font-bold text-gray-300">הכל</span>
                     <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i>
                 </div>
                 <div class="text-2xl font-black text-white" id="count-all">0</div>
@@ -800,8 +802,11 @@
             const categories = ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'];
             categories.forEach(c => {
                 const btn = document.getElementById(`btn-cat-${c}`);
-                if (c === cat) btn.classList.add('filter-card-active');
-                else btn.classList.remove('filter-card-active');
+                if (c === cat) {
+                    btn.classList.add('filter-card-active');
+                } else {
+                    btn.classList.remove('filter-card-active');
+                }
             });
             renderCards();
         }
@@ -810,11 +815,11 @@
 
         function getDealBadgeSymbol(dealType) {
             const dt = (dealType || '').toLowerCase();
-            if (dt.includes('sheriff')) return '<span class="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-md shadow-rose-500/50" title="מכירות שריף"></span>';
-            if (dt.includes('foreclosure') || dt.includes('reo')) return '<span class="w-3 h-3 rounded-full bg-amber-500 inline-block shadow-md shadow-amber-500/50" title="כינוס נכסים"></span>';
-            if (dt.includes('tax')) return '<span class="w-3 h-3 rounded-full bg-purple-500 inline-block shadow-md shadow-purple-500/50" title="פיגורי מס"></span>';
-            if (dt.includes('probate') || dt.includes('fsbo')) return '<span class="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-md shadow-emerald-500/50" title="עיזבונות ו-FSBO"></span>';
-            return '<span class="w-3 h-3 rounded-full bg-cyan-500 inline-block shadow-md shadow-cyan-500/50" title="MLS וירידות מחיר"></span>';
+            if (dt.includes('sheriff')) return '<span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block shadow-md shadow-rose-500/50" title="מכירות שריף"></span>';
+            if (dt.includes('foreclosure') || dt.includes('reo')) return '<span class="w-3.5 h-3.5 rounded-full bg-amber-500 inline-block shadow-md shadow-amber-500/50" title="כינוס נכסים"></span>';
+            if (dt.includes('tax')) return '<span class="w-3.5 h-3.5 rounded-full bg-purple-500 inline-block shadow-md shadow-purple-500/50" title="פיגורי מס"></span>';
+            if (dt.includes('probate') || dt.includes('fsbo')) return '<span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-md shadow-emerald-500/50" title="עיזבונות ו-FSBO"></span>';
+            return '<span class="w-3.5 h-3.5 rounded-full bg-cyan-400 inline-block shadow-md shadow-cyan-400/50" title="MLS וירידות מחיר"></span>';
         }
 
         function parseDateToSort(dateStr) {
@@ -1209,7 +1214,7 @@
                 minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v527', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v528', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1219,7 +1224,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v527');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v528');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
