@@ -90,7 +90,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.30</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.31</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -472,7 +472,7 @@
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label>
-                    <input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono font-bold text-center text-sm">
+                    <input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" placeholder="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono font-bold text-center text-sm">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label>
@@ -568,7 +568,7 @@
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1.5 text-xs">שטח מינ' (SqFt)</label>
-                    <input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this); saveOnDemandState();" value="" placeholder="ללא הגבלה" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-mono font-bold text-center text-sm">
+                    <input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this); saveOnDemandState();" value="1,200" placeholder="1,200" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-mono font-bold text-center text-sm">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1.5 text-xs">חדרי שינה מינ'</label>
@@ -1240,12 +1240,12 @@
                 sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value),
                 minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
                 maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
-                minSqft: document.getElementById('ondemand-min-sqft')?.value || '',
+                minSqft: document.getElementById('ondemand-min-sqft')?.value || '1,200',
                 minBeds: document.getElementById('ondemand-min-beds')?.value || 'all',
                 minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v530', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v531', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1255,7 +1255,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v530');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v531');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
@@ -1263,7 +1263,7 @@
                     setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 190000);
 
                     if (document.getElementById('ondemand-min-sqft')) {
-                        document.getElementById('ondemand-min-sqft').value = st.minSqft || '';
+                        document.getElementById('ondemand-min-sqft').value = st.minSqft || '1,200';
                     }
                     if (document.getElementById('ondemand-min-beds')) {
                         document.getElementById('ondemand-min-beds').value = st.minBeds || 'all';
@@ -1286,6 +1286,7 @@
             } else {
                 setPriceFormatted(document.getElementById('ondemand-min-price'), 50000);
                 setPriceFormatted(document.getElementById('ondemand-max-price'), 190000);
+                if (document.getElementById('ondemand-min-sqft')) document.getElementById('ondemand-min-sqft').value = '1,200';
             }
         }
 
@@ -1324,7 +1325,7 @@
             const citiesStr = selectedCities.join(', ');
             const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
             const maxPriceNum = getRawPrice(document.getElementById('ondemand-max-price')) || 190000;
-            const minSqftStr = document.getElementById('ondemand-min-sqft').value || 'Any';
+            const minSqftStr = document.getElementById('ondemand-min-sqft').value || '1,200';
             const minBedsStr = document.getElementById('ondemand-min-beds').value;
             const minBathsStr = document.getElementById('ondemand-min-baths').value;
 
