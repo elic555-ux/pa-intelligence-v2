@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.11</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.12</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -509,6 +509,14 @@
                 <input type="password" id="ondemand-token-input" onchange="saveOnDemandState()" placeholder="הדבק כאן את הטוקן שלך (ghp_...)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
             </div>
 
+            <!-- Targeted Query Bar -->
+            <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 space-y-1">
+                <label class="block text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                    <i data-lucide="crosshair" class="w-4 h-4"></i> סריקה ממוקדת לפי כתובת, עיר או מיקוד (אופציונלי):
+                </label>
+                <input type="text" id="ondemand-query-input" oninput="saveOnDemandState()" placeholder="לדוגמה: 1330 Sylvan St, Homestead או 15120 או Pittsburgh..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-bold">
+            </div>
+
             <!-- Target Sectors Matrix -->
             <div class="space-y-1.5">
                 <span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה כעת (המנוע יסרוק אך ורק מה שמסומן):</span>
@@ -536,8 +544,8 @@
                 </div>
             </div>
 
-            <!-- Full Criteria Controls Row with Enlarged Inputs -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
+            <!-- Full Criteria Controls Row with Restored Parameters -->
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
                 <div>
                     <label class="block font-bold text-gray-400 mb-1.5 text-xs">מדינה (State)</label>
                     <select class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-bold text-sm">
@@ -552,10 +560,41 @@
                     <label class="block font-bold text-emerald-400 mb-1.5 text-xs">מחיר מקסימום ($)</label>
                     <input type="text" id="ondemand-max-price" oninput="handlePriceInput(this); saveOnDemandState();" value="500,000" class="w-full bg-gray-900 border-2 border-emerald-500/50 rounded-xl px-2.5 py-1.5 text-emerald-400 font-black font-mono text-center text-base">
                 </div>
-                <div class="flex items-end">
-                    <button onclick="triggerOnDemandExecution()" class="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center justify-center gap-1.5">
-                        <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת
-                    </button>
+                <div>
+                    <label class="block font-bold text-gray-300 mb-1.5 text-xs">שטח מינ' (SqFt)</label>
+                    <input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this); saveOnDemandState();" placeholder="ללא הגבלה" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-mono font-bold text-center text-sm">
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-300 mb-1.5 text-xs">חדרי שינה מינ'</label>
+                    <select id="ondemand-min-beds" onchange="saveOnDemandState()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-bold text-sm">
+                        <option value="all">הכל</option>
+                        <option value="1">1+</option>
+                        <option value="2">2+</option>
+                        <option value="3" selected>3+</option>
+                        <option value="4">4+</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-300 mb-1.5 text-xs">חדרי רחצה מינ'</label>
+                    <select id="ondemand-min-baths" onchange="saveOnDemandState()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-bold text-sm">
+                        <option value="all">הכל</option>
+                        <option value="1" selected>1+</option>
+                        <option value="2">2+</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Property Types Selection -->
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-gray-300">סוגי נכסים לסריקה זו:</label>
+                <div class="flex flex-wrap gap-1.5 text-xs">
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-300"><input type="checkbox" checked value="Single Family" onchange="saveOnDemandState()" class="ondemand-prop-type-box accent-blue-500"> Single Family</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-300"><input type="checkbox" checked value="Townhouse" onchange="saveOnDemandState()" class="ondemand-prop-type-box accent-blue-500"> Townhouse</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-300"><input type="checkbox" checked value="Multi-Family" onchange="saveOnDemandState()" class="ondemand-prop-type-box accent-blue-500"> Multi-Family</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-300"><input type="checkbox" checked value="Duplex / Triplex" onchange="saveOnDemandState()" class="ondemand-prop-type-box accent-blue-500"> Duplex / Triplex</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-300"><input type="checkbox" checked value="Condo" onchange="saveOnDemandState()" class="ondemand-prop-type-box accent-blue-500"> Condo</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-300"><input type="checkbox" value="Commercial / Mixed-Use" onchange="saveOnDemandState()" class="ondemand-prop-type-box accent-blue-500"> Commercial / Mixed-Use</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500 text-gray-300"><input type="checkbox" value="Land / Lot" onchange="saveOnDemandState()" class="ondemand-prop-type-box accent-blue-500"> Land / Lot</label>
                 </div>
             </div>
 
@@ -570,16 +609,24 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-9 gap-1.5 text-xs text-gray-300">
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny"> Allegheny Co.</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown"> Allentown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading"> Reading</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie"> Erie</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton"> Scranton</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster"> Lancaster</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh" onchange="saveOnDemandState()"> Pittsburgh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny" onchange="saveOnDemandState()"> Allegheny Co.</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia" onchange="saveOnDemandState()"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown" onchange="saveOnDemandState()"> Allentown</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading" onchange="saveOnDemandState()"> Reading</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie" onchange="saveOnDemandState()"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton" onchange="saveOnDemandState()"> Scranton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem" onchange="saveOnDemandState()"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster" onchange="saveOnDemandState()"> Lancaster</label>
                 </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
+                <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold">ביטול</button>
+                <button onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
+                    <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת
+                </button>
             </div>
         </div>
     </div>
@@ -1102,12 +1149,17 @@
             }
 
             const state = {
+                query: document.getElementById('ondemand-query-input')?.value || '',
                 sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value),
                 minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
                 maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 500000,
+                minSqft: document.getElementById('ondemand-min-sqft')?.value || '',
+                minBeds: document.getElementById('ondemand-min-beds')?.value || '3',
+                minBaths: document.getElementById('ondemand-min-baths')?.value || '1',
+                propTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb => cb.value),
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v511', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v512', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1117,10 +1169,13 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v511');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v512');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
+                    if (document.getElementById('ondemand-query-input')) {
+                        document.getElementById('ondemand-query-input').value = st.query || '';
+                    }
                     setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice);
                     setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 500000);
 
@@ -1129,9 +1184,24 @@
                         setPriceFormatted(mainMinInput, st.minPrice);
                     }
 
+                    if (document.getElementById('ondemand-min-sqft')) {
+                        document.getElementById('ondemand-min-sqft').value = st.minSqft || '';
+                    }
+                    if (document.getElementById('ondemand-min-beds')) {
+                        document.getElementById('ondemand-min-beds').value = st.minBeds || '3';
+                    }
+                    if (document.getElementById('ondemand-min-baths')) {
+                        document.getElementById('ondemand-min-baths').value = st.minBaths || '1';
+                    }
+
                     if (st.sectors && Array.isArray(st.sectors)) {
                         document.querySelectorAll('.ondemand-sector-box').forEach(cb => {
                             cb.checked = st.sectors.includes(cb.value);
+                        });
+                    }
+                    if (st.propTypes && Array.isArray(st.propTypes)) {
+                        document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => {
+                            cb.checked = st.propTypes.includes(cb.value);
                         });
                     }
                     if (st.cities && Array.isArray(st.cities)) {
