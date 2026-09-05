@@ -18,10 +18,40 @@
         .font-mono {
             font-family: 'JetBrains Mono', monospace;
         }
-        .filter-card-active {
-            background-color: rgba(59, 130, 246, 0.15) !important;
+        .kpi-active-all {
+            background-color: rgba(59, 130, 246, 0.2) !important;
             border-color: #3b82f6 !important;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+        .kpi-active-mls {
+            background-color: rgba(6, 182, 212, 0.2) !important;
+            border-color: #22d3ee !important;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+            transform: translateY(-2px);
+        }
+        .kpi-active-distressed {
+            background-color: rgba(245, 158, 11, 0.2) !important;
+            border-color: #fbbf24 !important;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+            transform: translateY(-2px);
+        }
+        .kpi-active-sheriff {
+            background-color: rgba(244, 63, 94, 0.2) !important;
+            border-color: #fb7185 !important;
+            box-shadow: 0 0 20px rgba(251, 113, 133, 0.5);
+            transform: translateY(-2px);
+        }
+        .kpi-active-tax {
+            background-color: rgba(168, 85, 247, 0.2) !important;
+            border-color: #c084fc !important;
+            box-shadow: 0 0 20px rgba(192, 132, 252, 0.5);
+            transform: translateY(-2px);
+        }
+        .kpi-active-probate {
+            background-color: rgba(16, 185, 129, 0.2) !important;
+            border-color: #34d399 !important;
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
             transform: translateY(-2px);
         }
         .watchlist-btn-active {
@@ -60,7 +90,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.28</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.29</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -101,7 +131,7 @@
 
         <!-- KPI Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card filter-card-active text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between">
+            <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-xs font-bold text-gray-300">הכל</span>
                     <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i>
@@ -802,10 +832,10 @@
             const categories = ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'];
             categories.forEach(c => {
                 const btn = document.getElementById(`btn-cat-${c}`);
+                // Remove all possible active kpi classes first
+                btn.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate');
                 if (c === cat) {
-                    btn.classList.add('filter-card-active');
-                } else {
-                    btn.classList.remove('filter-card-active');
+                    btn.classList.add(`kpi-active-${c}`);
                 }
             });
             renderCards();
@@ -815,10 +845,10 @@
 
         function getDealBadgeSymbol(dealType) {
             const dt = (dealType || '').toLowerCase();
-            if (dt.includes('sheriff')) return '<span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block shadow-md shadow-rose-500/50" title="מכירות שריף"></span>';
-            if (dt.includes('foreclosure') || dt.includes('reo')) return '<span class="w-3.5 h-3.5 rounded-full bg-amber-500 inline-block shadow-md shadow-amber-500/50" title="כינוס נכסים"></span>';
-            if (dt.includes('tax')) return '<span class="w-3.5 h-3.5 rounded-full bg-purple-500 inline-block shadow-md shadow-purple-500/50" title="פיגורי מס"></span>';
-            if (dt.includes('probate') || dt.includes('fsbo')) return '<span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-md shadow-emerald-500/50" title="עיזבונות ו-FSBO"></span>';
+            if (dt.includes('sheriff')) return '<span class="w-3.5 h-3.5 rounded-full bg-rose-400 inline-block shadow-md shadow-rose-400/50" title="מכירות שריף"></span>';
+            if (dt.includes('foreclosure') || dt.includes('reo')) return '<span class="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block shadow-md shadow-amber-400/50" title="כינוס נכסים"></span>';
+            if (dt.includes('tax')) return '<span class="w-3.5 h-3.5 rounded-full bg-purple-400 inline-block shadow-md shadow-purple-400/50" title="פיגורי מס"></span>';
+            if (dt.includes('probate') || dt.includes('fsbo')) return '<span class="w-3.5 h-3.5 rounded-full bg-emerald-400 inline-block shadow-md shadow-emerald-400/50" title="עיזבונות ו-FSBO"></span>';
             return '<span class="w-3.5 h-3.5 rounded-full bg-cyan-400 inline-block shadow-md shadow-cyan-400/50" title="MLS וירידות מחיר"></span>';
         }
 
@@ -1214,7 +1244,7 @@
                 minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v528', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v529', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1224,7 +1254,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v528');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v529');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
