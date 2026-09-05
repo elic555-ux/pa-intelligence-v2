@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.9</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.10</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -162,7 +162,7 @@
             </div>
         </section>
 
-        <!-- Filters Bar including Strategy Selector -->
+        <!-- Filters Bar including Strategy Selector & Date Sort -->
         <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3.5 shadow-lg">
             <div>
                 <label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה (Dual-Track)</label>
@@ -208,6 +208,7 @@
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מיון תוצאות</label>
                 <select id="sort-by" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
                     <option value="score_desc">🔥 ציון כדאיות (Score)</option>
+                    <option value="date_desc" selected>📅 תאריך פרסום: מהחדש לישן</option>
                     <option value="price_asc">מחיר: מהנמוך לגבוה</option>
                     <option value="price_desc">מחיר: מהגבוה לנמוך</option>
                 </select>
@@ -941,6 +942,15 @@
             return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
         }
 
+        function parseDateToSort(dateStr) {
+            if (!dateStr) return 0;
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime() || 0;
+            }
+            return 0;
+        }
+
         function renderCards() {
             const container = document.getElementById('properties-container');
             const cityFilter = document.getElementById('filter-city').value;
@@ -975,9 +985,15 @@
                 return true;
             });
 
-            if (sortBy === 'score_desc') filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
-            else if (sortBy === 'price_asc') filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-            else if (sortBy === 'price_desc') filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+            if (sortBy === 'score_desc') {
+                filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
+            } else if (sortBy === 'date_desc') {
+                filtered.sort((a, b) => parseDateToSort(b.listed_date) - parseDateToSort(a.listed_date));
+            } else if (sortBy === 'price_asc') {
+                filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+            } else if (sortBy === 'price_desc') {
+                filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+            }
 
             if (filtered.length === 0) {
                 container.innerHTML = '<div class="col-span-3 text-center py-12 text-white font-extrabold text-base">לא נמצאו נכסים התואמים להגדרות הסינון.</div>';
@@ -1056,7 +1072,6 @@
 
             const badgeColor = getDealBadgeStyle(p.deal_type);
             const isHot = (p.deal_score || 0) >= 80;
-            const dt = (p.deal_type || '').toLowerCase();
 
             document.getElementById('modal-badges').innerHTML = `
                 <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
