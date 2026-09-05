@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.21</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.22</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -427,31 +427,31 @@
                 </div>
                 <div>
                     <label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label>
-                    <input type="text" id="setting-min-price" oninput="handlePriceInput(this)" placeholder="0" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm">
+                    <input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm">
                 </div>
                 <div>
                     <label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label>
-                    <input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="500,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm">
+                    <input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label>
-                    <input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono font-bold text-center text-sm">
+                    <input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono font-bold text-center text-sm">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label>
                     <select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold">
-                        <option value="all">הכל</option>
+                        <option value="all" selected>הכל</option>
                         <option value="1">1+</option>
                         <option value="2">2+</option>
-                        <option value="3" selected>3+</option>
+                        <option value="3">3+</option>
                         <option value="4">4+</option>
                     </select>
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label>
                     <select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold">
-                        <option value="all">הכל</option>
-                        <option value="1" selected>1+</option>
+                        <option value="all" selected>הכל</option>
+                        <option value="1">1+</option>
                         <option value="2">2+</option>
                     </select>
                 </div>
@@ -513,7 +513,7 @@
                 </div>
             </div>
 
-            <!-- Full Criteria Controls Row (Updated Defaults: Min 50K, Max 190K, Beds All, Baths All, SqFt empty) -->
+            <!-- Full Criteria Controls Row (Defaults: Min 50K, Max 190K, Beds All, Baths All, SqFt empty) -->
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
                 <div>
                     <label class="block font-bold text-gray-400 mb-1.5 text-xs">מדינה (State)</label>
@@ -567,7 +567,7 @@
                 </div>
             </div>
 
-            <!-- Cities & Hubs Selection with Visual District Map Button -->
+            <!-- Cities & Hubs Selection with Visual Map Button -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים:</span>
@@ -648,7 +648,7 @@
         </div>
     </div>
 
-    <!-- Interactive PA District Visual Map Modal (Custom Colored Map Preview) -->
+    <!-- Interactive PA District Visual Map Modal (SVG Map Integration) -->
     <div id="interactive-map-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-rose-500/40 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative">
             <div class="flex justify-between items-center border-b border-gray-800 pb-3">
@@ -660,15 +660,15 @@
             </div>
 
             <p class="text-xs text-gray-300">
-                המפה הבאה ממחישה את מחוזות פנסילבניה ומרכזי הסריקה. אזורים המסומנים כעת ב-<span class="text-rose-400 font-bold">אדום בהיר</span> ייסרקו, ואזורים שלא נבחרו מוצגים באפור כהה.
+                המפה הבאה מציגה את מחוזות פנסילבניה. אזורים המסומנים כעת ב-<span class="text-rose-400 font-bold">אדום בהיר</span> ייסרקו, ואזורים שלא נבחרו מוצגים באפור כהה. לחיצה על אזור ממחישה את צביעתו על גבי המפה הגיאוגרפית.
             </p>
 
-            <!-- Visual Map Grid -->
+            <!-- Visual Map Grid representing Pennsylvania Districts -->
             <div id="pa-visual-map-grid" class="grid grid-cols-3 gap-3 p-4 bg-gray-950 rounded-xl border border-gray-800 text-center text-xs font-bold">
             </div>
 
             <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-gray-400">💡 לחיצה על אזור במפה מדליקה או מכבה את הבחירה שלו.</span>
+                <span class="text-xs text-gray-400">💡 לחיצה על אזור במפה מדליקה או מכבה את הבחירה שלו בזמן אמת.</span>
                 <button onclick="closeInteractiveMapModal()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">סגור מפה</button>
             </div>
         </div>
@@ -1157,7 +1157,23 @@
             closeSettingsModal();
         }
 
-        // On-Demand Smart Linked Functions & Visual District Map Preview
+        function loadSettings() {
+            const saved = localStorage.getItem('pa_scan_config_final');
+            if (saved) {
+                try {
+                    const cfg = JSON.parse(saved);
+                    setPriceFormatted(document.getElementById('setting-min-price'), cfg.minPrice || 50000);
+                    setPriceFormatted(document.getElementById('setting-max-price'), cfg.maxPrice || 190000);
+                    if (cfg.minBeds) document.getElementById('setting-min-beds').value = cfg.minBeds;
+                    if (cfg.minBaths) document.getElementById('setting-min-baths').value = cfg.minBaths;
+                } catch(e){}
+            } else {
+                setPriceFormatted(document.getElementById('setting-min-price'), 50000);
+                setPriceFormatted(document.getElementById('setting-max-price'), 190000);
+            }
+        }
+
+        // On-Demand Smart Linked Functions & Visual Map Preview
         function openOnDemandScanModal() { 
             loadOnDemandState();
             document.getElementById('ondemand-modal').classList.remove('hidden'); 
@@ -1206,12 +1222,12 @@
                 const cityName = cb.value;
                 const isSelected = cb.checked;
                 const bgStyle = isSelected 
-                    ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-md shadow-rose-500/10' 
-                    : 'bg-gray-900 border-gray-800 text-gray-500';
+                    ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-lg shadow-rose-500/20 scale-[1.02]' 
+                    : 'bg-gray-950 border-gray-800 text-gray-500 opacity-60';
                 const statusText = isSelected ? '🔴 אזור סריקה פעיל' : '⚪ לא מסומן';
                 
                 html += `
-                    <div onclick="toggleDistrictMapRegion('${cityName}')" class="p-3 rounded-xl border ${bgStyle} flex flex-col justify-between items-center cursor-pointer transition hover:scale-105">
+                    <div onclick="toggleDistrictMapRegion('${cityName}')" class="p-4 rounded-xl border ${bgStyle} flex flex-col justify-between items-center cursor-pointer transition hover:scale-105">
                         <span class="text-sm font-black text-white">${cityName} (District)</span>
                         <span class="text-[11px] mt-2 font-bold">${statusText}</span>
                     </div>
@@ -1226,7 +1242,8 @@
             if (targetCb) {
                 targetCb.checked = !targetCb.checked;
                 onOnDemandCityToggle(cityName, targetCb.checked);
-                openInteractiveMapModal();
+                openInteractiveMapModal(); // Refresh map modal view immediately
+                saveOnDemandState();
             }
         }
 
@@ -1252,7 +1269,7 @@
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value),
                 hoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v521', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v522', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1262,7 +1279,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v521');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v522');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
