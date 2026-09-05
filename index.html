@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.22</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.25</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -148,7 +148,7 @@
             </button>
         </section>
 
-        <!-- Watchlist Strip -->
+        <!-- Watchlist Strip & View Mode Toggle -->
         <section class="flex flex-wrap items-center justify-between bg-gray-900/80 border border-gray-800 rounded-2xl p-3 sm:px-5 gap-3 shadow-lg">
             <button onclick="toggleWatchlistFilter()" id="btn-watchlist-filter" class="flex items-center gap-3 px-6 py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 text-sm font-black transition-all">
                 <i data-lucide="star" class="w-5 h-5 text-amber-400 fill-amber-400"></i>
@@ -156,9 +156,14 @@
                 <span class="badge-count px-2.5 py-0.5 bg-amber-500/30 border border-amber-400/50 rounded-lg font-mono text-white text-xs font-extrabold" id="count-watchlist">0</span>
             </button>
 
-            <div class="text-xs text-gray-400 flex items-center gap-2">
-                <i data-lucide="cloud" class="w-4 h-4 text-blue-400"></i>
-                <span>נכסים שהועברו לחדר עסקאות מנוהלים בנפרד ולא מוצגים בסריקה הכללית.</span>
+            <!-- View Toggle Buttons -->
+            <div class="flex items-center gap-2 bg-gray-950 p-1 rounded-xl border border-gray-800">
+                <button onclick="setViewMode('table')" id="btn-view-table" class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-blue-600 text-white transition">
+                    <i data-lucide="table" class="w-3.5 h-3.5"></i> תצוגת טבלה
+                </button>
+                <button onclick="setViewMode('grid')" id="btn-view-grid" class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 text-gray-400 hover:text-white transition">
+                    <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> כרטיסיות
+                </button>
             </div>
         </section>
 
@@ -191,16 +196,15 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-emerald-400 mb-1.5">מחיר מינימום ($)</label>
-                <input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyFilters();" placeholder="החל מ-0" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center">
+                <input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyFilters();" value="50,000" placeholder="50,000" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מחיר מקסימום ($)</label>
                 <select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
                     <option value="all">הכל (ללא הגבלה)</option>
                     <option value="100000">עד $100,000</option>
-                    <option value="150000">עד $150,000</option>
+                    <option value="190000" selected>עד $190,000</option>
                     <option value="250000">עד $250,000</option>
-                    <option value="350000">עד $350,000</option>
                     <option value="500000">עד $500,000</option>
                 </select>
             </div>
@@ -215,8 +219,8 @@
             </div>
         </section>
 
-        <!-- Properties Grid -->
-        <section id="properties-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Properties Container (Grid or Table) -->
+        <section id="properties-container" class="w-full">
         </section>
 
     </main>
@@ -513,7 +517,7 @@
                 </div>
             </div>
 
-            <!-- Full Criteria Controls Row (Defaults: Min 50K, Max 190K, Beds All, Baths All, SqFt empty) -->
+            <!-- Full Criteria Controls Row -->
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
                 <div>
                     <label class="block font-bold text-gray-400 mb-1.5 text-xs">מדינה (State)</label>
@@ -567,74 +571,26 @@
                 </div>
             </div>
 
-            <!-- Cities & Hubs Selection with Visual Map Button -->
+            <!-- Cities & Hubs Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים:</span>
-                    <div class="flex items-center gap-3">
-                        <button onclick="openInteractiveMapModal()" class="text-xs px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 rounded-lg font-bold flex items-center gap-1.5 transition shadow-sm">
-                            <i data-lucide="map" class="w-4 h-4 text-rose-400"></i> 🗺️ הצג מפת מחוזות פנסילבניה
-                        </button>
-                        <div class="text-xs space-x-2 space-x-reverse">
-                            <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
-                            <span class="text-gray-600">|</span>
-                            <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
-                        </div>
+                    <div class="text-xs space-x-2 space-x-reverse">
+                        <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
+                        <span class="text-gray-600">|</span>
+                        <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-9 gap-1.5 text-xs text-gray-300">
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh" onchange="onOnDemandCityToggle('Pittsburgh', this.checked)"> Pittsburgh</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny" onchange="saveOnDemandState()"> Allegheny Co.</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia" onchange="onOnDemandCityToggle('Philadelphia', this.checked)"> Philadelphia</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown" onchange="onOnDemandCityToggle('Allentown', this.checked)"> Allentown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading" onchange="onOnDemandCityToggle('Reading', this.checked)"> Reading</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie" onchange="onOnDemandCityToggle('Erie', this.checked)"> Erie</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton" onchange="onOnDemandCityToggle('Scranton', this.checked)"> Scranton</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem" onchange="onOnDemandCityToggle('Bethlehem', this.checked)"> Bethlehem</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster" onchange="onOnDemandCityToggle('Lancaster', this.checked)"> Lancaster</label>
-                </div>
-            </div>
-
-            <!-- Neighborhoods Selection -->
-            <div class="space-y-1.5">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-300">2. שכונות ואזורים ספציפיים מקושרים:</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllOnDemandHoods(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllOnDemandHoods(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
-                    </div>
-                </div>
-                <div class="flex flex-wrap gap-1.5 text-xs text-gray-300">
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Downtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> PGH Downtown</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Shadyside" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Shadyside</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Lawrenceville" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Lawrenceville</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Squirrel Hill" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Squirrel Hill</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: South Side" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> South Side</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Oakland" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Oakland</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: East Liberty" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> East Liberty</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Strip District" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Strip District</label>
-
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Center City" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Center City (Philly)</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Fishtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Fishtown</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Northern Liberties" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> N. Liberties</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: South Philly" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> South Philly</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: University City" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> University City</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Chestnut Hill" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Chestnut Hill</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Manayunk" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Manayunk</label>
-
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-purple-950/40 text-purple-200 border border-purple-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Downtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Lancaster Downtown</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-purple-950/40 text-purple-200 border border-purple-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Chestnut Hill" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Lancaster Chestnut</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-purple-950/40 text-purple-200 border border-purple-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Cabbage Hill" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Cabbage Hill</label>
-
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-emerald-950/40 text-emerald-200 border border-emerald-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: Historic District" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Bethlehem Historic</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-emerald-950/40 text-emerald-200 border border-emerald-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: South Side" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Bethlehem South</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-emerald-950/40 text-emerald-200 border border-emerald-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: West Bethlehem" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> West Bethlehem</label>
-
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: Downtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Erie Downtown</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: Bayfront" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Erie Bayfront</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: East Bay" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> East Bay</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: West Bay" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> West Bay</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny"> Allegheny Co.</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown"> Allentown</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading"> Reading</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton"> Scranton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster"> Lancaster</label>
                 </div>
             </div>
 
@@ -648,32 +604,6 @@
         </div>
     </div>
 
-    <!-- Interactive PA District Visual Map Modal (SVG Map Integration) -->
-    <div id="interactive-map-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-rose-500/40 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="map" class="w-5 h-5 text-rose-400"></i>
-                    <h3 class="text-lg font-black text-white">מפת מחוזות פנסילבניה (Visual District Map - PA)</h3>
-                </div>
-                <button onclick="closeInteractiveMapModal()" class="text-gray-400 hover:text-white p-1.5 rounded-lg bg-gray-800"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-
-            <p class="text-xs text-gray-300">
-                המפה הבאה מציגה את מחוזות פנסילבניה. אזורים המסומנים כעת ב-<span class="text-rose-400 font-bold">אדום בהיר</span> ייסרקו, ואזורים שלא נבחרו מוצגים באפור כהה. לחיצה על אזור ממחישה את צביעתו על גבי המפה הגיאוגרפית.
-            </p>
-
-            <!-- Visual Map Grid representing Pennsylvania Districts -->
-            <div id="pa-visual-map-grid" class="grid grid-cols-3 gap-3 p-4 bg-gray-950 rounded-xl border border-gray-800 text-center text-xs font-bold">
-            </div>
-
-            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-gray-400">💡 לחיצה על אזור במפה מדליקה או מכבה את הבחירה שלו בזמן אמת.</span>
-                <button onclick="closeInteractiveMapModal()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">סגור מפה</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Script Logic -->
     <script>
         let rawProperties = [];
@@ -682,6 +612,7 @@
         let userWatchlist = new Set();
         let pipelineDeals = [];
         let currentSelectedProperty = null;
+        let currentViewMode = 'table'; // Default view mode set to table for large database handling
 
         function handlePriceInput(input) {
             if (!input) return;
@@ -716,6 +647,20 @@
             loadSettings();
             loadOnDemandState();
             await loadProperties();
+        }
+
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            const btnTable = document.getElementById('btn-view-table');
+            const btnGrid = document.getElementById('btn-view-grid');
+            if (mode === 'table') {
+                btnTable.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-blue-600 text-white transition";
+                btnGrid.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 text-gray-400 hover:text-white transition";
+            } else {
+                btnGrid.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-blue-600 text-white transition";
+                btnTable.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 text-gray-400 hover:text-white transition";
+            }
+            renderCards();
         }
 
         function loadPipelineFromStorage() {
@@ -925,71 +870,137 @@
             }
 
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="col-span-3 text-center py-12 text-white font-extrabold text-base">לא נמצאו נכסים התואמים להגדרות הסינון.</div>';
+                container.innerHTML = '<div class="text-center py-12 text-white font-extrabold text-base bg-gray-900 border border-gray-800 rounded-2xl">לא נמצאו נכסים התואמים להגדרות הסינון.</div>';
                 return;
             }
 
-            container.innerHTML = filtered.map(p => {
-                const idStr = String(p.id);
-                const isWatchlisted = userWatchlist.has(idStr);
-                const isTurnkey = p.strategy === 'turnkey';
-                const isHot = (p.deal_score || 0) >= 80;
-                const badgeColor = getDealBadgeStyle(p.deal_type);
-                
-                return `
-                <div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isHot ? 'hot-deal-border' : 'border-gray-800'} hover:border-blue-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between relative overflow-hidden cursor-pointer group">
+            if (currentViewMode === 'table') {
+                // Render Table View
+                let tableHtml = `
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar">
+                        <table class="w-full text-right border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold">
+                                    <th class="p-3.5">סטטוס</th>
+                                    <th class="p-3.5">כתובת ומיקום</th>
+                                    <th class="p-3.5">מחיר ($)</th>
+                                    <th class="p-3.5">מאפיינים פיזיים</th>
+                                    <th class="p-3.5">מדדי השקעה</th>
+                                    <th class="p-3.5 text-center">ציון</th>
+                                    <th class="p-3.5 text-center">פעולות</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
+                `;
+
+                filtered.forEach(p => {
+                    const isWatchlisted = userWatchlist.has(String(p.id));
+                    const isHot = (p.deal_score || 0) >= 80;
+                    const isTurnkey = p.strategy === 'turnkey';
+
+                    tableHtml += `
+                        <tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 transition cursor-pointer">
+                            <td class="p-3.5">
+                                <span class="px-2 py-1 rounded-md text-[11px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/30">
+                                    ${p.strategy_label || p.deal_type}
+                                </span>
+                            </td>
+                            <td class="p-3.5">
+                                <div class="font-black text-white text-sm">${p.address}</div>
+                                <div class="text-[11px] text-gray-400">${p.city}, ${p.county} County</div>
+                            </td>
+                            <td class="p-3.5 font-mono font-black text-emerald-400 text-sm">
+                                $${(p.price || 0).toLocaleString()}
+                            </td>
+                            <td class="p-3.5 font-bold text-gray-300">
+                                🛏️ ${p.beds || '-'} \| 🛁 ${p.baths || '-'} \| 📐 ${p.sqft ? p.sqft.toLocaleString() + ' sqft' : '-'}
+                            </td>
+                            <td class="p-3.5">
+                                <div class="text-emerald-300 font-mono">💰 ${p.projected_rent || '$1,200'}</div>
+                                <div class="text-amber-300 text-[11px]">${isTurnkey ? 'תשואה: ' + (p.gross_yield || '10%') : 'שיפוץ: ' + (p.rehab_scope || '$20k')}</div>
+                            </td>
+                            <td class="p-3.5 text-center">
+                                <span class="px-2.5 py-1 rounded-lg font-mono font-black text-xs ${isHot ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">
+                                    ${p.deal_score || 75}
+                                </span>
+                            </td>
+                            <td class="p-3.5 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()">
+                                <button onclick="openPropertyModal('${p.id}')" class="px-2.5 py-1.5 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg font-bold transition text-[11px]">פרטים</button>
+                                <button onclick="toggleWatchlist('${p.id}', event)" class="p-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-amber-400 transition">
+                                    <i data-lucide="star" class="w-3.5 h-3.5 ${isWatchlisted ? 'fill-amber-400' : ''}"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `</tbody></table></div>`;
+                container.innerHTML = tableHtml;
+            } else {
+                // Render Grid View
+                container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4";
+                container.innerHTML = filtered.map(p => {
+                    const idStr = String(p.id);
+                    const isWatchlisted = userWatchlist.has(idStr);
+                    const isTurnkey = p.strategy === 'turnkey';
+                    const isHot = (p.deal_score || 0) >= 80;
+                    const badgeColor = getDealBadgeStyle(p.deal_type);
                     
-                    ${isHot ? `
-                    <div class="absolute top-0 left-0 bg-amber-600/90 backdrop-blur-sm border-b border-r border-amber-500/40 text-gray-950 font-black text-xs px-3 py-1 rounded-br-xl flex items-center gap-1.5 shadow-md">
-                        <span class="text-white text-[11px] font-extrabold tracking-wide">🔥 מציאה</span>
-                        <span class="bg-gray-950 text-amber-300 px-1.5 py-0.2 rounded font-black text-sm font-mono border border-amber-500/40">${p.deal_score || 80}</span>
-                    </div>
-                    ` : ''}
+                    return `
+                    <div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isHot ? 'hot-deal-border' : 'border-gray-800'} hover:border-blue-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between relative overflow-hidden cursor-pointer group">
+                        
+                        ${isHot ? `
+                        <div class="absolute top-0 left-0 bg-amber-600/90 backdrop-blur-sm border-b border-r border-amber-500/40 text-gray-950 font-black text-xs px-3 py-1 rounded-br-xl flex items-center gap-1.5 shadow-md">
+                            <span class="text-white text-[11px] font-extrabold tracking-wide">🔥 מציאה</span>
+                            <span class="bg-gray-950 text-amber-300 px-1.5 py-0.2 rounded font-black text-sm font-mono border border-amber-500/40">${p.deal_score || 80}</span>
+                        </div>
+                        ` : ''}
 
-                    <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 border border-gray-800 hover:border-amber-500/50 text-gray-400 hover:text-amber-400 z-10 transition">
-                        <i data-lucide="star" class="w-4 h-4 ${isWatchlisted ? 'text-amber-400 fill-amber-400' : ''}"></i>
-                    </button>
+                        <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 border border-gray-800 hover:border-amber-500/50 text-gray-400 hover:text-amber-400 z-10 transition">
+                            <i data-lucide="star" class="w-4 h-4 ${isWatchlisted ? 'text-amber-400 fill-amber-400' : ''}"></i>
+                        </button>
 
-                    <div>
-                        <div class="flex justify-between items-start gap-2 mb-3 ${isHot ? 'pt-3' : ''} pr-8">
-                            <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
-                                ${p.strategy_label || p.deal_type}
+                        <div>
+                            <div class="flex justify-between items-start gap-2 mb-3 ${isHot ? 'pt-3' : ''} pr-8">
+                                <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
+                                    ${p.strategy_label || p.deal_type}
+                                </span>
+                                <span class="text-xs font-black text-emerald-300 bg-emerald-500/15 px-2.5 py-0.5 rounded-md border border-emerald-400/30">
+                                    ${isTurnkey ? (p.gross_yield || 'תשואה שוטפת') : (p.margin_estimate || 'מרווח גבוה')}
+                                </span>
+                            </div>
+                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 transition mb-1 tracking-wide">${p.address}</h4>
+                            <p class="text-xs font-bold text-gray-400 mb-3.5 flex items-center gap-1.5">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i>
+                                ${p.city}, ${p.county} County, PA ${p.zip || ''}
+                            </p>
+                            <div class="text-2xl font-black text-emerald-400 font-mono mb-4 drop-shadow-sm">$${(p.price || 0).toLocaleString()}</div>
+                            <div class="grid grid-cols-3 gap-2 bg-gray-950 p-2.5 rounded-xl text-center text-xs text-gray-400 mb-4 border border-gray-800">
+                                <div><span class="text-gray-400 font-bold block">חדרים</span><strong class="text-white text-base font-black">${p.beds || '-'}</strong></div>
+                                <div><span class="text-gray-400 font-bold block">אמבט</span><strong class="text-white text-base font-black">${p.baths || '-'}</strong></div>
+                                <div><span class="text-gray-400 font-bold block">שטח (sqft)</span><strong class="text-white text-base font-black">${p.sqft || '-'}</strong></div>
+                            </div>
+
+                            <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 text-xs mb-3 flex justify-between">
+                                <span class="text-gray-400">צפי שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent || '$1,200'}</strong></span>
+                                <span class="text-gray-400">${isTurnkey ? 'תשואה צפויה:' : 'הערכת שיפוץ:'} <strong class="text-amber-300">${isTurnkey ? (p.gross_yield || '10%') : (p.rehab_scope || '$20k')}</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs">
+                            <div class="flex flex-col space-y-1">
+                                <span class="font-mono text-gray-400 font-bold text-[11px]">${p.docket_id || p.id}</span>
+                                <span class="text-amber-300 font-bold text-xs flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i> פורסם: ${p.listed_date}
+                                </span>
+                            </div>
+                            <span class="px-3.5 py-2 bg-gray-800 group-hover:bg-blue-600 group-hover:text-white text-blue-300 rounded-xl font-black flex items-center gap-1.5 transition">
+                                פרטים מלאים <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
                             </span>
-                            <span class="text-xs font-black text-emerald-300 bg-emerald-500/15 px-2.5 py-0.5 rounded-md border border-emerald-400/30">
-                                ${isTurnkey ? (p.gross_yield || 'תשואה שוטפת') : (p.margin_estimate || 'מרווח גבוה')}
-                            </span>
-                        </div>
-                        <h4 class="text-xl font-black text-white group-hover:text-blue-400 transition mb-1 tracking-wide">${p.address}</h4>
-                        <p class="text-xs font-bold text-gray-400 mb-3.5 flex items-center gap-1.5">
-                            <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i>
-                            ${p.city}, ${p.county} County, PA ${p.zip || ''}
-                        </p>
-                        <div class="text-2xl font-black text-emerald-400 font-mono mb-4 drop-shadow-sm">$${(p.price || 0).toLocaleString()}</div>
-                        <div class="grid grid-cols-3 gap-2 bg-gray-950 p-2.5 rounded-xl text-center text-xs text-gray-400 mb-4 border border-gray-800">
-                            <div><span class="text-gray-400 font-bold block">חדרים</span><strong class="text-white text-base font-black">${p.beds || '-'}</strong></div>
-                            <div><span class="text-gray-400 font-bold block">אמבט</span><strong class="text-white text-base font-black">${p.baths || '-'}</strong></div>
-                            <div><span class="text-gray-400 font-bold block">שטח (sqft)</span><strong class="text-white text-base font-black">${p.sqft || '-'}</strong></div>
-                        </div>
-
-                        <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 text-xs mb-3 flex justify-between">
-                            <span class="text-gray-400">צפי שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent || '$1,200'}</strong></span>
-                            <span class="text-gray-400">${isTurnkey ? 'תשואה צפויה:' : 'הערכת שיפוץ:'} <strong class="text-amber-300">${isTurnkey ? (p.gross_yield || '10%') : (p.rehab_scope || '$20k')}</strong></span>
                         </div>
                     </div>
-
-                    <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between text-xs">
-                        <div class="flex flex-col space-y-1">
-                            <span class="font-mono text-gray-400 font-bold text-[11px]">${p.docket_id || p.id}</span>
-                            <span class="text-amber-300 font-bold text-xs flex items-center gap-1">
-                                <i data-lucide="calendar" class="w-3.5 h-3.5"></i> פורסם: ${p.listed_date}
-                            </span>
-                        </div>
-                        <span class="px-3.5 py-2 bg-gray-800 group-hover:bg-blue-600 group-hover:text-white text-blue-300 rounded-xl font-black flex items-center gap-1.5 transition">
-                            פרטים מלאים <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
-                        </span>
-                    </div>
-                </div>
-            `}).join('');
+                `}).join('');
+            }
 
             lucide.createIcons();
         }
@@ -1137,19 +1148,13 @@
         function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
         function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
-        function toggleAllCities(state) {
-            document.querySelectorAll('.city-box').forEach(cb => { cb.checked = state; });
-        }
-
         function saveScanSettings() {
-            const selectedCities = Array.from(document.querySelectorAll('.city-box:checked')).map(cb => cb.value);
             const config = {
                 state: "PA",
                 minPrice: getRawPrice(document.getElementById('setting-min-price')),
                 maxPrice: getRawPrice(document.getElementById('setting-max-price')) || 190000,
                 minBeds: document.getElementById('setting-min-beds').value,
                 minBaths: document.getElementById('setting-min-baths').value,
-                cities: selectedCities,
                 savedAt: new Date().toISOString()
             };
             localStorage.setItem('pa_scan_config_final', JSON.stringify(config));
@@ -1173,211 +1178,40 @@
             }
         }
 
-        // On-Demand Smart Linked Functions & Visual Map Preview
-        function openOnDemandScanModal() { 
-            loadOnDemandState();
-            document.getElementById('ondemand-modal').classList.remove('hidden'); 
-        }
+        function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
         function toggleAllOnDemandCities(state) {
-            document.querySelectorAll('.ondemand-city-box').forEach(cb => { 
-                cb.checked = state; 
-                onOnDemandCityToggle(cb.value, state);
-            });
-            saveOnDemandState();
-        }
-
-        function toggleAllOnDemandHoods(state) {
-            document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
-                cb.checked = state;
-                updateOnDemandCardPill(cb);
-            });
-            saveOnDemandState();
-        }
-
-        function onOnDemandCityToggle(cityName, isChecked) {
-            const relatedHoods = document.querySelectorAll(`.ondemand-hood-box[data-city="${cityName}"]`);
-            relatedHoods.forEach(cb => {
-                cb.checked = isChecked;
-                updateOnDemandCardPill(cb);
-            });
-            saveOnDemandState();
-        }
-
-        function updateOnDemandCardPill(checkbox) {
-            const label = checkbox.closest('.ondemand-hood-label');
-            if (!label) return;
-            label.className = checkbox.checked
-                ? "ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer"
-                : "ondemand-hood-label flex items-center gap-1 bg-gray-950 text-gray-400 border border-gray-800 px-2 py-1 rounded-lg cursor-pointer";
-        }
-
-        function openInteractiveMapModal() {
-            const grid = document.getElementById('pa-visual-map-grid');
-            const cityBoxes = document.querySelectorAll('.ondemand-city-box');
-            
-            let html = '';
-            cityBoxes.forEach(cb => {
-                const cityName = cb.value;
-                const isSelected = cb.checked;
-                const bgStyle = isSelected 
-                    ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-lg shadow-rose-500/20 scale-[1.02]' 
-                    : 'bg-gray-950 border-gray-800 text-gray-500 opacity-60';
-                const statusText = isSelected ? '🔴 אזור סריקה פעיל' : '⚪ לא מסומן';
-                
-                html += `
-                    <div onclick="toggleDistrictMapRegion('${cityName}')" class="p-4 rounded-xl border ${bgStyle} flex flex-col justify-between items-center cursor-pointer transition hover:scale-105">
-                        <span class="text-sm font-black text-white">${cityName} (District)</span>
-                        <span class="text-[11px] mt-2 font-bold">${statusText}</span>
-                    </div>
-                `;
-            });
-            grid.innerHTML = html;
-            document.getElementById('interactive-map-modal').classList.remove('hidden');
-        }
-
-        function toggleDistrictMapRegion(cityName) {
-            const targetCb = Array.from(document.querySelectorAll('.ondemand-city-box')).find(cb => cb.value === cityName);
-            if (targetCb) {
-                targetCb.checked = !targetCb.checked;
-                onOnDemandCityToggle(cityName, targetCb.checked);
-                openInteractiveMapModal(); // Refresh map modal view immediately
-                saveOnDemandState();
-            }
-        }
-
-        function closeInteractiveMapModal() {
-            document.getElementById('interactive-map-modal').classList.add('hidden');
-        }
-
-        function saveOnDemandState() {
-            const tokenInput = document.getElementById('ondemand-token-input');
-            if (tokenInput && tokenInput.value.trim()) {
-                localStorage.setItem('pa_github_token', tokenInput.value.trim());
-            }
-
-            const state = {
-                query: document.getElementById('ondemand-query-input')?.value || '',
-                sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value),
-                minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
-                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
-                minSqft: document.getElementById('ondemand-min-sqft')?.value || '',
-                minBeds: document.getElementById('ondemand-min-beds')?.value || 'all',
-                minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
-                propTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb => cb.value),
-                cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value),
-                hoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value)
-            };
-            localStorage.setItem('pa_ondemand_state_v522', JSON.stringify(state));
-        }
-
-        function loadOnDemandState() {
-            const savedToken = localStorage.getItem('pa_github_token');
-            const tokenInput = document.getElementById('ondemand-token-input');
-            if (savedToken && tokenInput) {
-                tokenInput.value = savedToken;
-            }
-
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v522');
-            if (savedStateStr) {
-                try {
-                    const st = JSON.parse(savedStateStr);
-                    if (document.getElementById('ondemand-query-input')) {
-                        document.getElementById('ondemand-query-input').value = st.query || '';
-                    }
-                    setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice || 50000);
-                    setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 190000);
-
-                    if (document.getElementById('ondemand-min-sqft')) {
-                        document.getElementById('ondemand-min-sqft').value = st.minSqft || '';
-                    }
-                    if (document.getElementById('ondemand-min-beds')) {
-                        document.getElementById('ondemand-min-beds').value = st.minBeds || 'all';
-                    }
-                    if (document.getElementById('ondemand-min-baths')) {
-                        document.getElementById('ondemand-min-baths').value = st.minBaths || 'all';
-                    }
-
-                    if (st.sectors && Array.isArray(st.sectors)) {
-                        document.querySelectorAll('.ondemand-sector-box').forEach(cb => {
-                            cb.checked = st.sectors.includes(cb.value);
-                        });
-                    }
-                    if (st.propTypes && Array.isArray(st.propTypes)) {
-                        document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => {
-                            cb.checked = st.propTypes.includes(cb.value);
-                        });
-                    }
-                    if (st.cities && Array.isArray(st.cities)) {
-                        document.querySelectorAll('.ondemand-city-box').forEach(cb => {
-                            cb.checked = st.cities.includes(cb.value);
-                        });
-                    }
-                    if (st.hoods && Array.isArray(st.hoods)) {
-                        document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
-                            cb.checked = st.hoods.includes(cb.value);
-                        });
-                    }
-                } catch(e) {}
-            } else {
-                setPriceFormatted(document.getElementById('ondemand-min-price'), 50000);
-                setPriceFormatted(document.getElementById('ondemand-max-price'), 190000);
-                if (document.getElementById('ondemand-min-sqft')) document.getElementById('ondemand-min-sqft').value = '';
-                if (document.getElementById('ondemand-min-beds')) document.getElementById('ondemand-min-beds').value = 'all';
-                if (document.getElementById('ondemand-min-baths')) document.getElementById('ondemand-min-baths').value = 'all';
-            }
-
-            document.querySelectorAll('.ondemand-hood-box').forEach(updateOnDemandCardPill);
+            document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = state; });
         }
 
         async function triggerOnDemandExecution() {
             const tokenInput = document.getElementById('ondemand-token-input');
-            let githubToken = tokenInput ? tokenInput.value.trim() : '';
+            let githubToken = tokenInput ? tokenInput.value.trim() : localStorage.getItem('pa_github_token') || '';
             
-            if (!githubToken) {
-                githubToken = localStorage.getItem('pa_github_token') || '';
-            }
-
             if (!githubToken) {
                 alert("אנא הדבק את מפתח ה-GitHub שלך (Personal Access Token) בתיבה המיועדת לכך.");
                 tokenInput?.focus();
                 return;
             }
 
-            saveOnDemandState();
-
             const owner = "elic555-ux";
             const repo = "pa-intelligence-v2";
-
             const selectedSectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value);
             const selectedCities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value);
-            const selectedHoods = Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value);
 
-            if (selectedSectors.length === 0) {
-                alert("אנא בחר לפחות סקטור אחד לסריקה.");
+            if (selectedSectors.length === 0 || selectedCities.length === 0) {
+                alert("אנא בחר לפחות סקטור אחד ועיר אחת לסריקה.");
                 return;
             }
-            if (selectedCities.length === 0) {
-                alert("אנא בחר לפחות עיר או מחוז אחד לסריקה.");
-                return;
-            }
-
-            const chosenScanner = selectedSectors[0];
-            const citiesStr = selectedCities.join(', ');
-            const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
-            const maxPriceNum = getRawPrice(document.getElementById('ondemand-max-price')) || 190000;
-
-            const hoodsBase = selectedHoods.length > 0 ? selectedHoods.join(', ') : "All";
-            const hoodsStr = `${hoodsBase} | MIN_PRICE:${minPriceNum} | MAX_PRICE:${maxPriceNum} | SECTORS:${selectedSectors.join(',')}`;
 
             const payload = {
                 ref: "main",
                 inputs: {
-                    scanner_id: chosenScanner,
+                    scanner_id: selectedSectors[0],
                     target_county: "Allegheny",
-                    target_city: citiesStr,
-                    neighborhoods: hoodsStr
+                    target_city: selectedCities.join(', '),
+                    neighborhoods: "All"
                 }
             };
 
@@ -1386,21 +1220,21 @@
                     method: "POST",
                     headers: {
                         "Authorization": `token ${githubToken}`,
-                        "Accept": "application/vnd.github.v3+json",
+                        "Accept": "image/svg+xml, application/vnd.github.v3+json",
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
                 });
 
                 if (response.ok || response.status === 204) {
-                    alert(`פקודת סריקה מבוזרת שוגרה בהצלחה!\nערים/מחוזות: ${citiesStr}\nסקטורים: ${selectedSectors.join(', ')}\nטווח מחירים: $${minPriceNum.toLocaleString()} - $${maxPriceNum.toLocaleString()}`);
+                    alert("פקודת סריקה מבוזרת שוגרה בהצלחה ל-GitHub!");
                     closeOnDemandScanModal();
                 } else {
-                    alert("שגיאה בשיגור הסריקה מול GitHub (קוד: " + response.status + "). ודא שהטוקן תקין.");
+                    alert("שגיאה בשיגור הסריקה מול GitHub.");
                 }
             } catch (error) {
-                console.error("Error triggering GitHub workflow:", error);
-                alert("שגיאת תקשורת מול השרת.");
+                console.error(error);
+                alert("שגיאת תקשורת.");
             }
         }
 
