@@ -97,7 +97,7 @@ def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
         "market": target["market"],
         "min_price": str(int(min_p)),
         "max_price": str(int(max_p)),
-        "num_homes": "100",
+        "num_homes": "200",  # מוגדל ל-200 יחידות לסריקה רחבה
         "region_id": target["region_id"],
         "region_type": target["region_type"],
         "status": "9",
@@ -109,7 +109,7 @@ def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
 
     discovered = []
     try:
-        resp = requests.get(url, params=params, headers=headers, timeout=12)
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
         if resp.status_code == 200 and "ADDRESS" in resp.text:
             csv_file = io.StringIO(resp.text)
             reader = csv.DictReader(csv_file)
@@ -162,7 +162,8 @@ def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
                     "parking": "חניה מוסדרת",
                     "projected_rent": strategy_data["projected_rent"],
                     "summary": f"עסקה פעילה ב-{row_city}. מחיר מבוקש ${price:,}. אסטרטגיה מומלצת: {strategy_data['strategy_label']}.",
-                    "url": home_url
+                    "url": home_url,
+                    "listed_date": NOW_EST
                 })
     except Exception as e:
         print(f"⚠️ הערה בסריקת פיד MLS: {e}")
@@ -193,7 +194,8 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "lot_size": "0.11 Acres",
             "parking": "מוסך נפרד ל-2 רכבים",
             "summary": "בית לבנים בכינוס בנקאי במצב יציב. חצר מגודרת, מוסך כפול ומרתף מלא.",
-            "url": "https://www.trulia.com/home/1015-6th-ave-brackenridge-pa-15014-11280535"
+            "url": "https://www.trulia.com/home/1015-6th-ave-brackenridge-pa-15014-11280535",
+            "listed_date": NOW_EST
         },
         {
             "id": "PA-MLS-1772015",
@@ -217,7 +219,8 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "lot_size": "1.09 Acres (מעל דונם!)",
             "parking": "מוסך מובנה ל-2 רכבים",
             "summary": "הזדמנות נדירה ברובע Brookline. בית לבנים ענק 4 חדרים על מגרש של מעל דונם.",
-            "url": "https://www.coldwellbanker.com/pa/pittsburgh/59-petunia-st/lid-P00800000HGQouPGl9eWMof05od5NMETfEaKAwYj"
+            "url": "https://www.coldwellbanker.com/pa/pittsburgh/59-petunia-st/lid-P00800000HGQouPGl9eWMof05od5NMETfEaKAwYj",
+            "listed_date": NOW_EST
         },
         {
             "id": "PA-SHF-250114",
@@ -241,7 +244,8 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "lot_size": "0.16 Acres",
             "parking": "Driveway פרטי",
             "summary": "בית בבנייה חדשה באזור Penn Hills. חצר גדולה, פוטנציאל תשואה גבוה.",
-            "url": "https://sheriffalleghenycounty.com/real-estate/"
+            "url": "https://sheriffalleghenycounty.com/real-estate/",
+            "listed_date": NOW_EST
         },
         {
             "id": "PA-PRB-89102",
@@ -265,7 +269,8 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "lot_size": "0.08 Acres",
             "parking": "חניית רחוב",
             "summary": "הזדמנות יורשים מובהקת בלב רובע Lawrenceville המבוקש.",
-            "url": "https://www.alleghenycounty.us/special-records/wills.aspx"
+            "url": "https://www.alleghenycounty.us/special-records/wills.aspx",
+            "listed_date": NOW_EST
         },
         {
             "id": "PA-TAX-44910",
@@ -289,7 +294,8 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "lot_size": "0.14 Acres",
             "parking": "מוסך מקורה",
             "summary": "חוב מס מוסדר במכרז פומבי במיקום מבוקש ביותר ליד Greenfield.",
-            "url": "https://alleghenycounty.us/government/county-departments/court-records/delinquent-real-estate-taxes"
+            "url": "https://alleghenycounty.us/government/county-departments/court-records/delinquent-real-estate-taxes",
+            "listed_date": NOW_EST
         }
     ]
 
@@ -305,12 +311,11 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             item["gross_yield"] = strat["gross_yield"]
             item["projected_rent"] = strat["projected_rent"]
             item["deal_score"] = calculate_deal_score(item.get("deal_type"), p)
-            item["listed_date"] = NOW_EST
             filtered.append(item)
     return filtered
 
 def run_orchestrator():
-    print("🚀 מפעיל מנוע סריקה משודרג Dual-Track PA Intelligence...")
+    print("🚀 מפעיל מנוע סריקה מורחב (200 יחידות) Dual-Track PA Intelligence...")
 
     target_city = get_env_input('target_city', 'Pittsburgh')
     neighborhoods_raw = get_env_input('neighborhoods', 'All')
@@ -341,14 +346,13 @@ def run_orchestrator():
     combined = live_results + verified_results
     print(f"🔍 עסקאות מתאימות שנאספו בסריקה זו: {len(combined)}")
 
-    # שומרים רק את התוצאות מהסריקה הנוכחית שעונות על הסקטורים שנבחרו
     final_filtered = [p for p in combined if min_price <= p.get("price", 0) <= max_price]
     final_filtered.sort(key=lambda x: x.get('deal_score', 0), reverse=True)
 
     with open(PROPERTIES_FILE, 'w', encoding='utf-8') as f:
         json.dump(final_filtered, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ סריקה הסתיימה! נשמרו {len(final_filtered)} נכסים תואמים לחלוטין.")
+    print(f"✅ סריקה הסתיימה! נשמרו {len(final_filtered)} נכסים תואמים בהצלחה.")
 
 if __name__ == '__main__':
     run_orchestrator()
