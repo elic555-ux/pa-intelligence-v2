@@ -550,8 +550,17 @@
                 <button onclick="closeOnDemandScanModal()" class="text-gray-300 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
+            <!-- Secure GitHub Personal Token Input -->
+            <div class="bg-blue-950/30 p-3 rounded-xl border border-blue-500/40 space-y-1">
+                <label class="block text-xs font-bold text-blue-300 flex items-center gap-1.5">
+                    <i data-lucide="key" class="w-4 h-4 text-blue-400"></i> מפתח אישי של GitHub (טוקן Classic עם הרשאת repo):
+                </label>
+                <input type="password" id="ondemand-token-input" placeholder="הדבק כאן את הטוקן שלך (מתחיל ב-ghp_...)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+                <p class="text-[11px] text-gray-400">הטוקן נשמר במחשב שלך בלבד (LocalStorage) ולעולם אינו נחשף בקוד הפתוח של המאגר.</p>
+            </div>
+
             <!-- 1. Targeted On-Demand Query Bar -->
-            <div class="bg-gray-950 p-3.5 rounded-xl border border-gray-800 space-y-1">
+            <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 space-y-1">
                 <label class="block text-xs font-bold text-blue-400 flex items-center gap-1.5">
                     <i data-lucide="crosshair" class="w-4 h-4"></i> סריקה ממוקדת לפי כתובת, עיר או מיקוד (אופציונלי):
                 </label>
@@ -750,6 +759,15 @@
             await loadProperties();
             loadTelegramSettings();
             loadSettings();
+            loadLocalToken();
+        }
+
+        function loadLocalToken() {
+            const savedToken = localStorage.getItem('pa_github_token');
+            const tokenInput = document.getElementById('ondemand-token-input');
+            if (savedToken && tokenInput) {
+                tokenInput.value = savedToken;
+            }
         }
 
         function loadPipelineFromStorage() {
@@ -939,7 +957,7 @@
             });
 
             if (sortBy === 'score_desc') filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
-            else if (sortBy === 'price_asc') filtered.sort((a, b) => (a.price || 0) - (a.price || 0));
+            else if (sortBy === 'price_asc') filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
             else if (sortBy === 'price_desc') filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
 
             if (filtered.length === 0) {
@@ -1271,7 +1289,10 @@
         }
 
         // On-Demand Control Functions (Connected to GitHub Actions API)
-        function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
+        function openOnDemandScanModal() { 
+            loadLocalToken();
+            document.getElementById('ondemand-modal').classList.remove('hidden'); 
+        }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
         function onOnDemandCityToggle(cityName, isChecked) {
@@ -1307,7 +1328,22 @@
         }
 
         async function triggerOnDemandExecution() {
-            const githubToken = "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"; // <-- החלף את הטקסט בטוקן האישי שלך
+            const tokenInput = document.getElementById('ondemand-token-input');
+            let githubToken = tokenInput ? tokenInput.value.trim() : '';
+            
+            if (!githubToken) {
+                githubToken = localStorage.getItem('pa_github_token') || '';
+            }
+
+            if (!githubToken) {
+                alert("אנא הדבק את מפתח ה-GitHub שלך (Personal Access Token) בתיבה המיועדת לכך.");
+                tokenInput?.focus();
+                return;
+            }
+
+            // Save token securely to local storage only
+            localStorage.setItem('pa_github_token', githubToken);
+
             const owner = "elic555-ux";
             const repo = "pa-intelligence-v2";
 
@@ -1349,7 +1385,7 @@
                     alert("פקודת סריקה יזומה עם בחירות המשתמש שוגרה בהצלחה ל-GitHub!");
                     closeOnDemandScanModal();
                 } else {
-                    alert("שגיאה בשיגור הסריקה מול GitHub. בדוק את תקינות הטוקן.");
+                    alert("שגיאה בשיגור הסריקה מול GitHub (קוד תגובה: " + response.status + "). ודא שהטוקן תקין וכולל הרשאות repo ו-workflow.");
                 }
             } catch (error) {
                 console.error("Error triggering GitHub workflow:", error);
