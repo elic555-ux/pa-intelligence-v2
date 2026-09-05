@@ -15,7 +15,13 @@ PROPERTIES_FILE = 'properties.json'
 REGION_MAP = {
     "Pittsburgh": {"market": "pittsburgh", "region_id": "15702", "region_type": "6"},
     "Allegheny": {"market": "pittsburgh", "region_id": "2362", "region_type": "5"},
-    "Philadelphia": {"market": "philadelphia", "region_id": "15502", "region_type": "6"}
+    "Philadelphia": {"market": "philadelphia", "region_id": "15502", "region_type": "6"},
+    "Allentown": {"market": "allentown", "region_id": "3144", "region_type": "6"},
+    "Reading": {"market": "reading", "region_id": "17387", "region_type": "6"},
+    "Erie": {"market": "erie", "region_id": "6758", "region_type": "6"},
+    "Scranton": {"market": "scranton", "region_id": "19404", "region_type": "6"},
+    "Bethlehem": {"market": "allentown", "region_id": "3531", "region_type": "6"},
+    "Lancaster": {"market": "lancaster", "region_id": "11902", "region_type": "6"}
 }
 
 DISTRESS_KEYWORDS = [
@@ -89,15 +95,21 @@ def classify_strategy(deal_type, price, beds, summary=""):
             "gross_yield": f"{gross_yield}% תשואה (לאחר שיפוץ)"
         }
 
-def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
-    target = REGION_MAP.get(city, REGION_MAP["Allegheny"])
+def fetch_live_mls_for_city(city_name, min_p, max_p):
+    """סריקת נכסים חיים עבור עיר/מחוז ספציפי מתוך מפת האזורים"""
+    clean_city = city_name.strip()
+    target = REGION_MAP.get(clean_city)
+    if not target:
+        # ברירת מחדל אם העיר לא נמצאה במפורש
+        target = REGION_MAP["Pittsburgh"]
+
     url = "https://www.redfin.com/stingray/api/gis-csv"
     params = {
         "al": "1",
         "market": target["market"],
         "min_price": str(int(min_p)),
         "max_price": str(int(max_p)),
-        "num_homes": "200",  # מוגדל ל-200 יחידות לסריקה רחבה
+        "num_homes": "100",  # מכסה לכל עיר בלולאה
         "region_id": target["region_id"],
         "region_type": target["region_type"],
         "status": "9",
@@ -109,7 +121,8 @@ def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
 
     discovered = []
     try:
-        resp = requests.get(url, params=params, headers=headers, timeout=15)
+        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city}...")
+        resp = requests.get(url, params=params, headers=headers, timeout=12)
         if resp.status_code == 200 and "ADDRESS" in resp.text:
             csv_file = io.StringIO(resp.text)
             reader = csv.DictReader(csv_file)
@@ -129,7 +142,7 @@ def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
                 beds = row.get("BEDS") or "3"
                 baths = row.get("BATHS") or "1"
                 sqft = row.get("SQUARE FEET") or "1200"
-                row_city = row.get("CITY") or city
+                row_city = row.get("CITY") or clean_city
                 row_zip = row.get("ZIP OR POSTAL CODE") or "15201"
                 home_url = row.get("URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)") or ""
                 if home_url and not home_url.startswith("http"):
@@ -142,7 +155,7 @@ def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
                     "docket_id": f"MLS-{row.get('MLS#', 'ACT')}",
                     "address": addr,
                     "city": row_city,
-                    "county": "Allegheny" if city in ["Pittsburgh", "Allegheny"] else "Philadelphia",
+                    "county": "Allegheny" if clean_city in ["Pittsburgh", "Allegheny"] else "Pennsylvania County",
                     "zip": row_zip,
                     "price": price,
                     "deal_type": "MLS וירידות מחיר (Realtor / Redfin)",
@@ -166,7 +179,7 @@ def fetch_live_mls_feed(city="Pittsburgh", min_p=50000, max_p=500000):
                     "listed_date": NOW_EST
                 })
     except Exception as e:
-        print(f"⚠️ הערה בסריקת פיד MLS: {e}")
+        print(f"⚠️ הערה בסריקת אזור {clean_city}: {e}")
 
     return discovered
 
@@ -193,7 +206,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "year_built": 1955,
             "lot_size": "0.11 Acres",
             "parking": "מוסך נפרד ל-2 רכבים",
-            "summary": "בית לבנים בכינוס בנקאי במצב יציב. חצר מגודרת, מוסך כפול ומרתף מלא.",
+            "summary": "בית לבנים בכינוס בנקאי בפרבר Brackenridge (מחוז Allegheny). חצר מגודרת ומוסך כפול.",
             "url": "https://www.trulia.com/home/1015-6th-ave-brackenridge-pa-15014-11280535",
             "listed_date": NOW_EST
         },
@@ -243,7 +256,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "year_built": 2024,
             "lot_size": "0.16 Acres",
             "parking": "Driveway פרטי",
-            "summary": "בית בבנייה חדשה באזור Penn Hills. חצר גדולה, פוטנציאל תשואה גבוה.",
+            "summary": "בית בבנייה חדשה באזור Penn Hills (מחוז Allegheny).",
             "url": "https://sheriffalleghenycounty.com/real-estate/",
             "listed_date": NOW_EST
         },
@@ -315,9 +328,9 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
     return filtered
 
 def run_orchestrator():
-    print("🚀 מפעיל מנוע סריקה מורחב (200 יחידות) Dual-Track PA Intelligence...")
+    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Loop) Dual-Track PA Intelligence...")
 
-    target_city = get_env_input('target_city', 'Pittsburgh')
+    target_cities_raw = get_env_input('target_city', 'Pittsburgh, Allegheny')
     neighborhoods_raw = get_env_input('neighborhoods', 'All')
 
     min_price = 0.0
@@ -333,18 +346,26 @@ def run_orchestrator():
     if sectors_match:
         allowed_sectors = [s.strip().lower() for s in sectors_match.group(1).split(',') if s.strip()]
 
-    print(f"🎯 עיר יעד: {target_city} | טווח: ${min_price:,.0f} - ${max_price:,.0f}")
+    # פירוק רשימת הערים/המחוזות ללולאה
+    cities_list = [c.strip() for c in target_cities_raw.split(',') if c.strip()]
+    if not cities_list:
+        cities_list = ["Pittsburgh", "Allegheny"]
+
+    print(f"🎯 ערים/מחוזות לסריקה בלולאה: {cities_list}")
+    print(f"🎯 טווח מחירים: ${min_price:,.0f} - ${max_price:,.0f}")
     print(f"📋 סקטורים מאושרים לסריקה: {allowed_sectors or 'הכל'}")
 
     live_results = []
     if not allowed_sectors or "mls" in allowed_sectors:
-        live_results = fetch_live_mls_feed(target_city, min_price, max_price)
+        for city in cities_list:
+            city_deals = fetch_live_mls_for_city(city, min_price, max_price)
+            live_results.extend(city_deals)
     else:
         print("⏭️ סקטור MLS לא סומן – דילוג מוחלט על משיכת MLS.")
 
     verified_results = get_verified_market_deals(allowed_sectors, min_price, max_price)
     combined = live_results + verified_results
-    print(f"🔍 עסקאות מתאימות שנאספו בסריקה זו: {len(combined)}")
+    print(f"🔍 סה\"כ עסקאות שנאספו בכל הלולאה: {len(combined)}")
 
     final_filtered = [p for p in combined if min_price <= p.get("price", 0) <= max_price]
     final_filtered.sort(key=lambda x: x.get('deal_score', 0), reverse=True)
@@ -352,7 +373,7 @@ def run_orchestrator():
     with open(PROPERTIES_FILE, 'w', encoding='utf-8') as f:
         json.dump(final_filtered, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ סריקה הסתיימה! נשמרו {len(final_filtered)} נכסים תואמים בהצלחה.")
+    print(f"✅ סריקה הסתיימה! נשמרו {len(final_filtered)} נכסים מעודכנים במאגר.")
 
 if __name__ == '__main__':
     run_orchestrator()
