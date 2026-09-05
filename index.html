@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.26</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.27</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -220,7 +220,7 @@
             </div>
         </section>
 
-        <!-- Properties Container (Table or Grid) -->
+        <!-- Properties Container -->
         <section id="properties-container" class="w-full">
         </section>
 
@@ -808,13 +808,13 @@
 
         function applyFilters() { renderCards(); }
 
-        function getDealBadgeStyle(dealType) {
+        function getDealBadgeSymbol(dealType) {
             const dt = (dealType || '').toLowerCase();
-            if (dt.includes('sheriff')) return 'bg-rose-500/10 text-rose-300 border-rose-500/30';
-            if (dt.includes('foreclosure') || dt.includes('reo')) return 'bg-amber-500/10 text-amber-300 border-amber-500/30';
-            if (dt.includes('tax')) return 'bg-purple-500/10 text-purple-300 border-purple-500/30';
-            if (dt.includes('probate') || dt.includes('fsbo')) return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
-            return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
+            if (dt.includes('sheriff')) return '<span class="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-md shadow-rose-500/50" title="מכירות שריף"></span>';
+            if (dt.includes('foreclosure') || dt.includes('reo')) return '<span class="w-3 h-3 rounded-full bg-amber-500 inline-block shadow-md shadow-amber-500/50" title="כינוס נכסים"></span>';
+            if (dt.includes('tax')) return '<span class="w-3 h-3 rounded-full bg-purple-500 inline-block shadow-md shadow-purple-500/50" title="פיגורי מס"></span>';
+            if (dt.includes('probate') || dt.includes('fsbo')) return '<span class="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-md shadow-emerald-500/50" title="עיזבונות ו-FSBO"></span>';
+            return '<span class="w-3 h-3 rounded-full bg-cyan-500 inline-block shadow-md shadow-cyan-500/50" title="MLS וירידות מחיר"></span>';
         }
 
         function parseDateToSort(dateStr) {
@@ -881,11 +881,13 @@
                         <table class="w-full text-right border-collapse text-xs">
                             <thead>
                                 <tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold">
-                                    <th class="p-3.5">סטטוס</th>
+                                    <th class="p-3.5 text-center">סטטוס</th>
                                     <th class="p-3.5">כתובת ומיקום</th>
                                     <th class="p-3.5">מחיר ($)</th>
                                     <th class="p-3.5">מאפיינים פיזיים</th>
                                     <th class="p-3.5">מדדי השקעה</th>
+                                    <th class="p-3.5">תאריך פרסום</th>
+                                    <th class="p-3.5">מצב הנכס</th>
                                     <th class="p-3.5 text-center">ציון</th>
                                     <th class="p-3.5 text-center">פעולות</th>
                                 </tr>
@@ -897,13 +899,13 @@
                     const isWatchlisted = userWatchlist.has(String(p.id));
                     const isHot = (p.deal_score || 0) >= 80;
                     const isTurnkey = p.strategy === 'turnkey';
+                    const symbolHtml = getDealBadgeSymbol(p.deal_type);
+                    const occupancyStatus = p.occupancy || 'פנוי (Vacant)';
 
                     tableHtml += `
                         <tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 transition cursor-pointer">
-                            <td class="p-3.5">
-                                <span class="px-2 py-1 rounded-md text-[11px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/30">
-                                    ${p.strategy_label || p.deal_type}
-                                </span>
+                            <td class="p-3.5 text-center">
+                                ${symbolHtml}
                             </td>
                             <td class="p-3.5">
                                 <div class="font-black text-white text-sm">${p.address}</div>
@@ -918,6 +920,12 @@
                             <td class="p-3.5">
                                 <div class="text-emerald-300 font-mono">💰 ${p.projected_rent || '$1,200'}</div>
                                 <div class="text-amber-300 text-[11px]">${isTurnkey ? 'תשואה: ' + (p.gross_yield || '10%') : 'שיפוץ: ' + (p.rehab_scope || '$20k')}</div>
+                            </td>
+                            <td class="p-3.5 font-mono text-amber-300 text-xs">
+                                📅 ${p.listed_date || '05/09/2026'}
+                            </td>
+                            <td class="p-3.5 text-gray-300 font-semibold text-xs">
+                                🏠 ${occupancyStatus}
                             </td>
                             <td class="p-3.5 text-center">
                                 <span class="px-2.5 py-1 rounded-lg font-mono font-black text-xs ${isHot ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">
@@ -943,7 +951,6 @@
                     const isWatchlisted = userWatchlist.has(idStr);
                     const isTurnkey = p.strategy === 'turnkey';
                     const isHot = (p.deal_score || 0) >= 80;
-                    const badgeColor = getDealBadgeStyle(p.deal_type);
                     
                     return `
                     <div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isHot ? 'hot-deal-border' : 'border-gray-800'} hover:border-blue-500/50 rounded-2xl p-5 shadow-lg transition duration-200 flex flex-col justify-between relative overflow-hidden cursor-pointer group">
@@ -961,7 +968,7 @@
 
                         <div>
                             <div class="flex justify-between items-start gap-2 mb-3 ${isHot ? 'pt-3' : ''} pr-8">
-                                <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
+                                <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/30">
                                     ${p.strategy_label || p.deal_type}
                                 </span>
                                 <span class="text-xs font-black text-emerald-300 bg-emerald-500/15 px-2.5 py-0.5 rounded-md border border-emerald-400/30">
@@ -1009,11 +1016,10 @@
             if (!p) return;
             currentSelectedProperty = p;
 
-            const badgeColor = getDealBadgeStyle(p.deal_type);
             const isHot = (p.deal_score || 0) >= 80;
 
             document.getElementById('modal-badges').innerHTML = `
-                <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider border ${badgeColor}">
+                <span class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/30">
                     ${p.strategy_label || p.deal_type}
                 </span>
                 ${isHot ? `<span class="bg-amber-600/90 border border-amber-400/40 text-gray-950 font-black text-xs px-2.5 py-0.5 rounded-md flex items-center gap-1.5"><span class="text-white">🔥 ציון עסקה</span><span class="bg-gray-950 text-amber-300 px-1 rounded font-mono font-bold">${p.deal_score || 80}</span></span>` : ''}
@@ -1203,7 +1209,7 @@
                 minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v526', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v527', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1213,7 +1219,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v526');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v527');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
