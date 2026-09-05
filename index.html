@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.17</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.18</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -502,19 +502,14 @@
                 </div>
             </div>
 
-            <!-- Cities & Hubs Selection with Visual District Map Button -->
+            <!-- Cities & Hubs Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים:</span>
-                    <div class="flex items-center gap-3">
-                        <button onclick="openInteractiveMapModal()" class="text-xs px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 rounded-lg font-bold flex items-center gap-1.5 transition shadow-sm">
-                            <i data-lucide="map" class="w-4 h-4 text-rose-400"></i> 🗺️ הצג מפת מחוזות פנסילבניה
-                        </button>
-                        <div class="text-xs space-x-2 space-x-reverse">
-                            <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
-                            <span class="text-gray-600">|</span>
-                            <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
-                        </div>
+                    <div class="text-xs space-x-2 space-x-reverse">
+                        <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
+                        <span class="text-gray-600">|</span>
+                        <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-9 gap-1.5 text-xs text-gray-300">
@@ -583,36 +578,10 @@
         </div>
     </div>
 
-    <!-- Interactive PA District Visual Map Modal (Custom Colored Map Preview) -->
-    <div id="interactive-map-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-rose-500/40 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="map" class="w-5 h-5 text-rose-400"></i>
-                    <h3 class="text-lg font-black text-white">מפת מחוזות פנסילבניה (Visual District Map - PA)</h3>
-                </div>
-                <button onclick="closeInteractiveMapModal()" class="text-gray-400 hover:text-white p-1.5 rounded-lg bg-gray-800"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-
-            <p class="text-xs text-gray-300">
-                המפה הבאה ממחישה את מחוזות פנסילבניה ומרכזי הסריקה. אזורים המסומנים כעת ב-<span class="text-rose-400 font-bold">אדום בהיר</span> ייסרקו, ואזורים שלא נבחרו מוצגים באפור כהה.
-            </p>
-
-            <!-- Visual Map Grid -->
-            <div id="pa-visual-map-grid" class="grid grid-cols-3 gap-3 p-4 bg-gray-950 rounded-xl border border-gray-800 text-center text-xs font-bold">
-            </div>
-
-            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-gray-400">💡 לחיצה על אזור במפה מדליקה או מבית את הבחירה שלו.</span>
-                <button onclick="closeInteractiveMapModal()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">שמור וסגור מפה</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading Progress Modal (True Completion Polling) -->
+    <!-- Loading Progress Modal (True Completion Polling & Summary) -->
     <div id="loading-progress-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
         <div class="bg-gray-900 border border-blue-500/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl text-center relative">
-            <div class="flex justify-center">
+            <div id="loading-spinner-container" class="flex justify-center">
                 <div class="p-4 bg-blue-600/20 border border-blue-500/40 rounded-full text-blue-400 animate-spin">
                     <i data-lucide="loader-2" class="w-10 h-10"></i>
                 </div>
@@ -620,11 +589,16 @@
             <div>
                 <h3 class="text-xl font-black text-white mb-2" id="loading-title">הסריקה פעילה בענן...</h3>
                 <p class="text-xs text-gray-300 leading-relaxed" id="loading-subtitle">
-                    המערכת מריצה כעת את מנוע ה-Multi-City Loop מול פנסילבניה. אנא המתן בזמן שהתוצאות האמיתיות נאספות ומתעדכנות במאגר.
+                    המערכת מריצה כעת את המנוע מול פנסילבניה. אנא המתן עד לסיום מלא של התהליך.
                 </p>
             </div>
             <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 text-xs text-blue-400 font-mono" id="loading-status-text">
-                סטטוס: מתקשר עם שרתי GitHub Actions...
+                סטטוס: ממתין לתחילת ריצה...
+            </div>
+            <div id="loading-finish-btn-container" class="hidden pt-2">
+                <button onclick="window.location.reload(true)" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> רענן מחדש וסיום (Ctrl + F5)
+                </button>
             </div>
         </div>
     </div>
@@ -1088,7 +1062,7 @@
             }
         }
 
-        // On-Demand Smart Linked Functions & Visual District Map Preview
+        // On-Demand Smart Linked Functions
         function openOnDemandScanModal() { 
             loadOnDemandState();
             document.getElementById('ondemand-modal').classList.remove('hidden'); 
@@ -1128,43 +1102,6 @@
                 : "ondemand-hood-label flex items-center gap-1 bg-gray-950 text-gray-400 border border-gray-800 px-2 py-1 rounded-lg cursor-pointer";
         }
 
-        function openInteractiveMapModal() {
-            const grid = document.getElementById('pa-visual-map-grid');
-            const cityBoxes = document.querySelectorAll('.ondemand-city-box');
-            
-            let html = '';
-            cityBoxes.forEach(cb => {
-                const cityName = cb.value;
-                const isSelected = cb.checked;
-                const bgStyle = isSelected 
-                    ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-md shadow-rose-500/10' 
-                    : 'bg-gray-900 border-gray-800 text-gray-500';
-                const statusText = isSelected ? '🔴 אזור סריקה פעיל' : '⚪ לא מסומן';
-                
-                html += `
-                    <div onclick="toggleDistrictMapRegion('${cityName}')" class="p-3 rounded-xl border ${bgStyle} flex flex-col justify-between items-center cursor-pointer transition hover:scale-105">
-                        <span class="text-sm font-black text-white">${cityName} (District)</span>
-                        <span class="text-[11px] mt-2 font-bold">${statusText}</span>
-                    </div>
-                `;
-            });
-            grid.innerHTML = html;
-            document.getElementById('interactive-map-modal').classList.remove('hidden');
-        }
-
-        function toggleDistrictMapRegion(cityName) {
-            const targetCb = Array.from(document.querySelectorAll('.ondemand-city-box')).find(cb => cb.value === cityName);
-            if (targetCb) {
-                targetCb.checked = !targetCb.checked;
-                onOnDemandCityToggle(cityName, targetCb.checked);
-                openInteractiveMapModal(); // Refresh map modal view
-            }
-        }
-
-        function closeInteractiveMapModal() {
-            document.getElementById('interactive-map-modal').classList.add('hidden');
-        }
-
         function saveOnDemandState() {
             const tokenInput = document.getElementById('ondemand-token-input');
             if (tokenInput && tokenInput.value.trim()) {
@@ -1183,7 +1120,7 @@
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value),
                 hoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v517', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v518', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1193,7 +1130,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v517');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v518');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
@@ -1250,12 +1187,27 @@
             }
 
             if (!githubToken) {
-                alert("אנא הדבק את מפתח ה-GitHub שלך (Personal Access Token) בתיבה המיועדת לכך.");
+                alert("אנא הדבק את מפתח ה-GitHub שלך בתיבה המיועדת לכך.");
                 tokenInput?.focus();
                 return;
             }
 
             saveOnDemandState();
+            closeOnDemandScanModal();
+
+            const loadingModal = document.getElementById('loading-progress-modal');
+            const statusText = document.getElementById('loading-status-text');
+            const titleEl = document.getElementById('loading-title');
+            const subtitleEl = document.getElementById('loading-subtitle');
+            const spinnerContainer = document.getElementById('loading-spinner-container');
+            const finishBtnContainer = document.getElementById('loading-finish-btn-container');
+
+            titleEl.textContent = "הסריקה פעילה בענן...";
+            subtitleEl.textContent = "המערכת מריצה כעת את המנוע מול פנסילבניה. אנא המתן עד לסיום מלא של התהליך.";
+            spinnerContainer.classList.remove('hidden');
+            finishBtnContainer.classList.add('hidden');
+            loadingModal.classList.remove('hidden');
+            lucide.createIcons();
 
             const owner = "elic555-ux";
             const repo = "pa-intelligence-v2";
@@ -1265,10 +1217,12 @@
             const selectedHoods = Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value);
 
             if (selectedSectors.length === 0) {
+                loadingModal.classList.add('hidden');
                 alert("אנא בחר לפחות סקטור אחד לסריקה.");
                 return;
             }
             if (selectedCities.length === 0) {
+                loadingModal.classList.add('hidden');
                 alert("אנא בחר לפחות עיר או מחוז אחד לסריקה.");
                 return;
             }
@@ -1277,7 +1231,6 @@
             const citiesStr = selectedCities.join(', ');
             const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
             const maxPriceNum = getRawPrice(document.getElementById('ondemand-max-price')) || 500000;
-
             const hoodsBase = selectedHoods.length > 0 ? selectedHoods.join(', ') : "All";
             const hoodsStr = `${hoodsBase} | MIN_PRICE:${minPriceNum} | MAX_PRICE:${maxPriceNum} | SECTORS:${selectedSectors.join(',')}`;
 
@@ -1290,12 +1243,6 @@
                     neighborhoods: hoodsStr
                 }
             };
-
-            closeOnDemandScanModal();
-            const loadingModal = document.getElementById('loading-progress-modal');
-            const statusText = document.getElementById('loading-status-text');
-            loadingModal.classList.remove('hidden');
-            lucide.createIcons();
 
             try {
                 statusText.textContent = "סטטוס: שולח פקודה לענן...";
@@ -1315,11 +1262,10 @@
                     return;
                 }
 
-                statusText.textContent = "סטטוס: הסריקה החלה בענן. ממתין לסיום הריצה...";
+                statusText.textContent = "סטטוס: הסריקה החלה בענן. ממתין לזיהוי ריצה פעילה...";
 
-                // Polling GitHub API for workflow completion
                 let runId = null;
-                for (let attempt = 0; attempt < 5; attempt++) {
+                for (let attempt = 0; attempt < 8; attempt++) {
                     await new Promise(r => setTimeout(r, 4000));
                     try {
                         const runsRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/scanner.yml/runs?per_page=1`, {
@@ -1334,13 +1280,11 @@
                 }
 
                 if (!runId) {
-                    // Fallback timer if runId not captured
                     await new Promise(r => setTimeout(r, 20000));
                 } else {
-                    // Poll until status === 'completed'
                     let isCompleted = false;
                     let pollAttempts = 0;
-                    while (!isCompleted && pollAttempts < 20) {
+                    while (!isCompleted && pollAttempts < 30) {
                         await new Promise(r => setTimeout(r, 4000));
                         pollAttempts++;
                         try {
@@ -1356,12 +1300,19 @@
                     }
                 }
 
-                statusText.textContent = "סטטוס: מעדכן נתונים ומציג תוצאות חדשות...";
-                await new Promise(r => setTimeout(r, 2000));
-                await loadProperties();
+                let foundCount = 0;
+                try {
+                    const propRes = await fetch('properties.json?t=' + Date.now());
+                    const propList = await propRes.json();
+                    foundCount = propList.length;
+                } catch(e) {}
 
-                loadingModal.classList.add('hidden');
-                alert("🎉 הסריקה הסתיימה בהצלחה והתוצאות עודכנו בדשבורד!");
+                spinnerContainer.classList.add('hidden');
+                titleEl.textContent = "הסריקה הסתיימה בהצלחה! 🎉";
+                subtitleEl.textContent = `המנוע סיים את הסריקה במרחב ונמצאו סה"כ ${foundCount} נכסים זמינים ומעודכנים במאגר.`;
+                statusText.textContent = `סטטוס: הושלם בהצלחה ✓`;
+                finishBtnContainer.classList.remove('hidden');
+                lucide.createIcons();
 
             } catch (error) {
                 console.error("Error executing scan workflow:", error);
