@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.25</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.26</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -196,15 +196,16 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-emerald-400 mb-1.5">מחיר מינימום ($)</label>
-                <input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyFilters();" value="50,000" placeholder="50,000" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center">
+                <input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyFilters();" placeholder="החל מ-0" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מחיר מקסימום ($)</label>
                 <select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
                     <option value="all">הכל (ללא הגבלה)</option>
                     <option value="100000">עד $100,000</option>
-                    <option value="190000" selected>עד $190,000</option>
+                    <option value="190000">עד $190,000</option>
                     <option value="250000">עד $250,000</option>
+                    <option value="350000">עד $350,000</option>
                     <option value="500000">עד $500,000</option>
                 </select>
             </div>
@@ -219,7 +220,7 @@
             </div>
         </section>
 
-        <!-- Properties Container (Grid or Table) -->
+        <!-- Properties Container (Table or Grid) -->
         <section id="properties-container" class="w-full">
         </section>
 
@@ -487,7 +488,7 @@
                 <label class="block text-xs font-bold text-blue-300 flex items-center gap-1.5">
                     <i data-lucide="key" class="w-4 h-4 text-blue-400"></i> מפתח אישי של GitHub (Classic Token עם הרשאת repo):
                 </label>
-                <input type="password" id="ondemand-token-input" onchange="saveOnDemandState()" placeholder="הדבק כאן את הטוקן שלך (ghp_...)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+                <input type="password" id="ondemand-token-input" oninput="saveOnDemandState()" onchange="saveOnDemandState()" placeholder="הדבק כאן את הטוקן שלך (ghp_...)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
             </div>
 
             <!-- Target Sectors Matrix -->
@@ -582,15 +583,15 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-9 gap-1.5 text-xs text-gray-300">
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh"> Pittsburgh</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny"> Allegheny Co.</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia"> Philadelphia</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown"> Allentown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading"> Reading</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie"> Erie</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton"> Scranton</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem"> Bethlehem</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster"> Lancaster</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh" onchange="saveOnDemandState()"> Pittsburgh</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny" onchange="saveOnDemandState()"> Allegheny Co.</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia" onchange="saveOnDemandState()"> Philadelphia</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown" onchange="saveOnDemandState()"> Allentown</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading" onchange="saveOnDemandState()"> Reading</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie" onchange="saveOnDemandState()"> Erie</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton" onchange="saveOnDemandState()"> Scranton</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem" onchange="saveOnDemandState()"> Bethlehem</label>
+                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster" onchange="saveOnDemandState()"> Lancaster</label>
                 </div>
             </div>
 
@@ -612,7 +613,7 @@
         let userWatchlist = new Set();
         let pipelineDeals = [];
         let currentSelectedProperty = null;
-        let currentViewMode = 'table'; // Default view mode set to table for large database handling
+        let currentViewMode = 'table';
 
         function handlePriceInput(input) {
             if (!input) return;
@@ -875,7 +876,6 @@
             }
 
             if (currentViewMode === 'table') {
-                // Render Table View
                 let tableHtml = `
                     <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar">
                         <table class="w-full text-right border-collapse text-xs">
@@ -937,7 +937,6 @@
                 tableHtml += `</tbody></table></div>`;
                 container.innerHTML = tableHtml;
             } else {
-                // Render Grid View
                 container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4";
                 container.innerHTML = filtered.map(p => {
                     const idStr = String(p.id);
@@ -1178,40 +1177,124 @@
             }
         }
 
-        function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
+        function openOnDemandScanModal() { 
+            loadOnDemandState();
+            document.getElementById('ondemand-modal').classList.remove('hidden'); 
+        }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
         function toggleAllOnDemandCities(state) {
             document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = state; });
+            saveOnDemandState();
+        }
+
+        function saveOnDemandState() {
+            const tokenInput = document.getElementById('ondemand-token-input');
+            if (tokenInput && tokenInput.value.trim()) {
+                localStorage.setItem('pa_github_token', tokenInput.value.trim());
+            }
+
+            const state = {
+                sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value),
+                minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
+                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
+                minSqft: document.getElementById('ondemand-min-sqft')?.value || '',
+                minBeds: document.getElementById('ondemand-min-beds')?.value || 'all',
+                minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
+                cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value)
+            };
+            localStorage.setItem('pa_ondemand_state_v526', JSON.stringify(state));
+        }
+
+        function loadOnDemandState() {
+            const savedToken = localStorage.getItem('pa_github_token');
+            const tokenInput = document.getElementById('ondemand-token-input');
+            if (savedToken && tokenInput) {
+                tokenInput.value = savedToken;
+            }
+
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v526');
+            if (savedStateStr) {
+                try {
+                    const st = JSON.parse(savedStateStr);
+                    setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice || 50000);
+                    setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 190000);
+
+                    if (document.getElementById('ondemand-min-sqft')) {
+                        document.getElementById('ondemand-min-sqft').value = st.minSqft || '';
+                    }
+                    if (document.getElementById('ondemand-min-beds')) {
+                        document.getElementById('ondemand-min-beds').value = st.minBeds || 'all';
+                    }
+                    if (document.getElementById('ondemand-min-baths')) {
+                        document.getElementById('ondemand-min-baths').value = st.minBaths || 'all';
+                    }
+
+                    if (st.sectors && Array.isArray(st.sectors)) {
+                        document.querySelectorAll('.ondemand-sector-box').forEach(cb => {
+                            cb.checked = st.sectors.includes(cb.value);
+                        });
+                    }
+                    if (st.cities && Array.isArray(st.cities)) {
+                        document.querySelectorAll('.ondemand-city-box').forEach(cb => {
+                            cb.checked = st.cities.includes(cb.value);
+                        });
+                    }
+                } catch(e) {}
+            } else {
+                setPriceFormatted(document.getElementById('ondemand-min-price'), 50000);
+                setPriceFormatted(document.getElementById('ondemand-max-price'), 190000);
+            }
         }
 
         async function triggerOnDemandExecution() {
             const tokenInput = document.getElementById('ondemand-token-input');
-            let githubToken = tokenInput ? tokenInput.value.trim() : localStorage.getItem('pa_github_token') || '';
+            let githubToken = tokenInput ? tokenInput.value.trim() : '';
             
+            if (!githubToken) {
+                githubToken = localStorage.getItem('pa_github_token') || '';
+            }
+
             if (!githubToken) {
                 alert("אנא הדבק את מפתח ה-GitHub שלך (Personal Access Token) בתיבה המיועדת לכך.");
                 tokenInput?.focus();
                 return;
             }
 
+            saveOnDemandState();
+
             const owner = "elic555-ux";
             const repo = "pa-intelligence-v2";
+
             const selectedSectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value);
             const selectedCities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value);
 
-            if (selectedSectors.length === 0 || selectedCities.length === 0) {
-                alert("אנא בחר לפחות סקטור אחד ועיר אחת לסריקה.");
+            if (selectedSectors.length === 0) {
+                alert("אנא בחר לפחות סקטור אחד לסריקה.");
                 return;
             }
+            if (selectedCities.length === 0) {
+                alert("אנא בחר לפחות עיר או מחוז אחד לסריקה.");
+                return;
+            }
+
+            const chosenScanner = selectedSectors[0];
+            const citiesStr = selectedCities.join(', ');
+            const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
+            const maxPriceNum = getRawPrice(document.getElementById('ondemand-max-price')) || 190000;
+            const minSqftStr = document.getElementById('ondemand-min-sqft').value || 'Any';
+            const minBedsStr = document.getElementById('ondemand-min-beds').value;
+            const minBathsStr = document.getElementById('ondemand-min-baths').value;
+
+            const neighborhoodsMeta = `MIN_PRICE:${minPriceNum} | MAX_PRICE:${maxPriceNum} | MIN_SQFT:${minSqftStr} | BEDS:${minBedsStr} | BATHS:${minBathsStr} | SECTORS:${selectedSectors.join(',')}`;
 
             const payload = {
                 ref: "main",
                 inputs: {
-                    scanner_id: selectedSectors[0],
+                    scanner_id: chosenScanner,
                     target_county: "Allegheny",
-                    target_city: selectedCities.join(', '),
-                    neighborhoods: "All"
+                    target_city: citiesStr,
+                    neighborhoods: neighborhoodsMeta
                 }
             };
 
@@ -1220,21 +1303,21 @@
                     method: "POST",
                     headers: {
                         "Authorization": `token ${githubToken}`,
-                        "Accept": "image/svg+xml, application/vnd.github.v3+json",
+                        "Accept": "application/vnd.github.v3+json",
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
                 });
 
                 if (response.ok || response.status === 204) {
-                    alert("פקודת סריקה מבוזרת שוגרה בהצלחה ל-GitHub!");
+                    alert(`פקודת סריקה שוגרה בהצלחה!\nערים: ${citiesStr}\nטווח מחירים: $${minPriceNum.toLocaleString()} - $${maxPriceNum.toLocaleString()}`);
                     closeOnDemandScanModal();
                 } else {
-                    alert("שגיאה בשיגור הסריקה מול GitHub.");
+                    alert("שגיאה בשיגור הסריקה מול GitHub (קוד: " + response.status + "). ודא שהטוקן תקין.");
                 }
             } catch (error) {
-                console.error(error);
-                alert("שגיאת תקשורת.");
+                console.error("Error triggering GitHub workflow:", error);
+                alert("שגיאת תקשורת מול השרת.");
             }
         }
 
