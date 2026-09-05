@@ -17,11 +17,19 @@ def get_env_input(key, default=""):
     """קריאת פרמטרים מ-GitHub Actions Environment"""
     return os.environ.get(f'INPUT_{key.upper()}', os.environ.get(key.upper(), default)).strip()
 
-def normalize_key(address, docket=""):
-    """יצירת מפתח ייחודי מנורמל למניעת כפילויות"""
-    clean_addr = re.sub(r'[^a-zA-Z0-9]', '', (address or '').lower())
-    clean_docket = re.sub(r'[^a-zA-Z0-9]', '', (docket or '').lower())
-    return clean_docket if clean_docket else clean_addr
+def normalize_addr_key(address):
+    """
+    יצירת מפתח ייחודי מנורמל למניעת כפילויות של אותו נכס.
+    ממזג כתובות זהות (למשל '1330 Sylvan Ave, Homestead' ו-'1330 Sylvan Ave')
+    """
+    if not address:
+        return ""
+    clean = address.lower().strip()
+    # מזהה מספר בית + המילה הראשונה של שם הרחוב (לדוגמה: 1330_sylvan)
+    m = re.match(r'^(\d+)\s+([a-z0-9]+)', clean)
+    if m:
+        return f"{m.group(1)}_{m.group(2)}"
+    return re.sub(r'[^a-z0-9]', '', clean)
 
 def calculate_deal_score(deal_type, price, margin_est=25):
     """חישוב ציון כדאיות עסקה מבוסס פרמטרים פיננסיים"""
@@ -46,16 +54,15 @@ def calculate_deal_score(deal_type, price, margin_est=25):
     return max(40, min(99, score))
 
 def load_existing_properties():
-    """טעינת מאגר הנכסים הקיים מקובץ ה-JSON"""
+    """טעינת מאגר הנכסים הקיים מקובץ ה-JSON וניקוי כפילויות היסטוריות"""
     if not os.path.exists(PROPERTIES_FILE):
         return {}
     try:
         with open(PROPERTIES_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # מיפוי לפי מפתח ייחודי למניעת כפילויות
             prop_dict = {}
             for item in data:
-                key = normalize_key(item.get('address'), item.get('docket_id'))
+                key = normalize_addr_key(item.get('address'))
                 if key:
                     prop_dict[key] = item
             return prop_dict
@@ -65,15 +72,9 @@ def load_existing_properties():
 
 def scrape_allegheny_sheriff_live(target_city="Pittsburgh", min_p=0, max_p=250000):
     """
-    סריקה ממאגרי מכרזים פומביים של פנסילבניה (מחוז Allegheny / פיטסבורג)
-    עם Headers מדמי דפדפן למניעת חסימות
+    סריקה ממאגרי עסקאות ומכרזים פומביים בפנסילבניה
+    עם סינון מחיר מינימום ומקסימום קפדני
     """
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-    }
-
     discovered = []
     
     # מאגר עסקאות חי מפנסילבניה המסונכרן לפי אזורים ופרמטרים מבוקשים
@@ -178,73 +179,82 @@ def scrape_allegheny_sheriff_live(target_city="Pittsburgh", min_p=0, max_p=25000
 
     for item in public_records:
         price = item.get("price", 0)
-        # סינון מדויק לפי טווח המחירים המבוקש
+        # סינון חד-משמעי של מחיר מינימום ומחיר מקסימום
         if min_p <= price <= max_p:
             item["deal_score"] = calculate_deal_score(item.get("deal_type"), price)
             item["listed_date"] = NOW_EST
             discovered.append(item)
         else:
-            print(f"ℹ️ נכס נפסל מסינון מחיר: {item.get('address')} (${price:,})")
+            print(f"🚫 נכס סונן החוצה (לא בטווח ${min_p:,.0f}-${max_p:,.0f}): {item.get('address')} (${price:,})")
 
     return discovered
 
 def run_orchestrator():
-    print("🚀 מפעיל מנוע סריקה PA Real Estate Intelligence V5.5...")
+    print("🚀 מפעיל מנוע סריקה PA Real Estate Intelligence V5.6...")
 
-    # קריאת הגדרות הסינון מהסריקה היזומה או מהלוח
+    # קריאת הפרמטרים שנשלחו מהממשק
     scanner_id = get_env_input('scanner_id', 'all')
     target_county = get_env_input('target_county', 'Allegheny')
     target_city = get_env_input('target_city', 'Pittsburgh')
-    
-    try:
-        min_price = float(get_env_input('min_price', '0') or 0)
-    except ValueError:
-        min_price = 0.0
+    neighborhoods_raw = get_env_input('neighborhoods', 'All')
 
-    try:
-        max_price = float(get_env_input('max_price', '250000') or 250000)
-    except ValueError:
-        max_price = 250000.0
+    # חילוץ מחיר מינימום ומקסימום מתוך הפרמטרים
+    min_price = 0.0
+    max_price = 250000.0
 
-    print(f"🎯 סקטור סריקה: {scanner_id} | עיר: {target_city} ({target_county}) | מחירים: ${min_price:,.0f} - ${max_price:,.0f}")
+    min_match = re.search(r'MIN_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
+    max_match = re.search(r'MAX_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
+
+    if min_match:
+        min_price = float(min_match.group(1))
+    elif get_env_input('min_price'):
+        try:
+            min_price = float(get_env_input('min_price'))
+        except ValueError:
+            pass
+
+    if max_match:
+        max_price = float(max_match.group(1))
+    elif get_env_input('max_price'):
+        try:
+            max_price = float(get_env_input('max_price'))
+        except ValueError:
+            pass
+
+    print(f"🎯 סקטור: {scanner_id} | עיר: {target_city} | טווח מחירים מבוקש: ${min_price:,.0f} - ${max_price:,.0f}")
 
     # 1. טעינת נכסים קיימים ומניעת כפילויות
     property_store = load_existing_properties()
-    initial_count = len(property_store)
-    print(f"📦 נכסים קיימים במערכת: {initial_count}")
+    print(f"📦 נכסים קיימים במאגר (מנוקים מכפילויות): {len(property_store)}")
 
-    # 2. משיכת נתונים חיה
+    # 2. משיכת נתונים חדשים
     new_findings = scrape_allegheny_sheriff_live(target_city, min_price, max_price)
-    print(f"🔍 נכסים רלוונטיים שנסרקו: {len(new_findings)}")
+    print(f"🔍 נכסים מתאימים שנסרקו: {len(new_findings)}")
 
-    # 3. עדכון המאגר ללא כפילויות
+    # 3. עדכון המאגר ללא יצירת כפילויות
     added_count = 0
     updated_count = 0
 
     for prop in new_findings:
-        key = normalize_key(prop.get('address'), prop.get('docket_id'))
+        key = normalize_addr_key(prop.get('address'))
         if not key:
             continue
 
         if key in property_store:
-            # עדכון נכס קיים במידה ומחיר או סטטוס השתנו
             property_store[key].update(prop)
             updated_count += 1
         else:
-            # הוספת נכס חדש
             property_store[key] = prop
             added_count += 1
 
-    # 4. שמירה נקייה של הקובץ
+    # 4. שמירת המאגר כשהוא ממוין לפי Deal Score
     final_list = list(property_store.values())
-    
-    # מיון לפי ציון כדאיות עסקה Deal Score בסדר יורד
     final_list.sort(key=lambda x: x.get('deal_score', 0), reverse=True)
 
     with open(PROPERTIES_FILE, 'w', encoding='utf-8') as f:
         json.dump(final_list, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ סריקה הסתיימה בהצלחה! התווספו: {added_count} חדשים | עודכנו: {updated_count} | סה\"כ במערכת: {len(final_list)}")
+    print(f"✅ סריקה הסתיימה! נוספו: {added_count} | עודכנו: {updated_count} | סה\"כ נכסים במערכת: {len(final_list)}")
 
 if __name__ == '__main__':
     run_orchestrator()
