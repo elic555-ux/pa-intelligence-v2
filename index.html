@@ -90,7 +90,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.29</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.30</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -832,7 +832,6 @@
             const categories = ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'];
             categories.forEach(c => {
                 const btn = document.getElementById(`btn-cat-${c}`);
-                // Remove all possible active kpi classes first
                 btn.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate');
                 if (c === cat) {
                     btn.classList.add(`kpi-active-${c}`);
@@ -906,11 +905,13 @@
             }
 
             if (filtered.length === 0) {
+                container.className = "w-full";
                 container.innerHTML = '<div class="text-center py-12 text-white font-extrabold text-base bg-gray-900 border border-gray-800 rounded-2xl">לא נמצאו נכסים התואמים להגדרות הסינון.</div>';
                 return;
             }
 
             if (currentViewMode === 'table') {
+                container.className = "w-full";
                 let tableHtml = `
                     <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar">
                         <table class="w-full text-right border-collapse text-xs">
@@ -1244,7 +1245,7 @@
                 minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v529', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v530', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1254,7 +1255,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v529');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v530');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
