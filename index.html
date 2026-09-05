@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.19</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.20</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -466,14 +466,14 @@
         </div>
     </div>
 
-    <!-- On-Demand Scan Modal (Mission Control המקונן עם שיוך ערים לשכונות) -->
+    <!-- On-Demand Scan Modal (Mission Control) -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <div class="flex items-center gap-2">
                     <i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i>
-                    <h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית (Mission Control המלא)</h3>
+                    <h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית (Mission Control)</h3>
                 </div>
                 <button onclick="closeOnDemandScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
@@ -575,14 +575,19 @@
                 </div>
             </div>
 
-            <!-- Cities & Hubs Selection (Smart Linked to Neighborhoods) -->
+            <!-- Cities & Hubs Selection with Visual Map Button -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים (סימון עיר מדליק אוטומטית את שכונותיה):</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
+                    <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים:</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="openInteractiveMapModal()" class="text-xs px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 rounded-lg font-bold flex items-center gap-1.5 transition shadow-sm">
+                            <i data-lucide="map" class="w-4 h-4 text-rose-400"></i> 🗺️ הצג מפת מחוזות פנסילבניה
+                        </button>
+                        <div class="text-xs space-x-2 space-x-reverse">
+                            <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
+                            <span class="text-gray-600">|</span>
+                            <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
+                        </div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-9 gap-1.5 text-xs text-gray-300">
@@ -598,10 +603,10 @@
                 </div>
             </div>
 
-            <!-- Neighborhoods Selection (Grouped & Linked) -->
+            <!-- Neighborhoods Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-300">2. שכונות ואזורים ספציפיים (מסודרים לפי עיר):</span>
+                    <span class="text-xs font-bold text-gray-300">2. שכונות ואזורים ספציפיים מקושרים:</span>
                     <div class="text-xs space-x-2 space-x-reverse">
                         <button onclick="toggleAllOnDemandHoods(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
                         <span class="text-gray-600">|</span>
@@ -609,7 +614,6 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-1.5 text-xs text-gray-300">
-                    <!-- Pittsburgh Neighborhoods -->
                     <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Downtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> PGH Downtown</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Shadyside" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Shadyside</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Lawrenceville" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Lawrenceville</label>
@@ -619,7 +623,6 @@
                     <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: East Liberty" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> East Liberty</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-blue-950/40 text-blue-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Pittsburgh"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Pittsburgh" value="Pittsburgh: Strip District" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Strip District</label>
 
-                    <!-- Philadelphia Neighborhoods -->
                     <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Center City" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Center City (Philly)</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Fishtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Fishtown</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Northern Liberties" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> N. Liberties</label>
@@ -628,17 +631,14 @@
                     <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Chestnut Hill" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Chestnut Hill</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-indigo-950/40 text-indigo-200 border border-indigo-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Philadelphia"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Philadelphia" value="Philadelphia: Manayunk" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Manayunk</label>
 
-                    <!-- Lancaster Neighborhoods -->
                     <label class="ondemand-hood-label flex items-center gap-1 bg-purple-950/40 text-purple-200 border border-purple-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Downtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Lancaster Downtown</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-purple-950/40 text-purple-200 border border-purple-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Chestnut Hill" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Lancaster Chestnut</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-purple-950/40 text-purple-200 border border-purple-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Lancaster"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Lancaster" value="Lancaster: Cabbage Hill" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Cabbage Hill</label>
 
-                    <!-- Bethlehem Neighborhoods -->
                     <label class="ondemand-hood-label flex items-center gap-1 bg-emerald-950/40 text-emerald-200 border border-emerald-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: Historic District" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Bethlehem Historic</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-emerald-950/40 text-emerald-200 border border-emerald-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: South Side" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Bethlehem South</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-emerald-950/40 text-emerald-200 border border-emerald-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Bethlehem"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Bethlehem" value="Bethlehem: West Bethlehem" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> West Bethlehem</label>
 
-                    <!-- Erie Neighborhoods -->
                     <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: Downtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Erie Downtown</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: Bayfront" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Erie Bayfront</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: East Bay" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> East Bay</label>
@@ -652,6 +652,32 @@
                 <button onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
                     <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive PA District Visual Map Modal (Custom Colored Map Preview) -->
+    <div id="interactive-map-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-rose-500/40 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="map" class="w-5 h-5 text-rose-400"></i>
+                    <h3 class="text-lg font-black text-white">מפת מחוזות פנסילבניה (Visual District Map - PA)</h3>
+                </div>
+                <button onclick="closeInteractiveMapModal()" class="text-gray-400 hover:text-white p-1.5 rounded-lg bg-gray-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <p class="text-xs text-gray-300">
+                המפה הבאה ממחישה את מחוזות פנסילבניה ומרכזי הסריקה. אזורים המסומנים כעת ב-<span class="text-rose-400 font-bold">אדום בהיר</span> ייסרקו, ואזורים שלא נבחרו מוצגים באפור כהה.
+            </p>
+
+            <!-- Visual Map Grid -->
+            <div id="pa-visual-map-grid" class="grid grid-cols-3 gap-3 p-4 bg-gray-950 rounded-xl border border-gray-800 text-center text-xs font-bold">
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
+                <span class="text-xs text-gray-400">💡 לחיצה על אזור במפה מדליקה או מבית את הבחירה שלו.</span>
+                <button onclick="closeInteractiveMapModal()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">סגור מפה</button>
             </div>
         </div>
     </div>
@@ -1155,7 +1181,7 @@
             }
         }
 
-        // On-Demand Smart Linked Functions
+        // On-Demand Smart Linked Functions & Visual Map Preview
         function openOnDemandScanModal() { 
             loadOnDemandState();
             document.getElementById('ondemand-modal').classList.remove('hidden'); 
@@ -1195,6 +1221,43 @@
                 : "ondemand-hood-label flex items-center gap-1 bg-gray-950 text-gray-400 border border-gray-800 px-2 py-1 rounded-lg cursor-pointer";
         }
 
+        function openInteractiveMapModal() {
+            const grid = document.getElementById('pa-visual-map-grid');
+            const cityBoxes = document.querySelectorAll('.ondemand-city-box');
+            
+            let html = '';
+            cityBoxes.forEach(cb => {
+                const cityName = cb.value;
+                const isSelected = cb.checked;
+                const bgStyle = isSelected 
+                    ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-md shadow-rose-500/10' 
+                    : 'bg-gray-900 border-gray-800 text-gray-500';
+                const statusText = isSelected ? '🔴 אזור סריקה פעיל' : '⚪ לא מסומן';
+                
+                html += `
+                    <div onclick="toggleDistrictMapRegion('${cityName}')" class="p-3 rounded-xl border ${bgStyle} flex flex-col justify-between items-center cursor-pointer transition hover:scale-105">
+                        <span class="text-sm font-black text-white">${cityName} (District)</span>
+                        <span class="text-[11px] mt-2 font-bold">${statusText}</span>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+            document.getElementById('interactive-map-modal').classList.remove('hidden');
+        }
+
+        function toggleDistrictMapRegion(cityName) {
+            const targetCb = Array.from(document.querySelectorAll('.ondemand-city-box')).find(cb => cb.value === cityName);
+            if (targetCb) {
+                targetCb.checked = !targetCb.checked;
+                onOnDemandCityToggle(cityName, targetCb.checked);
+                openInteractiveMapModal();
+            }
+        }
+
+        function closeInteractiveMapModal() {
+            document.getElementById('interactive-map-modal').classList.add('hidden');
+        }
+
         function saveOnDemandState() {
             const tokenInput = document.getElementById('ondemand-token-input');
             if (tokenInput && tokenInput.value.trim()) {
@@ -1213,7 +1276,7 @@
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value),
                 hoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v514', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v520', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1223,7 +1286,7 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v514');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v520');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
@@ -1232,11 +1295,6 @@
                     }
                     setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice);
                     setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 500000);
-
-                    const mainMinInput = document.getElementById('filter-min-price');
-                    if (mainMinInput && st.minPrice) {
-                        setPriceFormatted(mainMinInput, st.minPrice);
-                    }
 
                     if (document.getElementById('ondemand-min-sqft')) {
                         document.getElementById('ondemand-min-sqft').value = st.minSqft || '';
@@ -1337,7 +1395,7 @@
                     method: "POST",
                     headers: {
                         "Authorization": `token ${githubToken}`,
-                        "Accept": `application/vnd.github.v3+json`,
+                        "Accept": "application/vnd.github.v3+json",
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
