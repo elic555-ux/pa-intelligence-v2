@@ -58,7 +58,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.20</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.21</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -486,14 +486,6 @@
                 <input type="password" id="ondemand-token-input" onchange="saveOnDemandState()" placeholder="הדבק כאן את הטוקן שלך (ghp_...)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
             </div>
 
-            <!-- Targeted Query Bar -->
-            <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 space-y-1">
-                <label class="block text-xs font-bold text-blue-400 flex items-center gap-1.5">
-                    <i data-lucide="crosshair" class="w-4 h-4"></i> סריקה ממוקדת לפי כתובת, עיר או מיקוד (אופציונלי):
-                </label>
-                <input type="text" id="ondemand-query-input" oninput="saveOnDemandState()" placeholder="לדוגמה: 1330 Sylvan St, Homestead או 15120 או Pittsburgh..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-bold">
-            </div>
-
             <!-- Target Sectors Matrix -->
             <div class="space-y-1.5">
                 <span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה כעת (המנוע יסרוק אך ורק מה שמסומן):</span>
@@ -521,7 +513,7 @@
                 </div>
             </div>
 
-            <!-- Full Criteria Controls Row -->
+            <!-- Full Criteria Controls Row (Updated Defaults: Min 50K, Max 190K, Beds All, Baths All, SqFt empty) -->
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
                 <div>
                     <label class="block font-bold text-gray-400 mb-1.5 text-xs">מדינה (State)</label>
@@ -531,31 +523,31 @@
                 </div>
                 <div>
                     <label class="block font-bold text-emerald-400 mb-1.5 text-xs">מחיר מינימום ($)</label>
-                    <input type="text" id="ondemand-min-price" oninput="handlePriceInput(this); saveOnDemandState();" placeholder="0" class="w-full bg-gray-900 border-2 border-emerald-500/50 rounded-xl px-2.5 py-1.5 text-emerald-400 font-black font-mono text-center text-base">
+                    <input type="text" id="ondemand-min-price" oninput="handlePriceInput(this); saveOnDemandState();" value="50,000" class="w-full bg-gray-900 border-2 border-emerald-500/50 rounded-xl px-2.5 py-1.5 text-emerald-400 font-black font-mono text-center text-base">
                 </div>
                 <div>
                     <label class="block font-bold text-emerald-400 mb-1.5 text-xs">מחיר מקסימום ($)</label>
-                    <input type="text" id="ondemand-max-price" oninput="handlePriceInput(this); saveOnDemandState();" value="500,000" class="w-full bg-gray-900 border-2 border-emerald-500/50 rounded-xl px-2.5 py-1.5 text-emerald-400 font-black font-mono text-center text-base">
+                    <input type="text" id="ondemand-max-price" oninput="handlePriceInput(this); saveOnDemandState();" value="190,000" class="w-full bg-gray-900 border-2 border-emerald-500/50 rounded-xl px-2.5 py-1.5 text-emerald-400 font-black font-mono text-center text-base">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1.5 text-xs">שטח מינ' (SqFt)</label>
-                    <input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this); saveOnDemandState();" placeholder="ללא הגבלה" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-mono font-bold text-center text-sm">
+                    <input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this); saveOnDemandState();" value="" placeholder="ללא הגבלה" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-mono font-bold text-center text-sm">
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1.5 text-xs">חדרי שינה מינ'</label>
                     <select id="ondemand-min-beds" onchange="saveOnDemandState()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-bold text-sm">
-                        <option value="all">הכל</option>
+                        <option value="all" selected>הכל</option>
                         <option value="1">1+</option>
                         <option value="2">2+</option>
-                        <option value="3" selected>3+</option>
+                        <option value="3">3+</option>
                         <option value="4">4+</option>
                     </select>
                 </div>
                 <div>
                     <label class="block font-bold text-gray-300 mb-1.5 text-xs">חדרי רחצה מינ'</label>
                     <select id="ondemand-min-baths" onchange="saveOnDemandState()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-bold text-sm">
-                        <option value="all">הכל</option>
-                        <option value="1" selected>1+</option>
+                        <option value="all" selected>הכל</option>
+                        <option value="1">1+</option>
                         <option value="2">2+</option>
                     </select>
                 </div>
@@ -575,7 +567,7 @@
                 </div>
             </div>
 
-            <!-- Cities & Hubs Selection with Visual Map Button -->
+            <!-- Cities & Hubs Selection with Visual District Map Button -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים:</span>
@@ -642,7 +634,7 @@
                     <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: Downtown" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Erie Downtown</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: Bayfront" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> Erie Bayfront</label>
                     <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: East Bay" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> East Bay</label>
-                    <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-cyan-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: West Bay" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> West Bay</label>
+                    <label class="ondemand-hood-label flex items-center gap-1 bg-cyan-950/40 text-cyan-200 border border-blue-500/50 px-2 py-1 rounded-lg cursor-pointer" data-city="Erie"><input type="checkbox" checked class="ondemand-hood-box accent-blue-500" data-city="Erie" value="Erie: West Bay" onchange="updateOnDemandCardPill(this); saveOnDemandState();"> West Bay</label>
                 </div>
             </div>
 
@@ -676,7 +668,7 @@
             </div>
 
             <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-xs text-gray-400">💡 לחיצה על אזור במפה מדליקה או מבית את הבחירה שלו.</span>
+                <span class="text-xs text-gray-400">💡 לחיצה על אזור במפה מדליקה או מכבה את הבחירה שלו.</span>
                 <button onclick="closeInteractiveMapModal()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">סגור מפה</button>
             </div>
         </div>
@@ -1154,7 +1146,7 @@
             const config = {
                 state: "PA",
                 minPrice: getRawPrice(document.getElementById('setting-min-price')),
-                maxPrice: getRawPrice(document.getElementById('setting-max-price')) || 500000,
+                maxPrice: getRawPrice(document.getElementById('setting-max-price')) || 190000,
                 minBeds: document.getElementById('setting-min-beds').value,
                 minBaths: document.getElementById('setting-min-baths').value,
                 cities: selectedCities,
@@ -1165,23 +1157,7 @@
             closeSettingsModal();
         }
 
-        function loadSettings() {
-            const saved = localStorage.getItem('pa_scan_config_final');
-            if (saved) {
-                try {
-                    const cfg = JSON.parse(saved);
-                    setPriceFormatted(document.getElementById('setting-min-price'), cfg.minPrice);
-                    setPriceFormatted(document.getElementById('setting-max-price'), cfg.maxPrice || 500000);
-                    if (cfg.minBeds) document.getElementById('setting-min-beds').value = cfg.minBeds;
-                    if (cfg.minBaths) document.getElementById('setting-min-baths').value = cfg.minBaths;
-                    if (cfg.cities && Array.isArray(cfg.cities)) {
-                        document.querySelectorAll('.city-box').forEach(cb => { cb.checked = cfg.cities.includes(cb.value); });
-                    }
-                } catch(e){}
-            }
-        }
-
-        // On-Demand Smart Linked Functions & Visual Map Preview
+        // On-Demand Smart Linked Functions & Visual District Map Preview
         function openOnDemandScanModal() { 
             loadOnDemandState();
             document.getElementById('ondemand-modal').classList.remove('hidden'); 
@@ -1268,15 +1244,15 @@
                 query: document.getElementById('ondemand-query-input')?.value || '',
                 sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value),
                 minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
-                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 500000,
+                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
                 minSqft: document.getElementById('ondemand-min-sqft')?.value || '',
-                minBeds: document.getElementById('ondemand-min-beds')?.value || '3',
-                minBaths: document.getElementById('ondemand-min-baths')?.value || '1',
+                minBeds: document.getElementById('ondemand-min-beds')?.value || 'all',
+                minBaths: document.getElementById('ondemand-min-baths')?.value || 'all',
                 propTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb => cb.value),
                 cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value),
                 hoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value)
             };
-            localStorage.setItem('pa_ondemand_state_v520', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v521', JSON.stringify(state));
         }
 
         function loadOnDemandState() {
@@ -1286,24 +1262,24 @@
                 tokenInput.value = savedToken;
             }
 
-            const savedStateStr = localStorage.getItem('pa_ondemand_state_v520');
+            const savedStateStr = localStorage.getItem('pa_ondemand_state_v521');
             if (savedStateStr) {
                 try {
                     const st = JSON.parse(savedStateStr);
                     if (document.getElementById('ondemand-query-input')) {
                         document.getElementById('ondemand-query-input').value = st.query || '';
                     }
-                    setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice);
-                    setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 500000);
+                    setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice || 50000);
+                    setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 190000);
 
                     if (document.getElementById('ondemand-min-sqft')) {
                         document.getElementById('ondemand-min-sqft').value = st.minSqft || '';
                     }
                     if (document.getElementById('ondemand-min-beds')) {
-                        document.getElementById('ondemand-min-beds').value = st.minBeds || '3';
+                        document.getElementById('ondemand-min-beds').value = st.minBeds || 'all';
                     }
                     if (document.getElementById('ondemand-min-baths')) {
-                        document.getElementById('ondemand-min-baths').value = st.minBaths || '1';
+                        document.getElementById('ondemand-min-baths').value = st.minBaths || 'all';
                     }
 
                     if (st.sectors && Array.isArray(st.sectors)) {
@@ -1328,7 +1304,11 @@
                     }
                 } catch(e) {}
             } else {
-                setPriceFormatted(document.getElementById('ondemand-max-price'), 500000);
+                setPriceFormatted(document.getElementById('ondemand-min-price'), 50000);
+                setPriceFormatted(document.getElementById('ondemand-max-price'), 190000);
+                if (document.getElementById('ondemand-min-sqft')) document.getElementById('ondemand-min-sqft').value = '';
+                if (document.getElementById('ondemand-min-beds')) document.getElementById('ondemand-min-beds').value = 'all';
+                if (document.getElementById('ondemand-min-baths')) document.getElementById('ondemand-min-baths').value = 'all';
             }
 
             document.querySelectorAll('.ondemand-hood-box').forEach(updateOnDemandCardPill);
@@ -1369,13 +1349,7 @@
             const chosenScanner = selectedSectors[0];
             const citiesStr = selectedCities.join(', ');
             const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
-            const maxPriceNum = getRawPrice(document.getElementById('ondemand-max-price')) || 500000;
-
-            const mainMinInput = document.getElementById('filter-min-price');
-            if (mainMinInput) {
-                setPriceFormatted(mainMinInput, minPriceNum);
-                applyFilters();
-            }
+            const maxPriceNum = getRawPrice(document.getElementById('ondemand-max-price')) || 190000;
 
             const hoodsBase = selectedHoods.length > 0 ? selectedHoods.join(', ') : "All";
             const hoodsStr = `${hoodsBase} | MIN_PRICE:${minPriceNum} | MAX_PRICE:${maxPriceNum} | SECTORS:${selectedSectors.join(',')}`;
