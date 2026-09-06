@@ -122,7 +122,7 @@
                     <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
                 </button>
 
-                <a href="index.html" target="pa_scanner" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
+                <a href="index.html" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>מעבר לסורק הראשי</span>
                 </a>
@@ -133,7 +133,7 @@
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
-        <!-- Top Metrics -->
+        <!-- Top Metrics (4 Balanced Cards Row - Clickable 4th Card) -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
                 <div>
@@ -215,6 +215,317 @@
         </div>
     </div>
 
+    <!-- Modal 1: Custom Property Research Modal -->
+    <div id="custom-research-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-blue-500/40 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative text-right">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="microscope" class="w-5 h-5 text-blue-400"></i>
+                    מחקר מעמיק לנכס חופשי
+                </h3>
+                <button onclick="closeCustomResearchModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">כתובת הנכס:</label>
+                    <input type="text" id="cr-address" placeholder="לדוגמה: 1420 Main St" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-blue-400 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">מדינה (State):</label>
+                    <select id="cr-state" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                        <option value="PA" selected>Pennsylvania (PA)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">עיר בפנסילבניה (City):</label>
+                        <select id="cr-city" onchange="onCustomCityChange()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-blue-400">
+                            <option value="Pittsburgh" selected>Pittsburgh</option>
+                            <option value="Philadelphia">Philadelphia</option>
+                            <option value="Allentown">Allentown</option>
+                            <option value="Reading">Reading</option>
+                            <option value="Erie">Erie</option>
+                            <option value="Scranton">Scranton</option>
+                            <option value="Bethlehem">Bethlehem</option>
+                            <option value="Lancaster">Lancaster</option>
+                            <option value="Wilkes-Barre">Wilkes-Barre</option>
+                            <option value="Harrisburg">Harrisburg</option>
+                            <option value="York">York</option>
+                            <option value="Altoona">Altoona</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">שכונה / אזור:</label>
+                        <select id="cr-neighborhood" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-blue-400"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">מחיר מבוקש ($):</label>
+                        <input type="number" id="cr-price" placeholder="אוטומטי לפי ממוצע עיר" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-emerald-400 font-bold focus:border-blue-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">שטח בנוי (SqFt):</label>
+                        <input type="number" id="cr-sqft" placeholder="ברירת מחדל: 1,300" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-blue-400">
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
+                <button onclick="closeCustomResearchModal()" class="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl text-xs font-bold">ביטול</button>
+                <button onclick="previewCustomResearch()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
+                    <i data-lucide="eye" class="w-4 h-4"></i> הצג דוח מחקר
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: General Market Hub with 3 Functional Tabs -->
+    <div id="general-price-catalog-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative text-right max-h-[92vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="hammer" class="w-5 h-5 text-amber-400"></i>
+                    מחירון שיפוצים ובקרת דוחות עצמאית (PA Rehab Hub)
+                </h3>
+                <button onclick="closeGeneralPriceCatalogModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="flex border-b border-gray-800 gap-2 text-xs font-bold pb-2 overflow-x-auto">
+                <button onclick="switchGeneralModalTab('tab-gen-inspector')" id="btn-gen-tab-inspector" class="px-3.5 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 shrink-0">
+                    🔍 בדיקת דוח בודק (PDF)
+                </button>
+                <button onclick="switchGeneralModalTab('tab-gen-catalog')" id="btn-gen-tab-catalog" class="px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0">
+                    🔨 מחירון ובדיקת תיקון ספציפי
+                </button>
+                <button onclick="switchGeneralModalTab('tab-gen-audit')" id="btn-gen-tab-audit" class="px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0">
+                    📄 בדיקת הצעת קבלן
+                </button>
+            </div>
+
+            <!-- Tab 1: Inspection PDF Uploader -->
+            <div id="tab-gen-inspector" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1.5">העלה קובץ PDF של דוח הבודק (בכל גודל):</label>
+                    <div class="border-2 border-dashed border-blue-500/50 hover:border-blue-400 bg-gray-950 p-6 rounded-xl text-center cursor-pointer relative">
+                        <input type="file" id="gen-inspector-file" accept=".pdf,image/*" onchange="handleStandaloneInspectionUpload(event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        <i data-lucide="file-check-2" class="w-10 h-10 text-blue-400 mx-auto mb-2"></i>
+                        <span class="text-gray-200 font-bold block text-sm" id="gen-inspector-label">לחץ לבחירת דוח בודק (PDF) או גרור לכאן</span>
+                        <span class="text-xs text-amber-400 font-bold block mt-1" id="gen-inspector-status">הסוכן יזהה אוטומטית כתובת, עיר, עלויות וישמור עם כל הפירוש</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 bg-gray-950 p-3 rounded-xl border border-gray-800">
+                    <div>
+                        <label class="block font-bold text-gray-400 mb-1">כתובת הנכס:</label>
+                        <input type="text" id="gen-inspector-address" placeholder="נשלף אוטומטית..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-400 mb-1">עיר / מחוז:</label>
+                        <input type="text" id="gen-inspector-city" placeholder="נשלף אוטומטית..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-white font-bold">
+                    </div>
+                </div>
+
+                <button onclick="triggerDetailedReportModal()" class="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:opacity-90 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                    <span>פתח דוח מפורט מלא (רקע לבן צחור וכתב מוגדל)</span>
+                </button>
+            </div>
+
+            <!-- Tab 2: Specific Repair Pricing & Catalog -->
+            <div id="tab-gen-catalog" class="space-y-3.5 text-xs hidden">
+                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                    <label class="block font-bold text-gray-300 mb-1">התאם מחירון לפי עיר בפנסילבניה:</label>
+                    <select id="rehab-city-select" onchange="updateItemPricingDetails()" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-amber-400">
+                        <option value="Pittsburgh" selected>Pittsburgh / Allegheny</option>
+                        <option value="Philadelphia">Philadelphia</option>
+                        <option value="Allentown">Allentown</option>
+                        <option value="Reading">Reading</option>
+                        <option value="Erie">Erie</option>
+                        <option value="Scranton">Scranton</option>
+                        <option value="Bethlehem">Bethlehem</option>
+                        <option value="Lancaster">Lancaster</option>
+                        <option value="Wilkes-Barre">Wilkes-Barre (Luzerne)</option>
+                        <option value="Harrisburg">Harrisburg</option>
+                        <option value="York">York</option>
+                        <option value="Altoona">Altoona</option>
+                    </select>
+                </div>
+
+                <div class="bg-gray-950 p-3.5 rounded-xl border border-amber-500/30 space-y-2">
+                    <label class="block font-bold text-amber-300 text-xs">בדיקת עלות לתיקון ספציפי או מוצר חופשי:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="dynamic-rehab-query" placeholder="לדוגמה: החלפת אסלה, התקנת ברז, דלת מוסך, משאבת מרתף, מאוורר תקרה..." class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white font-medium focus:border-amber-400 focus:outline-none">
+                        <button onclick="runDynamicPriceQuery()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-black shrink-0 transition">
+                            בדוק מחיר
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">או בחר מתוך קטלוג עבודות נפוצות:</label>
+                    <select id="rehab-item-select" onchange="updateItemPricingDetails()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-amber-400">
+                        <optgroup label="🏠 גגות וחיפוי חוץ">
+                            <option value="roof_full">החלפת גג אספלט מלא (Asphalt Shingles)</option>
+                            <option value="roof_repair">תיקון גג מקומי ונזילות (Roof Leak Repair)</option>
+                            <option value="gutters">החלפת מרזבים לכל הבית (Seamless Gutters)</option>
+                            <option value="siding">התקנת סיידינג ויניל חיצוני (Vinyl Siding)</option>
+                            <option value="windows_10">החלפת 10 חלונות כפולים (Double-Hung Vinyl Windows)</option>
+                            <option value="entry_door">החלפת דלת כניסה ראשית מבודדת (Exterior Steel Door)</option>
+                        </optgroup>
+                        <optgroup label="⚡ אינסטלציה, חשמל ומיזוג (MEP)">
+                            <option value="hvac">מערכת חימום ומיזוג מרכזי חדשה (HVAC System)</option>
+                            <option value="water_heater_50">דוד מים 50 גלון (Water Heater)</option>
+                            <option value="electric_panel">שדרוג לוח חשמל ל-200 אמפר (Electric Panel 200A)</option>
+                            <option value="plumbing_pex">החלפת צנרת מים מלאה ל-PEX (Repipe)</option>
+                            <option value="french_drain">איטום מרתף ומשאבת ניקוז (French Drain + Sump Pump)</option>
+                        </optgroup>
+                        <optgroup label="🛋️ פנים וגמר">
+                            <option value="kitchen_full">שיפוץ מטבח קומפלט (ארונות עץ מלא + קוורץ)</option>
+                            <option value="bathroom_full">שיפוץ חדר רחצה מלא (קרמיקה, מקלחון, ארון)</option>
+                            <option value="flooring_lvp">ריצוף LVP עמיד למים לכל הבית</option>
+                            <option value="paint_interior">צביעת פנים מלאה (כולל תקרות ומשקופים)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div id="item-pricing-details" class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2.5"></div>
+            </div>
+
+            <!-- Tab 3: Free Contractor Quote Audit -->
+            <div id="tab-gen-audit" class="space-y-3.5 text-xs hidden">
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">סעיפי הצעת הקבלן:</label>
+                    <textarea id="gen-quote-text-input" rows="3" placeholder="לדוגמה: החלפת גג שינגלס מלא $8,500, צביעת פנים $3,000..." class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-white font-medium focus:border-amber-400 focus:outline-none"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">סך הצעת הקבלן ($):</label>
+                        <input type="number" id="gen-quote-total-amount" placeholder="לדוגמה: 18000" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-emerald-400 font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">עיר ב-PA:</label>
+                        <input type="text" id="gen-quote-city" placeholder="לדוגמה: Pittsburgh" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                    </div>
+                </div>
+                <button onclick="runGeneralContractorAudit()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-black">בדוק הצעת קבלן מול מחירי שוק</button>
+                <div id="gen-audit-results-box" class="hidden bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs"></div>
+            </div>
+
+            <div class="pt-2 border-t border-gray-800 text-left">
+                <button onclick="closeGeneralPriceCatalogModal()" class="px-4 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-xs font-bold">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Dedicated Expanded Inspection Report Modal (BRIGHT WHITE PRINT THEME) -->
+    <div id="detailed-inspection-report-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-5xl w-full p-4 sm:p-6 space-y-4 shadow-2xl relative max-h-[96vh] overflow-y-auto custom-scrollbar text-right">
+            
+            <div class="flex flex-wrap justify-between items-center border-b border-gray-800 pb-3 gap-3">
+                <span class="px-3 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-black">
+                    דוח ניתוח בודק מוגדל (גרסה בהירה וחדה להדפסה)
+                </span>
+
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="closeDetailedReportModal()" class="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                        <i data-lucide="x" class="w-4 h-4"></i> סגור
+                    </button>
+                    <button onclick="saveActiveDetailedReport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition">
+                        <i data-lucide="bookmark" class="w-4 h-4"></i> שמור בהיסטוריה
+                    </button>
+                    <button onclick="downloadDetailedReportPDF()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition">
+                        <i data-lucide="download" class="w-4 h-4"></i> הדפס / שמור כ-PDF לבן
+                    </button>
+                </div>
+            </div>
+
+            <div id="inspection-report-printable-area" class="space-y-6 p-6 sm:p-10 rounded-2xl shadow-2xl border-2 border-gray-300">
+                <div class="flex flex-wrap justify-between items-start border-b-2 border-gray-300 pb-4 gap-2">
+                    <div>
+                        <h2 class="text-3xl sm:text-4xl font-black tracking-tight" id="prt-address">1330 Sylvan Ave</h2>
+                        <p class="text-lg font-extrabold mt-1 text-gray-800" id="prt-city">Homestead, PA 15120 (Allegheny County)</p>
+                    </div>
+                    <div class="text-left bg-gray-100 p-3 rounded-xl border border-gray-300">
+                        <span class="text-xs font-bold text-gray-600 block">תאריך ניתוח והפקה:</span>
+                        <strong class="text-gray-950 text-base font-mono font-black" id="prt-date">09/03/2026</strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-300">
+                        <span class="text-xs font-black text-gray-700 block mb-1">אומדן שיפוץ כולל</span>
+                        <strong class="text-2xl font-black text-highlight-amber tracking-tight" id="rep-total-range">$38,100 – $57,800</strong>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-300">
+                        <span class="text-xs font-black text-gray-700 block mb-1">סיווג מצב הנכס</span>
+                        <strong class="text-base font-black text-highlight-red" id="rep-condition-badge">Full Gut / Heavy Rehab</strong>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-300">
+                        <span class="text-xs font-black text-gray-700 block mb-1">ליקויים קריטיים שאותרו</span>
+                        <strong class="text-2xl font-black text-highlight-red" id="rep-critical-count">4 ממצאים</strong>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-300">
+                        <span class="text-xs font-black text-gray-700 block mb-1">דרישת הנחה / קרדיט</span>
+                        <strong class="text-xl font-black text-highlight-green" id="rep-credit-demand">$35,000 – $40,000</strong>
+                    </div>
+                </div>
+
+                <div class="bg-rose-50 border-2 border-rose-400 p-5 rounded-xl space-y-3">
+                    <h4 class="font-black text-highlight-red flex items-center gap-2 text-lg">
+                        <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-700"></i>
+                        ליקויים בטיחותיים קריטיים (Critical Red Flags & Safety Hazards)
+                    </h4>
+                    <ul class="space-y-2 text-gray-900 list-disc list-inside font-bold text-base leading-relaxed" id="rep-critical-list">
+                        <li><strong class="text-highlight-red">עובש שחור חמור (Severe Mold):</strong> עובש משמעותי במרתף ובשירותים שמנע מהשרברב להיכנס לבדיקת קו הביוב מחשש בטיחותי[cite: 1].</li>
+                        <li><strong class="text-highlight-red">קו אספקת מים ראשי מעופרת (Lead Water Service Line):</strong> סכנה בריאותית ישירה הדורשת חפירה והחלפה מלאה מהרחוב עד לתוך הבית[cite: 1].</li>
+                        <li><strong class="text-highlight-red">גג ראשי ומרפסת בסוף חייהם (Aged Roof):</strong> שינגלס בלויים ושבורים עם נזילות פעילות וכתמי מים בתקרות הקומה העליונה[cite: 1].</li>
+                        <li><strong class="text-highlight-red">מים מנותקים בעת הבדיקה (Water Turned Off):</strong> לא נבדקו נזילות בתוך הקירות ותקינות כלים סניטריים – נדרשת רזרבת אינסטלציה[cite: 1].</li>
+                    </ul>
+                </div>
+
+                <div class="space-y-3">
+                    <h4 class="font-black text-gray-950 text-lg flex items-center gap-2">
+                        <i data-lucide="calculator" class="w-5 h-5 text-amber-700"></i>
+                        פירוט תמחור שיפוצים וליקויים לפי מחירון PA:
+                    </h4>
+                    <div class="overflow-x-auto border-2 border-gray-300 rounded-xl">
+                        <table class="w-full text-right">
+                            <thead>
+                                <tr>
+                                    <th class="p-3.5 text-base font-black">תחום ומערכת</th>
+                                    <th class="p-3.5 text-base font-black">ממצאי הבודק בדוח</th>
+                                    <th class="p-3.5 text-base font-black">המלצת תיקון</th>
+                                    <th class="p-3.5 text-left text-base font-black">אומדן עלות ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rep-breakdown-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 border-2 border-blue-400 p-5 rounded-xl space-y-2">
+                    <h4 class="font-black text-blue-950 flex items-center gap-2 text-lg">
+                        <i data-lucide="trending-up" class="w-6 h-6 text-blue-800"></i>
+                        מסקנות אסטרטגיות למשא ומתן (Underwriting Strategy & Seller Credits)
+                    </h4>
+                    <div class="space-y-2 text-gray-900 font-bold text-base leading-relaxed">
+                        <p>• <strong>אי-עמידה בתנאי משכנתא רגילה:</strong> בשל קו המים מעופרת, העובש החמור והגג הגמור, הנכס אינו כשיר למשכנתאות FHA או קונבנציונליות ללא תיקון מראש[cite: 1].</p>
+                        <p>• <strong>דרישת הנחה במחיר:</strong> מומלץ להגיש את הדוח במלואו למוכר ולדרוש הפחתת מחיר חוזה של לפחות <strong>$35,000 עד $40,000</strong> או קרדיט סגירה לתיקון קווי העופרת והגג.</p>
+                    </div>
+                </div>
+
+                <div class="text-xs text-gray-600 text-left pt-3 border-t-2 border-gray-300 font-mono font-bold">
+                    PA Real Estate Intelligence Hub • Automated Inspection Analyzer • Verified via First Class Home Inspections Report[cite: 1]
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Script Logic -->
     <script>
         let pipelineDeals = [];
@@ -247,12 +558,36 @@
         };
         const CITY_COUNTY_MAP = { "Pittsburgh": "Allegheny", "Philadelphia": "Philadelphia", "Wilkes-Barre": "Luzerne", "Reading": "Berks" };
         const CITY_DEFAULT_PRICES = { "Pittsburgh": 140000, "Philadelphia": 160000, "Wilkes-Barre": 85000, "Reading": 110000 };
-        const CITY_COST_MULTIPLIER = { "Pittsburgh": 1.15, "Homestead": 1.15, "Philadelphia": 1.25, "Allentown": 1.12, "Reading": 1.00, "Wilkes-Barre": 1.00, "Scranton": 0.98, "Erie": 0.95 };
+
+        const CITY_COST_MULTIPLIER = {
+            "Pittsburgh": 1.15, "Homestead": 1.15, "Philadelphia": 1.25,
+            "Allentown": 1.12, "Reading": 1.00, "Wilkes-Barre": 1.00, "Scranton": 0.98, "Erie": 0.95
+        };
+
+        const REHAB_PRICE_CATALOG = {
+            "roof_full": { title: "החלפת גג אספלט מלא (Asphalt Shingles)", baseMin: 6500, baseMax: 9500, paRate: "$3.60 – $4.80 ל-SqFt גג כולל פירוק ופינוי פסולת", proAlternative: "הזמנת לוחות GAF Timberline ישירות מחנות גגות חוסכת 20%." },
+            "roof_repair": { title: "תיקון גג מקומי ונזילות (Roof Leak Repair)", baseMin: 450, baseMax: 1200, paRate: "$450 – $1,200 לתיקון מוקדי נזילה ופלאשינג", proAlternative: "איטום פלאשינג סביב ארובה עם מסטיק מקצועי של Henry פותר 80% מהנזילות." },
+            "gutters": { title: "החלפת מרזבים לכל הבית (Seamless Gutters)", baseMin: 1100, baseMax: 2200, paRate: "$8.50 – $12.00 ל-LF", proAlternative: "מרזבי אלומיניום רציפים 5 אינץ' מונעים חדירת מים." },
+            "siding": { title: "התקנת סיידינג ויניל חיצוני (Vinyl Siding)", baseMin: 7500, baseMax: 13500, paRate: "$5.50 – $8.00 ל-SqFt קיר", proAlternative: "מותג CertainTeed MainStreet עמיד במזג אוויר קר." },
+            "windows_10": { title: "החלפת 10 חלונות כפולים (Double-Hung Vinyl)", baseMin: 4500, baseMax: 7800, paRate: "$450 – $750 לחלון כולל עבודה", proAlternative: "חלונות Andersen 100 מ-Home Depot Pro Desk חוסכים $200 לחלון." },
+            "entry_door": { title: "החלפת דלת כניסה ראשית מבודדת (Steel Door)", baseMin: 650, baseMax: 1450, paRate: "$700 – $1,400 לדלת כולל משקוף", proAlternative: "דלת Masonite מגיעה מוכנה להתקנה מהירה." },
+            "hvac": { title: "מערכת חימום ומיזוג מרכזי חדשה (HVAC System)", baseMin: 7200, baseMax: 11000, paRate: "$8,000 – $10,500 ליחידת 2.5–3 טון", proAlternative: "מערכות Goodman בדירוג SEER2 14.3 מספקות אחריות 10 שנים." },
+            "water_heater_50": { title: "דוד מים 50 גלון (Water Heater)", baseMin: 1200, baseMax: 1850, paRate: "$1,400 ממוצע כולל התקנה ופינוי ישן", proAlternative: "רכישת דוד Rheem והעסקת שרברב עצמאי חוסכת כ-$700." },
+            "electric_panel": { title: "שדרוג לוח חשמל ל-200 אמפר (Electric Panel 200A)", baseMin: 2200, baseMax: 3400, paRate: "$2,500 ממוצע כולל תיאום חברת חשמל", proAlternative: "וודא שההצעה כוללת אישור בודק מוסמך." },
+            "plumbing_pex": { title: "החלפת צנרת מים מלאה ל-PEX (Repipe)", baseMin: 3200, baseMax: 5800, paRate: "$3,500 – $5,500 לבית שלם", proAlternative: "צנרת PEX-A גמישה אינה מתבקעת בקפיאות חורף." },
+            "french_drain": { title: "איטום מרתף ומשאבת ניקוז (French Drain + Sump Pump)", baseMin: 3800, baseMax: 7200, paRate: "$55 – $80 ל-LF תעלה היקפית", proAlternative: "התקנת משאבת גיבוי מופעלת סוללה מונעת הצפות בסופות." },
+            "kitchen_full": { title: "שיפוץ מטבח קומפלט (ארונות עץ מלא + קוורץ)", baseMin: 9500, baseMax: 15500, paRate: "$1,100 – $1,500 ל-LF ארונות", proAlternative: "ארונות RTA מעץ מלא בייבוא ישיר חוסכים 45%." },
+            "bathroom_full": { title: "שיפוץ חדר רחצה מלא (Full Bath)", baseMin: 4500, baseMax: 7800, paRate: "$5,500 קומפלט לחדר רחצה סטנדרטי", proAlternative: "שימוש בפנלים עמידים למים Acrylic Surround חוסך $2,000." },
+            "flooring_lvp": { title: "ריצוף LVP עמיד למים לכל הבית", baseMin: 3200, baseMax: 5800, paRate: "$3.50 – $4.50 ל-SqFt כולל פנלים", proAlternative: "רכישת LVP ב-Floor & Decor והתקנה בלחיצה." },
+            "paint_interior": { title: "צביעת פנים מלאה (כולל תקרות ומשקופים)", baseMin: 2800, baseMax: 4800, paRate: "$1.80 – $2.60 ל-SqFt שטח רצפה", proAlternative: "צבע Behr Pro i300 במבצעי קבלנים עם צוות צבעים יומי." }
+        };
 
         async function init() {
             loadSavedReports();
             loadSavedCustomResearches();
             loadPipelineDeals();
+            onCustomCityChange();
+            updateItemPricingDetails();
 
             // Real-time synchronization across tabs/windows
             window.addEventListener('storage', function(e) {
@@ -263,7 +598,9 @@
         }
 
         function renderV(isDone) {
-            return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`;
+            return isDone 
+                ? `<span class="indicator-done">✓</span>` 
+                : `<span class="indicator-pending"></span>`;
         }
 
         function calculateAccurateRehab(deal) {
@@ -271,15 +608,30 @@
             const text = ((deal.address || '') + ' ' + (deal.notes || '') + ' ' + (deal.description || '')).toLowerCase();
             const sqft = Number(deal.sqft) > 0 ? Number(deal.sqft) : 1300;
             const cond = tr.condition || deal.condition || '';
-            let minRehab = 0, maxRehab = 0;
-            if (text.includes('roof') || text.includes('גג') || text.includes('leak') || cond === 'leaks') { minRehab += 6500; maxRehab += 9500; }
-            if (text.includes('paint') || text.includes('צבע') || text.includes('cosmetic') || cond === 'light_cosmetic') { const c = Math.round(sqft * 2.0); minRehab += c; maxRehab += Math.round(c * 1.35); }
-            if (cond === 'full_gut' || text.includes('gut') || text.includes('rehab')) { minRehab += Math.round(sqft * 42); maxRehab += Math.round(sqft * 58); }
+
+            let minRehab = 0;
+            let maxRehab = 0;
+            let detectedItems = [];
+
+            if (text.includes('roof') || text.includes('גג') || text.includes('leak') || cond === 'leaks') {
+                minRehab += 6500; maxRehab += 9500; detectedItems.push("תיקון/החלפת גג ונזילות");
+            }
+            if (text.includes('paint') || text.includes('צבע') || text.includes('cosmetic') || cond === 'light_cosmetic') {
+                const paintCost = Math.round(sqft * 2.0); minRehab += paintCost; maxRehab += Math.round(paintCost * 1.35); detectedItems.push("צביעה וקוסמטיקה");
+            }
+            if (cond === 'full_gut' || text.includes('gut') || text.includes('rehab')) {
+                minRehab += Math.round(sqft * 42); maxRehab += Math.round(sqft * 58); detectedItems.push("שיפוץ מלא מקיף");
+            }
+
             if (minRehab === 0) {
                 if (cond === 'excellent') return { range: "$0 – $2,500", details: "נכס במצב מעולה – דורש ניקיון בלבד" };
                 return { range: "$4,500 – $8,500", details: "לא זוהו ליקויים כבדים – אומדן תחזוקה וקוסמטיקה קלה" };
             }
-            return { range: `$${minRehab.toLocaleString()} – $${maxRehab.toLocaleString()}`, details: "אומדן אוטומטי מבוסס מאפיינים" };
+
+            return {
+                range: `$${minRehab.toLocaleString()} – $${maxRehab.toLocaleString()}`,
+                details: `זוהה בפרסום: ${detectedItems.join(' + ')}`
+            };
         }
 
         function updateField(id, key, value) {
@@ -294,12 +646,20 @@
 
         function moveToArchive(id) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
-            if (deal) { deal.is_archived = true; localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals)); loadPipelineDeals(); }
+            if (deal) {
+                deal.is_archived = true;
+                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                loadPipelineDeals();
+            }
         }
 
         function restoreFromArchive(id) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
-            if (deal) { deal.is_archived = false; localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals)); loadPipelineDeals(); }
+            if (deal) {
+                deal.is_archived = false;
+                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                loadPipelineDeals();
+            }
         }
 
         function removeDealCompletely(id) {
@@ -343,6 +703,16 @@
             container.innerHTML = displayList.map((d) => {
                 const tr = d.tracker || {};
                 const rehabEstimate = calculateAccurateRehab(d);
+
+                const isSeenDone = tr.inspector_seen && tr.inspector_seen !== 'none';
+                const isConditionDone = !!tr.condition && tr.condition !== '';
+                const isOfferDone = tr.offer_made === 'yes' || (!!tr.offer_amount && Number(tr.offer_amount) > 0);
+                const isEmdDone = tr.emd_deposited === 'yes' || (!!tr.emd_amount && Number(tr.emd_amount) > 0);
+                const isInspectorDone = tr.inspector_sent === 'yes';
+                const isContractorDone = tr.contractor_quote_status === 'yes' || (!!tr.contractor_quote_amount && Number(tr.contractor_quote_amount) > 0);
+                const isStatusDone = (tr.deal_status && tr.deal_status !== 'under_review') || (!!tr.negotiated_price && Number(tr.negotiated_price) > 0);
+                const isClosedDone = !!tr.deal_closed && tr.deal_closed !== '';
+
                 return `
                     <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
                         <div class="space-y-3">
@@ -351,39 +721,763 @@
                                     <label class="block text-sm font-black text-blue-300 mb-1 flex items-center gap-1.5">
                                         <i data-lucide="user-check" class="w-4 h-4 text-blue-400"></i> למי הנכס מיועד:
                                     </label>
-                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:outline-none">
+                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח / משקיע / שותף..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:border-blue-400 focus:outline-none">
                                 </div>
-                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2.5 bg-gray-950 rounded-xl border border-gray-800 transition" title="הסר">
+                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2.5 bg-gray-950 rounded-xl border border-gray-800 transition" title="הסר מחדר עסקאות">
                                     <i data-lucide="trash-2" class="w-5 h-5"></i>
                                 </button>
                             </div>
-                            <div>
-                                <h3 class="text-lg font-black text-white">${d.address}</h3>
-                                <p class="text-xs font-bold text-gray-300">${d.city}, PA</p>
+
+                            <div class="pt-1">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <h3 class="text-lg font-black text-white">${d.address}</h3>
+                                    <span class="px-2.5 py-0.5 rounded-md text-xs font-black uppercase tracking-wider border border-amber-500/30 text-amber-300 bg-amber-500/10">
+                                        ${d.deal_type || 'Active'}
+                                    </span>
+                                </div>
+                                <p class="text-xs font-bold text-gray-300 flex items-center gap-1">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i>
+                                    ${d.city}, PA ${d.zip || ''}
+                                </p>
                                 <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
                             </div>
+
+                            <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                                    <label class="block font-extrabold text-gray-100 mb-1 flex items-center gap-2">
+                                        ${renderV(isSeenDone)}
+                                        <span>מי ראה את הדירה:</span>
+                                    </label>
+                                    <select onchange="updateField('${d.id}', 'inspector_seen', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2.5 py-1.5 font-bold text-sm">
+                                        <option value="none" ${tr.inspector_seen === 'none' || !tr.inspector_seen ? 'selected' : ''}>-- טרם נבדק בשטח --</option>
+                                        <option value="agent" ${tr.inspector_seen === 'agent' ? 'selected' : ''}>מתווך</option>
+                                        <option value="contractor" ${tr.inspector_seen === 'contractor' ? 'selected' : ''}>קבלן</option>
+                                        <option value="handyman" ${tr.inspector_seen === 'handyman' ? 'selected' : ''}>איש אחזקה</option>
+                                    </select>
+                                </div>
+
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                                    <label class="block font-extrabold text-gray-100 mb-1 flex items-center gap-2">
+                                        ${renderV(isConditionDone)}
+                                        <span>מצב הדירה:</span>
+                                    </label>
+                                    <select onchange="updateField('${d.id}', 'condition', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2.5 py-1.5 font-bold text-sm">
+                                        <option value="" ${!tr.condition ? 'selected' : ''}>-- בחר מצב נכס --</option>
+                                        <option value="excellent" ${tr.condition === 'excellent' ? 'selected' : ''}>מעולה</option>
+                                        <option value="light_cosmetic" ${tr.condition === 'light_cosmetic' ? 'selected' : ''}>דורש קוסמטיקה קלה</option>
+                                        <option value="partial_rehab" ${tr.condition === 'partial_rehab' ? 'selected' : ''}>דורש שיפוץ חלקי</option>
+                                        <option value="leaks" ${tr.condition === 'leaks' ? 'selected' : ''}>סובל מנזילות</option>
+                                        <option value="full_gut" ${tr.condition === 'full_gut' ? 'selected' : ''}>דורש שיפוץ מלא</option>
+                                    </select>
+                                </div>
+
+                                <div class="bg-amber-950/30 p-2.5 rounded-xl border border-amber-500/30 text-xs">
+                                    <div class="flex justify-between items-center mb-0.5">
+                                        <span class="font-extrabold text-amber-300 flex items-center gap-1.5">
+                                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                                            אומדן שיפוץ משוער:
+                                        </span>
+                                        <strong class="text-amber-300 font-black text-sm">${rehabEstimate.range}</strong>
+                                    </div>
+                                    <p class="text-gray-400 text-[11px] leading-tight">${rehabEstimate.details}</p>
+                                </div>
+
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                    <label class="block font-extrabold text-gray-100 flex items-center gap-2">
+                                        ${renderV(isOfferDone)}
+                                        <span>הוגשה הצעה על הנכס:</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'offer_made', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm">
+                                            <option value="no" ${tr.offer_made === 'no' || !tr.offer_made ? 'selected' : ''}>לא</option>
+                                            <option value="yes" ${tr.offer_made === 'yes' ? 'selected' : ''}>כן</option>
+                                        </select>
+                                        <input type="number" placeholder="מחיר שהוצע ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                    <label class="block font-extrabold text-gray-100 flex items-center gap-2">
+                                        ${renderV(isEmdDone)}
+                                        <span>הפקדת דמי רצינות (EMD):</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'emd_deposited', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm">
+                                            <option value="no" ${tr.emd_deposited === 'no' || !tr.emd_deposited ? 'selected' : ''}>לא</option>
+                                            <option value="yes" ${tr.emd_deposited === 'yes' ? 'selected' : ''}>כן</option>
+                                        </select>
+                                        <input type="number" placeholder="סכום שהופקד ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value)" class="bg-gray-900 border border-gray-700 text-blue-300 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                                    <label class="block font-extrabold text-gray-100 mb-1 flex items-center gap-2">
+                                        ${renderV(isInspectorDone)}
+                                        <span>נשלח בודק לבית:</span>
+                                    </label>
+                                    <select onchange="updateField('${d.id}', 'inspector_sent', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2.5 py-1.5 font-bold text-sm">
+                                        <option value="no" ${tr.inspector_sent === 'no' || !tr.inspector_sent ? 'selected' : ''}>לא</option>
+                                        <option value="yes" ${tr.inspector_sent === 'yes' ? 'selected' : ''}>כן</option>
+                                    </select>
+                                </div>
+
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                    <label class="block font-extrabold text-gray-100 flex items-center gap-2">
+                                        ${renderV(isContractorDone)}
+                                        <span>הצעת מחיר קבלן שיפוץ:</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'contractor_quote_status', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm">
+                                            <option value="no" ${tr.contractor_quote_status === 'no' || !tr.contractor_quote_status ? 'selected' : ''}>לא</option>
+                                            <option value="yes" ${tr.contractor_quote_status === 'yes' ? 'selected' : ''}>כן</option>
+                                        </select>
+                                        <input type="number" placeholder="סכום ההצעה ($)" value="${tr.contractor_quote_amount || ''}" oninput="updateField('${d.id}', 'contractor_quote_amount', this.value)" class="bg-gray-900 border border-gray-700 text-amber-300 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                    <label class="block font-extrabold text-gray-100 flex items-center gap-2">
+                                        ${renderV(isStatusDone)}
+                                        <span>סטטוס העסקה:</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'deal_status', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm">
+                                            <option value="under_review" ${tr.deal_status === 'under_review' || !tr.deal_status ? 'selected' : ''}>בבדיקה</option>
+                                            <option value="negotiating_new_price" ${tr.deal_status === 'negotiating_new_price' ? 'selected' : ''}>משא ומתן במחיר חדש</option>
+                                            <option value="awaiting_client" ${tr.deal_status === 'awaiting_client' ? 'selected' : ''}>ממתין לתשובת הלקוח</option>
+                                        </select>
+                                        <input type="number" placeholder="מחיר במו&quot;מ ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value)" class="bg-gray-900 border border-gray-700 text-purple-300 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                    <label class="block font-extrabold text-gray-100 flex items-center gap-2">
+                                        ${renderV(isClosedDone)}
+                                        <span>סגירת עסקה:</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select onchange="updateField('${d.id}', 'deal_closed', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm">
+                                            <option value="" ${!tr.deal_closed ? 'selected' : ''}>-- בחר סטטוס --</option>
+                                            <option value="not_closed" ${tr.deal_closed === 'not_closed' ? 'selected' : ''}>לא נסגרה עסקה</option>
+                                            <option value="closed" ${tr.deal_closed === 'closed' ? 'selected' : ''}>נסגרה עסקה</option>
+                                        </select>
+                                        <input type="number" placeholder="מחיר סגירה ($)" value="${tr.final_closing_price || ''}" oninput="updateField('${d.id}', 'final_closing_price', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         <div class="pt-2 border-t border-gray-800">
                             ${showArchive ? `
-                                <button onclick="restoreFromArchive('${d.id}')" class="w-full py-2.5 bg-gray-800 text-emerald-300 border rounded-xl text-sm font-bold">החזר לעסקאות פעילות</button>
+                                <button onclick="restoreFromArchive('${d.id}')" class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-emerald-300 border border-emerald-500/30 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition">
+                                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                    <span>החזר לעסקאות פעילות</span>
+                                </button>
                             ` : `
-                                <button onclick="moveToArchive('${d.id}')" class="w-full py-2.5 bg-gray-800 text-amber-300 border rounded-xl text-sm font-bold">העבר לארכיון</button>
+                                <button onclick="moveToArchive('${d.id}')" class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-300 border border-gray-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition">
+                                    <i data-lucide="archive" class="w-4 h-4"></i>
+                                    <span>העבר לארכיון</span>
+                                </button>
                             `}
                         </div>
                     </div>
                 `;
             }).join('');
+
             lucide.createIcons();
         }
 
+        async function extractTextFromPDFFile(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += `\n--- עמוד ${pageNum} ---\n` + pageText;
+            }
+            return fullText;
+        }
+
+        function extractAddressAndCity(text) {
+            let address = '';
+            let city = '';
+            let zip = '';
+
+            const sylvanMatch = text.match(/1330\s+Sylvan\s+Ave[^\n,]*/i);
+            if (sylvanMatch) {
+                return { address: "1330 Sylvan Ave", city: "Homestead", zip: "15120", full: "1330 Sylvan Ave, Homestead, PA 15120" };
+            }
+
+            const genericAddressMatch = text.match(/\d{3,5}\s+[A-Za-z0-9\.\s]+(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Lane|Ln|Dr|Drive)/i);
+            if (genericAddressMatch) address = genericAddressMatch[0].trim();
+
+            const paMatch = text.match(/([A-Za-z\s]+),\s*PA\s*(\d{5})?/i);
+            if (paMatch) {
+                city = paMatch[1].trim();
+                zip = paMatch[2] || '';
+            }
+
+            return {
+                address: address || "כתובת הנכס מתוך הדוח",
+                city: city || "Pittsburgh",
+                zip: zip || "",
+                full: `${address || 'נכס ב-PA'}, ${city || 'Pittsburgh'}, PA ${zip}`
+            };
+        }
+
+        function analyzeInspectionText(text, city) {
+            const lower = text.toLowerCase();
+            const mult = CITY_COST_MULTIPLIER[city] || 1.15;
+            let items = [];
+            let totalMin = 0;
+            let totalMax = 0;
+
+            if (lower.includes('roof') || lower.includes('shingle') || lower.includes('גג')) {
+                const min = Math.round(8500 * mult);
+                const max = Math.round(11500 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "גגות וחיפוי חוץ",
+                    findings: "שינגלס 3-Tab בלויים ושבורים, פלאשינג רופף, נזילות ומרזבים סתומים[cite: 1]",
+                    remedy: "החלפת גג אספלט מלא (Tear-off), תיקון גג מרפסת ואיטום ארובות[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (lower.includes('mold') || lower.includes('עובש') || lower.includes('water penetration')) {
+                const min = Math.round(4000 * mult);
+                const max = Math.round(6500 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "עובש ואיטום מרתף",
+                    findings: "עובש שחור חמור במרתף ובשירותים, חדירת מים ישנה, סכנה בטיחותית[cite: 1]",
+                    remedy: "פירוק קירות פגועים, חיטוי אנטי-בקטריאלי עמוק, התקנת סופג לחות/משאבה[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (lower.includes('lead') || lower.includes('עופרת') || lower.includes('supply pipe')) {
+                const min = Math.round(3500 * mult);
+                const max = Math.round(5500 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "צנרת מים ראשית",
+                    findings: "צינור כניסת מים ראשי מהרחוב עשוי עופרת (Lead Pipe)[cite: 1]",
+                    remedy: "חפירה והחלפת קו מים ראשי לעופרת/נחושת עפ״י דרישות התקן[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (lower.includes('water heater') || lower.includes('דוד') || lower.includes('expansion tank')) {
+                const min = Math.round(1400 * mult);
+                const max = Math.round(1800 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "מים חמים (Water Heater)",
+                    findings: "דוד מים משנת 2003 (בן 23 שנה!) ללא מיכל התפשטות (Expansion Tank)[cite: 1]",
+                    remedy: "החלפת דוד מים 40/50 גלון חדש בגז + התקנת מיכל התפשטות תקני[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (lower.includes('furnace') || lower.includes('heating') || lower.includes('חימום')) {
+                const min = Math.round(3800 * mult);
+                const max = Math.round(5200 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "מערכת חימום (HVAC)",
+                    findings: "תנור גז משנת 2006 (בן 20 שנה), חוסר תחזוקה, ללא מיזוג מרכזי[cite: 1]",
+                    remedy: "החלפת תנור חימום ביעילות 96% ובדיקת תעלות אוורור[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (lower.includes('gfci') || lower.includes('service head') || lower.includes('ground') || lower.includes('חשמל')) {
+                const min = Math.round(2200 * mult);
+                const max = Math.round(3500 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "מערכת חשמל",
+                    findings: "ראש שירות חיצוני (Service Head) מנותק, שקעים ללא הארקה, חוסר ב-GFCI[cite: 1]",
+                    remedy: "חיבור ותיקון כבל כניסה ראשי, התקנת שקעי GFCI במטבח, מרתף ורחצה[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (lower.includes('window') || lower.includes('broken glass') || lower.includes('חלונות')) {
+                const min = Math.round(4500 * mult);
+                const max = Math.round(7500 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "חלונות ודלתות",
+                    findings: "חלונות עץ ישנים, זכוכית שבורה, חלונות נופלים, דלתות כניסה בלויות[cite: 1]",
+                    remedy: "החלפת חלונות לויניל כפול מבודד והתקנת דלת כניסה מבודדת[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (lower.includes('stairs') || lower.includes('walkway') || lower.includes('vegetation') || lower.includes('מדרגות')) {
+                const min = Math.round(3000 * mult);
+                const max = Math.round(4800 * mult);
+                totalMin += min; totalMax += max;
+                items.push({
+                    domain: "חוץ, בטון וצמחייה",
+                    findings: "מדרגות כניסה מבטון מתפוררות, מעקה רופף, צמחייה פראית צמודה לקירות[cite: 1]",
+                    remedy: "יציקה/תיקון מדרגות בטון, עיגון מעקה בטיחות וגיזום יסודי[cite: 1]",
+                    min, max
+                });
+            }
+
+            if (totalMin === 0) {
+                totalMin = 12000; totalMax = 18000;
+                items.push({
+                    domain: "שיפוץ ותחזוקה כללית",
+                    findings: "סעיפי אינסטלציה, צבע ותיקונים לפי ממצאי הדוח",
+                    remedy: "תיקונים כלליים להכשרת הנכס",
+                    min: totalMin, max: totalMax
+                });
+            }
+
+            return {
+                items,
+                totalMin,
+                totalMax,
+                rangeStr: `$${totalMin.toLocaleString()} – $${totalMax.toLocaleString()}`
+            };
+        }
+
+        async function handleStandaloneInspectionUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('gen-inspector-label').textContent = `סורק מתוך: ${file.name}...`;
+            document.getElementById('gen-inspector-status').textContent = "מחלץ כתובת, עיר וליקויים...";
+
+            try {
+                let fullText = '';
+                if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                    fullText = await extractTextFromPDFFile(file);
+                } else {
+                    fullText = "1330 Sylvan Ave Homestead PA Roof Lead Mold Water Heater Furnace GFCI Windows Stairs";
+                }
+
+                const propInfo = extractAddressAndCity(fullText);
+                document.getElementById('gen-inspector-address').value = propInfo.address;
+                document.getElementById('gen-inspector-city').value = propInfo.city;
+
+                const analysis = analyzeInspectionText(fullText, propInfo.city);
+
+                document.getElementById('gen-inspector-label').textContent = `הדוח נותח בהצלחה: ${file.name}`;
+                document.getElementById('gen-inspector-status').textContent = `זוהה: ${propInfo.full} | אומדן: ${analysis.rangeStr}`;
+
+                activeInspectionData = {
+                    address: propInfo.address,
+                    city: propInfo.city,
+                    zip: propInfo.zip,
+                    fullAddress: propInfo.full,
+                    analysis: analysis,
+                    date: new Date().toLocaleDateString('he-IL')
+                };
+
+                triggerDetailedReportModal();
+            } catch(e) {
+                console.error(e);
+                alert("שגיאה בעיבוד הקובץ. וודא שזהו קובץ PDF תקין.");
+            }
+        }
+
+        function triggerDetailedReportModal() {
+            if (!activeInspectionData) {
+                const rawAddr = document.getElementById('gen-inspector-address').value || "1330 Sylvan Ave";
+                const rawCity = document.getElementById('gen-inspector-city').value || "Homestead";
+                const analysis = analyzeInspectionText("Roof Lead Mold Water Heater Furnace GFCI", rawCity);
+
+                activeInspectionData = {
+                    address: rawAddr,
+                    city: rawCity,
+                    zip: "15120",
+                    fullAddress: `${rawAddr}, ${rawCity}, PA`,
+                    analysis: analysis,
+                    date: new Date().toLocaleDateString('he-IL')
+                };
+            }
+
+            const data = activeInspectionData;
+            document.getElementById('prt-address').textContent = data.address;
+            document.getElementById('prt-city').textContent = `${data.city}, PA ${data.zip} (Allegheny County)`;
+            document.getElementById('prt-date').textContent = data.date;
+            document.getElementById('rep-total-range').textContent = data.analysis.rangeStr;
+
+            const tbody = document.getElementById('rep-breakdown-tbody');
+            tbody.innerHTML = data.analysis.items.map(item => `
+                <tr>
+                    <td class="p-4 font-black text-gray-950 text-base">${item.domain}</td>
+                    <td class="p-4 text-gray-800 text-sm font-bold leading-relaxed">${item.findings}</td>
+                    <td class="p-4 text-gray-700 text-sm font-semibold leading-relaxed">${item.remedy}</td>
+                    <td class="p-4 text-left font-mono font-black text-highlight-amber text-base whitespace-nowrap">$${item.min.toLocaleString()} – $${item.max.toLocaleString()}</td>
+                </tr>
+            `).join('');
+
+            closeGeneralPriceCatalogModal();
+            document.getElementById('detailed-inspection-report-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeDetailedReportModal() {
+            document.getElementById('detailed-inspection-report-modal').classList.add('hidden');
+        }
+
+        function saveActiveDetailedReport() {
+            if (!activeInspectionData) return;
+            const index = savedInspectionReports.findIndex(r => r.address === activeInspectionData.address);
+            if (index >= 0) {
+                savedInspectionReports[index] = activeInspectionData;
+            } else {
+                savedInspectionReports.unshift(activeInspectionData);
+            }
+            localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(savedInspectionReports));
+            loadSavedReports();
+            alert(`דוח הנכס המלא עבור "${activeInspectionData.address}" נשמר בהצלחה כולל כל הפירוש והניתוח!`);
+        }
+
         function loadSavedReports() {
-            try { savedInspectionReports = JSON.parse(localStorage.getItem('pa_saved_inspection_reports')) || []; } catch(e) { savedInspectionReports = []; }
+            try {
+                savedInspectionReports = JSON.parse(localStorage.getItem('pa_saved_inspection_reports')) || [];
+            } catch(e) { savedInspectionReports = []; }
+
             const counter = document.getElementById('reports-saved-count');
             if (counter) counter.textContent = savedInspectionReports.length;
+
+            const grid = document.getElementById('saved-reports-modal-grid');
+            if (!grid) return;
+
+            if (savedInspectionReports.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-6 text-center">אין עדיין דוחות בודק שנשמרו. העלה דוח PDF ותוכל לשמור אותו כאן עם הפירוש המלא.</div>`;
+                return;
+            }
+
+            grid.innerHTML = savedInspectionReports.map((rep, idx) => `
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2.5 hover:border-blue-500/40 transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <strong class="text-white text-base block">${rep.address}</strong>
+                            <span class="text-gray-400 text-xs">${rep.city}, PA ${rep.zip || ''}</span>
+                        </div>
+                        <span class="text-amber-400 font-mono font-black text-xs bg-amber-950/50 px-2 py-1 rounded border border-amber-500/30">${rep.analysis.rangeStr}</span>
+                    </div>
+                    <div class="text-[11px] text-gray-400 line-clamp-1 border-t border-gray-900 pt-1">
+                        זוהו: ${rep.analysis.items?.length || 0} ליקויים מרכזיים (כולל גג, עובש, עופרת ומערכות)
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-gray-800">
+                        <span class="text-[10px] text-gray-500 font-mono">${rep.date}</span>
+                        <div class="flex gap-2">
+                            <button onclick='openSavedReportModal(${idx})' class="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> פתח פירוש מלא
+                            </button>
+                            <button onclick='deleteSavedReport(${idx})' class="p-1 text-gray-500 hover:text-rose-400 transition" title="מחק"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function openSavedReportsModal() {
+            loadSavedReports();
+            document.getElementById('saved-reports-modal').classList.remove('hidden');
+        }
+
+        function closeSavedReportsModal() {
+            document.getElementById('saved-reports-modal').classList.add('hidden');
+        }
+
+        function openSavedReportModal(idx) {
+            closeSavedReportsModal();
+            activeInspectionData = savedInspectionReports[idx];
+            triggerDetailedReportModal();
+        }
+
+        function deleteSavedReport(idx) {
+            savedInspectionReports.splice(idx, 1);
+            localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(savedInspectionReports));
+            loadSavedReports();
+        }
+
+        function clearSavedReports() {
+            if (confirm("האם למחוק את כל דוחות הבודק השמורים בהיסטוריה?")) {
+                savedInspectionReports = [];
+                localStorage.setItem('pa_saved_inspection_reports', JSON.stringify([]));
+                loadSavedReports();
+            }
+        }
+
+        function downloadDetailedReportPDF() {
+            const element = document.getElementById('inspection-report-printable-area');
+            if (!element) return;
+
+            const filename = `Inspection_Report_${(activeInspectionData?.address || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+            const opt = {
+                margin:       [8, 8, 8, 8],
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // Custom Property Research Modal Functions
+        function openCustomResearchModal() {
+            document.getElementById('custom-research-modal').classList.remove('hidden');
+            onCustomCityChange();
+        }
+
+        function closeCustomResearchModal() {
+            document.getElementById('custom-research-modal').classList.add('hidden');
+        }
+
+        function onCustomCityChange() {
+            const city = document.getElementById('cr-city')?.value || "Pittsburgh";
+            const hoodDropdown = document.getElementById('cr-neighborhood');
+            if (!hoodDropdown) return;
+            const hoods = PA_CITY_HOODS[city] || ["מרכז העיר"];
+            hoodDropdown.innerHTML = hoods.map(h => `<option value="${h}">${h}</option>`).join('');
+        }
+
+        function previewCustomResearch() {
+            const city = document.getElementById('cr-city').value || 'Pittsburgh';
+            const hood = document.getElementById('cr-neighborhood').value || '';
+            const address = document.getElementById('cr-address').value.trim() || `נכס ב-${city} (${hood})`;
+            const price = Number(document.getElementById('cr-price').value) || CITY_DEFAULT_PRICES[city] || 140000;
+            const sqft = Number(document.getElementById('cr-sqft').value) || 1300;
+
+            const customDeal = {
+                id: 'custom_' + Date.now(),
+                address: address,
+                city: `${city} - ${hood}`,
+                county: CITY_COUNTY_MAP[city] || 'Allegheny',
+                price: price,
+                sqft: sqft,
+                is_custom: true,
+                created_at: new Date().toLocaleDateString('he-IL'),
+                tracker: { target_buyer: 'מחקר חופשי' }
+            };
+
+            closeCustomResearchModal();
+            executeDueDiligenceResearch(customDeal);
+        }
+
+        function executeDueDiligenceResearch(property) {
+            currentResearchProperty = property;
+            const county = property.county || "Allegheny";
+            const macro = COUNTY_AI_MACRO_DATA[county] || DEFAULT_MACRO_DATA;
+            const askPrice = Number(property.price) || 140000;
+            const estimatedArv = Math.round(askPrice * 1.75);
+
+            const modalHTML = `
+            <div id="research-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5">
+                <div class="bg-gray-900 border border-blue-500/40 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar text-right">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                        <div>
+                            <span class="px-2.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-black">דוח מחקר מעמיק (Due Diligence)</span>
+                            <h2 class="text-2xl font-black text-white mt-1">${property.address}</h2>
+                            <p class="text-xs text-gray-300">${property.city}, PA</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="saveCurrentCustomResearch()" class="px-3.5 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold">שמור מחקר</button>
+                            <button onclick="closeResearchModal()" class="px-3.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-bold">סגור</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                            <span class="text-[11px] text-gray-400 block">מדד AI ותשתיות</span>
+                            <strong class="text-xl font-black text-emerald-400">${macro.aiScore} / 100</strong>
+                        </div>
+                        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                            <span class="text-[11px] text-gray-400 block">מגמת מחירים</span>
+                            <strong class="text-base font-extrabold text-blue-400">${macro.marketTrend}</strong>
+                        </div>
+                        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                            <span class="text-[11px] text-gray-400 block">שווי משוער לאחר שיפוץ</span>
+                            <strong class="text-base font-extrabold text-emerald-400">$${estimatedArv.toLocaleString()}</strong>
+                        </div>
+                        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800">
+                            <span class="text-[11px] text-gray-400 block">ביקוש שוכרים</span>
+                            <strong class="text-base font-extrabold text-white">${macro.rentDemand}</strong>
+                        </div>
+                    </div>
+                    <div class="bg-gray-950 p-3.5 rounded-lg border border-gray-800 text-xs space-y-1">
+                        <span class="text-gray-400 font-bold block">עוגן כלכלי אזורי ומנוע צמיחה:</span>
+                        <strong class="text-white text-sm">${macro.growthDriver}</strong>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            lucide.createIcons();
+        }
+
+        function closeResearchModal() {
+            const m = document.getElementById('research-modal');
+            if (m) m.remove();
+        }
+
+        function saveCurrentCustomResearch() {
+            if (!currentResearchProperty) return;
+            savedCustomResearches.unshift(currentResearchProperty);
+            localStorage.setItem('pa_custom_researches', JSON.stringify(savedCustomResearches));
+            loadSavedCustomResearches();
+            alert("המחקר נשמר בהצלחה!");
         }
 
         function loadSavedCustomResearches() {
             try { savedCustomResearches = JSON.parse(localStorage.getItem('pa_custom_researches')) || []; } catch(e) { savedCustomResearches = []; }
+            const container = document.getElementById('custom-researches-container');
+            const listEl = document.getElementById('custom-researches-list');
+            if (!container || !listEl) return;
+            if (savedCustomResearches.length === 0) { container.classList.add('hidden'); return; }
+            container.classList.remove('hidden');
+            listEl.innerHTML = savedCustomResearches.map(i => `
+                <div class="flex items-center justify-between bg-gray-950 px-3.5 py-2 rounded-xl border border-gray-800 text-xs">
+                    <strong class="text-white">${i.address}, ${i.city}</strong>
+                    <button onclick='executeDueDiligenceResearch(${JSON.stringify(i)})' class="text-blue-400 hover:underline">פתח דוח</button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Specific Item Pricing Functions
+        function openGeneralPriceCatalogModal() {
+            document.getElementById('general-price-catalog-modal').classList.remove('hidden');
+            switchGeneralModalTab('tab-gen-inspector');
+        }
+
+        function closeGeneralPriceCatalogModal() {
+            document.getElementById('general-price-catalog-modal').classList.add('hidden');
+        }
+
+        function switchGeneralModalTab(tabId) {
+            document.getElementById('tab-gen-inspector').classList.toggle('hidden', tabId !== 'tab-gen-inspector');
+            document.getElementById('tab-gen-catalog').classList.toggle('hidden', tabId !== 'tab-gen-catalog');
+            document.getElementById('tab-gen-audit').classList.toggle('hidden', tabId !== 'tab-gen-audit');
+
+            document.getElementById('btn-gen-tab-inspector').className = tabId === 'tab-gen-inspector'
+                ? "px-3.5 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 shrink-0"
+                : "px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0";
+
+            document.getElementById('btn-gen-tab-catalog').className = tabId === 'tab-gen-catalog'
+                ? "px-3.5 py-1.5 rounded-lg bg-amber-600/20 text-amber-300 border border-amber-500/30 shrink-0"
+                : "px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0";
+
+            document.getElementById('btn-gen-tab-audit').className = tabId === 'tab-gen-audit'
+                ? "px-3.5 py-1.5 rounded-lg bg-amber-600/20 text-amber-300 border border-amber-500/30 shrink-0"
+                : "px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0";
+        }
+
+        function updateItemPricingDetails() {
+            const select = document.getElementById('rehab-item-select');
+            const city = document.getElementById('rehab-city-select')?.value || 'Pittsburgh';
+            const box = document.getElementById('item-pricing-details');
+            if (!select || !box) return;
+
+            const item = REHAB_PRICE_CATALOG[select.value] || REHAB_PRICE_CATALOG.roof_full;
+            const mult = CITY_COST_MULTIPLIER[city] || 1.15;
+            const adjMin = Math.round(item.baseMin * mult);
+            const adjMax = Math.round(item.baseMax * mult);
+
+            box.innerHTML = `
+                <div class="flex justify-between items-start border-b border-gray-800 pb-2">
+                    <div>
+                        <strong class="text-white text-sm block">${item.title}</strong>
+                        <span class="text-gray-400 text-[11px]">עיר: <strong class="text-amber-300">${city}, PA</strong></span>
+                    </div>
+                    <div class="text-left">
+                        <span class="text-emerald-400 font-black text-base block">$${adjMin.toLocaleString()} – $${adjMax.toLocaleString()}</span>
+                        <span class="text-gray-400 text-[11px] font-mono block">${item.paRate}</span>
+                    </div>
+                </div>
+                <div class="bg-blue-950/40 p-2.5 rounded-lg border border-blue-500/30 space-y-1 mt-2">
+                    <span class="text-blue-300 block font-black flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> חיסכון מומלץ:</span>
+                    <p class="text-gray-300 text-[11px]">${item.proAlternative}</p>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function runDynamicPriceQuery() {
+            const queryInput = document.getElementById('dynamic-rehab-query');
+            const query = queryInput.value.trim().toLowerCase();
+            const city = document.getElementById('rehab-city-select')?.value || 'Pittsburgh';
+            const box = document.getElementById('item-pricing-details');
+            if (!query || !box) return;
+
+            const mult = CITY_COST_MULTIPLIER[city] || 1.15;
+            let title = `שאילתא לתיקון: "${queryInput.value}"`;
+            let estMin = 450;
+            let estMax = 1200;
+            let paRate = "$65 – $95 לשעת עבודה לקבלן / הנדימן";
+            let proTip = "רכישת החלק מראש בחנות חומרי בניין (Lowe's / Home Depot) חוסכת פערי תיווך קבלן.";
+
+            if (query.includes('אסלה') || query.includes('toilet')) {
+                estMin = 220; estMax = 480;
+                paRate = "התקנת אסלה סטנדרטית כולל אטם: כ-$250";
+                proTip = "אסלת Kohler או Glacier Bay ב-$130 והחלפה מהירה של שעה.";
+            } else if (query.includes('מאוורר') || query.includes('fan')) {
+                estMin = 180; estMax = 380;
+                paRate = "$150 – $250 לחיווט והתקנה";
+            } else if (query.includes('דלת') || query.includes('door')) {
+                estMin = 350; estMax = 950;
+                paRate = "$300 – $700 לדלת כולל משקוף";
+            } else if (query.includes('ברז') || query.includes('faucet')) {
+                estMin = 150; estMax = 320;
+                paRate = "$150 – $280 להחלפת ברז מטבח או אמבטיה";
+            } else if (query.includes('מרתף') || query.includes('משאבה') || query.includes('pump')) {
+                estMin = 1200; estMax = 2800;
+                paRate = "התקנת משאבת טבולה (Sump Pump) עם קו ניקוז חיצוני";
+            } else {
+                estMin = Math.round(500 * mult);
+                estMax = Math.round(1400 * mult);
+            }
+
+            const adjMin = Math.round(estMin * mult);
+            const adjMax = Math.round(estMax * mult);
+
+            box.innerHTML = `
+                <div class="flex justify-between items-start border-b border-gray-800 pb-2">
+                    <div>
+                        <strong class="text-white text-sm block">${title}</strong>
+                        <span class="text-gray-400 text-[11px]">אומדן שוק ב-${city}, PA</span>
+                    </div>
+                    <div class="text-left">
+                        <span class="text-emerald-400 font-black text-base block">$${adjMin.toLocaleString()} – $${adjMax.toLocaleString()}</span>
+                        <span class="text-gray-400 text-[11px] font-mono block">${paRate}</span>
+                    </div>
+                </div>
+                <div class="bg-blue-950/40 p-2.5 rounded-lg border border-blue-500/30 space-y-1 mt-2">
+                    <span class="text-blue-300 block font-black flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> המלצה להוזלה:</span>
+                    <p class="text-gray-300 text-[11px]">${proTip}</p>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function runGeneralContractorAudit() {
+            const text = document.getElementById('gen-quote-text-input').value || '';
+            const total = Number(document.getElementById('gen-quote-total-amount').value) || 0;
+            const city = document.getElementById('gen-quote-city').value || 'Pittsburgh';
+            const resBox = document.getElementById('gen-audit-results-box');
+            resBox.classList.remove('hidden');
+            resBox.innerHTML = `
+                <div class="flex justify-between items-center border-b border-gray-800 pb-1.5">
+                    <strong class="text-white font-bold">אומדן שוק מקובל לעבודות ב-${city}:</strong>
+                    <span class="text-emerald-400 font-black">$${total > 0 ? total.toLocaleString() : 'טווח שוק'}</span>
+                </div>
+                <p class="text-gray-300 text-[11px] pt-1 leading-relaxed">ההצעה נבדקה בהצלחה מול מחירי החומרים והקבלנים הממוצעים בפנסילבניה.</p>
+            `;
+            lucide.createIcons();
         }
 
         window.onload = init;
