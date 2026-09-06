@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PA Counties Map</title>
+    <title>PA Counties Clean Map</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: Arial, sans-serif; background: #fff; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: Arial, sans-serif; background: #ffffff; }
         #map { height: 100vh; width: 100vw; }
 
         /* עיצוב שם המחוז על המפה */
@@ -34,9 +34,9 @@
         // אתחול המפה במרכז פנסילבניה
         const map = L.map('map', { zoomControl: true }).setView([40.9, -77.5], 7);
 
-        // מפת רקע נקייה ובהירה (ללא צורך במפתח)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        // מפת רקע רשמית, נקייה וללא שום דרישת מפתח
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
@@ -63,7 +63,7 @@
                             weight: 2,            // עובי קו ההפרדה
                             opacity: 1,
                             fillColor: fillColor,
-                            fillOpacity: 0.9      // צבע אטום
+                            fillOpacity: 0.85     // צבע אטום ונקי
                         };
                     },
                     onEachFeature: function (feature, layer) {
