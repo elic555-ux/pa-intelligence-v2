@@ -3,34 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PA Clean Counties Map</title>
+    <title>PA Counties Map - Embedded</title>
     <!-- Leaflet Map CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@600;800&display=swap');
         
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            font-family: 'Assistant', sans-serif; 
-            background-color: #f8fafc;
-            overflow: hidden;
-        }
-        
-        #map { 
-            height: 100vh; 
-            width: 100vw; 
-            z-index: 1; 
-        }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Assistant', sans-serif; background-color: #f8fafc; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
 
-        /* עיצוב שם המחוז שיופיע על המפה בשחור עם הילה לבנה */
         .county-label {
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
             color: #000000 !important;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
             text-align: center;
             text-shadow: 
@@ -40,35 +27,17 @@
                  1px  1px 0 #ffffff; 
         }
         .county-label::before { display: none !important; }
-
-        #loading-msg {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
-            background: white;
-            padding: 20px 30px;
-            border: 2px solid #ff4d4f;
-            border-radius: 12px;
-            font-weight: bold;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
 
-    <div id="loading-msg">טוען את מפת מחוזות פנסילבניה...</div>
     <div id="map"></div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // אתחול המפה ומרכוז על פנסילבניה
         const map = L.map('map', { zoomControl: true }).setView([40.9, -77.5], 7);
 
-        // מפת רקע בהירה ונקייה
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri',
             maxZoom: 16
@@ -78,49 +47,34 @@
         // אזור הגדרות הצבעים (Config) - השליטה שלך!
         // ==========================================
         const countyColors = {
-            // "Allegheny": "#bae6fd", // דוגמה לשינוי צבע למחוז ספציפי (תכלת בהיר)
+            // "Allegheny": "#bae6fd", // דוגמה לשינוי צבע לתכלת
             // "Philadelphia": "#fed7aa"
         };
 
-        const defaultFillColor = "#ffffff"; // לבן נקי בפנים כל המחוזות
-        const outlineColor = "#ff4d4f";     // אדום בהיר ובולט להפרדה בין המחוזות
-        const outlineWeight = 2;            // עובי קו ההפרדה
+        const defaultFillColor = "#ffffff"; // לבן נקי בפנים
+        const outlineColor = "#ff4d4f";     // אדום בהיר להפרדה
+        const outlineWeight = 2;            // עובי קו
 
-        // ==========================================
-        // טעינת מפת פנסילבניה ממקור גיבוי ישיר ואמין לחלוטין
-        // ==========================================
-        const geoJsonUrl = 'https://raw.githubusercontent.com/OpenDataDE/state-legislative-geojson/master/pa/pa_counties.geojson';
-
-        fetch(geoJsonUrl)
-            .then(res => {
-                if (!res.ok) throw new Error("Failed to load map data");
-                return res.json();
-            })
+        // משיכת גבולות אמינה וישירה שמובטחת לעבוד
+        fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/pennsylvania-counties.geojson')
+            .then(res => res.json())
             .then(data => {
-                document.getElementById('loading-msg').style.display = 'none';
-
                 L.geoJSON(data, {
                     style: function (feature) {
-                        // זיהוי שם המחוז
-                        let rawName = feature.properties.NAME || feature.properties.name || "";
-                        let cleanName = rawName.replace(' County', '').trim();
-                        
-                        // בדיקה אם הוגדר צבע אישי במערכת ההגדרות למעלה
+                        let cleanName = (feature.properties.name || "").replace(' County', '').trim();
                         let fillColor = countyColors[cleanName] || defaultFillColor;
                         
                         return {
-                            color: outlineColor,   // קו מתאר אדום בהיר
-                            weight: outlineWeight, // עובי קו
-                            opacity: 1,            // קו אטום ובולט
-                            fillColor: fillColor,  // לבן בפנים
-                            fillOpacity: 1         // צבע אטום
+                            color: outlineColor,   
+                            weight: outlineWeight, 
+                            opacity: 1,            
+                            fillColor: fillColor,  
+                            fillOpacity: 1         
                         };
                     },
                     onEachFeature: function (feature, layer) {
-                        let rawName = feature.properties.NAME || feature.properties.name || "";
-                        let cleanName = rawName.replace(' County', '').trim();
+                        let cleanName = (feature.properties.name || "").replace(' County', '').trim();
 
-                        // הצגת שם המחוז בשחור בדיוק במרכז האזור שלו על המפה
                         layer.bindTooltip(cleanName, {
                             permanent: true,
                             direction: 'center',
@@ -131,9 +85,7 @@
             })
             .catch(err => {
                 console.error("Error loading map:", err);
-                document.getElementById('loading-msg').innerHTML = 'שגיאה בטעינת המפה. אנא רענן את העמוד (F5).';
-                document.getElementById('loading-msg').style.borderColor = "red";
-                document.getElementById('loading-msg').style.color = "red";
+                alert("שגיאה בטעינת נתוני המפה.");
             });
     </script>
 </body>
