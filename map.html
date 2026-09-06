@@ -1,85 +1,184 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PA Counties Clean Map</title>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: Arial, sans-serif; background: #ffffff; }
-        #map { height: 100vh; width: 100vw; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PA Real Estate Intelligence - 67 Counties Map</title>
 
-        /* עיצוב שם המחוז על המפה */
-        .county-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            color: #000000 !important;
-            font-size: 11px;
-            font-weight: bold;
-            text-align: center;
-            text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
-        }
-        .county-label::before { display: none !important; }
-    </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+html, body, #map { height: 100%; margin: 0; padding: 0; }
+body { font-family: Arial, "Noto Sans Hebrew", sans-serif; background: #0b0f19; color: #fff; overflow: hidden; }
+#map { width: 100vw; height: 100vh; background: #0f172a; }
+
+.title {
+ position: absolute; z-index: 1000; top: 14px; right: 20px;
+ background: rgba(15, 23, 42, 0.95); padding: 12px 20px; border-radius: 12px;
+ box-shadow: 0 4px 20px rgba(0,0,0,0.4); font-size: 20px; font-weight: 750; color: #fff;
+ border: 1px solid #3b82f6;
+}
+.subtitle { font-size: 12px; font-weight: 400; color: #94a3b8; margin-top: 4px; }
+
+.search {
+ position: absolute; z-index: 1000; top: 14px; left: 20px; background: rgba(15, 23, 42, 0.95);
+ padding: 8px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+ border: 1px solid #3b82f6; display: flex; gap: 5px;
+}
+.search input { width: 200px; padding: 8px; border: 1px solid #334155; border-radius: 7px; font-size: 13px; background: #020617; color: #fff; }
+.search button { padding: 8px 12px; border: 0; border-radius: 7px; background: #2563eb; color: #fff; cursor: pointer; font-weight: bold; }
+.search button:hover { background: #1d4ed8; }
+
+.info {
+ position: absolute; z-index: 1000; top: 95px; right: 20px; width: 280px;
+ background: rgba(15, 23, 42, 0.96); padding: 16px; border-radius: 12px;
+ box-shadow: 0 4px 25px rgba(0,0,0,0.5); display: none; line-height: 1.5;
+ border: 1px solid #3b82f6; font-size: 13px;
+}
+.info h3 { margin: 0 0 8px; color: #60a5fa; font-size: 19px; }
+
+.county-label {
+ background: transparent !important; border: 0 !important; box-shadow: none !important;
+ color: #0f172a; font-weight: 800; font-size: 11px;
+ text-shadow: 0 1px 2px #fff, 0 -1px 2px #fff, 1px 0 2px #fff, -1px 0 2px #fff;
+ white-space: nowrap;
+}
+
+.legend {
+ position: absolute; z-index: 1000; bottom: 20px; left: 20px; background: rgba(15, 23, 42, 0.9);
+ padding: 8px 12px; border-radius: 9px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+ font-size: 11px; color: #94a3b8; border: 1px solid #334155;
+}
+
+.back-btn {
+ position: absolute; z-index: 1000; bottom: 20px; right: 20px;
+ background: #1e293b; color: #fff; padding: 8px 14px; border-radius: 8px;
+ text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #475569;
+ box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.back-btn:hover { background: #334155; }
+</style>
 </head>
 <body>
 
-    <div id="map"></div>
+<div id="map"></div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // אתחול המפה במרכז פנסילבניה
-        const map = L.map('map', { zoomControl: true }).setView([40.9, -77.5], 7);
+<div class="title">
+  פנסילבניה – מפת מודיעין נדל"ן (67 מחוזות)
+  <div class="subtitle">מפה אינטראקטיבית מבוססת PennDOT • לחיצה וחיפוש</div>
+</div>
 
-        // מפת רקע רשמית, נקייה וללא שום דרישת מפתח
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(map);
+<div class="search">
+  <input id="searchBox" placeholder="חפש מחוז (אנגלית / עברית)">
+  <button onclick="searchCounty()">חפש</button>
+  <button onclick="resetMap()" style="background:#475569">איפוס</button>
+</div>
 
-        // ==========================================
-        // אזור הגדרות הצבעים (Config) - השליטה שלך!
-        // ==========================================
-        const countyColors = {
-            // "Allegheny": "lightblue",
-            // "Philadelphia": "#fed7aa"
-        };
+<div id="info" class="info"></div>
+<div class="legend">מקור גבולות: Pennsylvania Department of Transportation (PennDOT)</div>
+<a href="index.html" class="back-btn">← חזרה לסורק הראשי</a>
 
-        // טעינת גבולות המחוזות של פנסילבניה
-        fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/pennsylvania-counties.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    style: function (feature) {
-                        let rawName = feature.properties.name || "";
-                        let cleanName = rawName.replace(' County', '').trim();
-                        let fillColor = countyColors[cleanName] || "#ffffff"; // לבן נקי בפנים
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet@3.0.19/dist/esri-leaflet.js"></script>
 
-                        return {
-                            color: "#ff4d4f",     // אדום בהיר להפרדה בין המחוזות
-                            weight: 2,            // עובי קו ההפרדה
-                            opacity: 1,
-                            fillColor: fillColor,
-                            fillOpacity: 0.85     // צבע אטום ונקי
-                        };
-                    },
-                    onEachFeature: function (feature, layer) {
-                        let rawName = feature.properties.name || "";
-                        let cleanName = rawName.replace(' County', '').trim();
+<script>
+const hebrew = {
+"Adams":"אדמס","Allegheny":"אלגני","Armstrong":"ארמסטרונג","Beaver":"ביבר","Bedford":"בדפורד",
+"Berks":"ברקס","Blair":"בלייר","Bradford":"ברדפורד","Bucks":"באקס","Butler":"בטלר",
+"Cambria":"קמבריה","Cameron":"קמרון","Carbon":"קרבון","Centre":"סנטר","Chester":"צ'סטר",
+"Clarion":"קלריון","Clearfield":"קלירפילד","Clinton":"קלינטון","Columbia":"קולומביה",
+"Crawford":"קרופורד","Cumberland":"קמברלנד","Dauphin":"דופין","Delaware":"דלאוור",
+"Elk":"אלק","Erie":"אירי","Fayette":"פאייט","Forest":"פורסט","Franklin":"פרנקלין",
+"Fulton":"פולטון","Greene":"גרין","Huntingdon":"האנטינגדון","Indiana":"אינדיאנה",
+"Jefferson":"ג'פרסון","Juniata":"ג'וניאטה","Lackawanna":"לקאוונה","Lancaster":"לנקסטר",
+"Lawrence":"לורנס","Lebanon":"לבנון","Lehigh":"להיי","Luzerne":"לוזרן","Lycoming":"לייקומינג",
+"McKean":"מקיין","Mercer":"מרסר","Mifflin":"מיפלין","Monroe":"מונרו","Montgomery":"מונטגומרי",
+"Montour":"מונטור","Northampton":"נורת'האמפטון","Northumberland":"נורת'מברלנד",
+"Perry":"פרי","Philadelphia":"פילדלפיה","Pike":"פייק","Potter":"פוטר","Schuylkill":"שיקיל",
+"Snyder":"סניידר","Somerset":"סומרסט","Sullivan":"סאליבן","Susquehanna":"סוסקוהאנה",
+"Tioga":"טיוגה","Union":"יוניון","Venango":"וננגו","Warren":"וורן","Washington":"וושינגטון",
+"Wayne":"וויין","Westmoreland":"ווסטמורלנד","Wyoming":"וויאומינג","York":"יורק"
+};
 
-                        // הצגת שם המחוז בשחור בדיוק במרכז האזור
-                        layer.bindTooltip(cleanName, {
-                            permanent: true,
-                            direction: 'center',
-                            className: 'county-label'
-                        });
-                    }
-                }).addTo(map);
-            })
-            .catch(err => console.error("Error loading GeoJSON:", err));
-    </script>
+const colors = ["#f7c2d4","#c9d9f5","#c9e6b8","#f4dd82","#d7c4ee","#b9e1df","#f5c79b","#c9d9ee"];
+const map = L.map("map", {zoomControl:true, minZoom:7, maxZoom:13}).setView([40.9,-77.8], 7.5);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+ attribution:"© OpenStreetMap contributors"
+}).addTo(map);
+
+let countyLayer;
+
+function nameOf(p){ return p.COUNTY_NAME || p.IMAGE_NAME || p.NAME || p.NAME10 || "County"; }
+function colorFor(name){
+ let n=0; for(let i=0; i<name.length; i++) n=(n+name.charCodeAt(i))%colors.length;
+ return colors[n];
+}
+function style(feature){
+ const n = nameOf(feature.properties);
+ return { color: "#ff4d4f", weight: 2, fillColor: colorFor(n), fillOpacity: 0.75 };
+}
+function showInfo(name, props){
+ const he = hebrew[name] || name;
+ const box = document.getElementById("info");
+ box.style.display = "block";
+ box.innerHTML = `<h3>${he}</h3>
+   <div><b>English:</b> ${name}</div>
+   <div style='margin-top:8px; color:#cbd5e1; font-size:12px;'>מחוז זה נטען בהצלחה ממסדי הנתונים של פנסילבניה. מוכן לחיבור נתוני הנדל״ן שלך!</div>`;
+}
+function highlight(e){
+ e.target.setStyle({weight:3.5, color:"#111", fillOpacity:0.9});
+ e.target.bringToFront();
+}
+function reset(e){ countyLayer.resetStyle(e.target); }
+
+countyLayer = L.esri.featureLayer({
+ url: "https://gis.penndot.pa.gov/gis/rest/services/opendata/countyboundary/MapServer/0",
+ where: "1=1",
+ simplifyFactor: 0.5,
+ precision: 5,
+ style: style,
+ onEachFeature: function(feature, layer){
+   const name = nameOf(feature.properties), he = hebrew[name] || name;
+   layer.bindTooltip(he, {permanent:true, direction:"center", className:"county-label", opacity:0.95});
+   layer.on({
+     mouseover: highlight,
+     mouseout: reset,
+     click: function(e){
+       map.fitBounds(e.target.getBounds(), {padding:[35,35]});
+       showInfo(name, feature.properties);
+     }
+   });
+ }
+}).addTo(map);
+
+countyLayer.once("load", function(){
+  try{ map.fitBounds(countyLayer.getBounds(), {padding:[20,20]}); }catch(e){}
+});
+
+function searchCounty(){
+ const q = document.getElementById("searchBox").value.trim().toLowerCase();
+ if(!q) return;
+ let found = null;
+ countyLayer.eachFeature(function(layer){
+   const n = nameOf(layer.feature.properties);
+   const h = hebrew[n] || "";
+   if(n.toLowerCase().includes(q) || h.includes(q)) found = layer;
+ });
+ if(found){
+   map.fitBounds(found.getBounds(), {padding:[35,35]});
+   showInfo(nameOf(found.feature.properties), found.feature.properties);
+ }else{
+   alert("לא נמצא מחוז מתאים.");
+ }
+}
+
+function resetMap(){
+ try{ map.fitBounds(countyLayer.getBounds(), {padding:[20,20]}); }catch(e){ map.setView([40.9,-77.8],7.5); }
+ document.getElementById("searchBox").value = "";
+ document.getElementById("info").style.display = "none";
+}
+
+document.getElementById("searchBox").addEventListener("keydown", e => { if(e.key==="Enter") searchCounty(); });
+</script>
 </body>
 </html>
