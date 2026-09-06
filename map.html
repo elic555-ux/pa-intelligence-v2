@@ -3,90 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PA Counties Map - Embedded</title>
-    <!-- Leaflet Map CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>PA Google Maps Counties</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@600;800&display=swap');
-        
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Assistant', sans-serif; background-color: #f8fafc; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
-
-        .county-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            color: #000000 !important;
-            font-size: 10px;
-            font-weight: 800;
-            text-align: center;
-            text-shadow: 
-                -1px -1px 0 #ffffff,  
-                 1px -1px 0 #ffffff,
-                -1px  1px 0 #ffffff,
-                 1px  1px 0 #ffffff; 
-        }
-        .county-label::before { display: none !important; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100vw; }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- טעינת ה-API הרשמי של Google Maps -->
     <script>
-        const map = L.map('map', { zoomControl: true }).setView([40.9, -77.5], 7);
-
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 16
-        }).addTo(map);
-
-        // ==========================================
-        // אזור הגדרות הצבעים (Config) - השליטה שלך!
-        // ==========================================
-        const countyColors = {
-            // "Allegheny": "#bae6fd", // דוגמה לשינוי צבע לתכלת
-            // "Philadelphia": "#fed7aa"
-        };
-
-        const defaultFillColor = "#ffffff"; // לבן נקי בפנים
-        const outlineColor = "#ff4d4f";     // אדום בהיר להפרדה
-        const outlineWeight = 2;            // עובי קו
-
-        // משיכת גבולות אמינה וישירה שמובטחת לעבוד
-        fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/pennsylvania-counties.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    style: function (feature) {
-                        let cleanName = (feature.properties.name || "").replace(' County', '').trim();
-                        let fillColor = countyColors[cleanName] || defaultFillColor;
-                        
-                        return {
-                            color: outlineColor,   
-                            weight: outlineWeight, 
-                            opacity: 1,            
-                            fillColor: fillColor,  
-                            fillOpacity: 1         
-                        };
-                    },
-                    onEachFeature: function (feature, layer) {
-                        let cleanName = (feature.properties.name || "").replace(' County', '').trim();
-
-                        layer.bindTooltip(cleanName, {
-                            permanent: true,
-                            direction: 'center',
-                            className: 'county-label'
-                        });
-                    }
-                }).addTo(map);
-            })
-            .catch(err => {
-                console.error("Error loading map:", err);
-                alert("שגיאה בטעינת נתוני המפה.");
+        function initMap() {
+            // אתחול המפה במרכז פנסילבניה
+            const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 7,
+                center: { lat: 40.9, lng: -77.5 },
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+                    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#000000" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }, { weight: 3 }] },
+                    { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#ff4d4f" }, { strokeWeight: 2 }] }
+                ]
             });
+
+            // ==========================================
+            // אזור הגדרות הצבעים (Config) - השליטה שלך!
+            // ==========================================
+            const countyColors = {
+                // "Allegheny": "lightblue",
+                // "Philadelphia": "#fed7aa"
+            };
+
+            // טעינת גבולות המחוזות של פנסילבניה ישירות מהמקור המאובטח של גוגל
+            map.data.loadGeoJson('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/pennsylvania-counties.geojson');
+
+            // עיצוב המחוזות במפה (לבן בפנים, קווים אדומים בהירים בחוץ)
+            map.data.setStyle(function(feature) {
+                let rawName = feature.getProperty('name') || "";
+                let cleanName = rawName.replace(' County', '').trim();
+                let fillColor = countyColors[cleanName] || "#ffffff";
+
+                return {
+                    fillColor: fillColor,
+                    fillOpacity: 1,
+                    strokeColor: "#ff4d4f", // אדום בהיר להפרדה בין מחוזות
+                    strokeWeight: 2,
+                    strokeOpacity: 1
+                };
+            });
+
+            // הוספת שמות המחוזות בשחור למרכז כל אזור
+            map.data.forEach(function(feature) {
+                let rawName = feature.getProperty('name') || "";
+                let cleanName = rawName.replace(' County', '').trim();
+                let geometry = feature.getGeometry();
+                
+                // חישוב המרכז של הפוליגון כדי לשתול עליו תווית טקסט
+                let bounds = new google.maps.LatLngBounds();
+                geometry.forEachLatLng(function(latlng) {
+                    bounds.extend(latlng);
+                });
+
+                // יצירת תוית שחורה עם הילה לבנה במרכז המחוז
+                new google.maps.Marker({
+                    position: bounds.getCenter(),
+                    map: map,
+                    icon: {
+                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                            <svg xmlns="http://www.w3.org/2000/svg" width="120" height="30">
+                                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" 
+                                      font-family="Arial" font-size="11" font-weight="bold" fill="#000000" 
+                                      stroke="#ffffff" stroke-width="3" paint-order="stroke fill">${cleanName}</text>
+                            </svg>
+                        `),
+                        anchor: new google.maps.Point(60, 15)
+                    },
+                    clickable: false
+                });
+            });
+        }
     </script>
+    
+    <!-- טעינת סקריפט המפה של גוגל -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=&callback=initMap"></script>
 </body>
 </html>
