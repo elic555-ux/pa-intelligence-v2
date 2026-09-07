@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
-        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f3f4f6; text-align: right; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
@@ -36,15 +36,15 @@
             </div>
 
             <div class="flex items-center gap-2">
+                <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold transition border border-gray-700">
+                    <i data-lucide="settings" class="w-4 h-4 text-gray-400"></i> הגדרות סריקה ותזמון
+                </button>
                 <a href="map.html" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold transition border border-gray-700">
                     <i data-lucide="map" class="w-4 h-4 text-blue-400"></i> מפת מחוזות
                 </a>
                 <a href="deals.html" class="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-black transition shadow-lg shadow-amber-600/20">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i> חדר עסקאות
                 </a>
-                <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold transition border border-gray-700">
-                    <i data-lucide="settings" class="w-4 h-4 text-gray-400"></i> הגדרות סריקה ותזמון
-                </button>
             </div>
         </div>
     </header>
@@ -123,20 +123,20 @@
 
     <!-- Settings Modal (Includes Scan & Scheduler Config) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-gray-900 border border-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-gray-900 border border-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden text-right">
             <div class="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-950">
-                <h3 class="text-sm font-black text-white flex items-center gap-2">
-                    <i data-lucide="settings" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה ותזמון מערכת
-                </h3>
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
+                <h3 class="text-sm font-black text-white flex items-center gap-2">
+                    <i data-lucide="settings" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה ותזמון מערכת
+                </h3>
             </div>
 
             <div class="p-5 space-y-4 text-xs">
                 <div>
                     <label class="block font-bold text-gray-300 mb-1">מצב סריקה:</label>
-                    <select id="config-scan-mode" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                    <select id="config-scan-mode" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold text-right">
                         <option value="standard">סריקה סטנדרטית (מבוקרת)</option>
                         <option value="bulk">סריקת כמויות גדולות (Bulk Scale)</option>
                     </select>
@@ -150,7 +150,7 @@
                     
                     <div>
                         <label class="block font-bold text-gray-300 mb-1">תדירות ריצה:</label>
-                        <select id="schedule-interval" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                        <select id="schedule-interval" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold text-right">
                             <option value="manual">ידני בלבד (ללא תזמון אוטומטי)</option>
                             <option value="6h">כל 6 שעות</option>
                             <option value="12h">כל 12 שעות</option>
@@ -162,14 +162,14 @@
                         <span class="text-gray-300 font-bold">הפעלת מתזמן ברקע:</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="schedule-active" class="sr-only peer">
-                            <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                            <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
                         </label>
                     </div>
                 </div>
 
                 <div class="pt-2 flex justify-end gap-2 border-t border-gray-800">
-                    <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl font-bold transition">ביטול</button>
                     <button onclick="saveSettings()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition shadow-lg shadow-blue-600/20">שמור הגדרות</button>
+                    <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl font-bold transition">ביטול</button>
                 </div>
             </div>
         </div>
@@ -223,7 +223,6 @@
             const active = document.getElementById('schedule-active').checked;
             const mode = document.getElementById('config-scan-mode').value;
             
-            // שמירה מקומית או לשליחה לשרת
             localStorage.setItem('pa_schedule_interval', interval);
             localStorage.setItem('pa_schedule_active', active);
             localStorage.setItem('pa_scan_mode', mode);
