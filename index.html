@@ -76,6 +76,13 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+        
+        /* אנימציה לחלונית הריענון */
+        .toast-enter { animation: slideInUp 0.5s ease-out forwards; }
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
@@ -90,14 +97,13 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.37</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V5.38</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
-                <!-- הקישור המעודכן עם הלשונית הקבועה -->
                 <a href="deals.html" target="deals_tab" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
                     <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                     <span>📊 חדר עסקאות (Deal Room)</span>
@@ -258,6 +264,21 @@
         </section>
 
     </main>
+
+    <!-- Background Scan Toast Indicator -->
+    <div id="scan-progress-toast" class="fixed bottom-6 left-6 bg-gray-900 border border-blue-500/40 rounded-2xl p-4 shadow-[0_0_30px_rgba(59,130,246,0.3)] z-50 hidden flex items-center gap-4 toast-enter">
+        <div id="scan-toast-icon">
+            <i data-lucide="loader-2" class="w-7 h-7 text-blue-400 animate-spin"></i>
+        </div>
+        <div id="scan-toast-content">
+            <h4 class="text-sm font-black text-white tracking-wide">סריקת עומק מתבצעת ברקע...</h4>
+            <p class="text-[11px] text-gray-400 font-semibold mt-0.5">המערכת מחפשת, ממיינת ותתרענן אוטומטית.</p>
+        </div>
+        <div class="mr-4 text-center border-r border-gray-700 pr-4">
+            <span class="block text-[10px] text-gray-500 font-bold mb-0.5">זמן ריצה</span>
+            <span class="text-sm font-black font-mono text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded-lg border border-blue-500/30" id="scan-timer">00:00</span>
+        </div>
+    </div>
 
     <!-- Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
@@ -444,7 +465,7 @@
         </div>
     </div>
 
-    <!-- Full Auto-Scan Settings Modal (NOW WITH ALL FILTERS RETURNED) -->
+    <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             
@@ -456,7 +477,6 @@
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Target Sectors Matrix -->
             <div class="space-y-1.5">
                 <span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה:</span>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -483,7 +503,6 @@
                 </div>
             </div>
 
-            <!-- Parameters Row -->
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs border-t border-gray-800 pt-3">
                 <div>
                     <label class="block font-bold text-gray-300 mb-1">מדינה (State)</label>
@@ -560,7 +579,6 @@
                 </div>
             </div>
 
-            <!-- Specific Neighborhoods Selection -->
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">2. שכונות ואזורים ספציפיים (מסודרים לפי עיר):</span>
@@ -571,40 +589,12 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
-                    <!-- Philadelphia -->
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"> N. Liberties</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"> Fishtown</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"> Center City (Philly)</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"> Manayunk</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"> Chestnut Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"> University City</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"> South Philly</label>
-                    
-                    <!-- Pittsburgh -->
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"> Strip District</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"> East Liberty</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"> Oakland</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"> South Side</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"> Squirrel Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"> Lawrenceville</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"> Shadyside</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"> PGH Downtown</label>
-                    
-                    <!-- Bethlehem -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South"> Bethlehem South</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic"> Bethlehem Historic</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem"> West Bethlehem</label>
-
-                    <!-- Lancaster -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill"> Cabbage Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut"> Lancaster Chestnut</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown"> Lancaster Downtown</label>
-                    
-                    <!-- Erie -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="West Bay"> West Bay</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="East Bay"> East Bay</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront"> Erie Bayfront</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"> Erie Downtown</label>
                 </div>
             </div>
 
@@ -718,10 +708,10 @@
                 </div>
             </div>
 
-            <!-- Cities & Hubs Selection (Section 1) -->
+            <!-- Cities & Hubs Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים (סימון עיר מדליק אוטומטית את שכונותיה):</span>
+                    <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים:</span>
                     <div class="text-xs space-x-2 space-x-reverse">
                         <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
                         <span class="text-gray-600">|</span>
@@ -738,54 +728,6 @@
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton" onchange="handleCityCheckboxChange('Scranton', this.checked)"> Scranton</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem" onchange="handleCityCheckboxChange('Bethlehem', this.checked)"> Bethlehem</label>
                     <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-blue-500"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster" onchange="handleCityCheckboxChange('Lancaster', this.checked)"> Lancaster</label>
-                </div>
-            </div>
-
-            <!-- Specific Neighborhoods Selection (Section 2) -->
-            <div class="space-y-1.5 pt-1">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-emerald-400">2. שכונות ואזורים ספציפיים (מסודרים לפי עיר):</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllOnDemandNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllOnDemandNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
-                    <!-- Philadelphia -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties" onchange="saveOnDemandState()"> N. Liberties</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown" onchange="saveOnDemandState()"> Fishtown</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City" onchange="saveOnDemandState()"> Center City (Philly)</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk" onchange="saveOnDemandState()"> Manayunk</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill" onchange="saveOnDemandState()"> Chestnut Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="University City" onchange="saveOnDemandState()"> University City</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly" onchange="saveOnDemandState()"> South Philly</label>
-                    
-                    <!-- Pittsburgh -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District" onchange="saveOnDemandState()"> Strip District</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty" onchange="saveOnDemandState()"> East Liberty</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland" onchange="saveOnDemandState()"> Oakland</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side" onchange="saveOnDemandState()"> South Side</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill" onchange="saveOnDemandState()"> Squirrel Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville" onchange="saveOnDemandState()"> Lawrenceville</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside" onchange="saveOnDemandState()"> Shadyside</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown" onchange="saveOnDemandState()"> PGH Downtown</label>
-                    
-                    <!-- Bethlehem -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South" onchange="saveOnDemandState()"> Bethlehem South</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic" onchange="saveOnDemandState()"> Bethlehem Historic</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem" onchange="saveOnDemandState()"> West Bethlehem</label>
-
-                    <!-- Lancaster -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill" onchange="saveOnDemandState()"> Cabbage Hill</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut" onchange="saveOnDemandState()"> Lancaster Chestnut</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown" onchange="saveOnDemandState()"> Lancaster Downtown</label>
-                    
-                    <!-- Erie -->
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="West Bay" onchange="saveOnDemandState()"> West Bay</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="East Bay" onchange="saveOnDemandState()"> East Bay</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront" onchange="saveOnDemandState()"> Erie Bayfront</label>
-                    <label class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800 cursor-pointer hover:border-emerald-500"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown" onchange="saveOnDemandState()"> Erie Downtown</label>
                 </div>
             </div>
 
@@ -808,6 +750,10 @@
         let pipelineDeals = [];
         let currentSelectedProperty = null;
         let currentViewMode = 'table';
+        
+        let scanPollingInterval = null;
+        let scanTimerInterval = null;
+        let scanStartTime = null;
 
         function handlePriceInput(input) {
             if (!input) return;
@@ -944,6 +890,7 @@
 
         async function loadProperties() {
             try {
+                // הוספת timestamp כדי למנוע Cache מהדפדפן ולמשוך נתונים טריים מגיטהאב
                 const res = await fetch('properties.json?t=' + Date.now());
                 const rawList = await res.json();
                 
@@ -1305,7 +1252,6 @@
             }
         }
 
-        // Telegram Modal & Settings
         function openTelegramModal() { document.getElementById('telegram-modal').classList.remove('hidden'); }
         function closeTelegramModal() { document.getElementById('telegram-modal').classList.add('hidden'); }
 
@@ -1347,7 +1293,6 @@
             }
         }
 
-        // Auto-Scan Settings Functions
         function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
         function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
@@ -1417,7 +1362,6 @@
             }
         }
 
-        // On-Demand Scan Functions
         function openOnDemandScanModal() { 
             loadOnDemandState();
             document.getElementById('ondemand-modal').classList.remove('hidden'); 
@@ -1478,35 +1422,21 @@
                     setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice || 50000);
                     setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice || 190000);
 
-                    if (document.getElementById('ondemand-min-sqft')) {
-                        document.getElementById('ondemand-min-sqft').value = st.minSqft || '1,200';
-                    }
-                    if (document.getElementById('ondemand-min-beds')) {
-                        document.getElementById('ondemand-min-beds').value = st.minBeds || 'all';
-                    }
-                    if (document.getElementById('ondemand-min-baths')) {
-                        document.getElementById('ondemand-min-baths').value = st.minBaths || 'all';
-                    }
+                    if (document.getElementById('ondemand-min-sqft')) document.getElementById('ondemand-min-sqft').value = st.minSqft || '1,200';
+                    if (document.getElementById('ondemand-min-beds')) document.getElementById('ondemand-min-beds').value = st.minBeds || 'all';
+                    if (document.getElementById('ondemand-min-baths')) document.getElementById('ondemand-min-baths').value = st.minBaths || 'all';
 
                     if (st.sectors && Array.isArray(st.sectors)) {
-                        document.querySelectorAll('.ondemand-sector-box').forEach(cb => {
-                            cb.checked = st.sectors.includes(cb.value);
-                        });
+                        document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
                     }
                     if (st.propertyTypes && Array.isArray(st.propertyTypes)) {
-                        document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => {
-                            cb.checked = st.propertyTypes.includes(cb.value);
-                        });
+                        document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
                     }
                     if (st.cities && Array.isArray(st.cities)) {
-                        document.querySelectorAll('.ondemand-city-box').forEach(cb => {
-                            cb.checked = st.cities.includes(cb.value);
-                        });
+                        document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
                     }
                     if (st.neighborhoods && Array.isArray(st.neighborhoods)) {
-                        document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
-                            cb.checked = st.neighborhoods.includes(cb.value);
-                        });
+                        document.querySelectorAll('.ondemand-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
                     }
                 } catch(e) {}
             } else {
@@ -1514,6 +1444,77 @@
                 setPriceFormatted(document.getElementById('ondemand-max-price'), 190000);
                 if (document.getElementById('ondemand-min-sqft')) document.getElementById('ondemand-min-sqft').value = '1,200';
             }
+        }
+
+        // --- מנגנון ניטור הסריקה ברקע וריענון אוטומטי ---
+        function startBackgroundScanMonitor() {
+            const toast = document.getElementById('scan-progress-toast');
+            toast.classList.remove('hidden');
+            
+            scanStartTime = Date.now();
+            const initialCount = rawProperties.length;
+            const initialTopId = rawProperties.length > 0 ? rawProperties[0].id : null;
+
+            // הפעלת טיימר
+            const timerEl = document.getElementById('scan-timer');
+            if (scanTimerInterval) clearInterval(scanTimerInterval);
+            scanTimerInterval = setInterval(() => {
+                const diff = Math.floor((Date.now() - scanStartTime) / 1000);
+                const m = String(Math.floor(diff / 60)).padStart(2, '0');
+                const s = String(diff % 60).padStart(2, '0');
+                timerEl.textContent = `${m}:${s}`;
+            }, 1000);
+
+            // דיקור (Polling) לקובץ כדי לזהות מתי השרת סיים
+            if (scanPollingInterval) clearInterval(scanPollingInterval);
+            scanPollingInterval = setInterval(async () => {
+                try {
+                    // Cache buster חזק
+                    const res = await fetch('properties.json?nocache=' + new Date().getTime());
+                    const newData = await res.json();
+                    const newTopId = newData.length > 0 ? newData[0].id : null;
+
+                    const elapsedSecs = (Date.now() - scanStartTime) / 1000;
+                    
+                    // בודק אם עברו לפחות 30 שניות כדי למנוע קריאות שווא 
+                    // ואם כמות הנכסים או הנכס העליון השתנה
+                    if (elapsedSecs > 30 && (newData.length !== initialCount || newTopId !== initialTopId)) {
+                        finishBackgroundScanMonitor();
+                    }
+                } catch(e) {}
+            }, 15000); // בודק כל 15 שניות
+        }
+
+        function finishBackgroundScanMonitor() {
+            clearInterval(scanPollingInterval);
+            clearInterval(scanTimerInterval);
+
+            const toastIcon = document.getElementById('scan-toast-icon');
+            const toastContent = document.getElementById('scan-toast-content');
+
+            toastIcon.innerHTML = `<div class="p-2 bg-emerald-500/20 rounded-full text-emerald-400"><i data-lucide="check-circle" class="w-6 h-6"></i></div>`;
+            toastContent.innerHTML = `
+                <h4 class="text-sm font-black text-white tracking-wide">הסריקה הושלמה בהצלחה!</h4>
+                <p class="text-[11px] text-gray-400 font-semibold mt-0.5">הנתונים בטבלה התרעננו אוטומטית.</p>
+            `;
+            lucide.createIcons();
+            
+            // טעינת הנתונים החדשים לטבלה
+            loadProperties();
+
+            // העלמת החלונית אחרי 6 שניות ואיפוס שלה
+            setTimeout(() => {
+                const toast = document.getElementById('scan-progress-toast');
+                toast.classList.add('hidden');
+                setTimeout(() => {
+                    toastIcon.innerHTML = `<i data-lucide="loader-2" class="w-7 h-7 text-blue-400 animate-spin"></i>`;
+                    toastContent.innerHTML = `
+                        <h4 class="text-sm font-black text-white tracking-wide">סריקת עומק מתבצעת ברקע...</h4>
+                        <p class="text-[11px] text-gray-400 font-semibold mt-0.5">המערכת מחפשת, ממיינת ותתרענן אוטומטית.</p>
+                    `;
+                    document.getElementById('scan-timer').textContent = '00:00';
+                }, 1000);
+            }, 6000);
         }
 
         async function triggerOnDemandExecution() {
@@ -1560,7 +1561,6 @@
             
             const neighborhoodsMeta = `MIN_PRICE:${minPriceNum} | MAX_PRICE:${maxPriceNum} | MIN_SQFT:${minSqftStr} | BEDS:${minBedsStr} | BATHS:${minBathsStr} | TYPES:${typesStr} | SECTORS:${selectedSectors.join(',')} | HOODS:${hoodsStr}`;
 
-            // --- תחילת מנגנון המנות (Batching) ---
             const BATCH_SIZE = 3; 
             const cityBatches = [];
             for (let i = 0; i < selectedCities.length; i += BATCH_SIZE) {
@@ -1618,13 +1618,13 @@
             btn.disabled = false;
             lucide.createIcons();
 
-            if (successCount === totalBatches) {
-                alert(`סריקה שוגרה בהצלחה!\nשוגרו ${totalBatches} בקשות נפרדות עבור ${selectedCities.length} יעדים.\nהמערכת עובדת ברקע.`);
+            if (successCount > 0) {
                 closeOnDemandScanModal();
+                // מפעיל את חיווי הרקע והריענון האוטומטי
+                startBackgroundScanMonitor();
             } else {
-                alert(`שיגור חלקי. ${successCount} מתוך ${totalBatches} מנות שוגרו בהצלחה.`);
+                alert(`שגיאה בשיגור הסריקות. אנא ודא שהטוקן תקין.`);
             }
-            // --- סוף מנגנון המנות ---
         }
 
         window.onload = init;
