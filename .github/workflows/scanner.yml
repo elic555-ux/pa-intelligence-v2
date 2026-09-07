@@ -56,6 +56,12 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add properties.json
-          git commit -m "Auto-update properties.json [skip ci]" || echo "אין שינויים לשמירה"
-          git push
+          
+          # מוסיף את קובץ הנתונים וההיסטוריה (אם קיים)
+          git add properties.json history.json || true
+          git commit -m "Auto-update properties.json (Batch Mode) [skip ci]" || echo "אין שינויים לשמירה"
+          
+          # מנגנון לולאת המתנה (Retry Loop) למניעת התנגשויות עומס בין מנות הסריקה
+          for i in {1..10}; do
+            git pull --rebase origin main && git push origin main && break || sleep 5
+          done
