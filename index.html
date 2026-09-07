@@ -792,7 +792,7 @@
             <!-- Footer Action Buttons -->
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3 mt-2">
                 <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold">ביטול</button>
-                <button onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
+                <button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-1.5">
                     <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת
                 </button>
             </div>
@@ -1550,7 +1550,6 @@
             }
 
             const chosenScanner = selectedSectors[0];
-            const citiesStr = selectedCities.join(', ');
             const hoodsStr = selectedHoods.length > 0 ? selectedHoods.join(', ') : 'All';
             const typesStr = selectedTypes.length > 0 ? selectedTypes.join(', ') : 'All';
             const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
@@ -1558,40 +1557,74 @@
             const minSqftStr = document.getElementById('ondemand-min-sqft').value || '1,200';
             const minBedsStr = document.getElementById('ondemand-min-beds').value;
             const minBathsStr = document.getElementById('ondemand-min-baths').value;
-
+            
             const neighborhoodsMeta = `MIN_PRICE:${minPriceNum} | MAX_PRICE:${maxPriceNum} | MIN_SQFT:${minSqftStr} | BEDS:${minBedsStr} | BATHS:${minBathsStr} | TYPES:${typesStr} | SECTORS:${selectedSectors.join(',')} | HOODS:${hoodsStr}`;
 
-            const payload = {
-                ref: "main",
-                inputs: {
-                    scanner_id: chosenScanner,
-                    target_county: "Allegheny",
-                    target_city: citiesStr,
-                    neighborhoods: neighborhoodsMeta
-                }
-            };
-
-            try {
-                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/scanner.yml/dispatches`, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `token ${githubToken}`,
-                        "Accept": "application/vnd.github.v3+json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok || response.status === 204) {
-                    alert(`פקודת סריקה שוגרה בהצלחה!\nערים: ${citiesStr}\nטווח מחירים: $${minPriceNum.toLocaleString()} - $${maxPriceNum.toLocaleString()}`);
-                    closeOnDemandScanModal();
-                } else {
-                    alert("שגיאה בשיגור הסריקה מול GitHub (קוד: " + response.status + "). ודא שהטוקן תקין.");
-                }
-            } catch (error) {
-                console.error("Error triggering GitHub workflow:", error);
-                alert("שגיאת תקשורת מול השרת.");
+            // --- תחילת מנגנון המנות (Batching) ---
+            const BATCH_SIZE = 3; 
+            const cityBatches = [];
+            for (let i = 0; i < selectedCities.length; i += BATCH_SIZE) {
+                cityBatches.push(selectedCities.slice(i, i + BATCH_SIZE));
             }
+
+            let successCount = 0;
+            const totalBatches = cityBatches.length;
+
+            const btn = document.getElementById('btn-trigger-scan');
+            const originalBtnHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> משגר... (${totalBatches} מנות)`;
+            btn.disabled = true;
+            lucide.createIcons();
+
+            for (let i = 0; i < cityBatches.length; i++) {
+                const batchStr = cityBatches[i].join(', ');
+                
+                const payload = {
+                    ref: "main",
+                    inputs: {
+                        scanner_id: chosenScanner,
+                        target_county: "Batch_Mode", 
+                        target_city: batchStr,
+                        neighborhoods: neighborhoodsMeta
+                    }
+                };
+
+                try {
+                    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/scanner.yml/dispatches`, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `token ${githubToken}`,
+                            "Accept": "application/vnd.github.v3+json",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok || response.status === 204) {
+                        successCount++;
+                    } else {
+                        console.error(`שגיאה בשיגור מנה ${i+1}: קוד ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`שגיאת רשת בשיגור מנה ${i+1}:`, error);
+                }
+
+                if (i < cityBatches.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+            }
+
+            btn.innerHTML = originalBtnHtml;
+            btn.disabled = false;
+            lucide.createIcons();
+
+            if (successCount === totalBatches) {
+                alert(`סריקה שוגרה בהצלחה!\nשוגרו ${totalBatches} בקשות נפרדות עבור ${selectedCities.length} יעדים.\nהמערכת עובדת ברקע.`);
+                closeOnDemandScanModal();
+            } else {
+                alert(`שיגור חלקי. ${successCount} מתוך ${totalBatches} מנות שוגרו בהצלחה.`);
+            }
+            // --- סוף מנגנון המנות ---
         }
 
         window.onload = init;
