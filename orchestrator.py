@@ -105,17 +105,15 @@ def classify_strategy(deal_type, price, beds, summary=""):
         }
 
 def is_within_lookback(sector, listed_date_str):
-    """בודק אם הנכס פורסם בתוך חלון הזמן המותר לסקטור שלו"""
-    max_days = SECTOR_LOOKBACK_DAYS.get(sector, 90) # ברירת מחדל 90
+    max_days = SECTOR_LOOKBACK_DAYS.get(sector, 90)
     try:
         listed_dt = datetime.strptime(listed_date_str, '%d/%m/%Y')
         delta = datetime.now() - listed_dt
         return delta.days <= max_days
     except:
-        return True # אם אין תאריך, מאפשרים
+        return True
 
 def fetch_live_mls_for_city(city_name, min_p, max_p):
-    """סריקת נכסים חיים עבור עיר/מחוז ספציפי - עם סינון ימים בשוק (DOM)"""
     clean_city = city_name.strip()
     target = REGION_MAP.get(clean_city)
     if not target:
@@ -127,7 +125,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
         "market": target["market"],
         "min_price": str(int(min_p)),
         "max_price": str(int(max_p)),
-        "num_homes": "100",
+        "num_homes": "500",  # משיכת עד 500 נכסים בכל פעימה!
         "region_id": target["region_id"],
         "region_type": target["region_type"],
         "status": "9",
@@ -139,7 +137,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
 
     discovered = []
     try:
-        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city}...")
+        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city} (עד 500 נכסים)...")
         resp = requests.get(url, params=params, headers=headers, timeout=12)
         if resp.status_code == 200 and "ADDRESS" in resp.text:
             csv_file = io.StringIO(resp.text)
@@ -156,14 +154,12 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 if not (min_p <= price <= max_p):
                     continue
 
-                # --- סינון לפי חוק 90 הימים (Days on Market) ---
                 dom_str = row.get("DAYS ON MARKET")
                 dom = int(float(dom_str)) if dom_str else 0
                 
                 if dom > SECTOR_LOOKBACK_DAYS["mls"]:
-                    continue # חורג מ-90 ימים אחורה, זורקים את העסקה
+                    continue 
                 
-                # חישוב תאריך פרסום מדויק
                 listed_dt = NOW_EST - timedelta(days=dom)
                 listed_date_str = listed_dt.strftime('%d/%m/%Y')
 
@@ -212,7 +208,6 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
     return discovered
 
 def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
-    # נתונים עם תאריכים מותאמים לבדיקת חוקי הזמן (שנת 2026 לפי המערכת שלך)
     all_deals = [
         {
             "id": "PA-MLS-1771849",
@@ -237,7 +232,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "parking": "מוסך נפרד ל-2 רכבים",
             "summary": "בית לבנים בכינוס בנקאי בפרבר Brackenridge (מחוז Allegheny). חצר מגודרת ומוסך כפול.",
             "url": "https://www.trulia.com/home/1015-6th-ave-brackenridge-pa-15014-11280535",
-            "listed_date": "10/08/2026" # עובר את הסינון של 90 יום לכינוס
+            "listed_date": "10/08/2026"
         },
         {
             "id": "PA-MLS-1772015",
@@ -262,7 +257,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "parking": "מוסך מובנה ל-2 רכבים",
             "summary": "הזדמנות נדירה ברובע Brookline. בית לבנים ענק 4 חדרים על מגרש של מעל דונם.",
             "url": "https://www.coldwellbanker.com/pa/pittsburgh/59-petunia-st/lid-P00800000HGQouPGl9eWMof05od5NMETfEaKAwYj",
-            "listed_date": "01/07/2026" # עובר (בערך 68 ימים אחורה)
+            "listed_date": "01/07/2026"
         },
         {
             "id": "PA-SHF-250114",
@@ -287,7 +282,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "parking": "Driveway פרטי",
             "summary": "בית בבנייה חדשה באזור Penn Hills (מחוז Allegheny).",
             "url": "https://sheriffalleghenycounty.com/real-estate/",
-            "listed_date": "25/08/2026" # עובר את הסינון של 45 יום לשריף
+            "listed_date": "25/08/2026"
         },
         {
             "id": "PA-PRB-89102",
@@ -312,7 +307,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "parking": "חניית רחוב",
             "summary": "הזדמנות יורשים מובהקת בלב רובע Lawrenceville המבוקש.",
             "url": "https://www.alleghenycounty.us/special-records/wills.aspx",
-            "listed_date": "15/04/2026" # עובר את ה-6 חודשים של עיזבונות (כ-145 יום)
+            "listed_date": "15/04/2026"
         },
         {
             "id": "PA-TAX-44910",
@@ -337,7 +332,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
             "parking": "מוסך מקורה",
             "summary": "חוב מס מוסדר במכרז פומבי במיקום מבוקש ביותר ליד Greenfield.",
             "url": "https://alleghenycounty.us/government/county-departments/court-records/delinquent-real-estate-taxes",
-            "listed_date": "05/08/2026" # עובר את הסינון של 45 יום למיסים
+            "listed_date": "05/08/2026"
         }
     ]
 
@@ -347,7 +342,6 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
         if allowed_sectors and sector not in allowed_sectors:
             continue
             
-        # בדיקת חלון זמן (Lookback Limit) לסקטור הספציפי
         if not is_within_lookback(sector, item.get("listed_date")):
             continue
 
@@ -363,7 +357,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
     return filtered
 
 def run_orchestrator():
-    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Batch Mode) עם חוקי תאריכים מוקשחים...")
+    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Batch Mode) עם מכסת עומק רחבה...")
 
     target_cities_raw = get_env_input('target_city', 'Pittsburgh, Allegheny')
     neighborhoods_raw = get_env_input('neighborhoods', 'All')
@@ -402,7 +396,7 @@ def run_orchestrator():
     
     final_filtered = [p for p in combined if min_price <= p.get("price", 0) <= max_price]
 
-    # --- תחילת מנגנון המיזוג הבטוח (Safe Append/Merge) ---
+    # --- מנגנון המיזוג (מתפקד כסורק דלתא אוטומטי ללא כפילויות) ---
     print(f"🔍 ממזג {len(final_filtered)} תוצאות (לאחר סינון תאריכים ומחיר) עם הנתונים הקיימים...")
     
     existing_props_dict = load_existing_properties()
