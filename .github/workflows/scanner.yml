@@ -22,6 +22,12 @@ on:
   schedule:
     - cron: '0 */6 * * *'
 
+# --- כאן מתבצע הקסם: יצירת תור (Queue) סדרתי לסריקות ---
+# GitHub יכניס את הסריקות לתור מסודר. אחת מסיימת, הבאה מתחילה.
+concurrency:
+  group: pa-scanner-queue
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -57,11 +63,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # מוסיף את קובץ הנתונים וההיסטוריה (אם קיים)
           git add properties.json history.json || true
-          git commit -m "Auto-update properties.json (Batch Mode) [skip ci]" || echo "אין שינויים לשמירה"
+          git commit -m "Auto-update properties.json (Sequential Batch Mode) [skip ci]" || echo "אין שינויים לשמירה"
           
-          # מנגנון לולאת המתנה (Retry Loop) למניעת התנגשויות עומס בין מנות הסריקה
-          for i in {1..10}; do
-            git pull --rebase origin main && git push origin main && break || sleep 5
-          done
+          # בגלל שהסריקות רצות בתור מסודר אחת אחרי השנייה, מספיקה פקודה פשוטה ובטוחה
+          git pull --rebase origin main && git push origin main
