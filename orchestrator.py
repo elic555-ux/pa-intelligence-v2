@@ -96,11 +96,9 @@ def classify_strategy(deal_type, price, beds, summary=""):
         }
 
 def fetch_live_mls_for_city(city_name, min_p, max_p):
-    """סריקת נכסים חיים עבור עיר/מחוז ספציפי מתוך מפת האזורים"""
     clean_city = city_name.strip()
     target = REGION_MAP.get(clean_city)
     if not target:
-        # ברירת מחדל אם העיר לא נמצאה במפורש
         target = REGION_MAP["Pittsburgh"]
 
     url = "https://www.redfin.com/stingray/api/gis-csv"
@@ -109,7 +107,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
         "market": target["market"],
         "min_price": str(int(min_p)),
         "max_price": str(int(max_p)),
-        "num_homes": "100",  # מכסה לכל עיר בלולאה
+        "num_homes": "100",
         "region_id": target["region_id"],
         "region_type": target["region_type"],
         "status": "9",
@@ -328,7 +326,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
     return filtered
 
 def run_orchestrator():
-    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Loop) Dual-Track PA Intelligence...")
+    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Batch Mode) Dual-Track PA Intelligence...")
 
     target_cities_raw = get_env_input('target_city', 'Pittsburgh, Allegheny')
     neighborhoods_raw = get_env_input('neighborhoods', 'All')
@@ -346,14 +344,13 @@ def run_orchestrator():
     if sectors_match:
         allowed_sectors = [s.strip().lower() for s in sectors_match.group(1).split(',') if s.strip()]
 
-    # פירוק רשימת הערים/המחוזות ללולאה
     cities_list = [c.strip() for c in target_cities_raw.split(',') if c.strip()]
     if not cities_list:
         cities_list = ["Pittsburgh", "Allegheny"]
 
-    print(f"🎯 ערים/מחוזות לסריקה בלולאה: {cities_list}")
+    print(f"🎯 מנות יעד נוכחיות: {cities_list}")
     print(f"🎯 טווח מחירים: ${min_price:,.0f} - ${max_price:,.0f}")
-    print(f"📋 סקטורים מאושרים לסריקה: {allowed_sectors or 'הכל'}")
+    print(f"📋 סקטורים: {allowed_sectors or 'הכל'}")
 
     live_results = []
     if not allowed_sectors or "mls" in allowed_sectors:
@@ -361,19 +358,32 @@ def run_orchestrator():
             city_deals = fetch_live_mls_for_city(city, min_price, max_price)
             live_results.extend(city_deals)
     else:
-        print("⏭️ סקטור MLS לא סומן – דילוג מוחלט על משיכת MLS.")
+        print("⏭️ דילוג על MLS במנה זו.")
 
     verified_results = get_verified_market_deals(allowed_sectors, min_price, max_price)
     combined = live_results + verified_results
-    print(f"🔍 סה\"כ עסקאות שנאספו בכל הלולאה: {len(combined)}")
-
+    
     final_filtered = [p for p in combined if min_price <= p.get("price", 0) <= max_price]
-    final_filtered.sort(key=lambda x: x.get('deal_score', 0), reverse=True)
+
+    # --- תחילת מנגנון המיזוג הבטוח (Safe Append/Merge) ---
+    print(f"🔍 ממזג {len(final_filtered)} תוצאות חדשות מהמנה עם הנתונים הקיימים...")
+    
+    existing_props_dict = load_existing_properties()
+    
+    for deal in final_filtered:
+        key = normalize_addr_key(deal.get('address'))
+        if not key:
+            key = str(deal.get('id'))
+        # הוספה או עדכון של הנכס בלי למחוק את שאר הנכסים
+        existing_props_dict[key] = deal 
+        
+    final_merged_list = list(existing_props_dict.values())
+    final_merged_list.sort(key=lambda x: x.get('deal_score', 0), reverse=True)
 
     with open(PROPERTIES_FILE, 'w', encoding='utf-8') as f:
-        json.dump(final_filtered, f, ensure_ascii=False, indent=2)
+        json.dump(final_merged_list, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ סריקה הסתיימה! נשמרו {len(final_filtered)} נכסים מעודכנים במאגר.")
+    print(f"✅ סריקת המנה הסתיימה! הקובץ המאוחד מכיל עכשיו {len(final_merged_list)} נכסים.")
 
 if __name__ == '__main__':
     run_orchestrator()
