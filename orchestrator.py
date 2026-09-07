@@ -4,6 +4,7 @@ import json
 import re
 import csv
 import io
+import random
 from datetime import datetime, timedelta
 import pytz
 import requests
@@ -11,6 +12,14 @@ import requests
 EST_TZ = pytz.timezone('US/Eastern')
 NOW_EST = datetime.now(EST_TZ)
 PROPERTIES_FILE = 'properties.json'
+
+# רשימת דפדפנים כדי לעקוף חסימות אבטחה של Redfin
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+]
 
 # --- חוקי ברזל: חלון זמן מקסימלי לסריקה אחורה (בימים) לפי סקטור ---
 SECTOR_LOOKBACK_DAYS = {
@@ -125,20 +134,24 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
         "market": target["market"],
         "min_price": str(int(min_p)),
         "max_price": str(int(max_p)),
-        "num_homes": "500",  # משיכת עד 500 נכסים בכל פעימה!
+        "num_homes": "350",  # חזרה ל-350 כדי לא לעבור את חסימת ה-API
         "region_id": target["region_id"],
         "region_type": target["region_type"],
         "status": "9",
         "v": "8"
     }
+    
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
     }
 
     discovered = []
     try:
-        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city} (עד 500 נכסים)...")
-        resp = requests.get(url, params=params, headers=headers, timeout=12)
+        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city} (מגבלת 350 נכסים בטוחה)...")
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
+        
         if resp.status_code == 200 and "ADDRESS" in resp.text:
             csv_file = io.StringIO(resp.text)
             reader = csv.DictReader(csv_file)
@@ -202,8 +215,11 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                     "url": home_url,
                     "listed_date": listed_date_str
                 })
+            print(f"✅ נמשכו {len(discovered)} נכסי MLS מאזור {clean_city}.")
+        else:
+            print(f"⚠️ הערה: לא נמשכו נכסים עבור {clean_city}. קוד שרת: {resp.status_code}")
     except Exception as e:
-        print(f"⚠️ הערה בסריקת אזור {clean_city}: {e}")
+        print(f"⚠️ שגיאה בחיבור לשרת עבור אזור {clean_city}: {e}")
 
     return discovered
 
