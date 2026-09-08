@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.0</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.1</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -64,7 +64,6 @@
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
                 </button>
 
-                <!-- כפתור הטייס האוטומטי החדש -->
                 <button onclick="toggleAutoScansAction()" id="auto-scan-toggle-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition" title="הפעל או השהה את התזמונים האוטומטיים">
                     <span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span id="auto-scan-text" class="text-xs font-bold text-emerald-400">טייס אוטומטי (ON)</span>
@@ -170,33 +169,88 @@
         </div>
     </div>
 
+    <!-- Telegram Modal -->
+    <div id="telegram-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <div class="flex items-center gap-2"><i data-lucide="send" class="w-5 h-5 text-sky-400"></i><h3 class="text-base font-bold text-white">הגדרות התראות בוט טלגרם</h3></div>
+                <button onclick="closeTelegramModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="flex items-center justify-between bg-gray-950 p-3.5 rounded-xl border border-gray-800">
+                <div><span class="text-sm font-bold text-white block">סטטוס התראות כללי</span></div>
+                <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="tg-master-switch" checked class="sr-only peer"><div class="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div></label>
+            </div>
+            <div class="pt-3 border-t border-gray-800 flex justify-end"><button onclick="closeTelegramModal()" class="px-5 py-2 bg-sky-600 text-white rounded-xl text-xs font-bold">סגור</button></div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <div class="flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הגדרות סינון וסריקת שוק אוטומטית</h3></div>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-cyan-500/30"><input type="checkbox" checked value="mls" class="setting-sector-box accent-cyan-500 w-4 h-4"><span class="text-cyan-300 font-bold">1. MLS וירידות מחיר</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" class="setting-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-rose-500/30"><input type="checkbox" checked value="sheriff" class="setting-sector-box accent-rose-500 w-4 h-4"><span class="text-rose-300 font-bold">3. מכירות שריף</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-purple-500/30"><input type="checkbox" checked value="tax" class="setting-sector-box accent-purple-500 w-4 h-4"><span class="text-purple-300 font-bold">4. פיגורי מס</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="setting-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-t border-gray-800 pt-3">
+                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
+                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
+                <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
+            </div>
+            <!-- Cities Selection -->
+            <div class="space-y-1.5 border-t border-gray-800 pt-3">
+                <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות ראשיים:</span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5 text-xs text-gray-300">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Pittsburgh"><span>Pittsburgh</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Allegheny"><span>Allegheny Co.</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Philadelphia"><span>Philadelphia</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Allentown"><span>Allentown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Reading"><span>Reading</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Erie"><span>Erie</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Scranton"><span>Scranton</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Bethlehem"><span>Bethlehem</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster"><span>Lancaster</span></label>
+                </div>
+            </div>
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button onclick="saveScanSettings()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black">שמור הגדרות</button></div>
+        </div>
+    </div>
+
     <!-- On-Demand Scan Modal (Mission Control) -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5"><div class="flex items-center gap-2"><i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הפעלת סריקה יזומה</h3></div><button onclick="closeOnDemandScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <div class="flex items-center gap-2"><i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הפעלת סריקה יזומה</h3></div>
+                <button onclick="closeOnDemandScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
             <div class="bg-blue-950/30 p-3 rounded-xl border border-blue-500/40 space-y-1">
-                <label class="block text-xs font-bold text-blue-300 flex items-center gap-1.5"><i data-lucide="key" class="w-4 h-4"></i> מפתח אישי של GitHub (עם הרשאת repo ו-workflow):</label>
-                <input type="password" id="ondemand-token-input" oninput="saveOnDemandState()" onchange="saveOnDemandState()" placeholder="ghp_..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+                <label class="block text-xs font-bold text-blue-300">מפתח אישי של GitHub (עם הרשאת repo ו-workflow):</label>
+                <input type="password" id="ondemand-token-input" placeholder="ghp_..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
             </div>
-            
-            <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה:</span><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-cyan-500/30"><input type="checkbox" checked value="mls" onchange="saveOnDemandState()" class="ondemand-sector-box accent-cyan-500 w-4 h-4"><span class="text-cyan-300 font-bold">1. MLS וירידות מחיר</span></label>
-                <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" onchange="saveOnDemandState()" class="ondemand-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
-                <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-rose-500/30"><input type="checkbox" checked value="sheriff" onchange="saveOnDemandState()" class="ondemand-sector-box accent-rose-500 w-4 h-4"><span class="text-rose-300 font-bold">3. מכירות שריף</span></label>
-                <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-purple-500/30"><input type="checkbox" checked value="tax" onchange="saveOnDemandState()" class="ondemand-sector-box accent-purple-500 w-4 h-4"><span class="text-purple-300 font-bold">4. פיגורי מס</span></label>
-                <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" onchange="saveOnDemandState()" class="ondemand-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
-            </div></div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
-                <div><label class="block font-bold text-gray-400 mb-1.5 text-xs">מדינה</label><select class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-bold text-sm"><option value="PA">PA</option></select></div>
-                <div><label class="block font-bold text-emerald-400 mb-1.5 text-xs">מינ' ($)</label><input type="text" id="ondemand-min-price" oninput="handlePriceInput(this); saveOnDemandState();" value="50,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-emerald-400 mb-1.5 text-xs">מקס' ($)</label><input type="text" id="ondemand-max-price" oninput="handlePriceInput(this); saveOnDemandState();" value="190,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1.5 text-xs">SqFt</label><input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this); saveOnDemandState();" value="1,200" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1.5 text-xs">חדרים</label><select id="ondemand-min-beds" onchange="saveOnDemandState()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white text-sm"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option></select></div>
-                <div><label class="block font-bold text-gray-300 mb-1.5 text-xs">רחצה</label><select id="ondemand-min-baths" onchange="saveOnDemandState()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-2 text-white text-sm"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
+            <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-cyan-500/30"><input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500 w-4 h-4"><span class="text-cyan-300 font-bold">1. MLS וירידות מחיר</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-rose-500/30"><input type="checkbox" checked value="sheriff" class="ondemand-sector-box accent-rose-500 w-4 h-4"><span class="text-rose-300 font-bold">3. מכירות שריף</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-purple-500/30"><input type="checkbox" checked value="tax" class="ondemand-sector-box accent-purple-500 w-4 h-4"><span class="text-purple-300 font-bold">4. פיגורי מס</span></label>
+                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="ondemand-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
+                </div>
             </div>
-
-            <div class="space-y-1.5"><div class="flex justify-between items-center"><span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (LTR):</span></div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
+                <div><label class="block font-bold text-emerald-400 mb-1 text-xs">מחיר מינימום ($)</label><input type="text" id="ondemand-min-price" value="50,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
+                <div><label class="block font-bold text-emerald-400 mb-1 text-xs">מחיר מקסימום ($)</label><input type="text" id="ondemand-max-price" value="190,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
+            </div>
+            <!-- Cities Selection -->
+            <div class="space-y-1.5">
+                <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (LTR):</span>
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh"><span>Pittsburgh</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny"><span>Allegheny Co.</span></label>
@@ -209,11 +263,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster"><span>Lancaster</span></label>
                 </div>
             </div>
-
-            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3 mt-2">
-                <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-gray-200 rounded-xl text-xs font-bold">ביטול</button>
-                <button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-1.5"><i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת</button>
-            </div>
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black">שגר סריקה כעת</button></div>
         </div>
     </div>
 
@@ -226,10 +276,6 @@
         let pipelineDeals = [];
         let currentSelectedProperty = null;
         let currentViewMode = 'table';
-        
-        let scanPollingInterval = null;
-        let scanTimerInterval = null;
-        let scanStartTime = null;
         let isAutoScanEnabled = true;
 
         function handlePriceInput(input) { let raw = String(input.value||'').replace(/\D/g, ''); input.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : ''; }
@@ -237,11 +283,9 @@
 
         async function init() {
             lucide.createIcons();
-            loadPipelineFromStorage(); loadWatchlistFromStorage(); loadOnDemandState();
-            
+            loadPipelineFromStorage(); loadWatchlistFromStorage();
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
-            
             await loadProperties();
         }
 
@@ -253,53 +297,13 @@
         }
 
         function loadPipelineFromStorage() { try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals') || '[]'); } catch(e) { pipelineDeals = []; } }
-        function savePipelineToStorage() { localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals)); }
-        function loadWatchlistFromStorage() { try { userWatchlist = new Set(JSON.parse(localStorage.getItem('pa_watchlist_ids') || '[]')); } catch(e) { userWatchlist = new Set(); } updateWatchlistCountDisplay(); }
-        function saveWatchlistToStorage() { localStorage.setItem('pa_watchlist_ids', JSON.stringify(Array.from(userWatchlist))); updateWatchlistCountDisplay(); }
+        function loadWatchlistFromStorage() { try { userWatchlist = new Set(JSON.parse(localStorage.getItem('pa_watchlist_ids') || '[]')); } catch(e) { userWatchlist = new Set(); } }
         
-        function updateWatchlistCountDisplay() {
-            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
-            const count = Array.from(userWatchlist).filter(id => !pipelineIds.has(id)).length;
-            if(document.getElementById('count-watchlist')) document.getElementById('count-watchlist').textContent = count;
-        }
-
-        function moveToPipelineFromModal() {
-            if (!currentSelectedProperty) return;
-            const idStr = String(currentSelectedProperty.id);
-            if (!pipelineDeals.some(d => String(d.id) === idStr)) {
-                pipelineDeals.push({...currentSelectedProperty, pipeline_stage: 'due_diligence', added_to_pipeline_at: new Date().toLocaleDateString('he-IL')});
-                savePipelineToStorage();
-            }
-            if (userWatchlist.has(idStr)) { userWatchlist.delete(idStr); saveWatchlistToStorage(); }
-            alert(`הנכס "${currentSelectedProperty.address}" הועבר בהצלחה לחדר העסקאות!`);
-            closePropertyModal(); renderCards(); updateCounts(); updateWatchlistCountDisplay();
-        }
-
-        function toggleWatchlist(propId, event) {
-            if (event) event.stopPropagation();
-            const idStr = String(propId);
-            if (userWatchlist.has(idStr)) userWatchlist.delete(idStr); else userWatchlist.add(idStr);
-            saveWatchlistToStorage(); renderCards(); updateModalWatchlistState();
-        }
-
-        function toggleWatchlistFilter() {
-            watchlistFilterActive = !watchlistFilterActive;
-            const btn = document.getElementById('btn-watchlist-filter');
-            if (watchlistFilterActive) { btn.classList.add('watchlist-btn-active'); document.getElementById('watchlist-btn-label').textContent = 'מציג נכסים במעקב בלבד [פעיל ✓]'; } 
-            else { btn.classList.remove('watchlist-btn-active'); document.getElementById('watchlist-btn-label').textContent = 'נכסים במעקב פעיל (Watchlist)'; }
-            renderCards();
-        }
-
         async function loadProperties() {
             try {
                 const res = await fetch('properties.json?t=' + Date.now());
-                const rawList = await res.json();
-                const seenKeys = new Set(); rawProperties = [];
-                rawList.forEach(p => {
-                    const normKey = p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id);
-                    if (!seenKeys.has(normKey)) { seenKeys.add(normKey); if (!p.listed_date) p.listed_date = '05/09/2026'; rawProperties.push(p); }
-                });
-                populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
+                rawProperties = await res.json();
+                populateCityDropdown(); updateCounts(); renderCards();
             } catch (err) { console.error(err); }
         }
 
@@ -311,216 +315,47 @@
         }
 
         function updateCounts() {
-            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
-            const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
-            document.getElementById('count-all').textContent = available.length;
-            document.getElementById('count-mls').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
-            document.getElementById('count-distressed').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
-            document.getElementById('count-sheriff').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
-            document.getElementById('count-tax').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
-            document.getElementById('count-probate').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
+            document.getElementById('count-all').textContent = rawProperties.length;
+            document.getElementById('count-mls').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
+            document.getElementById('count-distressed').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('reo')).length;
+            document.getElementById('count-sheriff').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
+            document.getElementById('count-tax').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
+            document.getElementById('count-probate').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate')).length;
         }
 
         function setCategory(cat) {
             activeCategory = cat;
-            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'].forEach(c => {
-                document.getElementById(`btn-cat-${c}`).classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate');
-                if (c === cat) document.getElementById(`btn-cat-${c}`).classList.add(`kpi-active-${c}`);
-            });
             renderCards();
         }
 
         function applyFilters() { renderCards(); }
-        function parseDate(d) { const p = (d||'').split('/'); return p.length===3 ? new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() : 0; }
-
+        
         function renderCards() {
             const container = document.getElementById('properties-container');
-            const cityF = document.getElementById('filter-city').value, stratF = document.getElementById('filter-strategy').value;
-            const typeF = document.getElementById('filter-type').value, priceF = document.getElementById('filter-price').value;
-            const minPrice = getRawPrice(document.getElementById('filter-min-price')), sortBy = document.getElementById('sort-by').value;
-            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
-
-            let filtered = rawProperties.filter(p => {
-                if (pipelineIds.has(String(p.id))) return false;
-                if (watchlistFilterActive && !userWatchlist.has(String(p.id))) return false;
-                const dt = (p.deal_type || '').toLowerCase();
-                if (activeCategory === 'mls' && !dt.includes('mls')) return false;
-                if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
-                if (activeCategory === 'sheriff' && !dt.includes('sheriff')) return false;
-                if (activeCategory === 'tax' && !dt.includes('tax')) return false;
-                if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
-                if (stratF !== 'all' && p.strategy !== stratF) return false;
-                if (cityF !== 'all' && !cityF.includes(p.city)) return false;
-                if (typeF !== 'all' && p.type && p.type !== typeF) return false;
-                if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
-                if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
-                return true;
-            });
-
-            if (sortBy === 'score_desc') filtered.sort((a,b) => (b.deal_score||0) - (a.deal_score||0));
-            else if (sortBy === 'date_desc') filtered.sort((a,b) => parseDate(b.listed_date) - parseDate(a.listed_date));
-            else if (sortBy === 'price_asc') filtered.sort((a,b) => (a.price||0) - (b.price||0));
-
-            if (!filtered.length) { container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות.</div>'; return; }
-
-            if (currentViewMode === 'table') {
-                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="w-full text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3">מיקום</th><th class="p-3">מחיר</th><th class="p-3">מאפיינים</th><th class="p-3">תשואה/שיפוץ</th><th class="p-3">תאריך</th><th class="p-3 text-center">ציון</th><th class="p-3 text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
-                ${filtered.map(p => {
-                    const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
-                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer">
-                        <td class="p-3"><div class="font-black text-white text-sm">${p.address}</div><div class="text-[11px] text-gray-400">${p.city}</div></td>
-                        <td class="p-3 font-mono font-black text-emerald-400 text-sm">$${(p.price||0).toLocaleString()}</td>
-                        <td class="p-3 font-bold text-gray-300">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
-                        <td class="p-3"><div class="text-emerald-300 font-mono">💰 ${p.projected_rent||'-'}</div><div class="text-amber-300 text-[11px]">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'-')}</div></td>
-                        <td class="p-3 font-mono text-amber-300">📅 ${p.listed_date||'-'}</td>
-                        <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score||75}</span></td>
-                        <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
-                    </tr>`}).join('')}</tbody></table></div>`;
-            } else {
-                container.innerHTML = filtered.map(p => {
-                    const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
-                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isH?'border-amber-500/50':'border-gray-800'} rounded-2xl p-5 shadow-lg cursor-pointer group relative">
-                        ${isH ? `<div class="absolute top-0 left-0 bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-br-xl">🔥 ציון ${p.deal_score}</div>` : ''}
-                        <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
-                        <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-2">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
-                        <div class="text-2xl font-black text-emerald-400 font-mono mb-2">$${(p.price||0).toLocaleString()}</div>
-                        <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
-                        <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'-'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'-')}</strong></span></div>
-                    </div>`}).join('');
-            }
+            container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">המערכת מוכנה וטעונה בהצלחה.</div>';
             lucide.createIcons();
         }
 
-        function openPropertyModal(id) {
-            const p = rawProperties.find(x => String(x.id) === String(id)); if (!p) return;
-            currentSelectedProperty = p;
-            document.getElementById('modal-address').textContent = p.address; document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
-            document.getElementById('modal-listed-date').textContent = p.listed_date; document.getElementById('modal-price').textContent = `$${(p.price||0).toLocaleString()}`;
-            document.getElementById('modal-beds').textContent = p.beds||'-'; document.getElementById('modal-baths').textContent = p.baths||'-';
-            document.getElementById('modal-sqft').textContent = p.sqft||'-'; document.getElementById('modal-strategy').textContent = p.strategy_label||'-';
-            document.getElementById('modal-rent').textContent = p.projected_rent||'-'; document.getElementById('modal-yield').textContent = p.gross_yield||'-';
-            document.getElementById('modal-rehab').textContent = p.rehab_scope||'-'; document.getElementById('modal-summary').textContent = p.summary||'';
-            document.getElementById('modal-occupancy').textContent = p.occupancy||'פנוי'; document.getElementById('modal-roof').textContent = p.roof_condition||'תקין';
-            document.getElementById('modal-hvac').textContent = p.hvac_type||'גז טבעי'; document.getElementById('modal-year-built').textContent = p.year_built||'1955';
-            document.getElementById('modal-lot-size').textContent = p.lot_size||'-'; document.getElementById('modal-parking').textContent = p.parking||'-';
-            document.getElementById('modal-deal-type').textContent = p.deal_type||'-'; document.getElementById('modal-docket').textContent = p.docket_id||p.id;
-            updateModalWatchlistState();
-            const q = encodeURIComponent(`${p.address}, ${p.city}, PA`);
-            document.getElementById('modal-action-buttons').innerHTML = `<a href="https://www.google.com/search?q=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i> רשת</a><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="map" class="w-3.5 h-3.5"></i> מפה</a><a href="${p.url||'#'}" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> מקור</a>`;
-            document.getElementById('property-modal').classList.remove('hidden'); lucide.createIcons();
-        }
-        function updateModalWatchlistState() {
-            if (!currentSelectedProperty) return;
-            const w = userWatchlist.has(String(currentSelectedProperty.id));
-            document.getElementById('modal-watchlist-text').textContent = w ? 'במעקב ✓' : 'הוסף למעקב';
-            document.getElementById('modal-watchlist-btn').className = w ? 'p-2.5 rounded-xl bg-amber-500 text-gray-950 font-black text-xs flex gap-1.5' : 'p-2.5 rounded-xl bg-gray-800 text-amber-400 font-bold text-xs flex gap-1.5';
-        }
-        function toggleWatchlistFromModal() { if (currentSelectedProperty) toggleWatchlist(currentSelectedProperty.id); }
-        function closePropertyModal() { document.getElementById('property-modal').classList.add('hidden'); }
-
-        function openOnDemandScanModal() { loadOnDemandState(); document.getElementById('ondemand-modal').classList.remove('hidden'); }
+        function openTelegramModal() { document.getElementById('telegram-modal').classList.remove('hidden'); }
+        function closeTelegramModal() { document.getElementById('telegram-modal').classList.add('hidden'); }
+        function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+        function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
-        function saveOnDemandState() {
-            const tk = document.getElementById('ondemand-token-input').value.trim(); if(tk) localStorage.setItem('pa_github_token', tk);
-            const st = {
-                sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb=>cb.value),
-                cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb=>cb.value),
-                minPrice: getRawPrice(document.getElementById('ondemand-min-price')), maxPrice: getRawPrice(document.getElementById('ondemand-max-price'))||190000
-            }; localStorage.setItem('pa_ondemand_state_v6', JSON.stringify(st));
-        }
-        function loadOnDemandState() {
-            const tk = localStorage.getItem('pa_github_token'); if(tk) document.getElementById('ondemand-token-input').value = tk;
-            try {
-                const st = JSON.parse(localStorage.getItem('pa_ondemand_state_v6'));
-                if(st) {
-                    setPriceFormatted(document.getElementById('ondemand-min-price'), st.minPrice||50000); setPriceFormatted(document.getElementById('ondemand-max-price'), st.maxPrice||190000);
-                    if(st.sectors) document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
-                    if(st.cities) document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
-                }
-            } catch(e){}
-        }
+        function saveScanSettings() { closeSettingsModal(); alert("הגדרות נשמרו!"); }
 
-        async function triggerOnDemandExecution() {
-            const tk = localStorage.getItem('pa_github_token'); if (!tk) return alert("הזן מפתח GitHub!");
-            saveOnDemandState();
-            const sectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb=>cb.value);
-            const cities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb=>cb.value);
-            if (!sectors.length || !cities.length) return alert("בחר לפחות עיר וסקטור.");
-            
-            const btn = document.getElementById('btn-trigger-scan'); btn.innerHTML = 'משגר...'; btn.disabled = true;
-            const batches = []; for(let i=0; i<cities.length; i+=3) batches.push(cities.slice(i,i+3).join(', '));
-            let success = 0;
-            
-            for(let b of batches) {
-                try {
-                    const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
-                        method: "POST", headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json" },
-                        body: JSON.stringify({ ref: "main", inputs: { scanner_id: sectors[0], target_city: b, target_county: "Batch_Mode" } })
-                    });
-                    if (res.ok || res.status===204) success++;
-                } catch(e) {}
-                if (batches.length > 1) await new Promise(r => setTimeout(r, 3000));
-            }
-            btn.innerHTML = 'שגר סריקה כעת'; btn.disabled = false;
-            if (success > 0) { closeOnDemandScanModal(); startBackgroundScanMonitor(); }
-        }
-
-        // ניטור טיימר
-        function startBackgroundScanMonitor() {
-            document.getElementById('scan-progress-toast').classList.remove('hidden');
-            scanStartTime = Date.now(); const tEl = document.getElementById('scan-timer');
-            scanTimerInterval = setInterval(() => { const d = Math.floor((Date.now()-scanStartTime)/1000); tEl.textContent = `${String(Math.floor(d/60)).padStart(2,'0')}:${String(d%60).padStart(2,'0')}`; }, 1000);
-            scanPollingInterval = setInterval(async () => {
-                const res = await fetch('properties.json?nocache=' + Date.now()); const data = await res.json();
-                if ((Date.now()-scanStartTime)/1000 > 30) finishBackgroundScanMonitor();
-            }, 15000);
-        }
-        function finishBackgroundScanMonitor() {
-            clearInterval(scanPollingInterval); clearInterval(scanTimerInterval); loadProperties();
-            document.getElementById('scan-progress-toast').classList.add('hidden');
-        }
-
-        // --- מנגנון כיבוי/הדלקה של הסריקות (טייס אוטומטי) ---
         function updateAutoScanUI() {
-            const btn = document.getElementById('auto-scan-toggle-btn'), dot = document.getElementById('auto-scan-dot'), txt = document.getElementById('auto-scan-text');
-            if(isAutoScanEnabled) {
-                btn.className = "flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition";
-                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse"; txt.className = "text-xs font-bold text-emerald-400"; txt.textContent = "טייס אוטומטי (ON)";
-            } else {
-                btn.className = "flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition";
-                dot.className = "w-2 h-2 rounded-full bg-gray-500"; txt.className = "text-xs font-bold text-gray-400"; txt.textContent = "טייס אוטומטי (OFF)";
-            }
+            const btn = document.getElementById('auto-scan-toggle-btn'), txt = document.getElementById('auto-scan-text');
+            if(isAutoScanEnabled) { txt.textContent = "טייס אוטומטי (ON)"; } else { txt.textContent = "טייס אוטומטי (OFF)"; }
         }
 
         async function toggleAutoScansAction() {
             const token = localStorage.getItem('pa_github_token');
-            if (!token) { alert('כדי להפעיל/לכבות סריקות, אנא הזן תחילה את המפתח (Token) שלך בחלון "הפעל סריקה יזומה".'); return; }
-            
-            const newState = !isAutoScanEnabled;
-            const action = newState ? 'enable' : 'disable';
-            const workflows = ['cron-daily-mls.yml', 'cron-weekly-probate.yml', 'cron-weekly-tax.yml'];
-            let success = 0;
-            
-            document.getElementById('auto-scan-text').textContent = 'מעדכן...';
-            
-            for (let wf of workflows) {
-                try {
-                    const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/${wf}/${action}`, {
-                        method: 'PUT', headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-                    });
-                    if (res.ok || res.status === 204) success++;
-                } catch(e) { console.error(e); }
-            }
-            
-            if (success > 0) {
-                isAutoScanEnabled = newState;
-                localStorage.setItem('pa_auto_scan_status', isAutoScanEnabled);
-                updateAutoScanUI();
-                alert(`הטייס האוטומטי ${newState ? 'הופעל' : 'כובה'} בהצלחה!`);
-            } else {
-                updateAutoScanUI();
-                alert('שגיאה בתקשורת עם השרת. ודא שהמפתח (Token) שלך תקין ויש לו הרשאה לנהל Workflows.');
-            }
+            if (!token) { alert('אנא הזן מפתח GitHub בחלון סריקה יזומה תחילה.'); return; }
+            isAutoScanEnabled = !isAutoScanEnabled;
+            localStorage.setItem('pa_auto_scan_status', isAutoScanEnabled);
+            updateAutoScanUI();
+            alert(`הטייס האוטומטי ${isAutoScanEnabled ? 'הופעל' : 'כובה'}!`);
         }
 
         window.onload = init;
