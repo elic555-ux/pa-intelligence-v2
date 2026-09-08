@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.3</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.4</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -356,10 +356,10 @@
         function updateCounts() {
             document.getElementById('count-all').textContent = rawProperties.length;
             document.getElementById('count-mls').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
-            document.getElementById('count-distressed').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('reo')).length;
+            document.getElementById('count-distressed').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
             document.getElementById('count-sheriff').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
             document.getElementById('count-tax').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
-            document.getElementById('count-probate').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate')).length;
+            document.getElementById('count-probate').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
         }
 
         function setCategory(cat) { activeCategory = cat; renderCards(); }
@@ -367,9 +367,76 @@
         
         function renderCards() {
             const container = document.getElementById('properties-container');
-            container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">המערכת מוכנה וטעונה בהצלחה.</div>';
+            const cityF = document.getElementById('filter-city').value, stratF = document.getElementById('filter-strategy').value;
+            const typeF = document.getElementById('filter-type').value, priceF = document.getElementById('filter-price').value;
+            const minPrice = getRawPrice(document.getElementById('filter-min-price')), sortBy = document.getElementById('sort-by').value;
+            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+
+            let filtered = rawProperties.filter(p => {
+                if (pipelineIds.has(String(p.id))) return false;
+                if (watchlistFilterActive && !userWatchlist.has(String(p.id))) return false;
+                const dt = (p.deal_type || '').toLowerCase();
+                if (activeCategory === 'mls' && !dt.includes('mls')) return false;
+                if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
+                if (activeCategory === 'sheriff' && !dt.includes('sheriff')) return false;
+                if (activeCategory === 'tax' && !dt.includes('tax')) return false;
+                if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
+                if (stratF !== 'all' && p.strategy !== stratF) return false;
+                if (cityF !== 'all' && !cityF.includes(p.city)) return false;
+                if (typeF !== 'all' && p.type && p.type !== typeF) return false;
+                if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
+                if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
+                return true;
+            });
+
+            if (!filtered.length) {
+                container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו נכסים התואמים להגדרות הסינון.</div>';
+                return;
+            }
+
+            if (currentViewMode === 'table') {
+                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="w-full text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3">מיקום</th><th class="p-3">מחיר</th><th class="p-3">מאפיינים</th><th class="p-3">תשואה/שיפוץ</th><th class="p-3">תאריך</th><th class="p-3 text-center">ציון</th><th class="p-3 text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
+                ${filtered.map(p => {
+                    const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
+                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer">
+                        <td class="p-3"><div class="font-black text-white text-sm">${p.address}</div><div class="text-[11px] text-gray-400">${p.city}</div></td>
+                        <td class="p-3 font-mono font-black text-emerald-400 text-sm">$${(p.price||0).toLocaleString()}</td>
+                        <td class="p-3 font-bold text-gray-300">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
+                        <td class="p-3"><div class="text-emerald-300 font-mono">💰 ${p.projected_rent||'-'}</div><div class="text-amber-300 text-[11px]">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'-')}</div></td>
+                        <td class="p-3 font-mono text-amber-300">📅 ${p.listed_date||'-'}</td>
+                        <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score||75}</span></td>
+                        <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
+                    </tr>`}).join('')}</tbody></table></div>`;
+            } else {
+                container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">` + filtered.map(p => {
+                    const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
+                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isH?'border-amber-500/50':'border-gray-800'} rounded-2xl p-5 shadow-lg cursor-pointer group relative">
+                        ${isH ? `<div class="absolute top-0 left-0 bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-br-xl">🔥 ציון ${p.deal_score}</div>` : ''}
+                        <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
+                        <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-2">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
+                        <div class="text-2xl font-black text-emerald-400 font-mono mb-2">$${(p.price||0).toLocaleString()}</div>
+                        <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
+                        <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'-'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'-')}</strong></span></div>
+                    </div>`}).join('') + `</div>`;
+            }
             lucide.createIcons();
         }
+
+        function openPropertyModal(id) {
+            const p = rawProperties.find(x => String(x.id) === String(id)); if (!p) return;
+            currentSelectedProperty = p;
+            document.getElementById('modal-address').textContent = p.address;
+            document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
+            document.getElementById('modal-listed-date').textContent = p.listed_date;
+            document.getElementById('modal-price').textContent = `$${(p.price||0).toLocaleString()}`;
+            document.getElementById('modal-beds').textContent = p.beds||'-';
+            document.getElementById('modal-baths').textContent = p.baths||'-';
+            document.getElementById('modal-sqft').textContent = p.sqft||'-';
+            document.getElementById('property-modal').classList.remove('hidden');
+        }
+        function closePropertyModal() { document.getElementById('property-modal').classList.add('hidden'); }
+        function toggleWatchlist(id, e) { e.stopPropagation(); }
+        function toggleWatchlistFilter() {}
 
         // פונקציות בחירה וניקוי מחוזות ושכונות
         function toggleAllSettingCities(state) {
