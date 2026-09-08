@@ -12,6 +12,7 @@ import requests
 EST_TZ = pytz.timezone('US/Eastern')
 NOW_EST = datetime.now(EST_TZ)
 PROPERTIES_FILE = 'properties.json'
+CONFIG_FILE = 'scan_config.json'
 
 # רשימת דפדפנים כדי לעקוף חסימות אבטחה של Redfin
 USER_AGENTS = [
@@ -71,6 +72,16 @@ def calculate_deal_score(deal_type, price, margin_est=25):
     if price and price < 90000: score += 5
     elif price and price > 250000: score -= 5
     return max(40, min(99, score))
+
+def load_server_config():
+    """קורא את קובץ ההגדרות מהממשק אם הוא קיים"""
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠️ שגיאה בקריאת קובץ ההגדרות מהממשק: {e}")
+    return None
 
 def load_existing_properties():
     if not os.path.exists(PROPERTIES_FILE):
@@ -134,7 +145,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
         "market": target["market"],
         "min_price": str(int(min_p)),
         "max_price": str(int(max_p)),
-        "num_homes": "350",  # חזרה ל-350 כדי לא לעבור את חסימת ה-API
+        "num_homes": "350",
         "region_id": target["region_id"],
         "region_type": target["region_type"],
         "status": "9",
@@ -373,27 +384,38 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
     return filtered
 
 def run_orchestrator():
-    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Batch Mode) עם מכסת עומק רחבה...")
+    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Batch Mode)...")
 
-    target_cities_raw = get_env_input('target_city', 'Pittsburgh, Allegheny')
-    neighborhoods_raw = get_env_input('neighborhoods', 'All')
+    # --- הזרקת התצורה הדינמית מהממשק ---
+    server_config = load_server_config()
+    
+    if server_config:
+        print("🎛️ קובץ תצורת ממשק (scan_config.json) זוהה! עובד לפי הגדרות המשתמש מהאתר.")
+        min_price = float(server_config.get('minPrice', 0))
+        max_price = float(server_config.get('maxPrice', 190000))
+        allowed_sectors = server_config.get('sectors', [])
+        cities_list = server_config.get('cities', ["Pittsburgh", "Allegheny"])
+    else:
+        print("🎛️ לא נמצא קובץ תצורה מהממשק, חוזר לברירת המחדל של ה-YAML...")
+        target_cities_raw = get_env_input('target_city', 'Pittsburgh, Allegheny')
+        neighborhoods_raw = get_env_input('neighborhoods', 'All')
 
-    min_price = 0.0
-    max_price = 500000.0
-    allowed_sectors = []
+        min_price = 0.0
+        max_price = 500000.0
+        allowed_sectors = []
 
-    min_match = re.search(r'MIN_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
-    max_match = re.search(r'MAX_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
-    sectors_match = re.search(r'SECTORS[:=]\s*([a-zA-Z0-9_,-]+)', neighborhoods_raw, re.IGNORECASE)
+        min_match = re.search(r'MIN_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
+        max_match = re.search(r'MAX_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
+        sectors_match = re.search(r'SECTORS[:=]\s*([a-zA-Z0-9_,-]+)', neighborhoods_raw, re.IGNORECASE)
 
-    if min_match: min_price = float(min_match.group(1))
-    if max_match: max_price = float(max_match.group(1))
-    if sectors_match:
-        allowed_sectors = [s.strip().lower() for s in sectors_match.group(1).split(',') if s.strip()]
+        if min_match: min_price = float(min_match.group(1))
+        if max_match: max_price = float(max_match.group(1))
+        if sectors_match:
+            allowed_sectors = [s.strip().lower() for s in sectors_match.group(1).split(',') if s.strip()]
 
-    cities_list = [c.strip() for c in target_cities_raw.split(',') if c.strip()]
-    if not cities_list:
-        cities_list = ["Pittsburgh", "Allegheny"]
+        cities_list = [c.strip() for c in target_cities_raw.split(',') if c.strip()]
+        if not cities_list:
+            cities_list = ["Pittsburgh", "Allegheny"]
 
     print(f"🎯 מנות יעד נוכחיות: {cities_list}")
     print(f"🎯 טווח מחירים: ${min_price:,.0f} - ${max_price:,.0f}")
