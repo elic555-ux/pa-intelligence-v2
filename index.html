@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.8</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.9</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -118,6 +118,7 @@
     <!-- Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
+            
             <div class="flex justify-between items-start border-b border-gray-800 pb-3.5">
                 <div>
                     <div class="flex items-center gap-2 mb-2" id="modal-badges"></div>
@@ -232,7 +233,7 @@
                         <button onclick="toggleAllSettingCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5 text-xs text-gray-300">
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Philadelphia" onchange="handleSettingCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Pittsburgh" onchange="handleSettingCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Allegheny" onchange="handleSettingCityCheckboxChange('Allegheny', this.checked)"><span>Allegheny Co.</span></label>
@@ -330,7 +331,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="ondemand-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection (9 Cities) -->
+            <!-- Cities Selection -->
             <div class="space-y-1.5">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
@@ -340,7 +341,7 @@
                         <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5 text-xs text-gray-300">
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia" onchange="handleCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh" onchange="handleCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny" onchange="handleCityCheckboxChange('Allegheny', this.checked)"><span>Allegheny Co.</span></label>
@@ -394,7 +395,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
                 </div>
             </div>
-            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black">שגר סריקה כעת</button></div>
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5"><i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת</button></div>
         </div>
     </div>
 
@@ -408,6 +409,10 @@
         let currentSelectedProperty = null;
         let currentViewMode = 'table';
         let isAutoScanEnabled = true;
+        
+        let scanPollingInterval = null;
+        let scanTimerInterval = null;
+        let scanStartTime = null;
 
         function handlePriceInput(input) { let raw = String(input.value||'').replace(/\D/g, ''); input.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : ''; }
         function getRawPrice(input) { return parseInt(String(input.value||'').replace(/\D/g, '') || 0, 10); }
@@ -418,8 +423,10 @@
             
             const savedToken = localStorage.getItem('pa_github_token');
             if(savedToken) {
-                document.getElementById('ondemand-token-input').value = savedToken;
-                document.getElementById('setting-token-input').value = savedToken;
+                const od = document.getElementById('ondemand-token-input');
+                const st = document.getElementById('setting-token-input');
+                if(od) od.value = savedToken;
+                if(st) st.value = savedToken;
             }
 
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
@@ -442,7 +449,8 @@
         function updateWatchlistCountDisplay() {
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const count = Array.from(userWatchlist).filter(id => !pipelineIds.has(String(id))).length;
-            if(document.getElementById('count-watchlist')) document.getElementById('count-watchlist').textContent = count;
+            const el = document.getElementById('count-watchlist');
+            if(el) el.textContent = count;
         }
 
         function moveToPipelineFromModal() {
@@ -703,6 +711,84 @@
                 } else { alert("שגיאה בשמירת ההגדרות בשרת. ודא שה-Token תקין ויש לו הרשאת repo."); }
             } catch(e) { alert("שגיאת רשת בחיבור לגיטהאב."); }
             document.getElementById('scan-progress-toast').classList.add('hidden');
+        }
+
+        // --- שיגור סריקה יזומה מתוך הממשק (Mission Control) ---
+        async function triggerOnDemandExecution() {
+            const tokenInput = document.getElementById('ondemand-token-input');
+            let tk = tokenInput ? tokenInput.value.trim() : '';
+            if (!tk) tk = localStorage.getItem('pa_github_token') || '';
+            
+            if (!tk) {
+                alert("אנא הדבק את מפתח ה-GitHub שלך בתיבה המיועדת לכך.");
+                return;
+            }
+
+            const sectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb=>cb.value);
+            const cities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb=>cb.value);
+            
+            if (!sectors.length || !cities.length) {
+                alert("בחר לפחות עיר וסקטור אחד.");
+                return;
+            }
+            
+            const btn = document.getElementById('btn-trigger-scan'); 
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> משגר...'; 
+            btn.disabled = true;
+            lucide.createIcons();
+
+            const batches = []; 
+            for(let i=0; i<cities.length; i+=3) batches.push(cities.slice(i,i+3).join(', '));
+            let success = 0;
+            
+            for(let b of batches) {
+                try {
+                    const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
+                        method: "POST", 
+                        headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json" },
+                        body: JSON.stringify({ ref: "main", inputs: { scanner_id: sectors[0], target_city: b, target_county: "Batch_Mode" } })
+                    });
+                    if (res.ok || res.status===204) success++;
+                } catch(e) {}
+                if (batches.length > 1) await new Promise(r => setTimeout(r, 3000));
+            }
+            
+            btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת'; 
+            btn.disabled = false;
+            lucide.createIcons();
+            
+            if (success > 0) { 
+                closeOnDemandScanModal(); 
+                startBackgroundScanMonitor(); 
+            } else {
+                alert("שגיאה בשיגור. ודא שהמפתח תקין ויש לו הרשאות workflow.");
+            }
+        }
+
+        // ניטור טיימר לסריקה
+        function startBackgroundScanMonitor() {
+            document.getElementById('scan-progress-toast').classList.remove('hidden');
+            scanStartTime = Date.now(); 
+            const tEl = document.getElementById('scan-timer');
+            scanTimerInterval = setInterval(() => { 
+                const d = Math.floor((Date.now()-scanStartTime)/1000); 
+                tEl.textContent = `${String(Math.floor(d/60)).padStart(2,'0')}:${String(d%60).padStart(2,'0')}`; 
+            }, 1000);
+            scanPollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('properties.json?nocache=' + Date.now()); 
+                    const data = await res.json();
+                    if ((Date.now()-scanStartTime)/1000 > 30) finishBackgroundScanMonitor();
+                } catch(e) {}
+            }, 15000);
+        }
+        
+        function finishBackgroundScanMonitor() {
+            clearInterval(scanPollingInterval); 
+            clearInterval(scanTimerInterval); 
+            loadProperties();
+            document.getElementById('scan-progress-toast').classList.add('hidden');
+            alert("הסריקה הסתיימה בהצלחה והנתונים התרעננו!");
         }
 
         function updateAutoScanUI() {
