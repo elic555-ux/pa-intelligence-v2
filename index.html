@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.1</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.2</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -64,6 +64,7 @@
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
                 </button>
 
+                <!-- כפתור הטייס האוטומטי -->
                 <button onclick="toggleAutoScansAction()" id="auto-scan-toggle-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition" title="הפעל או השהה את התזמונים האוטומטיים">
                     <span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span id="auto-scan-text" class="text-xs font-bold text-emerald-400">טייס אוטומטי (ON)</span>
@@ -200,10 +201,25 @@
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="setting-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
                 </div>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-t border-gray-800 pt-3">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs border-t border-gray-800 pt-3">
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
+                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option></select></div>
+                <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
+            </div>
+            <!-- Property Types -->
+            <div class="space-y-1.5 pt-2">
+                <span class="text-xs font-bold text-gray-300">סוגי נכסים:</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 text-xs">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Single Family" class="setting-prop-type-box accent-blue-500"><span>Single Family</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Townhouse" class="setting-prop-type-box accent-blue-500"><span>Townhouse</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Multi-Family" class="setting-prop-type-box accent-blue-500"><span>Multi-Family</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Duplex / Triplex" class="setting-prop-type-box accent-blue-500"><span>Duplex/Triplex</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Condo" class="setting-prop-type-box accent-blue-500"><span>Condo</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Commercial / Mixed-Use" class="setting-prop-type-box accent-blue-500"><span>Commercial</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
+                </div>
             </div>
             <!-- Cities Selection -->
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
@@ -218,6 +234,27 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Scranton"><span>Scranton</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Bethlehem"><span>Bethlehem</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster"><span>Lancaster</span></label>
+                </div>
+            </div>
+            <!-- Neighborhoods Selection -->
+            <div class="space-y-1.5 pt-1">
+                <span class="text-xs font-bold text-emerald-400">2. שכונות ואזורים ספציפיים:</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
                 </div>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button onclick="saveScanSettings()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black">שמור הגדרות</button></div>
@@ -244,9 +281,25 @@
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="ondemand-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
                 </div>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
                 <div><label class="block font-bold text-emerald-400 mb-1 text-xs">מחיר מינימום ($)</label><input type="text" id="ondemand-min-price" value="50,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
                 <div><label class="block font-bold text-emerald-400 mb-1 text-xs">מחיר מקסימום ($)</label><input type="text" id="ondemand-max-price" value="190,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
+                <div><label class="block font-bold text-gray-300 mb-1 text-xs">שטח מינ' (SqFt)</label><input type="text" id="ondemand-min-sqft" value="1,200" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center text-sm"></div>
+                <div><label class="block font-bold text-gray-300 mb-1 text-xs">חדרי שינה</label><select id="ondemand-min-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white text-sm"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option></select></div>
+                <div><label class="block font-bold text-gray-300 mb-1 text-xs">חדרי רחצה</label><select id="ondemand-min-baths" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white text-sm"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
+            </div>
+            <!-- Property Types -->
+            <div class="space-y-1.5">
+                <span class="text-xs font-bold text-gray-300">סוגי נכסים:</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 text-xs">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Single Family" class="ondemand-prop-type-box accent-blue-500"><span>Single Family</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Townhouse" class="ondemand-prop-type-box accent-blue-500"><span>Townhouse</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Multi-Family" class="ondemand-prop-type-box accent-blue-500"><span>Multi-Family</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Duplex / Triplex" class="ondemand-prop-type-box accent-blue-500"><span>Duplex/Triplex</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Condo" class="ondemand-prop-type-box accent-blue-500"><span>Condo</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Commercial / Mixed-Use" class="ondemand-prop-type-box accent-blue-500"><span>Commercial</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="ondemand-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
+                </div>
             </div>
             <!-- Cities Selection -->
             <div class="space-y-1.5">
@@ -261,6 +314,27 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton"><span>Scranton</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem"><span>Bethlehem</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster"><span>Lancaster</span></label>
+                </div>
+            </div>
+            <!-- Neighborhoods Selection -->
+            <div class="space-y-1.5 pt-1">
+                <span class="text-xs font-bold text-emerald-400">2. שכונות ואזורים ספציפיים:</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
                 </div>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black">שגר סריקה כעת</button></div>
@@ -323,11 +397,7 @@
             document.getElementById('count-probate').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate')).length;
         }
 
-        function setCategory(cat) {
-            activeCategory = cat;
-            renderCards();
-        }
-
+        function setCategory(cat) { activeCategory = cat; renderCards(); }
         function applyFilters() { renderCards(); }
         
         function renderCards() {
@@ -345,7 +415,7 @@
         function saveScanSettings() { closeSettingsModal(); alert("הגדרות נשמרו!"); }
 
         function updateAutoScanUI() {
-            const btn = document.getElementById('auto-scan-toggle-btn'), txt = document.getElementById('auto-scan-text');
+            const txt = document.getElementById('auto-scan-text');
             if(isAutoScanEnabled) { txt.textContent = "טייס אוטומטי (ON)"; } else { txt.textContent = "טייס אוטומטי (OFF)"; }
         }
 
