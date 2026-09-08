@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.5</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.6</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -108,9 +108,17 @@
         <section id="properties-container" class="w-full"></section>
     </main>
 
-    <!-- Property Modal -->
+    <!-- Background Scan Toast Indicator -->
+    <div id="scan-progress-toast" class="fixed bottom-6 left-6 bg-gray-900 border border-blue-500/40 rounded-2xl p-4 shadow-[0_0_30px_rgba(59,130,246,0.3)] z-50 hidden flex items-center gap-4 toast-enter">
+        <div id="scan-toast-icon"><i data-lucide="loader-2" class="w-7 h-7 text-blue-400 animate-spin"></i></div>
+        <div id="scan-toast-content"><h4 class="text-sm font-black text-white tracking-wide">סריקת עומק מתבצעת ברקע...</h4><p class="text-[11px] text-gray-400 font-semibold mt-0.5">המערכת מחפשת ותתרענן אוטומטית.</p></div>
+        <div class="mr-4 text-center border-r border-gray-700 pr-4"><span class="block text-[10px] text-gray-500 font-bold mb-0.5">זמן ריצה</span><span class="text-sm font-black font-mono text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded-lg border border-blue-500/30" id="scan-timer">00:00</span></div>
+    </div>
+
+    <!-- Property Modal (FULL AND COMPLETE) -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
+            
             <div class="flex justify-between items-start border-b border-gray-800 pb-3.5">
                 <div>
                     <div class="flex items-center gap-2 mb-2" id="modal-badges"></div>
@@ -133,7 +141,33 @@
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">רחצה</span><strong class="text-xl font-extrabold text-white" id="modal-baths"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
             </div>
-            <div class="pt-3.5 border-t border-gray-800 flex justify-end"><button onclick="closePropertyModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">סגור</button></div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3 rounded-xl border border-gray-800 text-xs">
+                <div><span class="text-gray-400 block font-bold">אסטרטגיה</span><strong class="text-amber-300 font-extrabold" id="modal-strategy"></strong></div>
+                <div><span class="text-gray-400 block font-bold">צפי שכירות</span><strong class="text-emerald-400 font-extrabold font-mono" id="modal-rent"></strong></div>
+                <div><span class="text-gray-400 block font-bold">תשואה צפויה</span><strong class="text-emerald-400 font-extrabold font-mono" id="modal-yield"></strong></div>
+                <div><span class="text-gray-400 block font-bold">הערכת שיפוץ</span><strong class="text-white font-extrabold" id="modal-rehab"></strong></div>
+            </div>
+
+            <div class="space-y-2 bg-gray-950/70 p-4 rounded-xl border border-gray-800">
+                <h4 class="text-xs font-black text-amber-400 uppercase flex items-center gap-1.5"><i data-lucide="clipboard-check" class="w-4 h-4"></i> מפרט טכני:</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs pt-1">
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">אכלוס</span><strong class="text-white text-sm" id="modal-occupancy"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">גג</span><strong class="text-white text-sm" id="modal-roof"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חימום</span><strong class="text-white text-sm" id="modal-hvac"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">בנייה</span><strong class="text-white text-sm" id="modal-year-built"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">מגרש</span><strong class="text-white text-sm" id="modal-lot-size"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חניה</span><strong class="text-white text-sm" id="modal-parking"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">עסקה</span><span class="text-white text-sm" id="modal-deal-type"></span></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">תיק</span><span class="text-blue-300 font-mono" id="modal-docket"></span></div>
+                </div>
+            </div>
+
+            <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תקציר:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
+            <div class="pt-3.5 border-t border-gray-800 flex justify-between items-center gap-3">
+                <button onclick="copyPropertyAddress()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span id="copy-btn-text">העתק כתובת</span></button>
+                <div class="flex gap-2.5" id="modal-action-buttons"></div>
+            </div>
         </div>
     </div>
 
@@ -375,7 +409,8 @@
 
         async function init() {
             lucide.createIcons();
-            loadPipelineFromStorage(); loadWatchlistFromStorage();
+            loadPipelineFromStorage(); 
+            loadWatchlistFromStorage();
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
             await loadProperties();
@@ -389,13 +424,55 @@
         }
 
         function loadPipelineFromStorage() { try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals') || '[]'); } catch(e) { pipelineDeals = []; } }
-        function loadWatchlistFromStorage() { try { userWatchlist = new Set(JSON.parse(localStorage.getItem('pa_watchlist_ids') || '[]')); } catch(e) { userWatchlist = new Set(); } }
-        
+        function savePipelineToStorage() { localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals)); }
+        function loadWatchlistFromStorage() { try { userWatchlist = new Set(JSON.parse(localStorage.getItem('pa_watchlist_ids') || '[]')); } catch(e) { userWatchlist = new Set(); } updateWatchlistCountDisplay(); }
+        function saveWatchlistToStorage() { localStorage.setItem('pa_watchlist_ids', JSON.stringify(Array.from(userWatchlist))); updateWatchlistCountDisplay(); }
+
+        function updateWatchlistCountDisplay() {
+            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+            const count = Array.from(userWatchlist).filter(id => !pipelineIds.has(String(id))).length;
+            if(document.getElementById('count-watchlist')) document.getElementById('count-watchlist').textContent = count;
+        }
+
+        function moveToPipelineFromModal() {
+            if (!currentSelectedProperty) return;
+            const idStr = String(currentSelectedProperty.id);
+            if (!pipelineDeals.some(d => String(d.id) === idStr)) {
+                pipelineDeals.push({...currentSelectedProperty, pipeline_stage: 'due_diligence', added_to_pipeline_at: new Date().toLocaleDateString('he-IL')});
+                savePipelineToStorage();
+            }
+            if (userWatchlist.has(idStr)) { userWatchlist.delete(idStr); saveWatchlistToStorage(); }
+            alert(`הנכס "${currentSelectedProperty.address}" הועבר בהצלחה לחדר העסקאות!`);
+            closePropertyModal(); renderCards(); updateCounts(); updateWatchlistCountDisplay();
+        }
+
+        function toggleWatchlist(propId, event) {
+            if (event) event.stopPropagation();
+            const idStr = String(propId);
+            if (userWatchlist.has(idStr)) userWatchlist.delete(idStr); else userWatchlist.add(idStr);
+            saveWatchlistToStorage(); renderCards(); updateModalWatchlistState();
+        }
+
+        function toggleWatchlistFromModal() { if (currentSelectedProperty) toggleWatchlist(currentSelectedProperty.id); }
+
+        function toggleWatchlistFilter() {
+            watchlistFilterActive = !watchlistFilterActive;
+            const btn = document.getElementById('btn-watchlist-filter');
+            if (watchlistFilterActive) { btn.classList.add('watchlist-btn-active'); document.getElementById('watchlist-btn-label').textContent = 'מציג נכסים במעקב בלבד [פעיל ✓]'; }
+            else { btn.classList.remove('watchlist-btn-active'); document.getElementById('watchlist-btn-label').textContent = 'נכסים במעקב פעיל (Watchlist)'; }
+            renderCards();
+        }
+
         async function loadProperties() {
             try {
                 const res = await fetch('properties.json?t=' + Date.now());
-                rawProperties = await res.json();
-                populateCityDropdown(); updateCounts(); renderCards();
+                const rawList = await res.json();
+                const seenKeys = new Set(); rawProperties = [];
+                rawList.forEach(p => {
+                    const normKey = p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id);
+                    if (!seenKeys.has(normKey)) { seenKeys.add(normKey); if (!p.listed_date) p.listed_date = '05/09/2026'; rawProperties.push(p); }
+                });
+                populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
             } catch (err) { console.error(err); }
         }
 
@@ -407,17 +484,28 @@
         }
 
         function updateCounts() {
-            document.getElementById('count-all').textContent = rawProperties.length;
-            document.getElementById('count-mls').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
-            document.getElementById('count-distressed').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
-            document.getElementById('count-sheriff').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
-            document.getElementById('count-tax').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
-            document.getElementById('count-probate').textContent = rawProperties.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
+            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+            const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
+            document.getElementById('count-all').textContent = available.length;
+            document.getElementById('count-mls').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
+            document.getElementById('count-distressed').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
+            document.getElementById('count-sheriff').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
+            document.getElementById('count-tax').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
+            document.getElementById('count-probate').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
         }
 
-        function setCategory(cat) { activeCategory = cat; renderCards(); }
+        function setCategory(cat) {
+            activeCategory = cat;
+            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'].forEach(c => {
+                document.getElementById(`btn-cat-${c}`).classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate');
+                if (c === cat) document.getElementById(`btn-cat-${c}`).classList.add(`kpi-active-${c}`);
+            });
+            renderCards();
+        }
+
         function applyFilters() { renderCards(); }
-        
+        function parseDate(d) { const p = (d||'').split('/'); return p.length===3 ? new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() : 0; }
+
         function renderCards() {
             const container = document.getElementById('properties-container');
             const cityF = document.getElementById('filter-city').value, stratF = document.getElementById('filter-strategy').value;
@@ -442,10 +530,11 @@
                 return true;
             });
 
-            if (!filtered.length) {
-                container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו נכסים התואמים להגדרות הסינון.</div>';
-                return;
-            }
+            if (sortBy === 'score_desc') filtered.sort((a,b) => (b.deal_score||0) - (a.deal_score||0));
+            else if (sortBy === 'date_desc') filtered.sort((a,b) => parseDate(b.listed_date) - parseDate(a.listed_date));
+            else if (sortBy === 'price_asc') filtered.sort((a,b) => (a.price||0) - (b.price||0));
+
+            if (!filtered.length) { container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות.</div>'; return; }
 
             if (currentViewMode === 'table') {
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="w-full text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3">מיקום</th><th class="p-3">מחיר</th><th class="p-3">מאפיינים</th><th class="p-3">תשואה/שיפוץ</th><th class="p-3">תאריך</th><th class="p-3 text-center">ציון</th><th class="p-3 text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
@@ -485,11 +574,49 @@
             document.getElementById('modal-beds').textContent = p.beds||'-';
             document.getElementById('modal-baths').textContent = p.baths||'-';
             document.getElementById('modal-sqft').textContent = p.sqft||'-';
+            document.getElementById('modal-strategy').textContent = p.strategy_label||'-';
+            document.getElementById('modal-rent').textContent = p.projected_rent||'-';
+            document.getElementById('modal-yield').textContent = p.gross_yield||'-';
+            document.getElementById('modal-rehab').textContent = p.rehab_scope||'-';
+            document.getElementById('modal-summary').textContent = p.summary||'';
+            document.getElementById('modal-occupancy').textContent = p.occupancy||'פנוי';
+            document.getElementById('modal-roof').textContent = p.roof_condition||'תקין';
+            document.getElementById('modal-hvac').textContent = p.hvac_type||'גז טבעי';
+            document.getElementById('modal-year-built').textContent = p.year_built||'1955';
+            document.getElementById('modal-lot-size').textContent = p.lot_size||'-';
+            document.getElementById('modal-parking').textContent = p.parking||'-';
+            document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
+            document.getElementById('modal-docket').textContent = p.docket_id||p.id;
+            
+            updateModalWatchlistState();
+            
+            const q = encodeURIComponent(`${p.address}, ${p.city}, PA`);
+            document.getElementById('modal-action-buttons').innerHTML = `
+                <a href="https://www.google.com/search?q=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i> רשת</a>
+                <a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="map" class="w-3.5 h-3.5"></i> מפה</a>
+                <a href="${p.url||'#'}" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> מקור</a>
+            `;
             document.getElementById('property-modal').classList.remove('hidden');
+            lucide.createIcons();
         }
+
+        function updateModalWatchlistState() {
+            if (!currentSelectedProperty) return;
+            const w = userWatchlist.has(String(currentSelectedProperty.id));
+            document.getElementById('modal-watchlist-text').textContent = w ? 'במעקב ✓' : 'הוסף למעקב';
+            document.getElementById('modal-watchlist-btn').className = w ? 'p-2.5 rounded-xl bg-amber-500 text-gray-950 font-black text-xs flex gap-1.5' : 'p-2.5 rounded-xl bg-gray-800 text-amber-400 font-bold text-xs flex gap-1.5';
+        }
+
         function closePropertyModal() { document.getElementById('property-modal').classList.add('hidden'); }
-        function toggleWatchlist(id, e) { e.stopPropagation(); }
-        function toggleWatchlistFilter() {}
+
+        function copyPropertyAddress() {
+            if (currentSelectedProperty) {
+                navigator.clipboard.writeText(`${currentSelectedProperty.address}, ${currentSelectedProperty.city}, PA`).then(() => {
+                    const b = document.getElementById('copy-btn-text');
+                    b.textContent = 'הועתק!'; setTimeout(() => b.textContent='העתק כתובת', 2000);
+                });
+            }
+        }
 
         // פונקציות בחירה וניקוי מחוזות ושכונות
         function toggleAllSettingCities(state) {
