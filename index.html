@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V6.9</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.0</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -64,7 +64,6 @@
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
                 </button>
 
-                <!-- כפתור הטייס האוטומטי -->
                 <button onclick="toggleAutoScansAction()" id="auto-scan-toggle-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition" title="הפעל או השהה את התזמונים האוטומטיים">
                     <span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span id="auto-scan-text" class="text-xs font-bold text-emerald-400">טייס אוטומטי (ON)</span>
@@ -111,7 +110,7 @@
     <!-- Background Scan Toast Indicator -->
     <div id="scan-progress-toast" class="fixed bottom-6 left-6 bg-gray-900 border border-blue-500/40 rounded-2xl p-4 shadow-[0_0_30px_rgba(59,130,246,0.3)] z-50 hidden flex items-center gap-4 toast-enter">
         <div id="scan-toast-icon"><i data-lucide="loader-2" class="w-7 h-7 text-blue-400 animate-spin"></i></div>
-        <div id="scan-toast-content"><h4 class="text-sm font-black text-white tracking-wide">פעולה מתבצעת ברקע...</h4><p class="text-[11px] text-gray-400 font-semibold mt-0.5">המערכת משדרת נתונים לשרת.</p></div>
+        <div id="scan-toast-content"><h4 class="text-sm font-black text-white tracking-wide">פעולה מתבצעת ברקע...</h4><p class="text-[11px] text-gray-400 font-semibold mt-0.5" id="scan-toast-subtitle">המערכת משדרת וסורקת נתונים.</p></div>
         <div class="mr-4 text-center border-r border-gray-700 pr-4"><span class="block text-[10px] text-gray-500 font-bold mb-0.5">זמן ריצה</span><span class="text-sm font-black font-mono text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded-lg border border-blue-500/30" id="scan-timer">00:00</span></div>
     </div>
 
@@ -191,7 +190,7 @@
             </div>
             <div class="bg-blue-950/30 p-3 rounded-xl border border-blue-500/40 space-y-1 mb-2">
                 <label class="block text-xs font-bold text-blue-300">הזן מפתח אישי של GitHub (כדי לשדר את ההגדרות לשרת!):</label>
-                <input type="password" id="setting-token-input" placeholder="ghp_..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
+                <input type="password" id="setting-token-input" placeholder="ghp_..." onchange="localStorage.setItem('pa_github_token', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
             </div>
             <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה:</span>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -429,10 +428,94 @@
                 if(st) st.value = savedToken;
             }
 
+            // טעינת זיכרון הגדרות המשתמש מהדפדפן
+            loadSettingsState();
+            loadOnDemandState();
+
+            // הפעלת מאזינים לשמירה אוטומטית של כל קליק
+            document.querySelectorAll('#settings-modal input, #settings-modal select').forEach(el => {
+                el.addEventListener('change', saveSettingsStateLocally);
+                if(el.type === 'text') el.addEventListener('input', saveSettingsStateLocally);
+            });
+            document.querySelectorAll('#ondemand-modal input, #ondemand-modal select').forEach(el => {
+                el.addEventListener('change', saveOnDemandStateLocally);
+                if(el.type === 'text') el.addEventListener('input', saveOnDemandStateLocally);
+            });
+
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
             await loadProperties();
         }
+
+        // --- מנגנון זיכרון הדפדפן (LocalStorage) מונע אמנזיה ---
+        function saveSettingsStateLocally() {
+            const state = {
+                minPrice: getRawPrice(document.getElementById('setting-min-price')),
+                maxPrice: getRawPrice(document.getElementById('setting-max-price')) || 190000,
+                minSqft: document.getElementById('setting-min-sqft').value,
+                minBeds: document.getElementById('setting-min-beds').value,
+                minBaths: document.getElementById('setting-min-baths').value,
+                sectors: Array.from(document.querySelectorAll('.setting-sector-box:checked')).map(cb => cb.value),
+                propertyTypes: Array.from(document.querySelectorAll('.setting-prop-type-box:checked')).map(cb => cb.value),
+                cities: Array.from(document.querySelectorAll('.setting-city-box:checked')).map(cb => cb.value),
+                neighborhoods: Array.from(document.querySelectorAll('.setting-hood-box:checked')).map(cb => cb.value)
+            };
+            localStorage.setItem('pa_settings_state_v7', JSON.stringify(state));
+        }
+
+        function loadSettingsState() {
+            try {
+                const saved = localStorage.getItem('pa_settings_state_v7');
+                if (saved) {
+                    const st = JSON.parse(saved);
+                    if(document.getElementById('setting-min-price') && st.minPrice) document.getElementById('setting-min-price').value = st.minPrice.toLocaleString('en-US');
+                    if(document.getElementById('setting-max-price') && st.maxPrice) document.getElementById('setting-max-price').value = st.maxPrice.toLocaleString('en-US');
+                    if(document.getElementById('setting-min-sqft') && st.minSqft) document.getElementById('setting-min-sqft').value = st.minSqft;
+                    if(document.getElementById('setting-min-beds') && st.minBeds) document.getElementById('setting-min-beds').value = st.minBeds;
+                    if(document.getElementById('setting-min-baths') && st.minBaths) document.getElementById('setting-min-baths').value = st.minBaths;
+                    
+                    if(st.sectors) document.querySelectorAll('.setting-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
+                    if(st.propertyTypes) document.querySelectorAll('.setting-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
+                    if(st.cities) document.querySelectorAll('.setting-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
+                    if(st.neighborhoods) document.querySelectorAll('.setting-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
+                }
+            } catch(e) {}
+        }
+
+        function saveOnDemandStateLocally() {
+            const state = {
+                minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
+                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
+                minSqft: document.getElementById('ondemand-min-sqft').value,
+                minBeds: document.getElementById('ondemand-min-beds').value,
+                minBaths: document.getElementById('ondemand-min-baths').value,
+                sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value),
+                propertyTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb => cb.value),
+                cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value),
+                neighborhoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value)
+            };
+            localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(state));
+        }
+
+        function loadOnDemandState() {
+            try {
+                const saved = localStorage.getItem('pa_ondemand_state_v7');
+                if (saved) {
+                    const st = JSON.parse(saved);
+                    if(document.getElementById('ondemand-min-price') && st.minPrice) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
+                    if(document.getElementById('ondemand-max-price') && st.maxPrice) document.getElementById('ondemand-max-price').value = st.maxPrice.toLocaleString('en-US');
+                    if(document.getElementById('ondemand-min-sqft') && st.minSqft) document.getElementById('ondemand-min-sqft').value = st.minSqft;
+                    if(document.getElementById('ondemand-min-beds') && st.minBeds) document.getElementById('ondemand-min-beds').value = st.minBeds;
+                    if(document.getElementById('ondemand-min-baths') && st.minBaths) document.getElementById('ondemand-min-baths').value = st.minBaths;
+                    
+                    if(st.sectors) document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
+                    if(st.propertyTypes) document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
+                    if(st.cities) document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
+                    if(st.neighborhoods) document.querySelectorAll('.ondemand-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
+                }
+            } catch(e) {}
+        }
+
 
         function setViewMode(mode) {
             currentViewMode = mode;
@@ -641,26 +724,32 @@
         function toggleAllSettingCities(state) {
             document.querySelectorAll('.setting-city-box').forEach(cb => { cb.checked = state; });
             document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state; });
+            saveSettingsStateLocally();
         }
         function toggleAllSettingNeighborhoods(state) {
             document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state; });
+            saveSettingsStateLocally();
         }
         function handleSettingCityCheckboxChange(cityName, isChecked) {
             document.querySelectorAll('.setting-hood-box').forEach(cb => {
                 if (cb.getAttribute('data-city') === cityName) cb.checked = isChecked;
             });
+            saveSettingsStateLocally();
         }
         function toggleAllOnDemandCities(state) {
             document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = state; });
             document.querySelectorAll('.ondemand-hood-box').forEach(cb => { cb.checked = state; });
+            saveOnDemandStateLocally();
         }
         function toggleAllOnDemandNeighborhoods(state) {
             document.querySelectorAll('.ondemand-hood-box').forEach(cb => { cb.checked = state; });
+            saveOnDemandStateLocally();
         }
         function handleCityCheckboxChange(cityName, isChecked) {
             document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
                 if (cb.getAttribute('data-city') === cityName) cb.checked = isChecked;
             });
+            saveOnDemandStateLocally();
         }
 
         function openTelegramModal() { document.getElementById('telegram-modal').classList.remove('hidden'); }
@@ -677,6 +766,7 @@
             localStorage.setItem('pa_github_token', token);
 
             document.getElementById('scan-progress-toast').classList.remove('hidden');
+            document.getElementById('scan-toast-subtitle').textContent = "ההגדרות משודרות לשרת...";
             
             const config = {
                 minPrice: getRawPrice(document.getElementById('setting-min-price')),
@@ -713,7 +803,7 @@
             document.getElementById('scan-progress-toast').classList.add('hidden');
         }
 
-        // --- שיגור סריקה יזומה מתוך הממשק (Mission Control) ---
+        // --- שיגור סריקה יזומה מתוך הממשק (Mission Control) עם עדכון השרת באותו רגע ---
         async function triggerOnDemandExecution() {
             const tokenInput = document.getElementById('ondemand-token-input');
             let tk = tokenInput ? tokenInput.value.trim() : '';
@@ -723,6 +813,7 @@
                 alert("אנא הדבק את מפתח ה-GitHub שלך בתיבה המיועדת לכך.");
                 return;
             }
+            localStorage.setItem('pa_github_token', tk);
 
             const sectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb=>cb.value);
             const cities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb=>cb.value);
@@ -733,10 +824,41 @@
             }
             
             const btn = document.getElementById('btn-trigger-scan'); 
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> משגר...'; 
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> מתקשר עם השרת...'; 
             btn.disabled = true;
             lucide.createIcons();
 
+            // 1. קודם כל שומרים את ההגדרות היזומות לקובץ השרת, כדי שהפייתון ידע מה לסרוק!
+            const config = {
+                minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
+                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
+                minSqft: document.getElementById('ondemand-min-sqft').value,
+                minBeds: document.getElementById('ondemand-min-beds').value,
+                minBaths: document.getElementById('ondemand-min-baths').value,
+                sectors: sectors,
+                propertyTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb => cb.value),
+                cities: cities,
+                neighborhoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value),
+                updatedAt: new Date().toISOString(),
+                is_manual_scan: true
+            };
+
+            try {
+                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
+                let sha = '';
+                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `token ${tk}` } });
+                if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+
+                await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${tk}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "Update config for On-Demand Scan", content: contentBase64, sha: sha || undefined })
+                });
+            } catch(e) {
+                console.warn("הערה: שגיאה בעדכון קובץ ההגדרות בשרת לפני הסריקה, ממשיך בשיגור...");
+            }
+
+            // 2. משגרים את הסריקה
             const batches = []; 
             for(let i=0; i<cities.length; i+=3) batches.push(cities.slice(i,i+3).join(', '));
             let success = 0;
@@ -745,7 +867,7 @@
                 try {
                     const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
                         method: "POST", 
-                        headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json" },
+                        headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
                         body: JSON.stringify({ ref: "main", inputs: { scanner_id: sectors[0], target_city: b, target_county: "Batch_Mode" } })
                     });
                     if (res.ok || res.status===204) success++;
@@ -761,13 +883,14 @@
                 closeOnDemandScanModal(); 
                 startBackgroundScanMonitor(); 
             } else {
-                alert("שגיאה בשיגור. ודא שהמפתח תקין ויש לו הרשאות workflow.");
+                alert("שגיאה בשיגור הגיטהאב. ודא שהמפתח תקין ויש לו הרשאות workflow.");
             }
         }
 
         // ניטור טיימר לסריקה
         function startBackgroundScanMonitor() {
             document.getElementById('scan-progress-toast').classList.remove('hidden');
+            document.getElementById('scan-toast-subtitle').textContent = "המערכת סורקת, הנתונים יתרעננו אוטומטית.";
             scanStartTime = Date.now(); 
             const tEl = document.getElementById('scan-timer');
             scanTimerInterval = setInterval(() => { 
@@ -788,7 +911,6 @@
             clearInterval(scanTimerInterval); 
             loadProperties();
             document.getElementById('scan-progress-toast').classList.add('hidden');
-            alert("הסריקה הסתיימה בהצלחה והנתונים התרעננו!");
         }
 
         function updateAutoScanUI() {
