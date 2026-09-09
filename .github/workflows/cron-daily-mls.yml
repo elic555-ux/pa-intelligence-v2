@@ -1,34 +1,35 @@
-name: 1. Daily Market Scan (MLS & REO)
+name: "1. Central Intelligence Orchestrator (Hourly)"
+
 on:
+  workflow_dispatch: # כפתור "שגר סריקה כעת" באתר
   schedule:
-    - cron: '0 5 * * 0-5'
-  workflow_dispatch:
-concurrency:
-  group: pa-scanner-queue
-  cancel-in-progress: false
-permissions:
-  contents: write
-  actions: write
+    - cron: '0 * * * *' # קם כל שעה עגולה! (01:00, 02:00...) הפייתון יחליט אם לסרוק או לישון
+
 jobs:
-  run-scraper:
+  scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.10' }
-      - run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 pytz
-      - env:
-          INPUT_SCANNER_ID: 'mls,reo'
-          INPUT_TARGET_COUNTY: 'Batch_Mode'
-          INPUT_TARGET_CITY: 'Pittsburgh, Allegheny, Philadelphia, Allentown, Reading, Erie, Scranton, Bethlehem, Lancaster'
-          INPUT_NEIGHBORHOODS: 'SECTORS:mls,reo | MIN_PRICE:40000 | MAX_PRICE:250000'
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install pytz requests
+
+      - name: Run Orchestrator (Brain)
+        # מכניסים את סוג ההפעלה כדי שהפייתון יידע אם זו סריקה יזומה
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: python orchestrator.py
-      - run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add properties.json || true
-          git commit -m "Auto-update: Daily MLS [skip ci]" || echo "No changes"
-          git pull origin main --no-rebase --strategy-option=ours || true
-          git push origin main
+
+      - name: Commit and Push Updates
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add properties.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update properties.json via Orchestrator" && git push)
