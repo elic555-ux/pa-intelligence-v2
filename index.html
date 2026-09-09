@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.5</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.6</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -222,7 +222,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection -->
+            <!-- Cities Selection (9 Cities & Counties) -->
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
@@ -244,7 +244,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
                 </div>
             </div>
-            <!-- Neighborhoods Selection -->
+            <!-- Neighborhoods Selection (All 25 Neighborhoods) -->
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
@@ -409,7 +409,6 @@
         let currentViewMode = 'table';
         let isAutoScanEnabled = true;
         
-        let scanPollingInterval = null;
         let scanTimerInterval = null;
         let scanStartTime = null;
 
@@ -876,30 +875,30 @@
             lucide.createIcons();
         }
 
-        // ניטור טיימר לסריקה
+        // ניטור טיימר לסריקה וביצוע ריענון אמיתי בסיום
         function startBackgroundScanMonitor() {
             document.getElementById('scan-progress-toast').classList.remove('hidden');
-            document.getElementById('scan-toast-subtitle').textContent = "המערכת סורקת, הנתונים יתרעננו אוטומטית.";
+            document.getElementById('scan-toast-subtitle').textContent = "סורק בשרת... הדף יתרענן אוטומטית בעוד כדקה וחצי.";
             scanStartTime = Date.now(); 
             const tEl = document.getElementById('scan-timer');
+            
+            if (scanTimerInterval) clearInterval(scanTimerInterval);
             scanTimerInterval = setInterval(() => { 
-                const d = Math.floor((Date.now()-scanStartTime)/1000); 
-                tEl.textContent = `${String(Math.floor(d/60)).padStart(2,'0')}:${String(d%60).padStart(2,'0')}`; 
+                const diff = Math.floor((Date.now() - scanStartTime) / 1000); 
+                tEl.textContent = `${String(Math.floor(diff / 60)).padStart(2,'0')}:${String(diff % 60).padStart(2,'0')}`; 
+                
+                // רענון אוטומטי ואמיתי אחרי 90 שניות (מכסה את זמן הריצה בגיטהאב)
+                if (diff >= 90) {
+                    finishBackgroundScanMonitor();
+                }
             }, 1000);
-            scanPollingInterval = setInterval(async () => {
-                try {
-                    const res = await fetch('properties.json?nocache=' + Date.now()); 
-                    const data = await res.json();
-                    if ((Date.now()-scanStartTime)/1000 > 30) finishBackgroundScanMonitor();
-                } catch(e) {}
-            }, 15000);
         }
         
         function finishBackgroundScanMonitor() {
-            clearInterval(scanPollingInterval); 
             clearInterval(scanTimerInterval); 
-            loadProperties();
             document.getElementById('scan-progress-toast').classList.add('hidden');
+            // פעולת הריענון שביקשת!
+            window.location.reload(true);
         }
 
         function updateAutoScanUI() {
