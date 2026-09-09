@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.7</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.8</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -176,7 +176,7 @@
         </div>
     </div>
 
-    <!-- Auto-Scan Management Modal (New!) -->
+    <!-- Auto-Scan Management Modal -->
     <div id="autoscan-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
@@ -219,14 +219,11 @@
                         </select>
                     </div>
                 </div>
-                <p class="text-[10px] text-gray-500 font-bold leading-tight">
-                    * הערה: שמירת התזמונים מעדכנת את קובץ ה-JSON בשרת. בהמשך נעדכן את מנוע הפייתון (השרת) כדי שיקרא את השעות האלו ויציית להן.
-                </p>
             </div>
 
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeAutoScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
-                <button onclick="saveScheduleSettings()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i> שמור תזמונים</button>
+                <button id="btn-save-schedule" onclick="saveScheduleSettings()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i> שמור לשרת</button>
             </div>
         </div>
     </div>
@@ -283,7 +280,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection (9 Cities & Counties) -->
+            <!-- Cities Selection -->
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
@@ -305,7 +302,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
                 </div>
             </div>
-            <!-- Neighborhoods Selection (All 25 Neighborhoods) -->
+            <!-- Neighborhoods Selection -->
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
@@ -490,7 +487,7 @@
 
             loadSettingsState();
             loadOnDemandState();
-            loadScheduleSettings(); // טעינת הגדרות התזמון
+            loadScheduleSettings();
 
             document.querySelectorAll('#settings-modal input, #settings-modal select').forEach(el => {
                 el.addEventListener('change', saveSettingsStateLocally);
@@ -506,19 +503,28 @@
             await loadProperties();
         }
 
-        function saveSettingsStateLocally() {
-            const state = {
-                minPrice: getRawPrice(document.getElementById('setting-min-price')),
-                maxPrice: getRawPrice(document.getElementById('setting-max-price')) || 190000,
-                minSqft: document.getElementById('setting-min-sqft').value,
-                minBeds: document.getElementById('setting-min-beds').value,
-                minBaths: document.getElementById('setting-min-baths').value,
-                sectors: Array.from(document.querySelectorAll('.setting-sector-box:checked')).map(cb => cb.value),
-                propertyTypes: Array.from(document.querySelectorAll('.setting-prop-type-box:checked')).map(cb => cb.value),
-                cities: Array.from(document.querySelectorAll('.setting-city-box:checked')).map(cb => cb.value),
-                neighborhoods: Array.from(document.querySelectorAll('.setting-hood-box:checked')).map(cb => cb.value)
+        function buildServerConfig(isManual = false) {
+            const prefix = isManual ? 'ondemand' : 'setting';
+            return {
+                minPrice: getRawPrice(document.getElementById(`${prefix}-min-price`)),
+                maxPrice: getRawPrice(document.getElementById(`${prefix}-max-price`)) || 190000,
+                minSqft: document.getElementById(`${prefix}-min-sqft`).value,
+                minBeds: document.getElementById(`${prefix}-min-beds`).value,
+                minBaths: document.getElementById(`${prefix}-min-baths`).value,
+                sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value),
+                propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
+                cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
+                neighborhoods: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`)).map(cb => cb.value),
+                autoScanEnabled: document.getElementById('autoscan-master-switch').checked,
+                scheduleMls: document.getElementById('schedule-mls-time').value,
+                scheduleDist: document.getElementById('schedule-distressed-day').value,
+                updatedAt: new Date().toISOString(),
+                is_manual_scan: isManual
             };
-            localStorage.setItem('pa_settings_state_v7', JSON.stringify(state));
+        }
+
+        function saveSettingsStateLocally() {
+            localStorage.setItem('pa_settings_state_v7', JSON.stringify(buildServerConfig(false)));
         }
 
         function loadSettingsState() {
@@ -541,18 +547,7 @@
         }
 
         function saveOnDemandStateLocally() {
-            const state = {
-                minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
-                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
-                minSqft: document.getElementById('ondemand-min-sqft').value,
-                minBeds: document.getElementById('ondemand-min-beds').value,
-                minBaths: document.getElementById('ondemand-min-baths').value,
-                sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb => cb.value),
-                propertyTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb => cb.value),
-                cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb => cb.value),
-                neighborhoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb => cb.value)
-            };
-            localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(state));
+            localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(buildServerConfig(true)));
         }
 
         function loadOnDemandState() {
@@ -625,7 +620,6 @@
 
         async function loadProperties() {
             try {
-                // המשיכה של הקובץ מהשרת כוללת עכשיו קריאת Headers לשעת העדכון האחרונה!
                 const res = await fetch('properties.json?t=' + Date.now());
                 
                 const lastModified = res.headers.get('Last-Modified');
@@ -840,19 +834,7 @@
             document.getElementById('scan-progress-toast').classList.remove('hidden');
             document.getElementById('scan-toast-subtitle').textContent = "ההגדרות משודרות לשרת...";
             
-            const config = {
-                minPrice: getRawPrice(document.getElementById('setting-min-price')),
-                maxPrice: getRawPrice(document.getElementById('setting-max-price')) || 190000,
-                minSqft: document.getElementById('setting-min-sqft').value,
-                minBeds: document.getElementById('setting-min-beds').value,
-                minBaths: document.getElementById('setting-min-baths').value,
-                sectors: Array.from(document.querySelectorAll('.setting-sector-box:checked')).map(cb => cb.value),
-                propertyTypes: Array.from(document.querySelectorAll('.setting-prop-type-box:checked')).map(cb => cb.value),
-                cities: Array.from(document.querySelectorAll('.setting-city-box:checked')).map(cb => cb.value),
-                neighborhoods: Array.from(document.querySelectorAll('.setting-hood-box:checked')).map(cb => cb.value),
-                updatedAt: new Date().toISOString()
-            };
-
+            const config = buildServerConfig(false);
             const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
             let sha = '';
 
@@ -897,19 +879,7 @@
             lucide.createIcons();
 
             // 1. מעדכנים את קובץ ההגדרות בשרת שיהווה את "המוח" של הפייתון
-            const config = {
-                minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
-                maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
-                minSqft: document.getElementById('ondemand-min-sqft').value,
-                minBeds: document.getElementById('ondemand-min-beds').value,
-                minBaths: document.getElementById('ondemand-min-baths').value,
-                sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb=>cb.value),
-                propertyTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb=>cb.value),
-                cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb=>cb.value),
-                neighborhoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb=>cb.value),
-                updatedAt: new Date().toISOString(),
-                is_manual_scan: true
-            };
+            const config = buildServerConfig(true);
 
             try {
                 const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
@@ -953,6 +923,7 @@
 
         // --- חלון ניהול טייס אוטומטי ותזמונים ---
         function openAutoScanModal() {
+            loadScheduleSettings();
             document.getElementById('autoscan-modal').classList.remove('hidden');
         }
 
@@ -971,7 +942,11 @@
             document.getElementById('schedule-distressed-day').value = distDay;
         }
 
-        function saveScheduleSettings() {
+        // שמירת הגדרות הטייס האוטומטי ושידור מלא לשרת
+        async function saveScheduleSettings() {
+            const token = document.getElementById('setting-token-input')?.value.trim() || localStorage.getItem('pa_github_token');
+            if (!token) { alert('כדי לשמור את התזמון לשרת, חסר מפתח GitHub. הזן אותו בחלון "הגדרות סריקה".'); return; }
+
             const isEnabled = document.getElementById('autoscan-master-switch').checked;
             const mlsTime = document.getElementById('schedule-mls-time').value;
             const distDay = document.getElementById('schedule-distressed-day').value;
@@ -982,9 +957,39 @@
             
             isAutoScanEnabled = isEnabled;
             updateAutoScanUI();
-            
-            closeAutoScanModal();
-            alert("הגדרות התזמון נשמרו!\n\n(הערה: כדי שהשרת יציית לשעות אלו בדיוק, נצטרך לעדכן את מנוע הפייתון לקרוא אותן מההגדרות בשלב הבא).");
+
+            const btn = document.getElementById('btn-save-schedule');
+            const origHtml = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> שומר בשרת...';
+            btn.disabled = true;
+            lucide.createIcons();
+
+            // אנחנו משדרים את כל ההגדרות הרגילות + התזמונים החדשים
+            const config = buildServerConfig(false);
+
+            try {
+                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
+                let sha = '';
+                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+
+                const putRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "Update Auto-Scan Schedule", content: contentBase64, sha: sha || undefined })
+                });
+
+                if(putRes.ok) {
+                    alert("פקודת התזמון (טייס אוטומטי) נשמרה בשרת בהצלחה!");
+                    closeAutoScanModal();
+                } else { 
+                    alert("שגיאה בשמירת התזמון בשרת. ודא שהטוקן תקין."); 
+                }
+            } catch(e) { alert("שגיאת רשת בחיבור לגיטהאב."); }
+
+            btn.innerHTML = origHtml;
+            btn.disabled = false;
+            lucide.createIcons();
         }
 
         // ניטור טיימר לסריקה וביצוע ריענון אמיתי בסיום
@@ -999,7 +1004,7 @@
                 const diff = Math.floor((Date.now() - scanStartTime) / 1000); 
                 tEl.textContent = `${String(Math.floor(diff / 60)).padStart(2,'0')}:${String(diff % 60).padStart(2,'0')}`; 
                 
-                // רענון אוטומטי ואמיתי אחרי 90 שניות (מכסה את זמן הריצה בגיטהאב)
+                // רענון אוטומטי ואמיתי אחרי 90 שניות
                 if (diff >= 90) {
                     finishBackgroundScanMonitor();
                 }
@@ -1009,7 +1014,6 @@
         function finishBackgroundScanMonitor() {
             clearInterval(scanTimerInterval); 
             document.getElementById('scan-progress-toast').classList.add('hidden');
-            // פעולת הריענון שביקשת!
             window.location.reload(true);
         }
 
