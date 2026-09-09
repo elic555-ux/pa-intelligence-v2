@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.4</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.5</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -222,7 +222,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection (9 Cities & Counties) -->
+            <!-- Cities Selection -->
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
@@ -244,7 +244,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
                 </div>
             </div>
-            <!-- Neighborhoods Selection (All 25 Neighborhoods) -->
+            <!-- Neighborhoods Selection -->
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
@@ -782,20 +782,23 @@
             let sha = '';
 
             try {
-                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `token ${token}` } });
+                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${token}` } });
                 if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
             } catch(e) {}
 
             try {
                 const putRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
                     method: 'PUT',
-                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: "Update scan config from UI", content: contentBase64, sha: sha || undefined })
                 });
                 if(putRes.ok) {
                     alert("ההגדרות נשמרו בשרת בהצלחה! מעכשיו הטייס האוטומטי יעבוד רק לפיהן.");
                     closeSettingsModal();
-                } else { alert("שגיאה בשמירת ההגדרות בשרת. ודא שה-Token תקין ויש לו הרשאת repo."); }
+                } else { 
+                    const errTxt = await putRes.text();
+                    alert(`שגיאה בשמירת ההגדרות בשרת.\nקוד: ${putRes.status}\nפרטים: ${errTxt}`); 
+                }
             } catch(e) { alert("שגיאת רשת בחיבור לגיטהאב."); }
             document.getElementById('scan-progress-toast').classList.add('hidden');
         }
@@ -812,16 +815,6 @@
             }
             localStorage.setItem('pa_github_token', tk);
 
-            const sectors = Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb=>cb.value);
-            const cities = Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb=>cb.value);
-            const propertyTypes = Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb=>cb.value);
-            const hoods = Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb=>cb.value);
-            
-            if (!sectors.length || !cities.length) {
-                alert("בחר לפחות עיר וסקטור אחד.");
-                return;
-            }
-            
             const btn = document.getElementById('btn-trigger-scan'); 
             const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> מתקשר עם השרת...'; 
@@ -835,10 +828,10 @@
                 minSqft: document.getElementById('ondemand-min-sqft').value,
                 minBeds: document.getElementById('ondemand-min-beds').value,
                 minBaths: document.getElementById('ondemand-min-baths').value,
-                sectors: sectors,
-                propertyTypes: propertyTypes,
-                cities: cities,
-                neighborhoods: hoods,
+                sectors: Array.from(document.querySelectorAll('.ondemand-sector-box:checked')).map(cb=>cb.value),
+                propertyTypes: Array.from(document.querySelectorAll('.ondemand-prop-type-box:checked')).map(cb=>cb.value),
+                cities: Array.from(document.querySelectorAll('.ondemand-city-box:checked')).map(cb=>cb.value),
+                neighborhoods: Array.from(document.querySelectorAll('.ondemand-hood-box:checked')).map(cb=>cb.value),
                 updatedAt: new Date().toISOString(),
                 is_manual_scan: true
             };
@@ -846,23 +839,23 @@
             try {
                 const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
                 let sha = '';
-                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `token ${tk}` } });
+                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${tk}` } });
                 if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
 
                 await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
                     method: 'PUT',
-                    headers: { 'Authorization': `token ${tk}`, 'Content-Type': 'application/json' },
+                    headers: { 'Authorization': `Bearer ${tk}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: "Update config for On-Demand Scan", content: contentBase64, sha: sha || undefined })
                 });
             } catch(e) {
                 console.warn("הערה: שגיאה בעדכון קובץ ההגדרות בשרת לפני הסריקה, ממשיך בשיגור...");
             }
 
-            // 2. משגרים פקודת "הפעל" פשוטה ונקייה למנוע החדש (ללא משתנים שגורמים לשגיאה 422)
+            // 2. משגרים פקודת "הפעל" פשוטה ונקייה למנוע
             try {
                 const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
                     method: "POST", 
-                    headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
+                    headers: { "Authorization": `Bearer ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
                     body: JSON.stringify({ ref: "main" })
                 });
                 
@@ -872,10 +865,10 @@
                 } else {
                     const errorText = await res.text();
                     console.error(errorText);
-                    alert("שגיאה בשיגור הסריקה! ודא שהמפתח (Token) תקין וכולל הרשאת 'workflow'.");
+                    alert(`שגיאה בשיגור הסריקה!\nקוד שגיאה: ${res.status}\nפרטים: ${errorText}\n\nצלם לי הודעה זו.`);
                 }
             } catch(e) {
-                alert("שגיאת תקשורת מול שרתי גיטהאב.");
+                alert(`שגיאת רשת מול גיטהאב: ${e.message}`);
             }
             
             btn.innerHTML = originalHtml; 
