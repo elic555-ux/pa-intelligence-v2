@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.2</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.3</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -803,7 +803,7 @@
             document.getElementById('scan-progress-toast').classList.add('hidden');
         }
 
-        // --- שיגור סריקה יזומה מתוך הממשק (Mission Control) בדיוק כמו שעבד לך ---
+        // --- שיגור סריקה יזומה מתוך הממשק ---
         async function triggerOnDemandExecution() {
             const tokenInput = document.getElementById('ondemand-token-input');
             let tk = tokenInput ? tokenInput.value.trim() : '';
@@ -826,11 +826,12 @@
             }
             
             const btn = document.getElementById('btn-trigger-scan'); 
+            const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> מתקשר עם השרת...'; 
             btn.disabled = true;
             lucide.createIcons();
 
-            // 1. קודם מעדכנים את קובץ ההגדרות בשרת (כדי שהפייתון יידע מה לסרוק)
+            // 1. קודם מעדכנים את קובץ ההגדרות בשרת
             const config = {
                 minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
                 maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
@@ -860,7 +861,7 @@
                 console.warn("הערה: שגיאה בעדכון קובץ ההגדרות בשרת לפני הסריקה, ממשיך בשיגור...");
             }
 
-            // 2. משגרים את הסריקה דרך scanner.yml בדיוק כמו בקובץ שלך שעבד
+            // 2. משגרים את הסריקה ישירות דרך scanner.yml בדיוק כמו בקובץ המקורי שעבד
             const hoodsStr = hoods.length > 0 ? hoods.join(', ') : 'All';
             const typesStr = propertyTypes.length > 0 ? propertyTypes.join(', ') : 'All';
             const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
@@ -907,7 +908,7 @@
                 if (i < cityBatches.length - 1) await new Promise(r => setTimeout(r, 3000));
             }
             
-            btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת'; 
+            btn.innerHTML = originalHtml; 
             btn.disabled = false;
             lucide.createIcons();
             
