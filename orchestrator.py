@@ -14,7 +14,6 @@ NOW_EST = datetime.now(EST_TZ)
 PROPERTIES_FILE = 'properties.json'
 CONFIG_FILE = 'scan_config.json'
 
-# רשימת דפדפנים כדי לעקוף חסימות אבטחה של Redfin
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
@@ -22,13 +21,8 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
 ]
 
-# --- חוקי ברזל: חלון זמן מקסימלי לסריקה אחורה (בימים) לפי סקטור ---
 SECTOR_LOOKBACK_DAYS = {
-    "mls": 90,
-    "reo": 90,
-    "sheriff": 45,
-    "tax": 45,
-    "06_probate_estates": 180
+    "mls": 90, "reo": 90, "sheriff": 45, "tax": 45, "06_probate_estates": 180
 }
 
 REGION_MAP = {
@@ -43,21 +37,13 @@ REGION_MAP = {
     "Lancaster": {"market": "lancaster", "region_id": "11902", "region_type": "6"}
 }
 
-DISTRESS_KEYWORDS = [
-    "as-is", "as is", "investor", "handyman", "fixer", "tlc", "cash only",
-    "rehab", "contractor special", "needs work", "estate sale", "foreclosure"
-]
-
-def get_env_input(key, default=""):
-    return os.environ.get(f'INPUT_{key.upper()}', os.environ.get(key.upper(), default)).strip()
+DISTRESS_KEYWORDS = ["as-is", "as is", "investor", "handyman", "fixer", "tlc", "cash only", "rehab", "contractor special", "needs work", "estate sale", "foreclosure"]
 
 def normalize_addr_key(address):
-    if not address:
-        return ""
+    if not address: return ""
     clean = address.lower().strip()
     m = re.match(r'^(\d+)\s+([a-z0-9]+)', clean)
-    if m:
-        return f"{m.group(1)}_{m.group(2)}"
+    if m: return f"{m.group(1)}_{m.group(2)}"
     return re.sub(r'[^a-z0-9]', '', clean)
 
 def calculate_deal_score(deal_type, price, margin_est=25):
@@ -74,35 +60,29 @@ def calculate_deal_score(deal_type, price, margin_est=25):
     return max(40, min(99, score))
 
 def load_server_config():
-    """קורא את קובץ ההגדרות מהממשק אם הוא קיים"""
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception as e:
-            print(f"⚠️ שגיאה בקריאת קובץ ההגדרות מהממשק: {e}")
+        except Exception: pass
     return None
 
 def load_existing_properties():
-    if not os.path.exists(PROPERTIES_FILE):
-        return {}
+    if not os.path.exists(PROPERTIES_FILE): return {}
     try:
         with open(PROPERTIES_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
             prop_dict = {}
             for item in data:
                 key = normalize_addr_key(item.get('address'))
-                if key:
-                    prop_dict[key] = item
+                if key: prop_dict[key] = item
             return prop_dict
-    except Exception:
-        return {}
+    except Exception: return {}
 
 def classify_strategy(deal_type, price, beds, summary=""):
     dt = (deal_type or '').lower()
     text = f"{dt} {summary}".lower()
     is_distressed = any(kw in text for kw in DISTRESS_KEYWORDS) or any(k in dt for k in ['sheriff', 'tax', 'probate', 'foreclosure', 'reo'])
-
     beds_num = int(beds) if str(beds).isdigit() else 3
     base_rent = 950 + (beds_num * 250)
     projected_rent = max(900, int(base_rent + (price * 0.002)))
@@ -110,19 +90,9 @@ def classify_strategy(deal_type, price, beds, summary=""):
     gross_yield = round((annual_rent / max(price, 1)) * 100, 1)
 
     if not is_distressed and price >= 60000:
-        return {
-            "strategy": "turnkey",
-            "strategy_label": "🔑 Turnkey (מניב מיידי)",
-            "projected_rent": f"${projected_rent:,} / חודש",
-            "gross_yield": f"{gross_yield}% תשואה"
-        }
+        return {"strategy": "turnkey", "strategy_label": "🔑 Turnkey (מניב מיידי)", "projected_rent": f"${projected_rent:,} / חודש", "gross_yield": f"{gross_yield}% תשואה"}
     else:
-        return {
-            "strategy": "value_add",
-            "strategy_label": "🔨 Value-Add (השבחה ומצוקה)",
-            "projected_rent": f"${projected_rent:,} / חודש",
-            "gross_yield": f"{gross_yield}% תשואה (לאחר שיפוץ)"
-        }
+        return {"strategy": "value_add", "strategy_label": "🔨 Value-Add (השבחה ומצוקה)", "projected_rent": f"${projected_rent:,} / חודש", "gross_yield": f"{gross_yield}% תשואה (לאחר שיפוץ)"}
 
 def is_within_lookback(sector, listed_date_str):
     max_days = SECTOR_LOOKBACK_DAYS.get(sector, 90)
@@ -130,59 +100,35 @@ def is_within_lookback(sector, listed_date_str):
         listed_dt = datetime.strptime(listed_date_str, '%d/%m/%Y')
         delta = datetime.now() - listed_dt
         return delta.days <= max_days
-    except:
-        return True
+    except: return True
 
 def fetch_live_mls_for_city(city_name, min_p, max_p):
     clean_city = city_name.strip()
     target = REGION_MAP.get(clean_city)
-    if not target:
-        target = REGION_MAP["Pittsburgh"]
+    if not target: target = REGION_MAP["Pittsburgh"]
 
     url = "https://www.redfin.com/stingray/api/gis-csv"
-    params = {
-        "al": "1",
-        "market": target["market"],
-        "min_price": str(int(min_p)),
-        "max_price": str(int(max_p)),
-        "num_homes": "350",
-        "region_id": target["region_id"],
-        "region_type": target["region_type"],
-        "status": "9",
-        "v": "8"
-    }
-    
-    headers = {
-        "User-Agent": random.choice(USER_AGENTS),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-    }
+    params = {"al": "1", "market": target["market"], "min_price": str(int(min_p)), "max_price": str(int(max_p)), "num_homes": "350", "region_id": target["region_id"], "region_type": target["region_type"], "status": "9", "v": "8"}
+    headers = {"User-Agent": random.choice(USER_AGENTS), "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5"}
 
     discovered = []
     try:
-        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city} (מגבלת 350 נכסים בטוחה)...")
+        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city}...")
         resp = requests.get(url, params=params, headers=headers, timeout=15)
-        
         if resp.status_code == 200 and "ADDRESS" in resp.text:
             csv_file = io.StringIO(resp.text)
             reader = csv.DictReader(csv_file)
             for row in reader:
                 addr = row.get("ADDRESS")
                 raw_price = row.get("PRICE")
-                if not addr or not raw_price:
-                    continue
-                
+                if not addr or not raw_price: continue
                 try: price = int(float(raw_price))
                 except ValueError: continue
-
-                if not (min_p <= price <= max_p):
-                    continue
+                if not (min_p <= price <= max_p): continue
 
                 dom_str = row.get("DAYS ON MARKET")
                 dom = int(float(dom_str)) if dom_str else 0
-                
-                if dom > SECTOR_LOOKBACK_DAYS["mls"]:
-                    continue 
+                if dom > SECTOR_LOOKBACK_DAYS["mls"]: continue 
                 
                 listed_dt = NOW_EST - timedelta(days=dom)
                 listed_date_str = listed_dt.strftime('%d/%m/%Y')
@@ -191,20 +137,17 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 baths = row.get("BATHS") or "1"
                 sqft = row.get("SQUARE FEET") or "1200"
                 row_city = row.get("CITY") or clean_city
-                row_zip = row.get("ZIP OR POSTAL CODE") or "15201"
                 home_url = row.get("URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)") or ""
-                if home_url and not home_url.startswith("http"):
-                    home_url = f"https://www.redfin.com{home_url}"
+                if home_url and not home_url.startswith("http"): home_url = f"https://www.redfin.com{home_url}"
 
                 strategy_data = classify_strategy("MLS וירידות מחיר", price, beds)
-
                 discovered.append({
                     "id": f"PA-MLS-{row.get('MLS#', normalize_addr_key(addr))}",
                     "docket_id": f"MLS-{row.get('MLS#', 'ACT')}",
                     "address": addr,
                     "city": row_city,
                     "county": "Allegheny" if clean_city in ["Pittsburgh", "Allegheny"] else "Pennsylvania County",
-                    "zip": row_zip,
+                    "zip": row.get("ZIP OR POSTAL CODE") or "15201",
                     "price": price,
                     "deal_type": "MLS וירידות מחיר (Realtor / Redfin)",
                     "margin_estimate": "24% מרווח",
@@ -226,9 +169,8 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                     "url": home_url,
                     "listed_date": listed_date_str
                 })
-            print(f"✅ נמשכו {len(discovered)} נכסי MLS מאזור {clean_city}.")
         else:
-            print(f"⚠️ הערה: לא נמשכו נכסים עבור {clean_city}. קוד שרת: {resp.status_code}")
+            print(f"⚠️ הערה: לא נמשכו נכסים עבור {clean_city}.")
     except Exception as e:
         print(f"⚠️ שגיאה בחיבור לשרת עבור אזור {clean_city}: {e}")
 
@@ -236,142 +178,18 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
 
 def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
     all_deals = [
-        {
-            "id": "PA-MLS-1771849",
-            "sector_key": "reo",
-            "docket_id": "WPMLS-1771849",
-            "address": "1015 6th Ave",
-            "city": "Brackenridge",
-            "county": "Allegheny",
-            "zip": "15014",
-            "price": 69900,
-            "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)",
-            "margin_estimate": "38% מרווח",
-            "beds": 3,
-            "baths": 1,
-            "sqft": 1015,
-            "occupancy": "פנוי (Vacant)",
-            "rehab_scope": "קוסמטי בלבד ($15k)",
-            "roof_condition": "תקין",
-            "hvac_type": "Forced Air / Gas",
-            "year_built": 1955,
-            "lot_size": "0.11 Acres",
-            "parking": "מוסך נפרד ל-2 רכבים",
-            "summary": "בית לבנים בכינוס בנקאי בפרבר Brackenridge (מחוז Allegheny). חצר מגודרת ומוסך כפול.",
-            "url": "https://www.trulia.com/home/1015-6th-ave-brackenridge-pa-15014-11280535",
-            "listed_date": "10/08/2026"
-        },
-        {
-            "id": "PA-MLS-1772015",
-            "sector_key": "reo",
-            "docket_id": "WPMLS-1772015",
-            "address": "59 Petunia St",
-            "city": "Pittsburgh",
-            "county": "Allegheny",
-            "zip": "15210",
-            "price": 139900,
-            "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)",
-            "margin_estimate": "36% מרווח",
-            "beds": 4,
-            "baths": 3,
-            "sqft": 2780,
-            "occupancy": "פנוי (Vacant)",
-            "rehab_scope": "שיפוץ בינוני ($35k)",
-            "roof_condition": "תקין",
-            "hvac_type": "Central Air / Forced Air Gas",
-            "year_built": 1978,
-            "lot_size": "1.09 Acres (מעל דונם!)",
-            "parking": "מוסך מובנה ל-2 רכבים",
-            "summary": "הזדמנות נדירה ברובע Brookline. בית לבנים ענק 4 חדרים על מגרש של מעל דונם.",
-            "url": "https://www.coldwellbanker.com/pa/pittsburgh/59-petunia-st/lid-P00800000HGQouPGl9eWMof05od5NMETfEaKAwYj",
-            "listed_date": "01/07/2026"
-        },
-        {
-            "id": "PA-SHF-250114",
-            "sector_key": "sheriff",
-            "docket_id": "GD-25-011492",
-            "address": "310 Long Rd",
-            "city": "Pittsburgh",
-            "county": "Allegheny",
-            "zip": "15235",
-            "price": 139000,
-            "deal_type": "מכירות שריף (Sheriff Sales)",
-            "margin_estimate": "30% מרווח",
-            "beds": 3,
-            "baths": 1,
-            "sqft": 1120,
-            "occupancy": "פנוי (Vacant)",
-            "rehab_scope": "קל ($12k)",
-            "roof_condition": "חדש (2024)",
-            "hvac_type": "Forced Air",
-            "year_built": 2024,
-            "lot_size": "0.16 Acres",
-            "parking": "Driveway פרטי",
-            "summary": "בית בבנייה חדשה באזור Penn Hills (מחוז Allegheny).",
-            "url": "https://sheriffalleghenycounty.com/real-estate/",
-            "listed_date": "25/08/2026"
-        },
-        {
-            "id": "PA-PRB-89102",
-            "sector_key": "06_probate_estates",
-            "docket_id": "PB-26-10928",
-            "address": "4210 Butler St",
-            "city": "Pittsburgh",
-            "county": "Allegheny",
-            "zip": "15201",
-            "price": 145000,
-            "deal_type": "תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)",
-            "margin_estimate": "32% מרווח",
-            "beds": 4,
-            "baths": 2,
-            "sqft": 2100,
-            "occupancy": "פנוי (Vacant)",
-            "rehab_scope": "שיפוץ מלא ($45k)",
-            "roof_condition": "דרוש תיקון",
-            "hvac_type": "Radiator / Steam",
-            "year_built": 1935,
-            "lot_size": "0.08 Acres",
-            "parking": "חניית רחוב",
-            "summary": "הזדמנות יורשים מובהקת בלב רובע Lawrenceville המבוקש.",
-            "url": "https://www.alleghenycounty.us/special-records/wills.aspx",
-            "listed_date": "15/04/2026"
-        },
-        {
-            "id": "PA-TAX-44910",
-            "sector_key": "tax",
-            "docket_id": "TX-26-44019",
-            "address": "742 Greenfield Ave",
-            "city": "Pittsburgh",
-            "county": "Allegheny",
-            "zip": "15217",
-            "price": 78000,
-            "deal_type": "פיגורי מס (County Tax Claim)",
-            "margin_estimate": "34% מרווח",
-            "beds": 3,
-            "baths": 2,
-            "sqft": 1580,
-            "occupancy": "פנוי (Vacant)",
-            "rehab_scope": "קוסמטי ($18k)",
-            "roof_condition": "חדש (2022)",
-            "hvac_type": "Central AC / Gas",
-            "year_built": 1962,
-            "lot_size": "0.14 Acres",
-            "parking": "מוסך מקורה",
-            "summary": "חוב מס מוסדר במכרז פומבי במיקום מבוקש ביותר ליד Greenfield.",
-            "url": "https://alleghenycounty.us/government/county-departments/court-records/delinquent-real-estate-taxes",
-            "listed_date": "05/08/2026"
-        }
+        {"id": "PA-MLS-1771849", "sector_key": "reo", "address": "1015 6th Ave", "city": "Brackenridge", "price": 69900, "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)", "listed_date": "10/08/2026"},
+        {"id": "PA-MLS-1772015", "sector_key": "reo", "address": "59 Petunia St", "city": "Pittsburgh", "price": 139900, "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)", "listed_date": "01/07/2026"},
+        {"id": "PA-SHF-250114", "sector_key": "sheriff", "address": "310 Long Rd", "city": "Pittsburgh", "price": 139000, "deal_type": "מכירות שריף (Sheriff Sales)", "listed_date": "25/08/2026"},
+        {"id": "PA-PRB-89102", "sector_key": "06_probate_estates", "address": "4210 Butler St", "city": "Pittsburgh", "price": 145000, "deal_type": "תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)", "listed_date": "15/04/2026"},
+        {"id": "PA-TAX-44910", "sector_key": "tax", "address": "742 Greenfield Ave", "city": "Pittsburgh", "price": 78000, "deal_type": "פיגורי מס (County Tax Claim)", "listed_date": "05/08/2026"}
     ]
 
     filtered = []
     for item in all_deals:
         sector = item.get("sector_key")
-        if allowed_sectors and sector not in allowed_sectors:
-            continue
-            
-        if not is_within_lookback(sector, item.get("listed_date")):
-            continue
-
+        if allowed_sectors and sector not in allowed_sectors: continue
+        if not is_within_lookback(sector, item.get("listed_date")): continue
         p = item.get("price", 0)
         if min_p <= p <= max_p:
             strat = classify_strategy(item.get("deal_type"), p, item.get("beds", 3), item.get("summary", ""))
@@ -384,65 +202,81 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
     return filtered
 
 def run_orchestrator():
-    print("🚀 מפעיל מנוע סריקה מבוזר (Multi-City Batch Mode)...")
+    print("🚀 מתחיל ריצת מנוע סריקה מרכזי...")
 
-    # --- הזרקת התצורה הדינמית מהממשק ---
+    # זיהוי אוטומטי אם הופעל ידנית מהאתר (workflow_dispatch) או ע"י השעון (schedule)
+    github_event = os.environ.get('GITHUB_EVENT_NAME', 'workflow_dispatch')
+    is_manual_trigger = (github_event == 'workflow_dispatch')
+
     server_config = load_server_config()
+    if not server_config:
+        print("⚠️ קובץ תצורה לא נמצא. מסיים ריצה.")
+        return
+
+    is_auto_scan_enabled = server_config.get('autoScanEnabled', True)
     
-    if server_config:
-        print("🎛️ קובץ תצורת ממשק (scan_config.json) זוהה! עובד לפי הגדרות המשתמש מהאתר.")
-        min_price = float(server_config.get('minPrice', 0))
-        max_price = float(server_config.get('maxPrice', 190000))
-        allowed_sectors = server_config.get('sectors', [])
-        cities_list = server_config.get('cities', ["Pittsburgh", "Allegheny"])
+    # 1. עצירת מנוע מוחלטת
+    if not is_manual_trigger and not is_auto_scan_enabled:
+        print("🛑 הטייס האוטומטי כבוי באתר. הסריקה המתוזמנת מבוטלת.")
+        sys.exit(0)
+
+    allowed_sectors = server_config.get('sectors', [])
+    
+    # 2. לוגיקת תזמון חכמה (לסריקות שמתעוררות אוטומטית)
+    if not is_manual_trigger:
+        schedule_mls = server_config.get('scheduleMls', '08:00')
+        schedule_dist = server_config.get('scheduleDist', 'Wednesday')
+        
+        current_hour = NOW_EST.strftime("%H:00")
+        current_day = NOW_EST.strftime("%A")
+        
+        run_mls = (current_hour == schedule_mls)
+        # נניח שסריקת הכינוסים המורחבת רצה תמיד ב-08:00 בבוקר ביום הנבחר
+        run_dist = (current_day == schedule_dist and current_hour == "08:00")
+        
+        if not run_mls and not run_dist:
+            print(f"💤 השעה כעת {current_hour} ביום {current_day} (EST).")
+            print(f"התזמון קובע: MLS ב-{schedule_mls} וכינוסים ב-{schedule_dist}. חוזר לישון...")
+            sys.exit(0)
+            
+        print("⏰ התזמון הגיע! מפעיל סריקה ממוקדת...")
+        active_sectors = []
+        if run_mls:
+            active_sectors.append("mls")
+        if run_dist:
+            active_sectors.extend(["reo", "sheriff", "tax", "06_probate_estates"])
+            
+        # סורק רק את מה שגם הגיע הזמן שלו וגם אושר בהגדרות באתר
+        allowed_sectors = [s for s in allowed_sectors if s in active_sectors]
+        if not allowed_sectors:
+            print("⚠️ הגיע זמן סריקה, אך הסקטורים הללו כבויים בהגדרות. חוזר לישון.")
+            sys.exit(0)
     else:
-        print("🎛️ לא נמצא קובץ תצורה מהממשק, חוזר לברירת המחדל של ה-YAML...")
-        target_cities_raw = get_env_input('target_city', 'Pittsburgh, Allegheny')
-        neighborhoods_raw = get_env_input('neighborhoods', 'All')
+        print("⚡ פקודת שיגור ידנית (Mission Control) התקבלה! סורק הכל עכשיו...")
 
-        min_price = 0.0
-        max_price = 500000.0
-        allowed_sectors = []
+    min_price = float(server_config.get('minPrice', 0))
+    max_price = float(server_config.get('maxPrice', 190000))
+    cities_list = server_config.get('cities', ["Pittsburgh"])
 
-        min_match = re.search(r'MIN_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
-        max_match = re.search(r'MAX_PRICE[:=]\s*(\d+)', neighborhoods_raw, re.IGNORECASE)
-        sectors_match = re.search(r'SECTORS[:=]\s*([a-zA-Z0-9_,-]+)', neighborhoods_raw, re.IGNORECASE)
-
-        if min_match: min_price = float(min_match.group(1))
-        if max_match: max_price = float(max_match.group(1))
-        if sectors_match:
-            allowed_sectors = [s.strip().lower() for s in sectors_match.group(1).split(',') if s.strip()]
-
-        cities_list = [c.strip() for c in target_cities_raw.split(',') if c.strip()]
-        if not cities_list:
-            cities_list = ["Pittsburgh", "Allegheny"]
-
-    print(f"🎯 מנות יעד נוכחיות: {cities_list}")
-    print(f"🎯 טווח מחירים: ${min_price:,.0f} - ${max_price:,.0f}")
-    print(f"📋 סקטורים: {allowed_sectors or 'הכל'}")
+    print(f"🎯 מנות יעד: {cities_list}")
+    print(f"📋 סקטורים רצים עכשיו: {allowed_sectors}")
 
     live_results = []
-    if not allowed_sectors or "mls" in allowed_sectors:
+    if "mls" in allowed_sectors:
         for city in cities_list:
             city_deals = fetch_live_mls_for_city(city, min_price, max_price)
             live_results.extend(city_deals)
-    else:
-        print("⏭️ דילוג על MLS במנה זו.")
 
     verified_results = get_verified_market_deals(allowed_sectors, min_price, max_price)
     combined = live_results + verified_results
-    
     final_filtered = [p for p in combined if min_price <= p.get("price", 0) <= max_price]
 
-    # --- מנגנון המיזוג (מתפקד כסורק דלתא אוטומטי ללא כפילויות) ---
-    print(f"🔍 ממזג {len(final_filtered)} תוצאות (לאחר סינון תאריכים ומחיר) עם הנתונים הקיימים...")
-    
+    print(f"🔍 ממזג {len(final_filtered)} תוצאות למאגר...")
     existing_props_dict = load_existing_properties()
     
     for deal in final_filtered:
         key = normalize_addr_key(deal.get('address'))
-        if not key:
-            key = str(deal.get('id'))
+        if not key: key = str(deal.get('id'))
         existing_props_dict[key] = deal 
         
     final_merged_list = list(existing_props_dict.values())
@@ -451,7 +285,7 @@ def run_orchestrator():
     with open(PROPERTIES_FILE, 'w', encoding='utf-8') as f:
         json.dump(final_merged_list, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ סריקת המנה הסתיימה! הקובץ המאוחד מכיל עכשיו {len(final_merged_list)} נכסים.")
+    print(f"✅ הסריקה הסתיימה! הקובץ מכיל כעת {len(final_merged_list)} נכסים.")
 
 if __name__ == '__main__':
     run_orchestrator()
