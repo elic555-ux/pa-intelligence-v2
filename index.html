@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.6</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.7</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -64,10 +64,17 @@
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
                 </button>
 
-                <button onclick="toggleAutoScansAction()" id="auto-scan-toggle-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition" title="הפעל או השהה את התזמונים האוטומטיים">
-                    <span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="auto-scan-text" class="text-xs font-bold text-emerald-400">טייס אוטומטי (ON)</span>
-                </button>
+                <!-- חיווי סריקה אחרונה וטייס אוטומטי -->
+                <div class="flex items-center gap-3 pr-2 border-r border-gray-700">
+                    <div class="text-right hidden sm:block">
+                        <span class="block text-[10px] text-gray-500 font-bold mb-0.5">סריקה אחרונה</span>
+                        <span class="text-xs font-mono font-black text-emerald-400" id="last-scan-time">בודק...</span>
+                    </div>
+                    <button onclick="openAutoScanModal()" id="auto-scan-toggle-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition cursor-pointer" title="ניהול תזמונים וטייס אוטומטי">
+                        <span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span id="auto-scan-text" class="text-xs font-bold text-emerald-400">טייס אוטומטי</span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -117,7 +124,6 @@
     <!-- Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
-            
             <div class="flex justify-between items-start border-b border-gray-800 pb-3.5">
                 <div>
                     <div class="flex items-center gap-2 mb-2" id="modal-badges"></div>
@@ -166,6 +172,61 @@
             <div class="pt-3.5 border-t border-gray-800 flex justify-between items-center gap-3">
                 <button onclick="copyPropertyAddress()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span id="copy-btn-text">העתק כתובת</span></button>
                 <div class="flex gap-2.5" id="modal-action-buttons"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-Scan Management Modal (New!) -->
+    <div id="autoscan-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <div class="flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5 text-emerald-400"></i><h3 class="text-base font-bold text-white">תזמון וניהול הטייס האוטומטי</h3></div>
+                <button onclick="closeAutoScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <div>
+                        <span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי</span>
+                        <span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות ברקע</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="autoscan-master-switch" checked class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-4">
+                    <h4 class="text-xs font-bold text-gray-300 border-b border-gray-800 pb-2">העדפות תזמון סריקה:</h4>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-400">סריקת MLS (יומי)</span>
+                        <select id="schedule-mls-time" class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold">
+                            <option value="05:00">05:00 (בוקר)</option>
+                            <option value="08:00">08:00 (בוקר)</option>
+                            <option value="12:00">12:00 (צהריים)</option>
+                            <option value="18:00">18:00 (ערב)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-400">כינוסים, עיזבונות ושריף (שבועי)</span>
+                        <select id="schedule-distressed-day" class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold">
+                            <option value="Monday">שני בבוקר</option>
+                            <option value="Wednesday">רביעי בבוקר</option>
+                            <option value="Friday">שישי בבוקר</option>
+                            <option value="Sunday">ראשון בבוקר</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-[10px] text-gray-500 font-bold leading-tight">
+                    * הערה: שמירת התזמונים מעדכנת את קובץ ה-JSON בשרת. בהמשך נעדכן את מנוע הפייתון (השרת) כדי שיקרא את השעות האלו ויציית להן.
+                </p>
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
+                <button onclick="closeAutoScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
+                <button onclick="saveScheduleSettings()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i> שמור תזמונים</button>
             </div>
         </div>
     </div>
@@ -429,6 +490,7 @@
 
             loadSettingsState();
             loadOnDemandState();
+            loadScheduleSettings(); // טעינת הגדרות התזמון
 
             document.querySelectorAll('#settings-modal input, #settings-modal select').forEach(el => {
                 el.addEventListener('change', saveSettingsStateLocally);
@@ -563,7 +625,18 @@
 
         async function loadProperties() {
             try {
+                // המשיכה של הקובץ מהשרת כוללת עכשיו קריאת Headers לשעת העדכון האחרונה!
                 const res = await fetch('properties.json?t=' + Date.now());
+                
+                const lastModified = res.headers.get('Last-Modified');
+                if (lastModified) {
+                    const dateObj = new Date(lastModified);
+                    const formattedDate = dateObj.toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit'}) + " " + dateObj.toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'});
+                    document.getElementById('last-scan-time').textContent = formattedDate;
+                } else {
+                    document.getElementById('last-scan-time').textContent = "מוכן";
+                }
+
                 const rawList = await res.json();
                 const seenKeys = new Set(); rawProperties = [];
                 rawList.forEach(p => {
@@ -571,7 +644,10 @@
                     if (!seenKeys.has(normKey)) { seenKeys.add(normKey); if (!p.listed_date) p.listed_date = '05/09/2026'; rawProperties.push(p); }
                 });
                 populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error(err); 
+                document.getElementById('last-scan-time').textContent = "שגיאה";
+            }
         }
 
         function populateCityDropdown() {
@@ -875,6 +951,42 @@
             lucide.createIcons();
         }
 
+        // --- חלון ניהול טייס אוטומטי ותזמונים ---
+        function openAutoScanModal() {
+            document.getElementById('autoscan-modal').classList.remove('hidden');
+        }
+
+        function closeAutoScanModal() {
+            document.getElementById('autoscan-modal').classList.add('hidden');
+        }
+
+        function loadScheduleSettings() {
+            const isEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
+            document.getElementById('autoscan-master-switch').checked = isEnabled;
+            
+            const mlsTime = localStorage.getItem('pa_schedule_mls') || "05:00";
+            document.getElementById('schedule-mls-time').value = mlsTime;
+            
+            const distDay = localStorage.getItem('pa_schedule_dist') || "Wednesday";
+            document.getElementById('schedule-distressed-day').value = distDay;
+        }
+
+        function saveScheduleSettings() {
+            const isEnabled = document.getElementById('autoscan-master-switch').checked;
+            const mlsTime = document.getElementById('schedule-mls-time').value;
+            const distDay = document.getElementById('schedule-distressed-day').value;
+            
+            localStorage.setItem('pa_auto_scan_status', isEnabled);
+            localStorage.setItem('pa_schedule_mls', mlsTime);
+            localStorage.setItem('pa_schedule_dist', distDay);
+            
+            isAutoScanEnabled = isEnabled;
+            updateAutoScanUI();
+            
+            closeAutoScanModal();
+            alert("הגדרות התזמון נשמרו!\n\n(הערה: כדי שהשרת יציית לשעות אלו בדיוק, נצטרך לעדכן את מנוע הפייתון לקרוא אותן מההגדרות בשלב הבא).");
+        }
+
         // ניטור טיימר לסריקה וביצוע ריענון אמיתי בסיום
         function startBackgroundScanMonitor() {
             document.getElementById('scan-progress-toast').classList.remove('hidden');
@@ -904,15 +1016,6 @@
         function updateAutoScanUI() {
             const txt = document.getElementById('auto-scan-text');
             if(isAutoScanEnabled) { txt.textContent = "טייס אוטומטי (ON)"; } else { txt.textContent = "טייס אוטומטי (OFF)"; }
-        }
-
-        async function toggleAutoScansAction() {
-            const token = localStorage.getItem('pa_github_token');
-            if (!token) { alert('אנא הזן מפתח GitHub בחלון סריקה יזומה תחילה.'); return; }
-            isAutoScanEnabled = !isAutoScanEnabled;
-            localStorage.setItem('pa_auto_scan_status', isAutoScanEnabled);
-            updateAutoScanUI();
-            alert(`הטייס האוטומטי ${isAutoScanEnabled ? 'הופעל' : 'כובה'}!`);
         }
 
         window.onload = init;
