@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.0</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.1</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -205,7 +205,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs border-t border-gray-800 pt-3">
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
+                <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option></select></div>
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
             </div>
@@ -828,7 +828,7 @@
             btn.disabled = true;
             lucide.createIcons();
 
-            // 1. קודם כל שומרים את ההגדרות היזומות לקובץ השרת, כדי שהפייתון ידע מה לסרוק!
+            // 1. שמירת ההגדרות היזומות לקובץ השרת (המוח החדש)
             const config = {
                 minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
                 maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
@@ -858,33 +858,29 @@
                 console.warn("הערה: שגיאה בעדכון קובץ ההגדרות בשרת לפני הסריקה, ממשיך בשיגור...");
             }
 
-            // 2. משגרים את הסריקה
-            const batches = []; 
-            for(let i=0; i<cities.length; i+=3) batches.push(cities.slice(i,i+3).join(', '));
-            let success = 0;
-            
-            for(let b of batches) {
-                try {
-                    const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
-                        method: "POST", 
-                        headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
-                        body: JSON.stringify({ ref: "main", inputs: { scanner_id: sectors[0], target_city: b, target_county: "Batch_Mode" } })
-                    });
-                    if (res.ok || res.status===204) success++;
-                } catch(e) {}
-                if (batches.length > 1) await new Promise(r => setTimeout(r, 3000));
+            // 2. משגרים את הסריקה (פעם אחת בלבד! הפייתון כבר קורא את כל הערים מהקובץ)
+            try {
+                const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
+                    method: "POST", 
+                    headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
+                    body: JSON.stringify({ ref: "main" })
+                });
+                
+                if (res.ok || res.status===204) {
+                    closeOnDemandScanModal(); 
+                    startBackgroundScanMonitor(); 
+                } else {
+                    const errText = await res.text();
+                    console.error("GitHub API Error:", errText);
+                    alert("שגיאה בשיגור! ודא שהמפתח (Token) שלך כולל הרשאת 'workflow' בגיטהאב.");
+                }
+            } catch(e) {
+                alert("שגיאת רשת בחיבור לגיטהאב.");
             }
             
             btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת'; 
             btn.disabled = false;
             lucide.createIcons();
-            
-            if (success > 0) { 
-                closeOnDemandScanModal(); 
-                startBackgroundScanMonitor(); 
-            } else {
-                alert("שגיאה בשיגור הגיטהאב. ודא שהמפתח תקין ויש לו הרשאות workflow.");
-            }
         }
 
         // ניטור טיימר לסריקה
