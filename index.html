@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.3</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.4</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -428,11 +428,9 @@
                 if(st) st.value = savedToken;
             }
 
-            // טעינת זיכרון הגדרות המשתמש מהדפדפן
             loadSettingsState();
             loadOnDemandState();
 
-            // הפעלת מאזינים לשמירה אוטומטית של כל קליק
             document.querySelectorAll('#settings-modal input, #settings-modal select').forEach(el => {
                 el.addEventListener('change', saveSettingsStateLocally);
                 if(el.type === 'text') el.addEventListener('input', saveSettingsStateLocally);
@@ -447,7 +445,6 @@
             await loadProperties();
         }
 
-        // --- מנגנון זיכרון הדפדפן (LocalStorage) מונע אמנזיה ---
         function saveSettingsStateLocally() {
             const state = {
                 minPrice: getRawPrice(document.getElementById('setting-min-price')),
@@ -803,7 +800,7 @@
             document.getElementById('scan-progress-toast').classList.add('hidden');
         }
 
-        // --- שיגור סריקה יזומה מתוך הממשק ---
+        // --- שיגור סריקה יזומה מתוך הממשק (Mission Control) ללא משתנים נדחפים ---
         async function triggerOnDemandExecution() {
             const tokenInput = document.getElementById('ondemand-token-input');
             let tk = tokenInput ? tokenInput.value.trim() : '';
@@ -831,7 +828,7 @@
             btn.disabled = true;
             lucide.createIcons();
 
-            // 1. קודם מעדכנים את קובץ ההגדרות בשרת
+            // 1. מעדכנים את קובץ ההגדרות בשרת שיהווה את "המוח" של הפייתון
             const config = {
                 minPrice: getRawPrice(document.getElementById('ondemand-min-price')),
                 maxPrice: getRawPrice(document.getElementById('ondemand-max-price')) || 190000,
@@ -861,63 +858,29 @@
                 console.warn("הערה: שגיאה בעדכון קובץ ההגדרות בשרת לפני הסריקה, ממשיך בשיגור...");
             }
 
-            // 2. משגרים את הסריקה ישירות דרך scanner.yml בדיוק כמו בקובץ המקורי שעבד
-            const hoodsStr = hoods.length > 0 ? hoods.join(', ') : 'All';
-            const typesStr = propertyTypes.length > 0 ? propertyTypes.join(', ') : 'All';
-            const minPriceNum = getRawPrice(document.getElementById('ondemand-min-price'));
-            const maxPriceNum = getRawPrice(document.getElementById('ondemand-max-price')) || 190000;
-            const minSqftStr = document.getElementById('ondemand-min-sqft').value || '1,200';
-            const minBedsStr = document.getElementById('ondemand-min-beds').value;
-            const minBathsStr = document.getElementById('ondemand-min-baths').value;
-            
-            const neighborhoodsMeta = `MIN_PRICE:${minPriceNum} | MAX_PRICE:${maxPriceNum} | MIN_SQFT:${minSqftStr} | BEDS:${minBedsStr} | BATHS:${minBathsStr} | TYPES:${typesStr} | SECTORS:${sectors.join(',')} | HOODS:${hoodsStr}`;
-
-            const BATCH_SIZE = 3; 
-            const cityBatches = [];
-            for (let i = 0; i < cities.length; i += BATCH_SIZE) {
-                cityBatches.push(cities.slice(i, i + BATCH_SIZE));
-            }
-
-            let success = 0;
-            
-            for (let i = 0; i < cityBatches.length; i++) {
-                const batchStr = cityBatches[i].join(', ');
+            // 2. משגרים פקודת "הפעל" פשוטה ונקייה למנוע החדש (ללא משתנים שגורמים לשגיאה 422)
+            try {
+                const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
+                    method: "POST", 
+                    headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
+                    body: JSON.stringify({ ref: "main" })
+                });
                 
-                const payload = {
-                    ref: "main",
-                    inputs: {
-                        scanner_id: sectors[0],
-                        target_county: "Batch_Mode", 
-                        target_city: batchStr,
-                        neighborhoods: neighborhoodsMeta
-                    }
-                };
-
-                try {
-                    const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/scanner.yml/dispatches`, {
-                        method: "POST", 
-                        headers: { "Authorization": `token ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    if (res.ok || res.status===204) {
-                        success++;
-                    }
-                } catch(e) {}
-                
-                if (i < cityBatches.length - 1) await new Promise(r => setTimeout(r, 3000));
+                if (res.ok || res.status===204) {
+                    closeOnDemandScanModal(); 
+                    startBackgroundScanMonitor(); 
+                } else {
+                    const errorText = await res.text();
+                    console.error(errorText);
+                    alert("שגיאה בשיגור הסריקה! ודא שהמפתח (Token) תקין וכולל הרשאת 'workflow'.");
+                }
+            } catch(e) {
+                alert("שגיאת תקשורת מול שרתי גיטהאב.");
             }
             
             btn.innerHTML = originalHtml; 
             btn.disabled = false;
             lucide.createIcons();
-            
-            if (success > 0) { 
-                closeOnDemandScanModal(); 
-                startBackgroundScanMonitor(); 
-            } else {
-                alert("שגיאה בשיגור הסריקה! ודא שהמפתח (Token) תקין וכולל הרשאת 'workflow'.");
-            }
         }
 
         // ניטור טיימר לסריקה
