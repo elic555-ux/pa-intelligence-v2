@@ -188,6 +188,7 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
     filtered = []
     for item in all_deals:
         sector = item.get("sector_key")
+        # סינון מדויק רק לפי מה שהפייתון אישר לרוץ עכשיו!
         if allowed_sectors and sector not in allowed_sectors: continue
         if not is_within_lookback(sector, item.get("listed_date")): continue
         p = item.get("price", 0)
@@ -204,7 +205,6 @@ def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
 def run_orchestrator():
     print("🚀 מתחיל ריצת מנוע סריקה מרכזי...")
 
-    # זיהוי אוטומטי אם הופעל ידנית מהאתר (workflow_dispatch) או ע"י השעון (schedule)
     github_event = os.environ.get('GITHUB_EVENT_NAME', 'workflow_dispatch')
     is_manual_trigger = (github_event == 'workflow_dispatch')
 
@@ -215,59 +215,61 @@ def run_orchestrator():
 
     is_auto_scan_enabled = server_config.get('autoScanEnabled', True)
     
-    # 1. עצירת מנוע מוחלטת
+    # בדיקה האם המשתמש כיבה את הטייס האוטומטי לחלוטין דרך האתר
     if not is_manual_trigger and not is_auto_scan_enabled:
-        print("🛑 הטייס האוטומטי כבוי באתר. הסריקה המתוזמנת מבוטלת.")
+        print("🛑 הטייס האוטומטי כבוי בממשק האתר. הסריקה המתוזמנת מבוטלת.")
         sys.exit(0)
 
-    allowed_sectors = server_config.get('sectors', [])
+    # כלל הסקטורים שהמשתמש סימן עם 'V' באתר:
+    user_selected_sectors = server_config.get('sectors', ["mls", "reo", "sheriff", "tax", "06_probate_estates"])
     
-    # 2. לוגיקת תזמון חכמה (לסריקות שמתעוררות אוטומטית)
-    if not is_manual_trigger:
+    active_sectors_now = []
+
+    if is_manual_trigger:
+        print("⚡ פקודת שיגור ידנית (Mission Control) התקבלה! סורק הכל עכשיו...")
+        active_sectors_now = user_selected_sectors
+    else:
+        # קריאת השעות והימים שהגדרת באתר
         schedule_mls = server_config.get('scheduleMls', '08:00')
         schedule_dist = server_config.get('scheduleDist', 'Wednesday')
         
         current_hour = NOW_EST.strftime("%H:00")
         current_day = NOW_EST.strftime("%A")
         
-        run_mls = (current_hour == schedule_mls)
-        # נניח שסריקת הכינוסים המורחבת רצה תמיד ב-08:00 בבוקר ביום הנבחר
-        run_dist = (current_day == schedule_dist and current_hour == "08:00")
-        
-        if not run_mls and not run_dist:
-            print(f"💤 השעה כעת {current_hour} ביום {current_day} (EST).")
-            print(f"התזמון קובע: MLS ב-{schedule_mls} וכינוסים ב-{schedule_dist}. חוזר לישון...")
-            sys.exit(0)
+        print(f"⏰ השעה בחוף המזרחי (EST): {current_day}, {current_hour}")
+        print(f"📅 הגדרות האתר: סריקת MLS ב-{schedule_mls} | שאר הסורקים ביום {schedule_dist}")
+
+        # בדיקה לסריקת ה-MLS היומית
+        if current_hour == schedule_mls:
+            active_sectors_now.append("mls")
             
-        print("⏰ התזמון הגיע! מפעיל סריקה ממוקדת...")
-        active_sectors = []
-        if run_mls:
-            active_sectors.append("mls")
-        if run_dist:
-            active_sectors.extend(["reo", "sheriff", "tax", "06_probate_estates"])
+        # בדיקה ל-4 הסורקים האחרים (רצים ביום שנבחר, באותה שעה של ה-MLS לנוחות)
+        if current_day == schedule_dist and current_hour == schedule_mls:
+            active_sectors_now.extend(["reo", "sheriff", "tax", "06_probate_estates"])
             
-        # סורק רק את מה שגם הגיע הזמן שלו וגם אושר בהגדרות באתר
-        allowed_sectors = [s for s in allowed_sectors if s in active_sectors]
-        if not allowed_sectors:
-            print("⚠️ הגיע זמן סריקה, אך הסקטורים הללו כבויים בהגדרות. חוזר לישון.")
+        # חיתוך: נריץ *רק* את מה שגם הגיע הזמן שלו, וגם מסומן ב-V באתר
+        active_sectors_now = [s for s in active_sectors_now if s in user_selected_sectors]
+
+        if not active_sectors_now:
+            print("💤 אין סורקים שמתוזמנים לשעה זו לפי הגדרות הממשק. חוזר לישון...")
             sys.exit(0)
-    else:
-        print("⚡ פקודת שיגור ידנית (Mission Control) התקבלה! סורק הכל עכשיו...")
 
     min_price = float(server_config.get('minPrice', 0))
     max_price = float(server_config.get('maxPrice', 190000))
     cities_list = server_config.get('cities', ["Pittsburgh"])
 
     print(f"🎯 מנות יעד: {cities_list}")
-    print(f"📋 סקטורים רצים עכשיו: {allowed_sectors}")
+    print(f"📋 סקטורים שמורשים לרוץ עכשיו: {active_sectors_now}")
 
     live_results = []
-    if "mls" in allowed_sectors:
+    if "mls" in active_sectors_now:
         for city in cities_list:
             city_deals = fetch_live_mls_for_city(city, min_price, max_price)
             live_results.extend(city_deals)
 
-    verified_results = get_verified_market_deals(allowed_sectors, min_price, max_price)
+    # משיכת כינוסים רק אם הם פעילים כרגע
+    verified_results = get_verified_market_deals(active_sectors_now, min_price, max_price)
+    
     combined = live_results + verified_results
     final_filtered = [p for p in combined if min_price <= p.get("price", 0) <= max_price]
 
