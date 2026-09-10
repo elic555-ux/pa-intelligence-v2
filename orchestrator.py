@@ -124,7 +124,6 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 if not addr or not raw_price: continue
                 try: price = int(float(raw_price))
                 except ValueError: continue
-                if not (min_p <= price <= max_p): continue
 
                 dom_str = row.get("DAYS ON MARKET")
                 dom = int(float(dom_str)) if dom_str else 0
@@ -176,30 +175,29 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
 
     return discovered
 
-def get_verified_market_deals(allowed_sectors, min_p=0, max_p=500000):
+def get_verified_market_deals(allowed_sectors):
     all_deals = [
-        {"id": "PA-MLS-1771849", "sector_key": "reo", "address": "1015 6th Ave", "city": "Brackenridge", "price": 69900, "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)", "listed_date": "10/08/2026"},
-        {"id": "PA-MLS-1772015", "sector_key": "reo", "address": "59 Petunia St", "city": "Pittsburgh", "price": 139900, "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)", "listed_date": "01/07/2026"},
-        {"id": "PA-SHF-250114", "sector_key": "sheriff", "address": "310 Long Rd", "city": "Pittsburgh", "price": 139000, "deal_type": "מכירות שריף (Sheriff Sales)", "listed_date": "25/08/2026"},
-        {"id": "PA-PRB-89102", "sector_key": "06_probate_estates", "address": "4210 Butler St", "city": "Pittsburgh", "price": 145000, "deal_type": "תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)", "listed_date": "15/04/2026"},
-        {"id": "PA-TAX-44910", "sector_key": "tax", "address": "742 Greenfield Ave", "city": "Pittsburgh", "price": 78000, "deal_type": "פיגורי מס (County Tax Claim)", "listed_date": "05/08/2026"}
+        {"id": "PA-MLS-1771849", "sector_key": "reo", "address": "1015 6th Ave", "city": "Brackenridge", "price": 69900, "beds": 3, "sqft": 1015, "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)", "listed_date": "10/08/2026"},
+        {"id": "PA-MLS-1772015", "sector_key": "reo", "address": "59 Petunia St", "city": "Pittsburgh", "price": 139900, "beds": 4, "sqft": 2780, "deal_type": "בנקים וכינוס נכסים (Foreclosure / REO)", "listed_date": "01/07/2026"},
+        {"id": "PA-SHF-250114", "sector_key": "sheriff", "address": "310 Long Rd", "city": "Pittsburgh", "price": 139000, "beds": 3, "sqft": 1120, "deal_type": "מכירות שריף (Sheriff Sales)", "listed_date": "25/08/2026"},
+        {"id": "PA-PRB-89102", "sector_key": "06_probate_estates", "address": "4210 Butler St", "city": "Pittsburgh", "price": 145000, "beds": 4, "sqft": 2100, "deal_type": "תיקי עיזבונות, יורשים ו-FSBO (Probate & Off-Market)", "listed_date": "15/04/2026"},
+        {"id": "PA-TAX-44910", "sector_key": "tax", "address": "742 Greenfield Ave", "city": "Pittsburgh", "price": 78000, "beds": 3, "sqft": 1580, "deal_type": "פיגורי מס (County Tax Claim)", "listed_date": "05/08/2026"}
     ]
 
     filtered = []
     for item in all_deals:
         sector = item.get("sector_key")
-        # סינון מדויק רק לפי מה שהפייתון אישר לרוץ עכשיו!
         if allowed_sectors and sector not in allowed_sectors: continue
         if not is_within_lookback(sector, item.get("listed_date")): continue
         p = item.get("price", 0)
-        if min_p <= p <= max_p:
-            strat = classify_strategy(item.get("deal_type"), p, item.get("beds", 3), item.get("summary", ""))
-            item["strategy"] = strat["strategy"]
-            item["strategy_label"] = strat["strategy_label"]
-            item["gross_yield"] = strat["gross_yield"]
-            item["projected_rent"] = strat["projected_rent"]
-            item["deal_score"] = calculate_deal_score(item.get("deal_type"), p)
-            filtered.append(item)
+        
+        strat = classify_strategy(item.get("deal_type"), p, item.get("beds", 3), item.get("summary", ""))
+        item["strategy"] = strat["strategy"]
+        item["strategy_label"] = strat["strategy_label"]
+        item["gross_yield"] = strat["gross_yield"]
+        item["projected_rent"] = strat["projected_rent"]
+        item["deal_score"] = calculate_deal_score(item.get("deal_type"), p)
+        filtered.append(item)
     return filtered
 
 def run_orchestrator():
@@ -215,50 +213,55 @@ def run_orchestrator():
 
     is_auto_scan_enabled = server_config.get('autoScanEnabled', True)
     
-    # בדיקה האם המשתמש כיבה את הטייס האוטומטי לחלוטין דרך האתר
     if not is_manual_trigger and not is_auto_scan_enabled:
         print("🛑 הטייס האוטומטי כבוי בממשק האתר. הסריקה המתוזמנת מבוטלת.")
         sys.exit(0)
 
-    # כלל הסקטורים שהמשתמש סימן עם 'V' באתר:
     user_selected_sectors = server_config.get('sectors', ["mls", "reo", "sheriff", "tax", "06_probate_estates"])
-    
     active_sectors_now = []
 
     if is_manual_trigger:
         print("⚡ פקודת שיגור ידנית (Mission Control) התקבלה! סורק הכל עכשיו...")
         active_sectors_now = user_selected_sectors
     else:
-        # קריאת השעות והימים שהגדרת באתר
-        schedule_mls = server_config.get('scheduleMls', '08:00')
-        schedule_dist = server_config.get('scheduleDist', 'Wednesday')
-        
+        schedules = server_config.get('schedules', {})
         current_hour = NOW_EST.strftime("%H:00")
         current_day = NOW_EST.strftime("%A")
         
         print(f"⏰ השעה בחוף המזרחי (EST): {current_day}, {current_hour}")
-        print(f"📅 הגדרות האתר: סריקת MLS ב-{schedule_mls} | שאר הסורקים ביום {schedule_dist}")
 
-        # בדיקה לסריקת ה-MLS היומית
-        if current_hour == schedule_mls:
-            active_sectors_now.append("mls")
+        for sec, sched in schedules.items():
+            s_day = sched.get('day', 'Everyday')
+            s_time = sched.get('time', '08:00')
+            if s_time == current_hour and (s_day == 'Everyday' or s_day == current_day):
+                active_sectors_now.append(sec)
             
-        # בדיקה ל-4 הסורקים האחרים (רצים ביום שנבחר, באותה שעה של ה-MLS לנוחות)
-        if current_day == schedule_dist and current_hour == schedule_mls:
-            active_sectors_now.extend(["reo", "sheriff", "tax", "06_probate_estates"])
-            
-        # חיתוך: נריץ *רק* את מה שגם הגיע הזמן שלו, וגם מסומן ב-V באתר
         active_sectors_now = [s for s in active_sectors_now if s in user_selected_sectors]
 
         if not active_sectors_now:
             print("💤 אין סורקים שמתוזמנים לשעה זו לפי הגדרות הממשק. חוזר לישון...")
             sys.exit(0)
 
-    min_price = float(server_config.get('minPrice', 0))
-    max_price = float(server_config.get('maxPrice', 190000))
+    # חילוץ פרמטרי הסינון החכמים (טווחי מינימום ומקסימום)
+    min_price = float(server_config.get('minPrice', 0)) if server_config.get('minPrice') else 0
+    max_price = float(server_config.get('maxPrice', 190000)) if server_config.get('maxPrice') else 190000
+
+    min_sqft_str = str(server_config.get('minSqft', '0')).replace(',', '')
+    min_sqft = int(min_sqft_str) if min_sqft_str.isdigit() else 0
+
+    max_sqft_str = str(server_config.get('maxSqft', '99999')).replace(',', '')
+    max_sqft = int(max_sqft_str) if max_sqft_str.isdigit() else 99999
+
+    min_beds_str = str(server_config.get('minBeds', 'all'))
+    min_beds = int(min_beds_str) if min_beds_str.isdigit() else 0
+
+    max_beds_str = str(server_config.get('maxBeds', 'all'))
+    max_beds = int(max_beds_str) if max_beds_str.isdigit() else 99
+
     cities_list = server_config.get('cities', ["Pittsburgh"])
 
     print(f"🎯 מנות יעד: {cities_list}")
+    print(f"🎯 טווח מחיר: {min_price} - {max_price} | שטח (SqFt): {min_sqft} - {max_sqft} | חדרים: {min_beds} - {max_beds}")
     print(f"📋 סקטורים שמורשים לרוץ עכשיו: {active_sectors_now}")
 
     live_results = []
@@ -267,13 +270,26 @@ def run_orchestrator():
             city_deals = fetch_live_mls_for_city(city, min_price, max_price)
             live_results.extend(city_deals)
 
-    # משיכת כינוסים רק אם הם פעילים כרגע
-    verified_results = get_verified_market_deals(active_sectors_now, min_price, max_price)
-    
+    verified_results = get_verified_market_deals(active_sectors_now)
     combined = live_results + verified_results
-    final_filtered = [p for p in combined if min_price <= p.get("price", 0) <= max_price]
+    
+    # סינון קשוח לפי הטווחי המקסימום והמינימום החדשים!
+    final_filtered = []
+    for p in combined:
+        p_price = p.get("price") or 0
+        p_sqft = p.get("sqft") or 0
+        p_beds = p.get("beds") or 0
 
-    print(f"🔍 ממזג {len(final_filtered)} תוצאות למאגר...")
+        if not (min_price <= p_price <= max_price):
+            continue
+        if not (min_sqft <= p_sqft <= max_sqft):
+            continue
+        if not (min_beds <= p_beds <= max_beds):
+            continue
+            
+        final_filtered.append(p)
+
+    print(f"🔍 ממזג {len(final_filtered)} תוצאות (שעברו את כל מסנני הטווחים) למאגר...")
     existing_props_dict = load_existing_properties()
     
     for deal in final_filtered:
@@ -287,7 +303,7 @@ def run_orchestrator():
     with open(PROPERTIES_FILE, 'w', encoding='utf-8') as f:
         json.dump(final_merged_list, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ הסריקה הסתיימה! הקובץ מכיל כעת {len(final_merged_list)} נכסים.")
+    print(f"✅ הסריקה הסתיימה! הקובץ מכיל כעת {len(final_merged_list)} נכסים מסוננים היטב.")
 
 if __name__ == '__main__':
     run_orchestrator()
