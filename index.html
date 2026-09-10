@@ -18,14 +18,12 @@
         .kpi-active-sheriff { background-color: rgba(244, 63, 94, 0.2) !important; border-color: #fb7185 !important; box-shadow: 0 0 20px rgba(251, 113, 133, 0.5); transform: translateY(-2px); }
         .kpi-active-tax { background-color: rgba(168, 85, 247, 0.2) !important; border-color: #c084fc !important; box-shadow: 0 0 20px rgba(192, 132, 252, 0.5); transform: translateY(-2px); }
         .kpi-active-probate { background-color: rgba(16, 185, 129, 0.2) !important; border-color: #34d399 !important; box-shadow: 0 0 20px rgba(52, 211, 153, 0.5); transform: translateY(-2px); }
+        .kpi-active-archive { background-color: rgba(107, 114, 128, 0.2) !important; border-color: #6b7280 !important; box-shadow: 0 0 20px rgba(107, 114, 128, 0.5); transform: translateY(-2px); }
+        
         .watchlist-btn-active { background-color: #f59e0b !important; color: #0f172a !important; border-color: #fbbf24 !important; box-shadow: 0 0 20px 2px rgba(245, 158, 11, 0.5); transform: translateY(-1px); }
         .watchlist-btn-active i { color: #0f172a !important; fill: #0f172a !important; }
         .watchlist-btn-active .badge-count { background-color: #0f172a !important; color: #fbbf24 !important; }
         .hot-deal-border { box-shadow: 0 0 16px -2px rgba(217, 119, 6, 0.3); border-color: rgba(217, 119, 6, 0.5) !important; }
-        
-        /* Viewed Card Style */
-        .card-viewed { opacity: 0.8; background-color: #080b13 !important; }
-        .card-viewed:hover { opacity: 1; background-color: #111827 !important; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
@@ -46,7 +44,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.1</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.2</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -69,7 +67,6 @@
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
                 </button>
 
-                <!-- חיווי סריקה אחרונה וטייס אוטומטי -->
                 <div class="flex items-center gap-3 pr-2 border-r border-gray-700">
                     <div class="text-right hidden sm:block">
                         <span class="block text-[10px] text-gray-500 font-bold mb-0.5">סריקה אחרונה</span>
@@ -87,13 +84,16 @@
     <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
         <!-- KPI Cards -->
-        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div></button>
             <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS וירידות מחיר</span><i data-lucide="trending-down" class="w-4 h-4 text-cyan-400"></i></div><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div></button>
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div></button>
             <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">מכירות שריף</span><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i></div><div class="text-2xl font-black text-rose-300" id="count-sheriff">0</div></button>
-            <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס (Tax Claim)</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
+            <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
             <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות ו-FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-2xl font-black text-emerald-300" id="count-probate">0</div></button>
+            
+            <!-- לשונית הארכיון החדשה -->
+            <button onclick="setCategory('archive')" id="btn-cat-archive" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-gray-600/30 transition hover:border-gray-500 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-400">ארכיון מוסתר</span><i data-lucide="archive" class="w-4 h-4 text-gray-500"></i></div><div class="text-2xl font-black text-gray-400" id="count-archive">0</div></button>
         </section>
 
         <!-- Watchlist & View -->
@@ -138,10 +138,13 @@
                         <span class="text-amber-300 font-bold bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-lg flex items-center gap-1.5" id="modal-listed-date"></span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap justify-end">
                     <button onclick="moveToPipelineFromModal()" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black flex items-center gap-1.5 text-xs"><i data-lucide="send" class="w-4 h-4"></i>לחדר עסקאות</button>
                     <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 text-amber-400 flex items-center gap-1.5 text-xs font-bold"><i data-lucide="star" class="w-4 h-4"></i><span id="modal-watchlist-text">מעקב</span></button>
-                    <button onclick="archiveFromModal()" class="p-2.5 rounded-xl bg-gray-800 hover:bg-rose-900/30 text-gray-400 hover:text-rose-400 border border-gray-700 flex items-center gap-1.5 text-xs font-bold transition" title="העבר לארכיון (יוחזר רק אם המחיר ירד)"><i data-lucide="archive" class="w-4 h-4"></i> ארכיון</button>
+                    
+                    <!-- דינמי: כפתור ארכיון או כפתור שחזור -->
+                    <span id="modal-archive-btn-container"></span>
+                    
                     <button onclick="closePropertyModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-gray-800/80 ml-2"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
             </div>
@@ -294,7 +297,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection (9 Cities & Counties) -->
+            <!-- Cities Selection -->
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
@@ -316,7 +319,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
                 </div>
             </div>
-            <!-- Neighborhoods Selection (All 25 Neighborhoods) -->
+            <!-- Neighborhoods Selection -->
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
@@ -494,7 +497,7 @@
             lucide.createIcons();
             loadPipelineFromStorage(); 
             loadWatchlistFromStorage();
-            loadViewedAndArchive(); // טעינת המערכת החדשה
+            loadViewedAndArchive(); 
             
             const savedToken = localStorage.getItem('pa_github_token');
             if(savedToken) {
@@ -544,7 +547,20 @@
             
             alert(`הנכס הועבר לארכיון! הוא יקפוץ בחזרה ללוח רק אם נזהה ירידת מחיר.`);
             closePropertyModal();
-            loadProperties(); // הערכה מחדש של הכל
+            loadProperties(); 
+        }
+
+        function restoreFromModal() {
+            if(!currentSelectedProperty) return;
+            const idStr = String(currentSelectedProperty.id);
+            
+            delete archiveDeals[idStr];
+            saveArchive();
+            
+            currentSelectedProperty.is_archived = false;
+            alert('הנכס הוחזר בהצלחה ללוח הראשי!');
+            closePropertyModal();
+            loadProperties();
         }
 
         function buildServerConfig(isManual = false) {
@@ -619,7 +635,6 @@
                 }
             } catch(e) {}
         }
-
 
         function setViewMode(mode) {
             currentViewMode = mode;
@@ -701,23 +716,24 @@
                         const idStr = String(p.id);
                         const currentPrice = Number(p.price) || 0;
                         
-                        // 1. בדיקת תחיית המתים מהארכיון (ירידת מחיר)
                         if (archiveDeals[idStr]) {
                             if (currentPrice > 0 && currentPrice < archiveDeals[idStr].price) {
                                 delete archiveDeals[idStr];
                                 archiveChanged = true;
-                                p.price_dropped = true; // נסמן לטובת חיווי אדום בממשק
+                                p.price_dropped = true; 
+                                p.is_archived = false;
                             } else {
-                                return; // נשאר בארכיון, אל תציג.
+                                p.is_archived = true;
                             }
-                        }
-                        
-                        // 2. אוטומציה: נכס ישן מ-3 חודשים (90 יום) הולך לארכיון
-                        const listTime = parseDate(p.listed_date);
-                        if (listTime > 0 && (NOW - listTime) > NINETY_DAYS_MS && !p.price_dropped) {
-                            archiveDeals[idStr] = { price: currentPrice, date: new Date().toISOString() };
-                            archiveChanged = true;
-                            return; // אל תציג.
+                        } else {
+                            const listTime = parseDate(p.listed_date);
+                            if (listTime > 0 && (NOW - listTime) > NINETY_DAYS_MS && !p.price_dropped) {
+                                archiveDeals[idStr] = { price: currentPrice, date: new Date().toISOString() };
+                                archiveChanged = true;
+                                p.is_archived = true;
+                            } else {
+                                p.is_archived = false;
+                            }
                         }
                         
                         activeProps.push(p); 
@@ -736,7 +752,7 @@
 
         function populateCityDropdown() {
             const dropdown = document.getElementById('filter-city');
-            const cities = [...new Set(rawProperties.map(p => `${p.city} (${p.county})`))].sort();
+            const cities = [...new Set(rawProperties.filter(p => !p.is_archived).map(p => `${p.city} (${p.county})`))].sort();
             dropdown.innerHTML = '<option value="all">כל הערים והמחוזות</option>';
             cities.forEach(c => dropdown.innerHTML += `<option value="${c}">${c}</option>`);
         }
@@ -744,19 +760,24 @@
         function updateCounts() {
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
-            document.getElementById('count-all').textContent = available.length;
-            document.getElementById('count-mls').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
-            document.getElementById('count-distressed').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
-            document.getElementById('count-sheriff').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
-            document.getElementById('count-tax').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
-            document.getElementById('count-probate').textContent = available.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
+            
+            const nonArchived = available.filter(p => !p.is_archived);
+            
+            document.getElementById('count-all').textContent = nonArchived.length;
+            document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
+            document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
+            document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
+            document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
+            document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
+            
+            document.getElementById('count-archive').textContent = available.filter(p => p.is_archived).length;
         }
 
         function setCategory(cat) {
             activeCategory = cat;
-            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate'].forEach(c => {
-                document.getElementById(`btn-cat-${c}`).classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate');
-                if (c === cat) document.getElementById(`btn-cat-${c}`).classList.add(`kpi-active-${c}`);
+            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate', 'archive'].forEach(c => {
+                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate', 'kpi-active-archive');
+                if (c === cat) document.getElementById(`btn-cat-${c}`)?.classList.add(`kpi-active-${c}`);
             });
             renderCards();
         }
@@ -773,12 +794,20 @@
             let filtered = rawProperties.filter(p => {
                 if (pipelineIds.has(String(p.id))) return false;
                 if (watchlistFilterActive && !userWatchlist.has(String(p.id))) return false;
-                const dt = (p.deal_type || '').toLowerCase();
-                if (activeCategory === 'mls' && !dt.includes('mls')) return false;
-                if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
-                if (activeCategory === 'sheriff' && !dt.includes('sheriff')) return false;
-                if (activeCategory === 'tax' && !dt.includes('tax')) return false;
-                if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
+                
+                if (activeCategory === 'archive') {
+                    if (!p.is_archived) return false;
+                } else {
+                    if (p.is_archived) return false;
+                    
+                    const dt = (p.deal_type || '').toLowerCase();
+                    if (activeCategory === 'mls' && !dt.includes('mls')) return false;
+                    if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
+                    if (activeCategory === 'sheriff' && !dt.includes('sheriff')) return false;
+                    if (activeCategory === 'tax' && !dt.includes('tax')) return false;
+                    if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
+                }
+
                 if (stratF !== 'all' && p.strategy !== stratF) return false;
                 if (cityF !== 'all' && !cityF.includes(p.city)) return false;
                 if (typeF !== 'all' && p.type && p.type !== typeF) return false;
@@ -798,10 +827,10 @@
                 ${filtered.map(p => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
-                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${isV ? 'card-viewed' : ''}">
+                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
-                                ${isV ? '<span title="נצפה"><i data-lucide="eye" class="w-3.5 h-3.5 text-gray-500"></i></span>' : ''}
+                                ${isV && activeCategory !== 'archive' ? '<span title="נצפה"><i data-lucide="eye" class="w-3.5 h-3.5 text-gray-500"></i></span>' : ''}
                                 <div class="font-black text-white text-sm">${p.address}</div>
                             </div>
                             <div class="text-[11px] text-gray-400">${p.city}</div>
@@ -818,10 +847,10 @@
                 container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">` + filtered.map(p => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
-                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isH?'border-amber-500/50':'border-gray-800'} rounded-2xl p-5 shadow-lg cursor-pointer group relative ${isV ? 'card-viewed' : ''}">
+                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isH?'border-amber-500/50':'border-gray-800'} rounded-2xl p-5 shadow-lg cursor-pointer group relative ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         
                         <div class="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-                            ${isV ? '<span class="bg-gray-950/80 text-gray-400 text-[10px] px-1.5 py-1 rounded-md border border-gray-800 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> נצפה</span>' : ''}
+                            ${isV && activeCategory !== 'archive' ? '<span class="bg-gray-950/80 text-gray-400 text-[10px] px-1.5 py-1 rounded-md border border-gray-800 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> נצפה</span>' : ''}
                             ${isH && !p.price_dropped ? `<span class="bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-md">🔥 ציון ${p.deal_score}</span>` : ''}
                             ${p.price_dropped ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px] px-2 py-1 rounded-md">📉 ירד מחיר!</span>` : ''}
                         </div>
@@ -841,11 +870,11 @@
             const p = rawProperties.find(x => String(x.id) === String(id)); if (!p) return;
             currentSelectedProperty = p;
             
-            // סימון כנצפה
+            // סימון אוטומטי כ"נצפה" ברגע הפתיחה
             if (!viewedDeals.has(String(p.id))) {
                 viewedDeals.add(String(p.id));
                 saveViewed();
-                renderCards(); // מרענן רק כדי שיופיע אייקון העין מאחורה
+                renderCards(); 
             }
 
             document.getElementById('modal-address').textContent = p.address;
@@ -870,6 +899,13 @@
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
             
             updateModalWatchlistState();
+            
+            const archiveBtnContainer = document.getElementById('modal-archive-btn-container');
+            if (p.is_archived) {
+                archiveBtnContainer.innerHTML = `<button onclick="restoreFromModal()" class="p-2.5 rounded-xl bg-gray-800 hover:bg-emerald-900/30 text-gray-400 hover:text-emerald-400 border border-gray-700 flex items-center gap-1.5 text-xs font-bold transition"><i data-lucide="refresh-cw" class="w-4 h-4"></i> שחזר ללוח הראשי</button>`;
+            } else {
+                archiveBtnContainer.innerHTML = `<button onclick="archiveFromModal()" class="p-2.5 rounded-xl bg-gray-800 hover:bg-rose-900/30 text-gray-400 hover:text-rose-400 border border-gray-700 flex items-center gap-1.5 text-xs font-bold transition" title="העבר לארכיון (יוחזר רק אם המחיר ירד)"><i data-lucide="archive" class="w-4 h-4"></i> ארכיון</button>`;
+            }
             
             const q = encodeURIComponent(`${p.address}, ${p.city}, PA`);
             document.getElementById('modal-action-buttons').innerHTML = `
@@ -899,6 +935,7 @@
             }
         }
 
+        // פונקציות בחירה וניקוי
         function toggleAllSettingCities(state) {
             document.querySelectorAll('.setting-city-box').forEach(cb => { cb.checked = state; });
             document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state; });
