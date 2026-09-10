@@ -41,7 +41,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.8</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V7.9</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -176,9 +176,9 @@
         </div>
     </div>
 
-    <!-- Auto-Scan Management Modal -->
+    <!-- Auto-Scan Management Modal (V7.9: Individual Control) -->
     <div id="autoscan-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <div class="flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5 text-emerald-400"></i><h3 class="text-base font-bold text-white">תזמון וניהול הטייס האוטומטי</h3></div>
                 <button onclick="closeAutoScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -187,8 +187,8 @@
             <div class="space-y-4">
                 <div class="flex items-center justify-between bg-gray-950 p-4 rounded-xl border border-gray-800">
                     <div>
-                        <span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי</span>
-                        <span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות ברקע</span>
+                        <span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי מרכזי</span>
+                        <span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות המתוזמנות ברקע</span>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="autoscan-master-switch" checked class="sr-only peer">
@@ -196,28 +196,76 @@
                     </label>
                 </div>
 
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-4">
-                    <h4 class="text-xs font-bold text-gray-300 border-b border-gray-800 pb-2">העדפות תזמון סריקה:</h4>
-                    
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-gray-400">סריקת MLS (יומי)</span>
-                        <select id="schedule-mls-time" class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold">
-                            <option value="05:00">05:00 (בוקר)</option>
-                            <option value="08:00">08:00 (בוקר)</option>
-                            <option value="12:00">12:00 (צהריים)</option>
-                            <option value="18:00">18:00 (ערב)</option>
-                        </select>
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-3">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-2">
+                        <h4 class="text-sm font-bold text-gray-200">הגדרות תזמון לפי סקטור (שעון EST):</h4>
                     </div>
                     
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-gray-400">כינוסים, עיזבונות ושריף (שבועי)</span>
-                        <select id="schedule-distressed-day" class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold">
-                            <option value="Monday">שני בבוקר</option>
-                            <option value="Wednesday">רביעי בבוקר</option>
-                            <option value="Friday">שישי בבוקר</option>
-                            <option value="Sunday">ראשון בבוקר</option>
-                        </select>
+                    <!-- MLS Row -->
+                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-cyan-500/40 transition">
+                        <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5"><i data-lucide="trending-down" class="w-4 h-4"></i> 1. MLS וירידות מחיר</span>
+                        <div class="flex gap-2">
+                            <select id="sched-day-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-cyan-500">
+                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
+                            </select>
+                            <select id="sched-time-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-cyan-500">
+                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00">08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <!-- REO Row -->
+                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-amber-500/40 transition">
+                        <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5"><i data-lucide="shield-alert" class="w-4 h-4"></i> 2. בנקים וכינוס נכסים</span>
+                        <div class="flex gap-2">
+                            <select id="sched-day-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-amber-500">
+                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
+                            </select>
+                            <select id="sched-time-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-amber-500">
+                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00">08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Sheriff Row -->
+                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-rose-500/40 transition">
+                        <span class="text-xs font-bold text-rose-300 flex items-center gap-1.5"><i data-lucide="gavel" class="w-4 h-4"></i> 3. מכירות שריף</span>
+                        <div class="flex gap-2">
+                            <select id="sched-day-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-rose-500">
+                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
+                            </select>
+                            <select id="sched-time-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-rose-500">
+                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00">08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tax Row -->
+                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-purple-500/40 transition">
+                        <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5"><i data-lucide="receipt" class="w-4 h-4"></i> 4. פיגורי מס (Tax Claim)</span>
+                        <div class="flex gap-2">
+                            <select id="sched-day-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-purple-500">
+                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
+                            </select>
+                            <select id="sched-time-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-purple-500">
+                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00">08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Probate Row -->
+                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-emerald-500/40 transition">
+                        <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5"><i data-lucide="home" class="w-4 h-4"></i> 5. עיזבונות ו-FSBO</span>
+                        <div class="flex gap-2">
+                            <select id="sched-day-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-emerald-500">
+                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
+                            </select>
+                            <select id="sched-time-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-emerald-500">
+                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00">08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -225,17 +273,6 @@
                 <button onclick="closeAutoScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
                 <button id="btn-save-schedule" onclick="saveScheduleSettings()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i> שמור לשרת</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Telegram Modal -->
-    <div id="telegram-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
-                <div class="flex items-center gap-2"><i data-lucide="send" class="w-5 h-5 text-sky-400"></i><h3 class="text-base font-bold text-white">הגדרות התראות בוט טלגרם</h3></div>
-                <button onclick="closeTelegramModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div class="pt-3 border-t border-gray-800 flex justify-end"><button onclick="closeTelegramModal()" class="px-5 py-2 bg-sky-600 text-white rounded-xl text-xs font-bold">סגור</button></div>
         </div>
     </div>
 
@@ -250,7 +287,7 @@
                 <label class="block text-xs font-bold text-blue-300">הזן מפתח אישי של GitHub (כדי לשדר את ההגדרות לשרת!):</label>
                 <input type="password" id="setting-token-input" placeholder="ghp_..." onchange="localStorage.setItem('pa_github_token', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
             </div>
-            <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה:</span>
+            <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים שמורשים לרוץ (V) בסריקות השונות:</span>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-cyan-500/30"><input type="checkbox" checked value="mls" class="setting-sector-box accent-cyan-500 w-4 h-4"><span class="text-cyan-300 font-bold">1. MLS וירידות מחיר</span></label>
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" class="setting-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
@@ -280,7 +317,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection -->
+            <!-- Cities Selection (9 Cities & Counties) -->
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
@@ -487,7 +524,6 @@
 
             loadSettingsState();
             loadOnDemandState();
-            loadScheduleSettings();
 
             document.querySelectorAll('#settings-modal input, #settings-modal select').forEach(el => {
                 el.addEventListener('change', saveSettingsStateLocally);
@@ -515,9 +551,17 @@
                 propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
                 neighborhoods: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`)).map(cb => cb.value),
+                
+                // מערך התזמונים החדש והמדויק (מלא)
                 autoScanEnabled: document.getElementById('autoscan-master-switch').checked,
-                scheduleMls: document.getElementById('schedule-mls-time').value,
-                scheduleDist: document.getElementById('schedule-distressed-day').value,
+                schedules: {
+                    mls: { day: document.getElementById('sched-day-mls').value, time: document.getElementById('sched-time-mls').value },
+                    reo: { day: document.getElementById('sched-day-reo').value, time: document.getElementById('sched-time-reo').value },
+                    sheriff: { day: document.getElementById('sched-day-sheriff').value, time: document.getElementById('sched-time-sheriff').value },
+                    tax: { day: document.getElementById('sched-day-tax').value, time: document.getElementById('sched-time-tax').value },
+                    "06_probate_estates": { day: document.getElementById('sched-day-probate').value, time: document.getElementById('sched-time-probate').value }
+                },
+                
                 updatedAt: new Date().toISOString(),
                 is_manual_scan: isManual
             };
@@ -921,7 +965,7 @@
             lucide.createIcons();
         }
 
-        // --- חלון ניהול טייס אוטומטי ותזמונים ---
+        // --- חלון ניהול טייס אוטומטי ותזמונים V7.9 ---
         function openAutoScanModal() {
             loadScheduleSettings();
             document.getElementById('autoscan-modal').classList.remove('hidden');
@@ -935,28 +979,29 @@
             const isEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             document.getElementById('autoscan-master-switch').checked = isEnabled;
             
-            const mlsTime = localStorage.getItem('pa_schedule_mls') || "05:00";
-            document.getElementById('schedule-mls-time').value = mlsTime;
-            
-            const distDay = localStorage.getItem('pa_schedule_dist') || "Wednesday";
-            document.getElementById('schedule-distressed-day').value = distDay;
+            try {
+                const st = JSON.parse(localStorage.getItem('pa_settings_state_v7') || '{}');
+                if (st.schedules) {
+                    if (st.schedules.mls) { document.getElementById('sched-day-mls').value = st.schedules.mls.day || 'Everyday'; document.getElementById('sched-time-mls').value = st.schedules.mls.time || '08:00'; }
+                    if (st.schedules.reo) { document.getElementById('sched-day-reo').value = st.schedules.reo.day || 'Wednesday'; document.getElementById('sched-time-reo').value = st.schedules.reo.time || '08:00'; }
+                    if (st.schedules.sheriff) { document.getElementById('sched-day-sheriff').value = st.schedules.sheriff.day || 'Wednesday'; document.getElementById('sched-time-sheriff').value = st.schedules.sheriff.time || '08:00'; }
+                    if (st.schedules.tax) { document.getElementById('sched-day-tax').value = st.schedules.tax.day || 'Wednesday'; document.getElementById('sched-time-tax').value = st.schedules.tax.time || '08:00'; }
+                    if (st.schedules["06_probate_estates"]) { document.getElementById('sched-day-probate').value = st.schedules["06_probate_estates"].day || 'Wednesday'; document.getElementById('sched-time-probate').value = st.schedules["06_probate_estates"].time || '08:00'; }
+                }
+            } catch(e){}
         }
 
-        // שמירת הגדרות הטייס האוטומטי ושידור מלא לשרת
         async function saveScheduleSettings() {
             const token = document.getElementById('setting-token-input')?.value.trim() || localStorage.getItem('pa_github_token');
             if (!token) { alert('כדי לשמור את התזמון לשרת, חסר מפתח GitHub. הזן אותו בחלון "הגדרות סריקה".'); return; }
 
             const isEnabled = document.getElementById('autoscan-master-switch').checked;
-            const mlsTime = document.getElementById('schedule-mls-time').value;
-            const distDay = document.getElementById('schedule-distressed-day').value;
-            
             localStorage.setItem('pa_auto_scan_status', isEnabled);
-            localStorage.setItem('pa_schedule_mls', mlsTime);
-            localStorage.setItem('pa_schedule_dist', distDay);
-            
             isAutoScanEnabled = isEnabled;
             updateAutoScanUI();
+
+            // שמירה מקומית כדי שלא יימחק
+            saveSettingsStateLocally();
 
             const btn = document.getElementById('btn-save-schedule');
             const origHtml = btn.innerHTML;
@@ -964,7 +1009,7 @@
             btn.disabled = true;
             lucide.createIcons();
 
-            // אנחנו משדרים את כל ההגדרות הרגילות + התזמונים החדשים
+            // משדר לשרת
             const config = buildServerConfig(false);
 
             try {
@@ -976,11 +1021,11 @@
                 const putRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: "Update Auto-Scan Schedule", content: contentBase64, sha: sha || undefined })
+                    body: JSON.stringify({ message: "Update 5 Sectors Auto-Scan Schedule", content: contentBase64, sha: sha || undefined })
                 });
 
                 if(putRes.ok) {
-                    alert("פקודת התזמון (טייס אוטומטי) נשמרה בשרת בהצלחה!");
+                    alert("פקודת התזמון לכלל 5 הסורקים נשמרה בשרת בהצלחה!\nמנוע הפייתון מעודכן ויציית לשעות אלו.");
                     closeAutoScanModal();
                 } else { 
                     alert("שגיאה בשמירת התזמון בשרת. ודא שהטוקן תקין."); 
