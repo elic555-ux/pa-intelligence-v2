@@ -48,7 +48,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.3</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.4</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -71,7 +71,6 @@
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
                 </button>
 
-                <!-- חיווי סריקה אחרונה וטייס אוטומטי -->
                 <div class="flex items-center gap-3 pr-2 border-r border-gray-700">
                     <div class="text-right hidden sm:block">
                         <span class="block text-[10px] text-gray-500 font-bold mb-0.5">סריקה אחרונה</span>
@@ -97,7 +96,6 @@
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
             <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות ו-FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-2xl font-black text-emerald-300" id="count-probate">0</div></button>
             
-            <!-- לשונית הארכיון החדשה -->
             <button onclick="setCategory('archive')" id="btn-cat-archive" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-gray-600/30 transition hover:border-gray-500 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-400">ארכיון מוסתר</span><i data-lucide="archive" class="w-4 h-4 text-gray-500"></i></div><div class="text-2xl font-black text-gray-400" id="count-archive">0</div></button>
         </section>
 
@@ -113,7 +111,26 @@
         <!-- Filters -->
         <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3.5 shadow-lg">
             <div><label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label><select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none"><option value="all">הכל</option><option value="turnkey">🔑 מניב מיידי</option><option value="value_add">🔨 השבחה</option></select></div>
-            <div><label class="block text-xs font-bold text-gray-300 mb-1.5">עיר / מחוז</label><select id="filter-city" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none"><option value="all">הכל</option></select></div>
+            
+            <!-- V8.4: פילטר מרובה ערים חכם -->
+            <div class="relative" id="city-filter-wrapper">
+                <label class="block text-xs font-bold text-gray-300 mb-1.5">עיר / אזור סריקה</label>
+                <div class="w-full bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-between px-2.5 py-2 cursor-pointer" onclick="toggleCityDropdown(event)">
+                    <span id="city-dropdown-text" class="text-xs text-white font-bold truncate pr-1">כל האזורים</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                </div>
+                <!-- Dropdown Menu -->
+                <div id="city-dropdown-list" class="hidden absolute top-full mt-1 left-0 right-0 md:w-64 w-full bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto custom-scrollbar">
+                    <div class="sticky top-0 bg-gray-900 border-b border-gray-800 p-2.5 flex justify-between items-center z-10">
+                        <button onclick="setAllCityFilters(true, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">סמן הכל</button>
+                        <button onclick="setAllCityFilters(false, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">נקה הכל</button>
+                    </div>
+                    <div id="city-checkbox-container" class="p-2 space-y-1 flex flex-col text-xs text-gray-200">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
             <div><label class="block text-xs font-bold text-gray-300 mb-1.5">סוג נכס</label><select id="filter-type" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none"><option value="all">הכל</option><option value="Single Family">Single Family</option><option value="Townhouse">Townhouse</option><option value="Multi-Family">Multi-Family</option><option value="Duplex / Triplex">Duplex/Triplex</option></select></div>
             <div><label class="block text-xs font-bold text-emerald-400 mb-1.5">מחיר מינימום</label><input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyFilters();" placeholder="0" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center"></div>
             <div><label class="block text-xs font-bold text-gray-300 mb-1.5">מחיר מקסימום</label><select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none"><option value="all">ללא הגבלה</option><option value="100000">עד $100k</option><option value="190000">עד $190k</option><option value="250000">עד $250k</option></select></div>
@@ -147,7 +164,6 @@
                     <button onclick="moveToPipelineFromModal()" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black flex items-center gap-1.5 text-xs"><i data-lucide="send" class="w-4 h-4"></i>לחדר עסקאות</button>
                     <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 text-amber-400 flex items-center gap-1.5 text-xs font-bold"><i data-lucide="star" class="w-4 h-4"></i><span id="modal-watchlist-text">מעקב</span></button>
                     
-                    <!-- דינמי: כפתור ארכיון או כפתור שחזור -->
                     <span id="modal-archive-btn-container"></span>
                     
                     <button onclick="closePropertyModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-gray-800/80 ml-2"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -197,24 +213,16 @@
                 <div class="flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5 text-emerald-400"></i><h3 class="text-base font-bold text-white">תזמון וניהול הטייס האוטומטי</h3></div>
                 <button onclick="closeAutoScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            
             <div class="space-y-4">
                 <div class="flex items-center justify-between bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <div>
-                        <span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי מרכזי</span>
-                        <span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות המתוזמנות ברקע</span>
-                    </div>
+                    <div><span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי מרכזי</span><span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות המתוזמנות ברקע</span></div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="autoscan-master-switch" checked class="sr-only peer">
                         <div class="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
                 </div>
-
                 <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-3">
-                    <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-2">
-                        <h4 class="text-sm font-bold text-gray-200">הגדרות תזמון לפי סקטור (שעון EST):</h4>
-                    </div>
-                    
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-2"><h4 class="text-sm font-bold text-gray-200">הגדרות תזמון לפי סקטור (שעון EST):</h4></div>
                     <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-cyan-500/40 transition">
                         <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5"><i data-lucide="trending-down" class="w-4 h-4"></i> 1. MLS וירידות מחיר</span>
                         <div class="flex gap-2">
@@ -237,7 +245,7 @@
                         </div>
                     </div>
                     <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-purple-500/40 transition">
-                        <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5"><i data-lucide="receipt" class="w-4 h-4"></i> 4. פיגורי מס (Tax Claim)</span>
+                        <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5"><i data-lucide="receipt" class="w-4 h-4"></i> 4. פיגורי מס</span>
                         <div class="flex gap-2">
                             <select id="sched-day-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-purple-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
                             <select id="sched-time-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-purple-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
@@ -250,10 +258,8 @@
                             <select id="sched-time-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-emerald-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
                         </div>
                     </div>
-
                 </div>
             </div>
-
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeAutoScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
                 <button id="btn-save-schedule" onclick="saveScheduleSettings()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i> שמור לשרת</button>
@@ -265,7 +271,7 @@
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
-                <div class="flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הגדרות סינון וסריקת שוק אוטומטית (פנסילבניה)</h3></div>
+                <div class="flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הגדרות סינון וסריקת שוק אוטומטית</h3></div>
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="bg-blue-950/30 p-3 rounded-xl border border-blue-500/40 space-y-1 mb-2">
@@ -282,23 +288,16 @@
                 </div>
             </div>
             
-            <!-- פרמטרים V8.3 עם מקסימום לשטח וחדרים -->
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-xs border-t border-gray-800 pt-3">
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
-                
-                <!-- שטח מינימום ומקסימום -->
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מקס' (SqFt)</label><input type="text" id="setting-max-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
-                
-                <!-- חדרים מינימום ומקסימום -->
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></div>
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מקס'</label><select id="setting-max-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="2">עד 2</option><option value="3">עד 3</option><option value="4">עד 4</option><option value="5">עד 5</option></select></div>
-                
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
             </div>
             
-            <!-- סוגי נכסים -->
             <div class="space-y-1.5 pt-2">
                 <span class="text-xs font-bold text-gray-300">סוגי נכסים מבוקשים לסריקה:</span>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 text-xs">
@@ -311,15 +310,10 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection -->
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllSettingCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllSettingCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
-                    </div>
+                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Philadelphia" onchange="handleSettingCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
@@ -333,15 +327,10 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
                 </div>
             </div>
-            <!-- Neighborhoods Selection -->
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllSettingNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllSettingNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button>
-                    </div>
+                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
@@ -400,23 +389,16 @@
                 </div>
             </div>
             
-            <!-- פרמטרים V8.3 סריקה יזומה -->
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800 text-xs">
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="ondemand-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center"></div>
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="ondemand-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center"></div>
-                
-                <!-- שטח מינימום ומקסימום -->
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center"></div>
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מקס' (SqFt)</label><input type="text" id="ondemand-max-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center"></div>
-                
-                <!-- חדרים מינימום ומקסימום -->
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="ondemand-min-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></div>
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מקס'</label><select id="ondemand-max-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="2">עד 2</option><option value="3">עד 3</option><option value="4">עד 4</option><option value="5">עד 5</option></select></div>
-                
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="ondemand-min-baths" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
             </div>
             
-            <!-- סוגי נכסים בסריקה יזומה -->
             <div class="space-y-1.5 mt-3">
                 <span class="text-xs font-bold text-gray-300">סוגי נכסים:</span>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 text-xs">
@@ -429,15 +411,10 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="ondemand-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
                 </div>
             </div>
-            <!-- Cities Selection -->
             <div class="space-y-1.5 mt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button>
-                    </div>
+                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia" onchange="handleCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
@@ -451,15 +428,10 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster" onchange="handleCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
                 </div>
             </div>
-            <!-- Neighborhoods Selection -->
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
-                    <div class="text-xs space-x-2 space-x-reverse">
-                        <button onclick="toggleAllOnDemandNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button>
-                        <span class="text-gray-600">|</span>
-                        <button onclick="toggleAllOnDemandNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button>
-                    </div>
+                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
@@ -514,8 +486,21 @@
         let scanTimerInterval = null;
         let scanStartTime = null;
 
+        // V8.4: משתנים לסינון ערים רב-ברירה
+        let selectedCitiesFilter = new Set();
+        let allAvailableCities = [];
+
         function handlePriceInput(input) { let raw = String(input.value||'').replace(/\D/g, ''); input.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : ''; }
         function getRawPrice(input) { return parseInt(String(input.value||'').replace(/\D/g, '') || 0, 10); }
+
+        // סגירת חלון העיר בלחיצה בחוץ
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('city-filter-wrapper');
+            const list = document.getElementById('city-dropdown-list');
+            if (wrapper && list && !wrapper.contains(e.target)) {
+                list.classList.add('hidden');
+            }
+        });
 
         async function init() {
             lucide.createIcons();
@@ -592,13 +577,10 @@
             return {
                 minPrice: getRawPrice(document.getElementById(`${prefix}-min-price`)),
                 maxPrice: getRawPrice(document.getElementById(`${prefix}-max-price`)) || 190000,
-                
-                // עדכון V8.3: שטח מקסימום וחדרים מקסימום
                 minSqft: document.getElementById(`${prefix}-min-sqft`).value,
                 maxSqft: document.getElementById(`${prefix}-max-sqft`) ? document.getElementById(`${prefix}-max-sqft`).value : '',
                 minBeds: document.getElementById(`${prefix}-min-beds`).value,
                 maxBeds: document.getElementById(`${prefix}-max-beds`) ? document.getElementById(`${prefix}-max-beds`).value : 'all',
-                
                 minBaths: document.getElementById(`${prefix}-min-baths`).value,
                 sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value),
                 propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
@@ -783,11 +765,67 @@
             }
         }
 
+        // V8.4: פונקציות לתפריט הערים החכם
+        function toggleCityDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('city-dropdown-list').classList.toggle('hidden');
+        }
+
         function populateCityDropdown() {
-            const dropdown = document.getElementById('filter-city');
-            const cities = [...new Set(rawProperties.filter(p => !p.is_archived).map(p => `${p.city} (${p.county})`))].sort();
-            dropdown.innerHTML = '<option value="all">כל הערים והמחוזות</option>';
-            cities.forEach(c => dropdown.innerHTML += `<option value="${c}">${c}</option>`);
+            const container = document.getElementById('city-checkbox-container');
+            allAvailableCities = [...new Set(rawProperties.filter(p => !p.is_archived).map(p => `${p.city} (${p.county})`))].sort();
+            
+            // בטעינה ראשונה, אם הרשימה ריקה - נסמן את הכל כברירת מחדל כדי שהלוח יהיה מלא
+            if(selectedCitiesFilter.size === 0 && container.innerHTML.trim() === "") {
+                allAvailableCities.forEach(c => selectedCitiesFilter.add(c));
+            }
+
+            container.innerHTML = '';
+            allAvailableCities.forEach(c => {
+                const isChecked = selectedCitiesFilter.has(c) ? 'checked' : '';
+                container.innerHTML += `
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-800 p-1.5 rounded-lg transition border border-transparent hover:border-gray-700" onclick="event.stopPropagation()">
+                        <input type="checkbox" value="${c}" ${isChecked} onchange="updateCityFilter(this)" class="accent-blue-500 w-3.5 h-3.5 rounded bg-gray-900 border-gray-700">
+                        <span class="truncate" dir="ltr">${c}</span>
+                    </label>
+                `;
+            });
+            updateCityDropdownLabel();
+        }
+
+        function updateCityFilter(checkbox) {
+            if (checkbox.checked) {
+                selectedCitiesFilter.add(checkbox.value);
+            } else {
+                selectedCitiesFilter.delete(checkbox.value);
+            }
+            updateCityDropdownLabel();
+            applyFilters();
+        }
+
+        function setAllCityFilters(state, e) {
+            if(e) e.stopPropagation();
+            const checkboxes = document.querySelectorAll('#city-checkbox-container input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = state;
+                if (state) selectedCitiesFilter.add(cb.value);
+                else selectedCitiesFilter.clear();
+            });
+            updateCityDropdownLabel();
+            applyFilters();
+        }
+
+        function updateCityDropdownLabel() {
+            const label = document.getElementById('city-dropdown-text');
+            if (selectedCitiesFilter.size === allAvailableCities.length && allAvailableCities.length > 0) {
+                label.textContent = "כל האזורים";
+            } else if (selectedCitiesFilter.size === 0) {
+                label.textContent = "0 אזורים";
+            } else if (selectedCitiesFilter.size === 1) {
+                label.textContent = Array.from(selectedCitiesFilter)[0].split(' ')[0]; // רק שם העיר
+            } else {
+                label.textContent = `${selectedCitiesFilter.size} אזורים נבחרו`;
+            }
         }
 
         function updateCounts() {
@@ -819,7 +857,7 @@
 
         function renderCards() {
             const container = document.getElementById('properties-container');
-            const cityF = document.getElementById('filter-city').value, stratF = document.getElementById('filter-strategy').value;
+            const stratF = document.getElementById('filter-strategy').value;
             const typeF = document.getElementById('filter-type').value, priceF = document.getElementById('filter-price').value;
             const minPrice = getRawPrice(document.getElementById('filter-min-price')), sortBy = document.getElementById('sort-by').value;
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
@@ -842,10 +880,15 @@
                 }
 
                 if (stratF !== 'all' && p.strategy !== stratF) return false;
-                if (cityF !== 'all' && !cityF.includes(p.city)) return false;
                 if (typeF !== 'all' && p.type && p.type !== typeF) return false;
                 if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
                 if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
+                
+                // סינון אזורים חכם V8.4
+                const propCityStr = `${p.city} (${p.county})`;
+                if (selectedCitiesFilter.size > 0 && !selectedCitiesFilter.has(propCityStr)) return false;
+                if (selectedCitiesFilter.size === 0) return false; // אם כלום לא מסומן, מציג מסך ריק (נקי)
+
                 return true;
             });
 
@@ -853,7 +896,7 @@
             else if (sortBy === 'date_desc') filtered.sort((a,b) => parseDate(b.listed_date) - parseDate(a.listed_date));
             else if (sortBy === 'price_asc') filtered.sort((a,b) => (a.price||0) - (b.price||0));
 
-            if (!filtered.length) { container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות.</div>'; return; }
+            if (!filtered.length) { container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
 
             if (currentViewMode === 'table') {
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="w-full text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3">מיקום</th><th class="p-3">מחיר</th><th class="p-3">מאפיינים</th><th class="p-3">תשואה/שיפוץ</th><th class="p-3">תאריך</th><th class="p-3 text-center">ציון</th><th class="p-3 text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
