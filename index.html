@@ -22,6 +22,11 @@
         .watchlist-btn-active i { color: #0f172a !important; fill: #0f172a !important; }
         .watchlist-btn-active .badge-count { background-color: #0f172a !important; color: #fbbf24 !important; }
         .hot-deal-border { box-shadow: 0 0 16px -2px rgba(217, 119, 6, 0.3); border-color: rgba(217, 119, 6, 0.5) !important; }
+        
+        /* Viewed Card Style */
+        .card-viewed { opacity: 0.8; background-color: #080b13 !important; }
+        .card-viewed:hover { opacity: 1; background-color: #111827 !important; }
+        
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
@@ -41,7 +46,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.0</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.1</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -134,9 +139,10 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="moveToPipelineFromModal()" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black flex items-center gap-1.5 text-xs"><i data-lucide="send" class="w-4 h-4"></i>העבר לחדר עסקאות</button>
+                    <button onclick="moveToPipelineFromModal()" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black flex items-center gap-1.5 text-xs"><i data-lucide="send" class="w-4 h-4"></i>לחדר עסקאות</button>
                     <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 text-amber-400 flex items-center gap-1.5 text-xs font-bold"><i data-lucide="star" class="w-4 h-4"></i><span id="modal-watchlist-text">מעקב</span></button>
-                    <button onclick="closePropertyModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-gray-800/80"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    <button onclick="archiveFromModal()" class="p-2.5 rounded-xl bg-gray-800 hover:bg-rose-900/30 text-gray-400 hover:text-rose-400 border border-gray-700 flex items-center gap-1.5 text-xs font-bold transition" title="העבר לארכיון (יוחזר רק אם המחיר ירד)"><i data-lucide="archive" class="w-4 h-4"></i> ארכיון</button>
+                    <button onclick="closePropertyModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-gray-800/80 ml-2"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
             </div>
 
@@ -176,7 +182,7 @@
         </div>
     </div>
 
-    <!-- Auto-Scan Management Modal (V8.0: With Correct Strategic Defaults) -->
+    <!-- Auto-Scan Management Modal -->
     <div id="autoscan-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
@@ -201,68 +207,39 @@
                         <h4 class="text-sm font-bold text-gray-200">הגדרות תזמון לפי סקטור (שעון EST):</h4>
                     </div>
                     
-                    <!-- MLS Row -->
                     <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-cyan-500/40 transition">
                         <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5"><i data-lucide="trending-down" class="w-4 h-4"></i> 1. MLS וירידות מחיר</span>
                         <div class="flex gap-2">
-                            <select id="sched-day-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-cyan-500">
-                                <option value="Everyday" selected>כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-cyan-500">
-                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
-                            </select>
+                            <select id="sched-day-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-cyan-500"><option value="Everyday" selected>כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
+                            <select id="sched-time-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-cyan-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
                         </div>
                     </div>
-
-                    <!-- REO Row -->
                     <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-amber-500/40 transition">
                         <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5"><i data-lucide="shield-alert" class="w-4 h-4"></i> 2. בנקים וכינוס נכסים</span>
                         <div class="flex gap-2">
-                            <select id="sched-day-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-amber-500">
-                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-amber-500">
-                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
-                            </select>
+                            <select id="sched-day-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-amber-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
+                            <select id="sched-time-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-amber-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
                         </div>
                     </div>
-
-                    <!-- Sheriff Row -->
                     <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-rose-500/40 transition">
                         <span class="text-xs font-bold text-rose-300 flex items-center gap-1.5"><i data-lucide="gavel" class="w-4 h-4"></i> 3. מכירות שריף</span>
                         <div class="flex gap-2">
-                            <select id="sched-day-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-rose-500">
-                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-rose-500">
-                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
-                            </select>
+                            <select id="sched-day-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-rose-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
+                            <select id="sched-time-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-rose-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
                         </div>
                     </div>
-
-                    <!-- Tax Row -->
                     <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-purple-500/40 transition">
                         <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5"><i data-lucide="receipt" class="w-4 h-4"></i> 4. פיגורי מס (Tax Claim)</span>
                         <div class="flex gap-2">
-                            <select id="sched-day-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-purple-500">
-                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-purple-500">
-                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
-                            </select>
+                            <select id="sched-day-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-purple-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
+                            <select id="sched-time-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-purple-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
                         </div>
                     </div>
-
-                    <!-- Probate Row -->
                     <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-emerald-500/40 transition">
                         <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5"><i data-lucide="home" class="w-4 h-4"></i> 5. עיזבונות ו-FSBO</span>
                         <div class="flex gap-2">
-                            <select id="sched-day-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-emerald-500">
-                                <option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-emerald-500">
-                                <option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option>
-                            </select>
+                            <select id="sched-day-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-emerald-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
+                            <select id="sched-time-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-emerald-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
                         </div>
                     </div>
 
@@ -504,6 +481,9 @@
         let currentViewMode = 'table';
         let isAutoScanEnabled = true;
         
+        let viewedDeals = new Set();
+        let archiveDeals = {}; // { "PA-MLS-123": { price: 150000, date: "..." } }
+        
         let scanTimerInterval = null;
         let scanStartTime = null;
 
@@ -512,7 +492,9 @@
 
         async function init() {
             lucide.createIcons();
-            loadPipelineFromStorage(); loadWatchlistFromStorage();
+            loadPipelineFromStorage(); 
+            loadWatchlistFromStorage();
+            loadViewedAndArchive(); // טעינת המערכת החדשה
             
             const savedToken = localStorage.getItem('pa_github_token');
             if(savedToken) {
@@ -537,6 +519,32 @@
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
             await loadProperties();
+        }
+
+        // --- מנגנוני ניהול קשב וארכיון ---
+        function loadViewedAndArchive() {
+            try { viewedDeals = new Set(JSON.parse(localStorage.getItem('pa_viewed_deals') || '[]')); } catch(e){}
+            try { archiveDeals = JSON.parse(localStorage.getItem('pa_archive_deals') || '{}'); } catch(e){}
+        }
+        function saveViewed() { localStorage.setItem('pa_viewed_deals', JSON.stringify(Array.from(viewedDeals))); }
+        function saveArchive() { localStorage.setItem('pa_archive_deals', JSON.stringify(archiveDeals)); }
+
+        function archiveFromModal() {
+            if(!currentSelectedProperty) return;
+            const idStr = String(currentSelectedProperty.id);
+            const price = Number(currentSelectedProperty.price) || 0;
+            
+            archiveDeals[idStr] = { price: price, date: new Date().toISOString() };
+            saveArchive();
+            
+            if(userWatchlist.has(idStr)) {
+                userWatchlist.delete(idStr);
+                saveWatchlistToStorage();
+            }
+            
+            alert(`הנכס הועבר לארכיון! הוא יקפוץ בחזרה ללוח רק אם נזהה ירידת מחיר.`);
+            closePropertyModal();
+            loadProperties(); // הערכה מחדש של הכל
         }
 
         function buildServerConfig(isManual = false) {
@@ -612,6 +620,7 @@
             } catch(e) {}
         }
 
+
         function setViewMode(mode) {
             currentViewMode = mode;
             document.getElementById('btn-view-table').className = mode === 'table' ? "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-blue-600 text-white" : "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 text-gray-400 hover:text-white";
@@ -660,6 +669,8 @@
             renderCards();
         }
 
+        function parseDate(d) { const p = (d||'').split('/'); return p.length===3 ? new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() : 0; }
+
         async function loadProperties() {
             try {
                 const res = await fetch('properties.json?t=' + Date.now());
@@ -674,11 +685,48 @@
                 }
 
                 const rawList = await res.json();
-                const seenKeys = new Set(); rawProperties = [];
+                const seenKeys = new Set(); 
+                let activeProps = [];
+                let archiveChanged = false;
+                
+                const NOW = Date.now();
+                const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+
                 rawList.forEach(p => {
                     const normKey = p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id);
-                    if (!seenKeys.has(normKey)) { seenKeys.add(normKey); if (!p.listed_date) p.listed_date = '05/09/2026'; rawProperties.push(p); }
+                    if (!seenKeys.has(normKey)) { 
+                        seenKeys.add(normKey); 
+                        if (!p.listed_date) p.listed_date = '05/09/2026'; 
+                        
+                        const idStr = String(p.id);
+                        const currentPrice = Number(p.price) || 0;
+                        
+                        // 1. בדיקת תחיית המתים מהארכיון (ירידת מחיר)
+                        if (archiveDeals[idStr]) {
+                            if (currentPrice > 0 && currentPrice < archiveDeals[idStr].price) {
+                                delete archiveDeals[idStr];
+                                archiveChanged = true;
+                                p.price_dropped = true; // נסמן לטובת חיווי אדום בממשק
+                            } else {
+                                return; // נשאר בארכיון, אל תציג.
+                            }
+                        }
+                        
+                        // 2. אוטומציה: נכס ישן מ-3 חודשים (90 יום) הולך לארכיון
+                        const listTime = parseDate(p.listed_date);
+                        if (listTime > 0 && (NOW - listTime) > NINETY_DAYS_MS && !p.price_dropped) {
+                            archiveDeals[idStr] = { price: currentPrice, date: new Date().toISOString() };
+                            archiveChanged = true;
+                            return; // אל תציג.
+                        }
+                        
+                        activeProps.push(p); 
+                    }
                 });
+                
+                if (archiveChanged) saveArchive();
+                rawProperties = activeProps;
+                
                 populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
             } catch (err) { 
                 console.error(err); 
@@ -714,7 +762,6 @@
         }
 
         function applyFilters() { renderCards(); }
-        function parseDate(d) { const p = (d||'').split('/'); return p.length===3 ? new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() : 0; }
 
         function renderCards() {
             const container = document.getElementById('properties-container');
@@ -750,8 +797,16 @@
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="w-full text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3">מיקום</th><th class="p-3">מחיר</th><th class="p-3">מאפיינים</th><th class="p-3">תשואה/שיפוץ</th><th class="p-3">תאריך</th><th class="p-3 text-center">ציון</th><th class="p-3 text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
                 ${filtered.map(p => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
-                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer">
-                        <td class="p-3"><div class="font-black text-white text-sm">${p.address}</div><div class="text-[11px] text-gray-400">${p.city}</div></td>
+                    const isV = viewedDeals.has(String(p.id));
+                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${isV ? 'card-viewed' : ''}">
+                        <td class="p-3">
+                            <div class="flex items-center gap-1.5">
+                                ${isV ? '<span title="נצפה"><i data-lucide="eye" class="w-3.5 h-3.5 text-gray-500"></i></span>' : ''}
+                                <div class="font-black text-white text-sm">${p.address}</div>
+                            </div>
+                            <div class="text-[11px] text-gray-400">${p.city}</div>
+                            ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
+                        </td>
                         <td class="p-3 font-mono font-black text-emerald-400 text-sm">$${(p.price||0).toLocaleString()}</td>
                         <td class="p-3 font-bold text-gray-300">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
                         <td class="p-3"><div class="text-emerald-300 font-mono">💰 ${p.projected_rent||'-'}</div><div class="text-amber-300 text-[11px]">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'-')}</div></td>
@@ -762,10 +817,18 @@
             } else {
                 container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">` + filtered.map(p => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
-                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isH?'border-amber-500/50':'border-gray-800'} rounded-2xl p-5 shadow-lg cursor-pointer group relative">
-                        ${isH ? `<div class="absolute top-0 left-0 bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-br-xl">🔥 ציון ${p.deal_score}</div>` : ''}
-                        <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
-                        <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-2">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
+                    const isV = viewedDeals.has(String(p.id));
+                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isH?'border-amber-500/50':'border-gray-800'} rounded-2xl p-5 shadow-lg cursor-pointer group relative ${isV ? 'card-viewed' : ''}">
+                        
+                        <div class="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                            ${isV ? '<span class="bg-gray-950/80 text-gray-400 text-[10px] px-1.5 py-1 rounded-md border border-gray-800 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> נצפה</span>' : ''}
+                            ${isH && !p.price_dropped ? `<span class="bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-md">🔥 ציון ${p.deal_score}</span>` : ''}
+                            ${p.price_dropped ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px] px-2 py-1 rounded-md">📉 ירד מחיר!</span>` : ''}
+                        </div>
+
+                        <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
+                        
+                        <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
                         <div class="text-2xl font-black text-emerald-400 font-mono mb-2">$${(p.price||0).toLocaleString()}</div>
                         <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
                         <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'-'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'-')}</strong></span></div>
@@ -777,6 +840,14 @@
         function openPropertyModal(id) {
             const p = rawProperties.find(x => String(x.id) === String(id)); if (!p) return;
             currentSelectedProperty = p;
+            
+            // סימון כנצפה
+            if (!viewedDeals.has(String(p.id))) {
+                viewedDeals.add(String(p.id));
+                saveViewed();
+                renderCards(); // מרענן רק כדי שיופיע אייקון העין מאחורה
+            }
+
             document.getElementById('modal-address').textContent = p.address;
             document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
             document.getElementById('modal-listed-date').textContent = p.listed_date;
@@ -958,7 +1029,7 @@
             lucide.createIcons();
         }
 
-        // --- חלון ניהול טייס אוטומטי ותזמונים ---
+        // --- חלון ניהול טייס אוטומטי ותזמונים V8.0 ---
         function openAutoScanModal() {
             loadScheduleSettings();
             document.getElementById('autoscan-modal').classList.remove('hidden');
@@ -981,7 +1052,6 @@
                     if (st.schedules.tax) { document.getElementById('sched-day-tax').value = st.schedules.tax.day || 'Wednesday'; document.getElementById('sched-time-tax').value = st.schedules.tax.time || '08:00'; }
                     if (st.schedules["06_probate_estates"]) { document.getElementById('sched-day-probate').value = st.schedules["06_probate_estates"].day || 'Wednesday'; document.getElementById('sched-time-probate').value = st.schedules["06_probate_estates"].time || '08:00'; }
                 } else {
-                    // הגדרת ברירות המחדל הנכונות למקרה שאין היסטוריה שמורה
                     document.getElementById('sched-day-mls').value = 'Everyday'; document.getElementById('sched-time-mls').value = '08:00';
                     document.getElementById('sched-day-reo').value = 'Wednesday'; document.getElementById('sched-time-reo').value = '08:00';
                     document.getElementById('sched-day-sheriff').value = 'Wednesday'; document.getElementById('sched-time-sheriff').value = '08:00';
