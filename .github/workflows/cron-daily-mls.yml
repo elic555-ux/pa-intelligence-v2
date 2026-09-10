@@ -1,9 +1,9 @@
 name: "1. Central Intelligence Orchestrator (Hourly)"
 
 on:
-  workflow_dispatch: # כפתור "שגר סריקה כעת" באתר
+  workflow_dispatch: # מאפשר שיגור ידני (Mission Control) מתוך האתר
   schedule:
-    - cron: '0 * * * *' # קם כל שעה עגולה! (01:00, 02:00...) הפייתון יחליט אם לסרוק או לישון
+    - cron: '0 * * * *' # קם כל שעה עגולה (UTC). הפייתון שלנו יחליט אם לסרוק או לישון.
 
 jobs:
   scan:
@@ -22,7 +22,7 @@ jobs:
           pip install pytz requests
 
       - name: Run Orchestrator (Brain)
-        # מכניסים את סוג ההפעלה כדי שהפייתון יידע אם זו סריקה יזומה
+        # אנחנו שולחים לפייתון אינדיקציה איך הוא הופעל (ידנית או אוטומטית)
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: python orchestrator.py
