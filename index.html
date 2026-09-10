@@ -25,6 +25,10 @@
         .watchlist-btn-active .badge-count { background-color: #0f172a !important; color: #fbbf24 !important; }
         .hot-deal-border { box-shadow: 0 0 16px -2px rgba(217, 119, 6, 0.3); border-color: rgba(217, 119, 6, 0.5) !important; }
         
+        /* Viewed Card Style */
+        .card-viewed { opacity: 0.8; background-color: #080b13 !important; }
+        .card-viewed:hover { opacity: 1; background-color: #111827 !important; }
+        
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
@@ -44,7 +48,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.2</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.3</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -67,6 +71,7 @@
                     <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
                 </button>
 
+                <!-- חיווי סריקה אחרונה וטייס אוטומטי -->
                 <div class="flex items-center gap-3 pr-2 border-r border-gray-700">
                     <div class="text-right hidden sm:block">
                         <span class="block text-[10px] text-gray-500 font-bold mb-0.5">סריקה אחרונה</span>
@@ -276,14 +281,23 @@
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="setting-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
                 </div>
             </div>
-            <!-- פרמטרים -->
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs border-t border-gray-800 pt-3">
+            
+            <!-- פרמטרים V8.3 עם מקסימום לשטח וחדרים -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-xs border-t border-gray-800 pt-3">
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
                 <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
+                
+                <!-- שטח מינימום ומקסימום -->
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option></select></div>
+                <div><label class="block font-bold text-gray-300 mb-1">שטח מקס' (SqFt)</label><input type="text" id="setting-max-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
+                
+                <!-- חדרים מינימום ומקסימום -->
+                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></div>
+                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מקס'</label><select id="setting-max-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="2">עד 2</option><option value="3">עד 3</option><option value="4">עד 4</option><option value="5">עד 5</option></select></div>
+                
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
             </div>
+            
             <!-- סוגי נכסים -->
             <div class="space-y-1.5 pt-2">
                 <span class="text-xs font-bold text-gray-300">סוגי נכסים מבוקשים לסריקה:</span>
@@ -385,15 +399,25 @@
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="ondemand-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
                 </div>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800">
-                <div><label class="block font-bold text-emerald-400 mb-1 text-xs">מחיר מינימום ($)</label><input type="text" id="ondemand-min-price" value="50,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-emerald-400 mb-1 text-xs">מחיר מקסימום ($)</label><input type="text" id="ondemand-max-price" value="190,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1 text-xs">שטח מינ' (SqFt)</label><input type="text" id="ondemand-min-sqft" value="1,200" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1 text-xs">חדרי שינה</label><select id="ondemand-min-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white text-sm"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option></select></div>
-                <div><label class="block font-bold text-gray-300 mb-1 text-xs">חדרי רחצה</label><select id="ondemand-min-baths" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white text-sm"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
+            
+            <!-- פרמטרים V8.3 סריקה יזומה -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800 text-xs">
+                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="ondemand-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center"></div>
+                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="ondemand-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center"></div>
+                
+                <!-- שטח מינימום ומקסימום -->
+                <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center"></div>
+                <div><label class="block font-bold text-gray-300 mb-1">שטח מקס' (SqFt)</label><input type="text" id="ondemand-max-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center"></div>
+                
+                <!-- חדרים מינימום ומקסימום -->
+                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="ondemand-min-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></div>
+                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מקס'</label><select id="ondemand-max-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="2">עד 2</option><option value="3">עד 3</option><option value="4">עד 4</option><option value="5">עד 5</option></select></div>
+                
+                <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="ondemand-min-baths" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
             </div>
+            
             <!-- סוגי נכסים בסריקה יזומה -->
-            <div class="space-y-1.5">
+            <div class="space-y-1.5 mt-3">
                 <span class="text-xs font-bold text-gray-300">סוגי נכסים:</span>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 text-xs">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Single Family" class="ondemand-prop-type-box accent-blue-500"><span>Single Family</span></label>
@@ -406,7 +430,7 @@
                 </div>
             </div>
             <!-- Cities Selection -->
-            <div class="space-y-1.5">
+            <div class="space-y-1.5 mt-3">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
                     <div class="text-xs space-x-2 space-x-reverse">
@@ -485,7 +509,7 @@
         let isAutoScanEnabled = true;
         
         let viewedDeals = new Set();
-        let archiveDeals = {}; // { "PA-MLS-123": { price: 150000, date: "..." } }
+        let archiveDeals = {}; 
         
         let scanTimerInterval = null;
         let scanStartTime = null;
@@ -568,8 +592,13 @@
             return {
                 minPrice: getRawPrice(document.getElementById(`${prefix}-min-price`)),
                 maxPrice: getRawPrice(document.getElementById(`${prefix}-max-price`)) || 190000,
+                
+                // עדכון V8.3: שטח מקסימום וחדרים מקסימום
                 minSqft: document.getElementById(`${prefix}-min-sqft`).value,
+                maxSqft: document.getElementById(`${prefix}-max-sqft`) ? document.getElementById(`${prefix}-max-sqft`).value : '',
                 minBeds: document.getElementById(`${prefix}-min-beds`).value,
+                maxBeds: document.getElementById(`${prefix}-max-beds`) ? document.getElementById(`${prefix}-max-beds`).value : 'all',
+                
                 minBaths: document.getElementById(`${prefix}-min-baths`).value,
                 sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value),
                 propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
@@ -602,7 +631,9 @@
                     if(document.getElementById('setting-min-price') && st.minPrice) document.getElementById('setting-min-price').value = st.minPrice.toLocaleString('en-US');
                     if(document.getElementById('setting-max-price') && st.maxPrice) document.getElementById('setting-max-price').value = st.maxPrice.toLocaleString('en-US');
                     if(document.getElementById('setting-min-sqft') && st.minSqft) document.getElementById('setting-min-sqft').value = st.minSqft;
+                    if(document.getElementById('setting-max-sqft') && st.maxSqft !== undefined) document.getElementById('setting-max-sqft').value = st.maxSqft;
                     if(document.getElementById('setting-min-beds') && st.minBeds) document.getElementById('setting-min-beds').value = st.minBeds;
+                    if(document.getElementById('setting-max-beds') && st.maxBeds !== undefined) document.getElementById('setting-max-beds').value = st.maxBeds;
                     if(document.getElementById('setting-min-baths') && st.minBaths) document.getElementById('setting-min-baths').value = st.minBaths;
                     
                     if(st.sectors) document.querySelectorAll('.setting-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
@@ -625,7 +656,9 @@
                     if(document.getElementById('ondemand-min-price') && st.minPrice) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
                     if(document.getElementById('ondemand-max-price') && st.maxPrice) document.getElementById('ondemand-max-price').value = st.maxPrice.toLocaleString('en-US');
                     if(document.getElementById('ondemand-min-sqft') && st.minSqft) document.getElementById('ondemand-min-sqft').value = st.minSqft;
+                    if(document.getElementById('ondemand-max-sqft') && st.maxSqft !== undefined) document.getElementById('ondemand-max-sqft').value = st.maxSqft;
                     if(document.getElementById('ondemand-min-beds') && st.minBeds) document.getElementById('ondemand-min-beds').value = st.minBeds;
+                    if(document.getElementById('ondemand-max-beds') && st.maxBeds !== undefined) document.getElementById('ondemand-max-beds').value = st.maxBeds;
                     if(document.getElementById('ondemand-min-baths') && st.minBaths) document.getElementById('ondemand-min-baths').value = st.minBaths;
                     
                     if(st.sectors) document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
@@ -870,7 +903,6 @@
             const p = rawProperties.find(x => String(x.id) === String(id)); if (!p) return;
             currentSelectedProperty = p;
             
-            // סימון אוטומטי כ"נצפה" ברגע הפתיחה
             if (!viewedDeals.has(String(p.id))) {
                 viewedDeals.add(String(p.id));
                 saveViewed();
@@ -935,7 +967,6 @@
             }
         }
 
-        // פונקציות בחירה וניקוי
         function toggleAllSettingCities(state) {
             document.querySelectorAll('.setting-city-box').forEach(cb => { cb.checked = state; });
             document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state; });
@@ -1066,7 +1097,6 @@
             lucide.createIcons();
         }
 
-        // --- חלון ניהול טייס אוטומטי ותזמונים V8.0 ---
         function openAutoScanModal() {
             loadScheduleSettings();
             document.getElementById('autoscan-modal').classList.remove('hidden');
