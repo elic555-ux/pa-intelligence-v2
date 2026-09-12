@@ -118,10 +118,10 @@
                     <button onclick="closeUnderwritingModal()" class="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-xl transition"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
 
-                <!-- Simulated Image Gallery -->
-                <div class="grid grid-cols-4 gap-2 h-40 mb-4">
+                <!-- Real Image from JSON if exists, else placeholder -->
+                <div class="grid grid-cols-4 gap-2 h-40 mb-4" id="uw-image-gallery">
                     <div class="col-span-2 row-span-2 rounded-xl overflow-hidden relative">
-                        <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
+                        <img id="uw-main-img" src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
                         <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">חזית (Main)</div>
                     </div>
                     <div class="rounded-xl overflow-hidden relative">
@@ -134,7 +134,7 @@
                     </div>
                     <div class="col-span-2 rounded-xl bg-gray-800 border border-gray-700 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-700 transition">
                         <i data-lucide="images" class="w-6 h-6 mb-1"></i>
-                        <span class="text-xs font-bold">+19 תמונות נשאבו</span>
+                        <span class="text-xs font-bold">+ תמונות נוספות נשאבו</span>
                     </div>
                 </div>
 
@@ -145,7 +145,7 @@
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">מ"ר (SqFt)</span><strong class="text-sm text-white font-mono" id="uw-sqft">--</strong></div>
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">שנת בנייה</span><strong class="text-sm text-white font-mono" id="uw-year">--</strong></div>
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">מגרש (SqFt)</span><strong class="text-sm text-white font-mono" id="uw-lot">--</strong></div>
-                    <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">מערכת חימום</span><strong class="text-sm text-white truncate px-1" id="uw-hvac">--</strong></div>
+                    <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">ימי שוק (DOM)</span><strong class="text-sm text-white truncate px-1" id="uw-dom">--</strong></div>
                 </div>
             </div>
 
@@ -388,8 +388,11 @@
         function loadPipelineDeals() {
             try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || []; } catch(e) { pipelineDeals = []; }
             const active = pipelineDeals.filter(d => !d.is_archived);
+            
+            // עדכון המונים העליונים
             document.getElementById('deals-total-count').textContent = active.length;
             document.getElementById('deals-offered-count').textContent = active.filter(d => d.tracker?.offer_made === 'yes').length;
+            
             renderDeals();
         }
 
@@ -421,7 +424,7 @@
         }
 
         function removeDealCompletely(id) {
-            if (confirm("האם להסיר את הנכס לחלוטין מחדר העסקאות?")) {
+            if (confirm("האם להסיר את הנכס מהצנרת?")) {
                 pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 loadPipelineDeals();
@@ -447,48 +450,54 @@
                 const isAgent = seenArray.includes('agent');
                 const isContractor = seenArray.includes('contractor');
                 const isHandyman = seenArray.includes('handyman');
-                const isConditionDone = !!tr.condition && tr.condition !== '';
                 const isOfferDone = tr.offer_made === 'yes' || (!!tr.offer_amount && Number(tr.offer_amount) > 0);
                 const isEmdDone = tr.emd_deposited === 'yes' || (!!tr.emd_amount && Number(tr.emd_amount) > 0);
-                const isInspectorDone = tr.inspector_sent === 'yes';
-                const isContractorDone = tr.contractor_quote_status === 'yes' || (!!tr.contractor_quote_amount && Number(tr.contractor_quote_amount) > 0);
                 const isStatusDone = (tr.deal_status && tr.deal_status !== 'under_review') || (!!tr.negotiated_price && Number(tr.negotiated_price) > 0);
-                const isClosedDone = !!tr.deal_closed && tr.deal_closed !== '';
+                
+                // הוספת שליפת תמונה אמיתית אם יש במאגר, או תמונת רחוב דיפולטיבית
+                const imgSrc = d.image_url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80";
 
                 return `
                     <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
+                        
+                        <!-- Header & Image Block -->
                         <div class="space-y-3">
-                            <div class="flex justify-between items-center gap-2">
-                                <div class="bg-gray-950 px-3.5 py-2.5 rounded-xl border border-blue-500/40 flex-1">
-                                    <label class="block text-sm font-black text-blue-300 mb-1 flex items-center gap-1.5">
-                                        <i data-lucide="user-check" class="w-4 h-4 text-blue-400"></i> למי הנכס מיועד:
-                                    </label>
-                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:border-blue-400 focus:outline-none">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-16 h-16 rounded-xl overflow-hidden border border-gray-700 shrink-0">
+                                        <img src="${imgSrc}" class="w-full h-full object-cover">
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-black text-white leading-tight">${d.address}</h3>
+                                        <p class="text-xs font-bold text-gray-400 mt-0.5">${d.city}, PA</p>
+                                    </div>
                                 </div>
-                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2.5 bg-gray-950 rounded-xl border border-gray-800 transition">
-                                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-1.5 bg-gray-950 rounded-lg border border-gray-800 transition">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>
-
-                            <div class="pt-1">
-                                <div class="flex items-center justify-between gap-2 mb-1">
-                                    <h3 class="text-lg font-black text-white">${d.address}</h3>
-                                </div>
-                                <p class="text-xs font-bold text-gray-300 mb-2">${d.city}, PA ${d.zip || ''}</p>
-                                <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
+                            
+                            <div class="flex justify-between items-end pb-1 border-b border-gray-800">
+                                <div class="text-2xl font-black text-emerald-400 font-mono">$${(Number(d.price) || 0).toLocaleString()}</div>
+                                <div class="text-[10px] text-gray-500 font-bold">שנת בנייה: ${d.year_built || '1955'}</div>
+                            </div>
+                            
+                            <div class="bg-gray-950 px-3 py-2 rounded-xl border border-blue-500/40">
+                                <label class="block text-[10px] font-black text-blue-300 mb-1">למי הנכס מיועד:</label>
+                                <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח..." class="w-full bg-transparent text-sm text-white font-extrabold focus:outline-none placeholder-gray-600">
                             </div>
                             
                             <!-- כפתור דוח חיתוך מורחב -->
-                            <button onclick="openUnderwritingModal('${d.id}')" class="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
+                            <button onclick="openUnderwritingModal('${d.id}')" class="w-full py-2.5 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2">
                                 <i data-lucide="microscope" class="w-4 h-4"></i>
-                                <span>פתח דוח AI לחיתוך עסקה (Underwriting)</span>
+                                <span>פתח דוח AI לחיתוך עסקה</span>
                             </button>
 
-                            <!-- שדות המעקב והניהול ששוחזרו במלואם -->
-                            <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
+                            <!-- שדות המעקב והניהול (שחזרנו אותם) -->
+                            <div class="space-y-2 pt-3 text-sm">
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
                                     <label class="block font-extrabold text-gray-100 mb-2 flex items-center gap-2">
-                                        ${renderV(isSeenDone)}<span>מי ראה את הנכס בשטח:</span>
+                                        ${renderV(isSeenDone)}<span class="text-xs">מי ראה את הנכס בשטח:</span>
                                     </label>
                                     <div class="grid grid-cols-3 gap-1.5">
                                         <button onclick="toggleMultiField('${d.id}', 'inspector_seen', 'agent')" class="flex items-center justify-center gap-1 py-1.5 rounded-lg border transition-all text-xs font-bold ${isAgent ? 'border-emerald-500 bg-emerald-900/30 text-emerald-400' : 'border-gray-700 bg-gray-900 text-gray-400 hover:bg-gray-800'}">${isAgent ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''} מתווך</button>
@@ -497,33 +506,33 @@
                                     </div>
                                 </div>
 
-                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1.5">
                                     <label class="block font-extrabold text-gray-100 flex items-center gap-2">
-                                        ${renderV(isOfferDone)}<span>הוגשה הצעה על הנכס:</span>
+                                        ${renderV(isOfferDone)}<span class="text-xs">הוגשה הצעה על הנכס:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'offer_made', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm"><option value="no" ${tr.offer_made === 'no' || !tr.offer_made ? 'selected' : ''}>לא</option><option value="yes" ${tr.offer_made === 'yes' ? 'selected' : ''}>כן</option></select>
-                                        <input type="number" placeholder="סכום שהוצע ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                        <select onchange="updateField('${d.id}', 'offer_made', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"><option value="no" ${tr.offer_made === 'no' || !tr.offer_made ? 'selected' : ''}>לא הוגש</option><option value="yes" ${tr.offer_made === 'yes' ? 'selected' : ''}>הוגש הצעת מחיר</option></select>
+                                        <input type="number" placeholder="סכום ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none font-mono">
                                     </div>
                                 </div>
                                 
-                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1.5">
                                     <label class="block font-extrabold text-gray-100 flex items-center gap-2">
-                                        ${renderV(isEmdDone)}<span>הפקדת EMD:</span>
+                                        ${renderV(isEmdDone)}<span class="text-xs">הפקדת EMD:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'emd_deposited', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm"><option value="no" ${tr.emd_deposited === 'no' || !tr.emd_deposited ? 'selected' : ''}>לא</option><option value="yes" ${tr.emd_deposited === 'yes' ? 'selected' : ''}>כן</option></select>
-                                        <input type="number" placeholder="סכום הופקד ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value)" class="bg-gray-900 border border-gray-700 text-blue-300 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                        <select onchange="updateField('${d.id}', 'emd_deposited', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"><option value="no" ${tr.emd_deposited === 'no' || !tr.emd_deposited ? 'selected' : ''}>לא הופקד</option><option value="yes" ${tr.emd_deposited === 'yes' ? 'selected' : ''}>כן הופקד</option></select>
+                                        <input type="number" placeholder="סכום הופקד ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value)" class="bg-gray-900 border border-gray-700 text-blue-300 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none font-mono">
                                     </div>
                                 </div>
 
-                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
+                                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1.5">
                                     <label class="block font-extrabold text-gray-100 flex items-center gap-2">
-                                        ${renderV(isStatusDone)}<span>סטטוס עסקה:</span>
+                                        ${renderV(isStatusDone)}<span class="text-xs">סטטוס העסקה:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'deal_status', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1.5 font-bold text-sm"><option value="under_review" ${tr.deal_status === 'under_review' || !tr.deal_status ? 'selected' : ''}>בבדיקה</option><option value="negotiating_new_price" ${tr.deal_status === 'negotiating_new_price' ? 'selected' : ''}>מו"מ פעיל</option><option value="awaiting_client" ${tr.deal_status === 'awaiting_client' ? 'selected' : ''}>ממתין ללקוח</option></select>
-                                        <input type="number" placeholder="מחיר סגירה ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value)" class="bg-gray-900 border border-gray-700 text-purple-300 rounded-lg px-2 py-1.5 font-bold text-sm">
+                                        <select onchange="updateField('${d.id}', 'deal_status', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"><option value="under_review" ${tr.deal_status === 'under_review' || !tr.deal_status ? 'selected' : ''}>בבדיקה</option><option value="negotiating_new_price" ${tr.deal_status === 'negotiating_new_price' ? 'selected' : ''}>מו"מ פעיל</option><option value="awaiting_client" ${tr.deal_status === 'awaiting_client' ? 'selected' : ''}>ממתין ללקוח</option></select>
+                                        <input type="number" placeholder="מחיר סגירה ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value)" class="bg-gray-900 border border-gray-700 text-purple-300 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none font-mono">
                                     </div>
                                 </div>
                             </div>
@@ -547,14 +556,30 @@
             document.getElementById('uw-asking-price').textContent = `$${(Number(deal.price) || 0).toLocaleString()}`;
             document.getElementById('uw-arv-price').textContent = `$${(deal.arv || 0).toLocaleString()}`;
             
-            // Fill Specs
+            // Fill Specs & Image
+            const imgSrc = deal.image_url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80";
+            document.getElementById('uw-main-img').src = imgSrc;
+
             const sqft = Number(deal.sqft) || 1300;
             document.getElementById('uw-beds').textContent = deal.beds || '-';
             document.getElementById('uw-baths').textContent = deal.baths || '-';
             document.getElementById('uw-sqft').textContent = sqft;
             document.getElementById('uw-year').textContent = deal.year_built || '1955';
             document.getElementById('uw-lot').textContent = deal.lot_size || '-';
-            document.getElementById('uw-hvac').textContent = deal.hvac_type || 'Forced Air';
+            
+            // חישוב ימי שוק
+            let dom = '-';
+            if (deal.listed_date) {
+                const parts = deal.listed_date.split('/');
+                if (parts.length === 3) {
+                    const listDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                    const today = new Date();
+                    const diffTime = Math.abs(today - listDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    dom = diffDays + ' ימים';
+                }
+            }
+            document.getElementById('uw-dom').textContent = dom;
 
             document.getElementById('uw-flip-rehab').textContent = `-$${(deal.flip_rehab || (sqft * 45)).toLocaleString()}`;
             document.getElementById('uw-flip-margin').textContent = `-$${Math.round((deal.arv||0)*0.30).toLocaleString()}`;
