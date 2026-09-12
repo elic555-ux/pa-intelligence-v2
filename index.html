@@ -48,7 +48,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.4</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.5 AI</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -109,7 +109,7 @@
         </section>
 
         <!-- Filters -->
-        <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3.5 shadow-lg">
+        <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3.5 shadow-lg">
             <div><label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label><select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none"><option value="all">הכל</option><option value="turnkey">🔑 מניב מיידי</option><option value="value_add">🔨 השבחה</option></select></div>
             
             <!-- V8.4: פילטר מרובה ערים חכם -->
@@ -135,6 +135,13 @@
             <div><label class="block text-xs font-bold text-emerald-400 mb-1.5">מחיר מינימום</label><input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyFilters();" placeholder="0" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center"></div>
             <div><label class="block text-xs font-bold text-gray-300 mb-1.5">מחיר מקסימום</label><select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none"><option value="all">ללא הגבלה</option><option value="100000">עד $100k</option><option value="190000">עד $190k</option><option value="250000">עד $250k</option></select></div>
             <div><label class="block text-xs font-bold text-gray-300 mb-1.5">מיון</label><select id="sort-by" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none"><option value="score_desc">🔥 ציון כדאיות</option><option value="date_desc" selected>📅 תאריך פרסום</option><option value="price_asc">מחיר (נמוך לגבוה)</option></select></div>
+            
+            <div class="flex items-end pb-0.5">
+                <label class="flex items-center justify-center gap-2 cursor-pointer bg-blue-900/20 border border-blue-500/30 px-2 py-2 rounded-xl w-full hover:bg-blue-900/40 transition h-[36px]">
+                    <input type="checkbox" id="filter-good-deal" onchange="applyFilters()" class="w-4 h-4 rounded bg-gray-900 border-gray-700 text-blue-600 focus:ring-blue-600 focus:ring-offset-gray-900">
+                    <span class="text-xs font-bold text-blue-400">דיל מתחת ל-MAO</span>
+                </label>
+            </div>
         </section>
 
         <!-- Properties Container -->
@@ -150,8 +157,8 @@
 
     <!-- Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
-            <div class="flex justify-between items-start border-b border-gray-800 pb-3.5">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-start border-b border-gray-800 pb-3">
                 <div>
                     <div class="flex items-center gap-2 mb-2" id="modal-badges"></div>
                     <h3 class="text-2xl font-black text-white tracking-wide" id="modal-address"></h3>
@@ -177,9 +184,24 @@
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3 rounded-xl border border-gray-800 text-xs">
+            <!-- New AI Section in Modal -->
+            <div class="bg-blue-950/20 p-4 rounded-xl border border-blue-500/30">
+                <div class="flex justify-between items-center border-b border-gray-800/60 pb-2 mb-3">
+                    <span class="font-black text-blue-300 flex items-center gap-1.5 text-sm"><i data-lucide="brain-circuit" class="w-5 h-5"></i> ניתוח AI מורחב (Analyzer)</span>
+                    <span id="modal-ai-class"></span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div><span class="text-gray-400 block font-bold mb-1">ARV משוער</span><strong class="text-white text-lg font-mono" id="modal-ai-arv"></strong></div>
+                    <div><span class="text-gray-400 block font-bold mb-1">צפי שכירות</span><strong class="text-white text-lg font-mono" id="modal-ai-rent"></strong></div>
+                    <div><span class="text-gray-400 block font-bold mb-1">MAO שכירות</span><strong class="text-emerald-400 text-lg font-black font-mono" id="modal-ai-mao-rent"></strong></div>
+                    <div><span class="text-gray-400 block font-bold mb-1">MAO פליפ (70%)</span><strong class="text-amber-400 text-lg font-black font-mono" id="modal-ai-mao-flip"></strong></div>
+                </div>
+                <p class="text-gray-300 text-xs mt-3 bg-gray-900/50 p-3 rounded-lg border border-gray-800/50" id="modal-ai-summary"></p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3 rounded-xl border border-gray-800 text-xs mt-2">
                 <div><span class="text-gray-400 block font-bold">אסטרטגיה</span><strong class="text-amber-300 font-extrabold" id="modal-strategy"></strong></div>
-                <div><span class="text-gray-400 block font-bold">צפי שכירות</span><strong class="text-emerald-400 font-extrabold font-mono" id="modal-rent"></strong></div>
+                <div><span class="text-gray-400 block font-bold">צפי שכירות מקורי</span><strong class="text-emerald-400 font-extrabold font-mono" id="modal-rent"></strong></div>
                 <div><span class="text-gray-400 block font-bold">תשואה צפויה</span><strong class="text-emerald-400 font-extrabold font-mono" id="modal-yield"></strong></div>
                 <div><span class="text-gray-400 block font-bold">הערכת שיפוץ</span><strong class="text-white font-extrabold" id="modal-rehab"></strong></div>
             </div>
@@ -198,7 +220,7 @@
                 </div>
             </div>
 
-            <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תקציר:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
+            <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תיאור מקורי:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
             <div class="pt-3.5 border-t border-gray-800 flex justify-between items-center gap-3">
                 <button onclick="copyPropertyAddress()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span id="copy-btn-text">העתק כתובת</span></button>
                 <div class="flex gap-2.5" id="modal-action-buttons"></div>
@@ -861,6 +883,7 @@
             const typeF = document.getElementById('filter-type').value, priceF = document.getElementById('filter-price').value;
             const minPrice = getRawPrice(document.getElementById('filter-min-price')), sortBy = document.getElementById('sort-by').value;
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+            const onlyGoodDeals = document.getElementById('filter-good-deal')?.checked;
 
             let filtered = rawProperties.filter(p => {
                 if (pipelineIds.has(String(p.id))) return false;
@@ -889,6 +912,11 @@
                 if (selectedCitiesFilter.size > 0 && !selectedCitiesFilter.has(propCityStr)) return false;
                 if (selectedCitiesFilter.size === 0) return false; // אם כלום לא מסומן, מציג מסך ריק (נקי)
 
+                // סינון AI מתחת ל-MAO
+                if (onlyGoodDeals) {
+                    if (!p.price || !p.mao_flip || (Number(p.price) > Number(p.mao_flip))) return false;
+                }
+
                 return true;
             });
 
@@ -903,6 +931,7 @@
                 ${filtered.map(p => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
+                    const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
                     return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
@@ -911,6 +940,7 @@
                             </div>
                             <div class="text-[11px] text-gray-400">${p.city}</div>
                             ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
+                            ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
                         </td>
                         <td class="p-3 font-mono font-black text-emerald-400 text-sm">$${(p.price||0).toLocaleString()}</td>
                         <td class="p-3 font-bold text-gray-300">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
@@ -920,23 +950,45 @@
                         <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
             } else {
-                container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">` + filtered.map(p => {
+                container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">` + filtered.map(p => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
-                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isH?'border-amber-500/50':'border-gray-800'} rounded-2xl p-5 shadow-lg cursor-pointer group relative ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
+                    const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
+
+                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800')} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         
-                        <div class="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-                            ${isV && activeCategory !== 'archive' ? '<span class="bg-gray-950/80 text-gray-400 text-[10px] px-1.5 py-1 rounded-md border border-gray-800 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> נצפה</span>' : ''}
-                            ${isH && !p.price_dropped ? `<span class="bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-md">🔥 ציון ${p.deal_score}</span>` : ''}
-                            ${p.price_dropped ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px] px-2 py-1 rounded-md">📉 ירד מחיר!</span>` : ''}
+                        ${isGoodDeal ? '<span class="absolute -top-3 -right-3 bg-emerald-600 text-white font-black text-[10px] px-2 py-1 rounded-md shadow-lg rotate-12 z-20">DEAL!</span>' : ''}
+
+                        <div>
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                                ${isV && activeCategory !== 'archive' ? '<span class="bg-gray-950/80 text-gray-400 text-[10px] px-1.5 py-1 rounded-md border border-gray-800 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> נצפה</span>' : ''}
+                                ${isH && !p.price_dropped ? `<span class="bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-md">🔥 ציון ${p.deal_score}</span>` : ''}
+                                ${p.price_dropped ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px] px-2 py-1 rounded-md">📉 ירד מחיר!</span>` : ''}
+                            </div>
+
+                            <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
+                            
+                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
+                            <div class="text-2xl font-black text-emerald-400 font-mono mb-2">$${(p.price||0).toLocaleString()}</div>
+                            
+                            <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
+                            <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'-'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'-')}</strong></span></div>
+                        
+                            <!-- הבלוק הכחול של ה-AI במסך הראשי -->
+                            <div class="bg-blue-950/20 p-2.5 rounded-xl border border-blue-500/30 mt-3 mb-1 space-y-1.5">
+                                <div class="flex justify-between items-center border-b border-gray-800/60 pb-1">
+                                    <span class="font-black text-blue-300 flex items-center gap-1 text-[11px]"><i data-lucide="brain-circuit" class="w-3 h-3"></i> ניתוח AI</span>
+                                    ${p.neighborhood_class ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-[9px] text-gray-500">ממתין...</span>'}
+                                </div>
+                                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+                                    <div><span class="text-gray-400 block">ARV משוער</span><strong class="text-white">$${(p.arv||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block">צפי שכירות</span><strong class="text-white">$${(p.monthly_rent_est||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block">MAO שכירות</span><strong class="text-emerald-400 font-black">$${(p.mao_rental||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block">MAO פליפ</span><strong class="text-amber-400 font-black">$${(p.mao_flip||0).toLocaleString()}</strong></div>
+                                </div>
+                            </div>
                         </div>
 
-                        <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
-                        
-                        <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
-                        <div class="text-2xl font-black text-emerald-400 font-mono mb-2">$${(p.price||0).toLocaleString()}</div>
-                        <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
-                        <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'-'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'-')}</strong></span></div>
                     </div>`}).join('') + `</div>`;
             }
             lucide.createIcons();
@@ -973,6 +1025,14 @@
             document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
             
+            // עדכון חלונית AI ב-Modal
+            document.getElementById('modal-ai-class').innerHTML = p.neighborhood_class ? `<span class="px-2 py-0.5 rounded text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-xs text-gray-500">חסר נתון שרת</span>';
+            document.getElementById('modal-ai-arv').textContent = `$${(p.arv||0).toLocaleString()}`;
+            document.getElementById('modal-ai-rent').textContent = `$${(p.monthly_rent_est||0).toLocaleString()}`;
+            document.getElementById('modal-ai-mao-rent').textContent = `$${(p.mao_rental||0).toLocaleString()}`;
+            document.getElementById('modal-ai-mao-flip').textContent = `$${(p.mao_flip||0).toLocaleString()}`;
+            document.getElementById('modal-ai-summary').textContent = p.ai_summary || 'לא קיים תקציר AI מוכן לנכס זה.';
+
             updateModalWatchlistState();
             
             const archiveBtnContainer = document.getElementById('modal-archive-btn-container');
