@@ -211,6 +211,121 @@
 
     </main>
 
+    <!-- NEW MODAL: AI Underwriting Modal (The Big Report) -->
+    <div id="ai-underwriting-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-blue-500/40 rounded-2xl max-w-5xl w-full p-4 sm:p-8 space-y-6 shadow-2xl relative text-right max-h-[96vh] overflow-y-auto custom-scrollbar">
+            <!-- Header -->
+            <div class="flex justify-between items-start border-b border-gray-800 pb-4">
+                <div>
+                    <span class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-black flex items-center gap-1.5 w-max mb-2">
+                        <i data-lucide="microscope" class="w-4 h-4"></i> דוח חיתוך עסקה מעמיק (AI Underwriting)
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-black text-white" id="uw-address">--</h2>
+                    <p class="text-sm font-bold text-gray-400 flex items-center gap-1.5 mt-1">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i>
+                        <span id="uw-city">--</span>
+                        <span class="mx-2 text-gray-600">|</span>
+                        <span id="uw-class" class="px-2 py-0.5 rounded text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class --</span>
+                    </p>
+                </div>
+                <button onclick="closeUnderwritingModal()" class="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-xl transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Main Price Alert -->
+            <div class="bg-gray-950 p-4 rounded-xl border-l-4 border-emerald-500 flex justify-between items-center shadow-inner">
+                <div>
+                    <span class="text-sm font-bold text-gray-400 block mb-1">המחיר המבוקש בשוק (Asking Price):</span>
+                    <strong class="text-3xl font-black text-white font-mono" id="uw-asking-price">$--</strong>
+                </div>
+                <div class="text-left">
+                    <span class="text-sm font-bold text-gray-400 block mb-1">שווי משוער לאחר שיפוץ (ARV):</span>
+                    <strong class="text-3xl font-black text-emerald-400 font-mono" id="uw-arv-price">$--</strong>
+                </div>
+            </div>
+
+            <!-- Two Columns Strategy Comparison -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Column 1: Flip Strategy -->
+                <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-bl-full flex items-start justify-end p-2 border-b border-l border-amber-500/20">
+                        <i data-lucide="hammer" class="w-6 h-6 text-amber-400"></i>
+                    </div>
+                    <h3 class="text-lg font-black text-amber-400 mb-4 border-b border-gray-800 pb-2">אסטרטגיית פליפ (Fix & Flip)</h3>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 font-bold">כלל משקיעים מנחה:</span>
+                            <strong class="text-white font-mono">70% Rule</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 font-bold">עלות שיפוץ מוערכת (<span id="uw-flip-sqft"></span> SqFt × $45):</span>
+                            <strong class="text-rose-400 font-mono" id="uw-flip-rehab">$--</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 font-bold">רווח צפוי / הוצאות נלוות (30% מה-ARV):</span>
+                            <strong class="text-gray-300 font-mono" id="uw-flip-margin">$--</strong>
+                        </div>
+                        
+                        <div class="pt-4 mt-2 border-t border-gray-800">
+                            <span class="text-xs font-black text-gray-500 uppercase tracking-wider block mb-1">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-3xl font-black text-amber-400 font-mono block" id="uw-flip-mao">$--</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: Rental Strategy -->
+                <div class="bg-gray-900 border-2 border-emerald-500/40 rounded-2xl p-5 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full flex items-start justify-end p-2 border-b border-l border-emerald-500/20">
+                        <i data-lucide="key" class="w-6 h-6 text-emerald-400"></i>
+                    </div>
+                    <h3 class="text-lg font-black text-emerald-400 mb-4 border-b border-gray-800 pb-2">אסטרטגיית שכירות (Buy & Hold)</h3>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between items-center bg-emerald-900/20 p-2 rounded-lg border border-emerald-500/30">
+                            <span class="text-emerald-300 font-bold">יעד תשואה מבוקש (Target Cap Rate):</span>
+                            <select id="uw-target-cap" onchange="recalculateRentalMAO()" class="bg-gray-950 border border-emerald-500/50 rounded-md px-2 py-1 text-emerald-400 font-black font-mono focus:outline-none">
+                                <option value="0.08">8%</option>
+                                <option value="0.10" selected>10%</option>
+                                <option value="0.12">12%</option>
+                                <option value="0.15">15%</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 font-bold">צפי שכירות חודשית ברוטו:</span>
+                            <strong class="text-white font-mono" id="uw-rent-monthly">$--</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 font-bold">רווח תפעולי נקי (NOI) לאחר 26% הוצאות:</span>
+                            <strong class="text-emerald-300 font-mono" id="uw-rent-noi">$--</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 font-bold">הכנה להשכרה / קוסמטיקה (<span id="uw-rental-sqft"></span> SqFt × $25):</span>
+                            <strong class="text-rose-400 font-mono" id="uw-rental-rehab">$--</strong>
+                        </div>
+                        
+                        <div class="pt-4 mt-2 border-t border-gray-800">
+                            <span class="text-xs font-black text-gray-500 uppercase tracking-wider block mb-1">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-3xl font-black text-emerald-400 font-mono block transition-colors duration-300" id="uw-rental-mao">$--</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Summary Box -->
+            <div class="bg-blue-950/20 border border-blue-500/30 p-5 rounded-2xl">
+                <h4 class="text-sm font-black text-blue-300 flex items-center gap-1.5 mb-2">
+                    <i data-lucide="bot" class="w-4 h-4"></i> שורת המחץ למשא ומתן (AI Summary):
+                </h4>
+                <p class="text-gray-200 text-sm leading-relaxed font-bold bg-gray-900/50 p-3 rounded-xl border border-gray-800" id="uw-summary">--</p>
+            </div>
+            
+            <div class="text-center pt-2">
+                <button onclick="closeUnderwritingModal()" class="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-bold transition shadow-lg">סגור דוח חיתוך</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Modal: Saved Inspection Reports Viewer Modal -->
     <div id="saved-reports-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-emerald-500/40 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative text-right max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -557,6 +672,9 @@
         let mapInstance = null;
         let isMapView = false;
         let mapMarkers = [];
+        
+        // Underwriting Data
+        let activeUnderwritingDeal = null;
 
         const COUNTY_AI_MACRO_DATA = {
             "Allegheny": { tier: "Tier A", aiScore: 90, growthDriver: "אקוסיסטם רובוטיקה ואוניברסיטאות AI (פיטסבורג)", permitStatus: "High-Tech Growth Hub", rentDemand: "יציב וחיובי", medianRent: "$1,450", safetyGrade: "B", schoolsGrade: "8/10", marketTrend: "+4.5% שנתי" },
@@ -817,12 +935,80 @@
             renderDeals();
         }
 
+        // --- NEW: Underwriting Modal Logic ---
+        function openUnderwritingModal(dealId) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(dealId));
+            if (!deal) return;
+            
+            activeUnderwritingDeal = deal;
+
+            // Fill basic info
+            document.getElementById('uw-address').textContent = deal.address;
+            document.getElementById('uw-city').textContent = deal.city;
+            document.getElementById('uw-class').textContent = `Class ${deal.neighborhood_class || 'N/A'}`;
+            document.getElementById('uw-asking-price').textContent = `$${(Number(deal.price) || 0).toLocaleString()}`;
+            document.getElementById('uw-arv-price').textContent = `$${(deal.arv || 0).toLocaleString()}`;
+            document.getElementById('uw-summary').textContent = deal.ai_summary || "ממתין לניתוח AI מלא.";
+            
+            const sqft = Number(deal.sqft) || 1300;
+            document.getElementById('uw-flip-sqft').textContent = sqft;
+            document.getElementById('uw-rental-sqft').textContent = sqft;
+
+            // Fill Flip Logic
+            document.getElementById('uw-flip-rehab').textContent = `-$${(deal.flip_rehab || (sqft * 45)).toLocaleString()}`;
+            const flipMargin = (deal.arv || 0) * 0.30;
+            document.getElementById('uw-flip-margin').textContent = `-$${Math.round(flipMargin).toLocaleString()}`;
+            document.getElementById('uw-flip-mao').textContent = `$${(deal.mao_flip || 0).toLocaleString()}`;
+
+            // Reset Rental Select to 10% and Calculate
+            document.getElementById('uw-target-cap').value = "0.10";
+            recalculateRentalMAO();
+
+            document.getElementById('ai-underwriting-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeUnderwritingModal() {
+            document.getElementById('ai-underwriting-modal').classList.add('hidden');
+            activeUnderwritingDeal = null;
+        }
+
+        function recalculateRentalMAO() {
+            if (!activeUnderwritingDeal) return;
+            const deal = activeUnderwritingDeal;
+            
+            const targetCap = parseFloat(document.getElementById('uw-target-cap').value);
+            const monthlyRent = deal.monthly_rent_est || 1400;
+            const annualRent = monthlyRent * 12;
+            const noi = annualRent * 0.74; // 26% expenses
+            const rentalRehab = deal.rental_rehab || (Number(deal.sqft || 1300) * 25);
+            
+            const newMao = Math.round((noi / targetCap) - rentalRehab - 5000); // 5k closing costs
+
+            // Update UI
+            document.getElementById('uw-rent-monthly').textContent = `$${monthlyRent.toLocaleString()}`;
+            document.getElementById('uw-rent-noi').textContent = `$${Math.round(noi).toLocaleString()} / לשנה`;
+            document.getElementById('uw-rental-rehab').textContent = `-$${rentalRehab.toLocaleString()}`;
+            
+            const maoEl = document.getElementById('uw-rental-mao');
+            maoEl.textContent = `$${newMao.toLocaleString()}`;
+            
+            // Visual cue if new MAO is higher or lower than asking
+            if (newMao >= Number(deal.price)) {
+                maoEl.classList.remove('text-emerald-400');
+                maoEl.classList.add('text-green-400');
+            } else {
+                maoEl.classList.remove('text-green-400');
+                maoEl.classList.add('text-emerald-400');
+            }
+        }
+        // ------------------------------------
+
         function renderDeals() {
             const container = document.getElementById('pipeline-deals-grid');
             if (!container) return;
             const displayList = pipelineDeals.filter(d => showArchive ? d.is_archived : !d.is_archived);
 
-            // עדכון המפה אם היא פתוחה במקביל
             if (isMapView && mapInstance) { plotDealsOnMap(); }
 
             if (displayList.length === 0) {
@@ -836,14 +1022,12 @@
                 const rehabEstimate = calculateAccurateRehab(d);
 
                 let seenArray = tr.inspector_seen || [];
-                if (!Array.isArray(seenArray)) {
-                    seenArray = (seenArray && seenArray !== 'none') ? [seenArray] : [];
-                }
+                if (!Array.isArray(seenArray)) { seenArray = (seenArray && seenArray !== 'none') ? [seenArray] : []; }
+                
                 const isSeenDone = seenArray.length > 0;
                 const isAgent = seenArray.includes('agent');
                 const isContractor = seenArray.includes('contractor');
                 const isHandyman = seenArray.includes('handyman');
-
                 const isConditionDone = !!tr.condition && tr.condition !== '';
                 const isOfferDone = tr.offer_made === 'yes' || (!!tr.offer_amount && Number(tr.offer_amount) > 0);
                 const isEmdDone = tr.emd_deposited === 'yes' || (!!tr.emd_amount && Number(tr.emd_amount) > 0);
@@ -881,20 +1065,11 @@
                                 <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
                             </div>
                             
-                            <!-- הבלוק החדש: נתוני ה-Analyzer -->
-                            <div class="bg-blue-950/20 p-3 rounded-xl border border-blue-500/30 mb-3 space-y-2">
-                                <div class="flex justify-between items-center border-b border-gray-800/60 pb-1.5">
-                                    <span class="font-black text-blue-300 flex items-center gap-1.5 text-xs"><i data-lucide="brain-circuit" class="w-3.5 h-3.5"></i> ניתוח AI (Analyzer)</span>
-                                    ${d.neighborhood_class ? `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${d.neighborhood_class}</span>` : '<span class="text-[10px] text-gray-500">ממתין לניתוח שרת...</span>'}
-                                </div>
-                                <div class="grid grid-cols-2 gap-2 text-xs">
-                                    <div><span class="text-gray-400 block mb-0.5">ARV משוער</span><strong class="text-white">$${(d.arv||0).toLocaleString()}</strong></div>
-                                    <div><span class="text-gray-400 block mb-0.5">שכירות חודשית</span><strong class="text-white">$${(d.monthly_rent_est||0).toLocaleString()}</strong></div>
-                                    <div><span class="text-gray-400 block mb-0.5">MAO שכירות (10%)</span><strong class="text-emerald-400 font-black">$${(d.mao_rental||0).toLocaleString()}</strong></div>
-                                    <div><span class="text-gray-400 block mb-0.5">MAO פליפ (70%)</span><strong class="text-amber-400 font-black">$${(d.mao_flip||0).toLocaleString()}</strong></div>
-                                </div>
-                                ${d.ai_summary ? `<p class="text-gray-400 text-[11px] leading-tight pt-1.5 border-t border-gray-800/60">${d.ai_summary}</p>` : ''}
-                            </div>
+                            <!-- כפתור חיתוך העסקאות במקום הקובייה המלאה -->
+                            <button onclick="openUnderwritingModal('${d.id}')" class="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
+                                <i data-lucide="microscope" class="w-4 h-4"></i>
+                                <span>פתח דוח AI לחיתוך עסקה (Underwriting)</span>
+                            </button>
 
                             <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
