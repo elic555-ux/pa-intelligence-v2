@@ -21,15 +21,17 @@ jobs:
         run: |
           pip install pytz requests
 
-      - name: Run Orchestrator (Brain)
+      - name: Run Orchestrator and Analyzer (Brain & Analyst)
         # אנחנו שולחים לפייתון אינדיקציה איך הוא הופעל (ידנית או אוטומטית)
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-        run: python orchestrator.py
+        run: |
+          python orchestrator.py
+          python analyzer.py
 
       - name: Commit and Push Updates
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add properties.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update properties.json via Orchestrator" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update properties.json via Orchestrator and Analyzer" && git push)
