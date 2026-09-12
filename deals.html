@@ -93,6 +93,7 @@
             </h2>
         </div>
 
+        <!-- Pipeline Cards Grid -->
         <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></section>
     </main>
 
@@ -120,15 +121,15 @@
 
                 <!-- Real Image from JSON if exists, else placeholder -->
                 <div class="grid grid-cols-4 gap-2 h-40 mb-4" id="uw-image-gallery">
-                    <div class="col-span-2 row-span-2 rounded-xl overflow-hidden relative">
+                    <div class="col-span-2 row-span-2 rounded-xl overflow-hidden relative border border-gray-700">
                         <img id="uw-main-img" src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
                         <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">חזית (Main)</div>
                     </div>
-                    <div class="rounded-xl overflow-hidden relative">
+                    <div class="rounded-xl overflow-hidden relative border border-gray-700">
                         <img src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=400&q=80" class="w-full h-full object-cover">
                         <div class="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">מטבח</div>
                     </div>
-                    <div class="rounded-xl overflow-hidden relative">
+                    <div class="rounded-xl overflow-hidden relative border border-gray-700">
                         <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80" class="w-full h-full object-cover">
                         <div class="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">רחצה</div>
                     </div>
@@ -138,14 +139,16 @@
                     </div>
                 </div>
 
-                <!-- Property Specs Grid -->
-                <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 bg-gray-950 p-3 rounded-xl border border-gray-800 text-center">
+                <!-- Property Specs Grid - UPDATED WITH MORE PARAMETERS -->
+                <div class="grid grid-cols-3 sm:grid-cols-8 gap-2 bg-gray-950 p-3 rounded-xl border border-gray-800 text-center">
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">חדרים</span><strong class="text-sm text-white" id="uw-beds">--</strong></div>
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">רחצה</span><strong class="text-sm text-white" id="uw-baths">--</strong></div>
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">מ"ר (SqFt)</span><strong class="text-sm text-white font-mono" id="uw-sqft">--</strong></div>
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">שנת בנייה</span><strong class="text-sm text-white font-mono" id="uw-year">--</strong></div>
                     <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">מגרש (SqFt)</span><strong class="text-sm text-white font-mono" id="uw-lot">--</strong></div>
-                    <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">ימי שוק (DOM)</span><strong class="text-sm text-white truncate px-1" id="uw-dom">--</strong></div>
+                    <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">ימי שוק (DOM)</span><strong class="text-sm text-white font-mono" id="uw-dom">--</strong></div>
+                    <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">מיסים (שנתי)</span><strong class="text-sm text-white font-mono" id="uw-taxes">--</strong></div>
+                    <div><span class="text-[10px] text-gray-500 block font-bold mb-0.5">מחיר למ"ר</span><strong class="text-sm text-white font-mono" id="uw-psf">--</strong></div>
                 </div>
             </div>
 
@@ -225,9 +228,14 @@
                         </h3>
                         <p class="text-xs text-gray-400 mt-1">מערכת ה-AI סורקת תמונות מתוך פרסום הנכס ושומרת את פירוק העלויות לקטגוריות באופן אוטומטי.</p>
                     </div>
-                    <button id="btn-run-vision" onclick="runVisionAI()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 whitespace-nowrap">
-                        <i data-lucide="scan-line" class="w-4 h-4"></i> הפעל סריקת תמונות
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <span id="vision-save-alert" class="hidden text-xs font-bold text-emerald-400 bg-emerald-900/30 px-3 py-1.5 rounded-lg border border-emerald-500/30 flex items-center gap-1.5">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> הדוח נשמר
+                        </span>
+                        <button id="btn-run-vision" onclick="runVisionAI()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 whitespace-nowrap">
+                            <i data-lucide="scan-line" class="w-4 h-4"></i> הפעל סריקת תמונות
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Vision Results Container -->
@@ -384,15 +392,12 @@
             loadPipelineDeals();
         }
 
-        // --- שחזור כל פונקציונליות ניהול הכרטיסיות (Pipeline Logic) ---
+        // --- Core Pipeline Logic ---
         function loadPipelineDeals() {
             try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || []; } catch(e) { pipelineDeals = []; }
             const active = pipelineDeals.filter(d => !d.is_archived);
-            
-            // עדכון המונים העליונים
             document.getElementById('deals-total-count').textContent = active.length;
             document.getElementById('deals-offered-count').textContent = active.filter(d => d.tracker?.offer_made === 'yes').length;
-            
             renderDeals();
         }
 
@@ -431,6 +436,7 @@
             }
         }
 
+        // --- Render Deals in the Grid ---
         function renderDeals() {
             const container = document.getElementById('pipeline-deals-grid');
             if (!container) return;
@@ -454,47 +460,46 @@
                 const isEmdDone = tr.emd_deposited === 'yes' || (!!tr.emd_amount && Number(tr.emd_amount) > 0);
                 const isStatusDone = (tr.deal_status && tr.deal_status !== 'under_review') || (!!tr.negotiated_price && Number(tr.negotiated_price) > 0);
                 
-                // הוספת שליפת תמונה אמיתית אם יש במאגר, או תמונת רחוב דיפולטיבית
-                const imgSrc = d.image_url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80";
+                const imgSrc = d.image_url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80";
 
                 return `
-                    <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
+                    <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4 overflow-hidden relative">
                         
-                        <!-- Header & Image Block -->
+                        <!-- Image Banner at the top of the card -->
+                        <div class="h-48 -mx-5 -mt-5 mb-2 relative border-b border-gray-800">
+                            <img src="${imgSrc}" class="w-full h-full object-cover">
+                            <div class="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md text-xs font-black text-white border border-white/10 shadow-lg">
+                                ${d.deal_type || 'Active'}
+                            </div>
+                            <button onclick="removeDealCompletely('${d.id}'); event.stopPropagation();" class="absolute top-3 left-3 bg-black/70 backdrop-blur-md p-1.5 rounded-md text-gray-300 hover:text-rose-400 border border-white/10 shadow-lg transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                            <div class="absolute bottom-3 right-3 drop-shadow-md">
+                                <h3 class="text-xl font-black text-white leading-tight">${d.address}</h3>
+                                <p class="text-xs font-bold text-gray-200 mt-0.5 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-blue-400"></i> ${d.city}, PA ${d.zip || ''}</p>
+                            </div>
+                        </div>
+
+                        <!-- Content inside the card -->
                         <div class="space-y-3">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-16 h-16 rounded-xl overflow-hidden border border-gray-700 shrink-0">
-                                        <img src="${imgSrc}" class="w-full h-full object-cover">
-                                    </div>
-                                    <div>
-                                        <h3 class="text-lg font-black text-white leading-tight">${d.address}</h3>
-                                        <p class="text-xs font-bold text-gray-400 mt-0.5">${d.city}, PA</p>
-                                    </div>
-                                </div>
-                                <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-1.5 bg-gray-950 rounded-lg border border-gray-800 transition">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                            
                             <div class="flex justify-between items-end pb-1 border-b border-gray-800">
-                                <div class="text-2xl font-black text-emerald-400 font-mono">$${(Number(d.price) || 0).toLocaleString()}</div>
-                                <div class="text-[10px] text-gray-500 font-bold">שנת בנייה: ${d.year_built || '1955'}</div>
+                                <div class="text-3xl font-black text-emerald-400 font-mono drop-shadow-sm">$${(Number(d.price) || 0).toLocaleString()}</div>
+                                <div class="text-xs text-gray-400 font-bold mb-1"><i data-lucide="calendar" class="w-3 h-3 inline mr-1"></i> שנת בנייה: ${d.year_built || '1955'}</div>
                             </div>
                             
-                            <div class="bg-gray-950 px-3 py-2 rounded-xl border border-blue-500/40">
+                            <div class="bg-gray-950 px-3.5 py-2.5 rounded-xl border border-blue-500/40">
                                 <label class="block text-[10px] font-black text-blue-300 mb-1">למי הנכס מיועד:</label>
                                 <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח..." class="w-full bg-transparent text-sm text-white font-extrabold focus:outline-none placeholder-gray-600">
                             </div>
                             
-                            <!-- כפתור דוח חיתוך מורחב -->
-                            <button onclick="openUnderwritingModal('${d.id}')" class="w-full py-2.5 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2">
+                            <!-- כפתור חיתוך העסקאות -->
+                            <button onclick="openUnderwritingModal('${d.id}')" class="w-full py-2.5 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
                                 <i data-lucide="microscope" class="w-4 h-4"></i>
                                 <span>פתח דוח AI לחיתוך עסקה</span>
                             </button>
 
                             <!-- שדות המעקב והניהול (שחזרנו אותם) -->
-                            <div class="space-y-2 pt-3 text-sm">
+                            <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
                                     <label class="block font-extrabold text-gray-100 mb-2 flex items-center gap-2">
                                         ${renderV(isSeenDone)}<span class="text-xs">מי ראה את הנכס בשטח:</span>
@@ -549,38 +554,42 @@
             if (!deal) return;
             activeUnderwritingDeal = deal;
 
-            // Fill basic info
+            // Basic Info
             document.getElementById('uw-address').textContent = deal.address;
             document.getElementById('uw-city').textContent = deal.city;
             document.getElementById('uw-class').textContent = `Class ${deal.neighborhood_class || 'B'}`;
             document.getElementById('uw-asking-price').textContent = `$${(Number(deal.price) || 0).toLocaleString()}`;
             document.getElementById('uw-arv-price').textContent = `$${(deal.arv || 0).toLocaleString()}`;
             
-            // Fill Specs & Image
+            // Image
             const imgSrc = deal.image_url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80";
             document.getElementById('uw-main-img').src = imgSrc;
 
+            // Specs
             const sqft = Number(deal.sqft) || 1300;
             document.getElementById('uw-beds').textContent = deal.beds || '-';
             document.getElementById('uw-baths').textContent = deal.baths || '-';
-            document.getElementById('uw-sqft').textContent = sqft;
+            document.getElementById('uw-sqft').textContent = sqft.toLocaleString();
             document.getElementById('uw-year').textContent = deal.year_built || '1955';
-            document.getElementById('uw-lot').textContent = deal.lot_size || '-';
+            document.getElementById('uw-lot').textContent = deal.lot_size ? Number(deal.lot_size).toLocaleString() : '-';
             
-            // חישוב ימי שוק
+            // DOM Calculation
             let dom = '-';
             if (deal.listed_date) {
                 const parts = deal.listed_date.split('/');
                 if (parts.length === 3) {
                     const listDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                    const today = new Date();
-                    const diffTime = Math.abs(today - listDate);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                    dom = diffDays + ' ימים';
+                    const diffTime = Math.abs(new Date() - listDate);
+                    dom = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + ' ימים';
                 }
             }
             document.getElementById('uw-dom').textContent = dom;
+            
+            // Taxes & Price/SqFt
+            document.getElementById('uw-taxes').textContent = deal.taxes ? `$${Number(deal.taxes).toLocaleString()}` : `$${Math.round(Number(deal.price)*0.015).toLocaleString()}`;
+            document.getElementById('uw-psf').textContent = `$${Math.round(Number(deal.price) / sqft)}`;
 
+            // Flips
             document.getElementById('uw-flip-rehab').textContent = `-$${(deal.flip_rehab || (sqft * 45)).toLocaleString()}`;
             document.getElementById('uw-flip-margin').textContent = `-$${Math.round((deal.arv||0)*0.30).toLocaleString()}`;
             document.getElementById('uw-flip-mao').textContent = `$${(deal.mao_flip || 0).toLocaleString()}`;
@@ -589,15 +598,13 @@
             document.getElementById('uw-target-cap').value = "0.10";
             recalculateRentalMAO();
 
-            // Vision AI Logic (Auto-Save check)
+            // Vision AI Check
             const btn = document.getElementById('btn-run-vision');
             if (deal.vision_analyzed) {
-                // Already scanned! Show results immediately
                 btn.classList.add('hidden');
                 populateVisionTables(deal);
                 document.getElementById('vision-results').classList.remove('hidden');
             } else {
-                // Not scanned yet
                 btn.classList.remove('hidden');
                 document.getElementById('vision-results').classList.add('hidden');
                 btn.innerHTML = `<i data-lucide="scan-line" class="w-4 h-4"></i> הפעל סריקת תמונות`;
@@ -611,6 +618,7 @@
 
         function closeUnderwritingModal() {
             document.getElementById('ai-underwriting-modal').classList.add('hidden');
+            document.getElementById('vision-save-alert').classList.add('hidden');
             activeUnderwritingDeal = null;
         }
 
@@ -644,7 +652,7 @@
             document.getElementById('uw-schools-grade').textContent = (COUNTY_AI_MACRO_DATA[cty] || DEFAULT_MACRO_DATA).schoolsGrade;
         }
 
-        // Lazy Loading Simulation for Deep Vision Report with Auto-Save
+        // Lazy Loading Simulation for Deep Vision Report with Explicit Save
         function runVisionAI() {
             if (!activeUnderwritingDeal) return;
             const btn = document.getElementById('btn-run-vision');
@@ -654,13 +662,23 @@
             lucide.createIcons();
 
             setTimeout(() => {
-                // Auto-Save the state so it doesn't need scanning next time
-                activeUnderwritingDeal.vision_analyzed = true;
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                // Save state globally so it persists!
+                const idx = pipelineDeals.findIndex(d => String(d.id) === String(activeUnderwritingDeal.id));
+                if(idx > -1) {
+                    pipelineDeals[idx].vision_analyzed = true;
+                    localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                    activeUnderwritingDeal = pipelineDeals[idx];
+                }
 
                 populateVisionTables(activeUnderwritingDeal);
-                btn.classList.add('hidden'); // Hide button since it's saved
+                btn.classList.add('hidden'); // Hide scan button
                 document.getElementById('vision-results').classList.remove('hidden');
+                
+                // Show Save Confirmation
+                const alertBox = document.getElementById('vision-save-alert');
+                alertBox.classList.remove('hidden');
+                setTimeout(() => alertBox.classList.add('hidden'), 4000);
+
                 lucide.createIcons();
             }, 1800);
         }
@@ -672,7 +690,7 @@
         }
 
         function populateVisionTables(deal) {
-            const total = deal.flip_rehab || (1300 * 45);
+            const total = deal.flip_rehab || ((Number(deal.sqft)||1300) * 45);
             
             // Allocations
             const sysTot = Math.round(total * 0.52);
@@ -710,6 +728,49 @@
                 <tr><td class="p-2 font-bold text-gray-300">Flooring (LVP)</td><td class="p-2">${getConditionBadge(5)}</td><td class="p-2 text-gray-400">Replace old carpet with LVP throughout.</td><td class="p-2 text-emerald-400 font-mono font-bold">$${Math.round(intTot*0.55).toLocaleString()}</td></tr>
                 <tr><td class="p-2 font-bold text-gray-300">Paint</td><td class="p-2">${getConditionBadge(4)}</td><td class="p-2 text-gray-400">Full interior repaint (walls & trim).</td><td class="p-2 text-emerald-400 font-mono font-bold">$${Math.round(intTot*0.45).toLocaleString()}</td></tr>
             `;
+        }
+
+        // Optional logic for map map toggling
+        function toggleMapView() {
+            isMapView = !isMapView;
+            const grid = document.getElementById('pipeline-deals-grid');
+            const mapCont = document.getElementById('deals-map-container');
+            const btnText = document.getElementById('map-btn-text');
+            
+            if (isMapView) {
+                grid.classList.add('hidden');
+                mapCont.classList.remove('hidden');
+                btnText.textContent = 'חזור לכרטיסיות';
+                if(!mapInstance) initMap();
+                else plotDealsOnMap();
+            } else {
+                grid.classList.remove('hidden');
+                mapCont.classList.add('hidden');
+                btnText.textContent = 'מפת עסקאות';
+            }
+        }
+
+        function initMap() {
+            mapInstance = L.map('deals-map-container').setView([40.4406, -79.9959], 11);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapInstance);
+            setTimeout(() => { mapInstance.invalidateSize(); plotDealsOnMap(); }, 100);
+        }
+
+        function plotDealsOnMap() {
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapMarkers = [];
+            let bounds = [];
+            pipelineDeals.filter(d => !d.is_archived).forEach(d => {
+                if (d.lat && d.lng) {
+                    let markerColor = '#3b82f6'; 
+                    if (d.mao_rental && d.price && Number(d.price) <= Number(d.mao_rental)) markerColor = '#10b981';
+                    const icon = L.divIcon({ className: 'custom-div-icon', html: `<div style="background-color:${markerColor}; width:16px; height:16px; border-radius:50%; border:2px solid white;"></div>` });
+                    const marker = L.marker([d.lat, d.lng], {icon: icon}).addTo(mapInstance);
+                    bounds.push([d.lat, d.lng]);
+                    mapMarkers.push(marker);
+                }
+            });
+            if (bounds.length > 0) mapInstance.fitBounds(bounds, {padding: [40, 40]});
         }
 
         window.onload = init;
