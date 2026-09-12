@@ -12,6 +12,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- PDF.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Leaflet CSS & JS for Dynamic Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
@@ -53,6 +57,10 @@
             flex-shrink: 0;
             box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
         }
+
+        /* Leaflet Dark Popup Customization */
+        .leaflet-popup-content-wrapper { background: #111827 !important; border: 1px solid #374151; color: white; border-radius: 12px; }
+        .leaflet-popup-tip { background: #111827 !important; border: 1px solid #374151; }
 
         /* סגנון הדוח הבהיר להדפסה ולייצוא */
         #inspection-report-printable-area {
@@ -100,32 +108,38 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         חדר עסקאות וניהול צנרת (Deal Room)
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ניהול וסריקה פעילים</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">מנוע אנליסט פעיל</span>
                     </h1>
-                    <p class="text-xs text-gray-300">מעקב, הערכת שיפוצים וניתוח דוחות בודק</p>
+                    <p class="text-xs text-gray-300">מעקב, מפות, ניתוחי MAO חכמים והערכות שיפוץ</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
+                <!-- כפתור מפה דינמית -->
+                <button onclick="toggleMapView()" id="btn-toggle-map" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition">
+                    <i data-lucide="map" class="w-4 h-4"></i>
+                    <span id="map-btn-text">מפת עסקאות</span>
+                </button>
+
                 <button onclick="openCustomResearchModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition">
                     <i data-lucide="microscope" class="w-4 h-4 text-blue-400"></i>
-                    <span>🔬 מחקר לנכס חופשי</span>
+                    <span>🔬 מחקר חופשי</span>
                 </button>
 
                 <button onclick="openGeneralPriceCatalogModal()" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
                     <i data-lucide="hammer" class="w-4 h-4"></i>
-                    <span>🔨 מחירון ובדיקת דוחות חופשית</span>
+                    <span>🔨 בקרת שיפוצים</span>
                 </button>
 
                 <button onclick="toggleArchiveView()" id="btn-toggle-archive" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition">
                     <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
-                    <span id="archive-btn-text">צפה בארכיון</span>
+                    <span id="archive-btn-text">ארכיון</span>
                     <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
                 </button>
 
                 <a href="index.html" target="scanner_tab" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
-                    <span>מעבר לסורק הראשי</span>
+                    <span>לסורק הראשי</span>
                 </a>
             </div>
         </div>
@@ -188,6 +202,9 @@
                 רשימת עסקאות בצנרת
             </h2>
         </div>
+
+        <!-- Map Container (Hidden by default) -->
+        <div id="deals-map-container" class="hidden w-full h-[550px] rounded-2xl border border-gray-800 z-10 shadow-2xl overflow-hidden mb-6"></div>
 
         <!-- Pipeline Cards Grid -->
         <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></section>
@@ -536,6 +553,11 @@
         let activeInspectionData = null;
         let currentResearchProperty = null;
 
+        // Map Variables
+        let mapInstance = null;
+        let isMapView = false;
+        let mapMarkers = [];
+
         const COUNTY_AI_MACRO_DATA = {
             "Allegheny": { tier: "Tier A", aiScore: 90, growthDriver: "אקוסיסטם רובוטיקה ואוניברסיטאות AI (פיטסבורג)", permitStatus: "High-Tech Growth Hub", rentDemand: "יציב וחיובי", medianRent: "$1,450", safetyGrade: "B", schoolsGrade: "8/10", marketTrend: "+4.5% שנתי" },
             "Luzerne": { tier: "Tier A", aiScore: 95, growthDriver: "מתחם חוות שרתים ענק של אמזון ($20B)", permitStatus: "Permitted & Powered", rentDemand: "גבוה מאוד", medianRent: "$1,550", safetyGrade: "B+", schoolsGrade: "7/10", marketTrend: "+6.8% שנתי" },
@@ -590,13 +612,92 @@
             onCustomCityChange();
             updateItemPricingDetails();
 
-            // Real-time synchronization across tabs/windows
             window.addEventListener('storage', function(e) {
                 if (e.key === 'pa_pipeline_deals') {
                     loadPipelineDeals();
                 }
             });
         }
+
+        // ------------------ מנגנון המפה ------------------
+        function toggleMapView() {
+            isMapView = !isMapView;
+            const grid = document.getElementById('pipeline-deals-grid');
+            const mapCont = document.getElementById('deals-map-container');
+            const btnText = document.getElementById('map-btn-text');
+            
+            if (isMapView) {
+                grid.classList.add('hidden');
+                mapCont.classList.remove('hidden');
+                btnText.textContent = 'חזור לכרטיסיות';
+                initMap();
+            } else {
+                grid.classList.remove('hidden');
+                mapCont.classList.add('hidden');
+                btnText.textContent = 'מפת עסקאות';
+            }
+        }
+
+        function initMap() {
+            if (!mapInstance) {
+                mapInstance = L.map('deals-map-container').setView([40.4406, -79.9959], 11);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(mapInstance);
+            }
+            
+            // עיכוב קל כדי שה-DOM יעכל את פתיחת הקונטיינר לפני שמותחים את המפה
+            setTimeout(() => {
+                mapInstance.invalidateSize();
+                plotDealsOnMap();
+            }, 100);
+        }
+
+        function plotDealsOnMap() {
+            if (!mapInstance) return;
+
+            // נקה סיכות ישנות
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapMarkers = [];
+
+            const displayList = pipelineDeals.filter(d => showArchive ? d.is_archived : !d.is_archived);
+            let bounds = [];
+            
+            displayList.forEach(d => {
+                if (d.lat && d.lng) {
+                    // צבע הסיכה: ירוק אם המחיר נמוך מה-MAO, אחרת כחול
+                    let markerColor = '#3b82f6'; 
+                    if (d.mao_rental && d.price && Number(d.price) <= Number(d.mao_rental)) markerColor = '#10b981';
+                    
+                    const customIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color:${markerColor}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px ${markerColor};"></div>`,
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    });
+
+                    const marker = L.marker([d.lat, d.lng], {icon: customIcon}).addTo(mapInstance);
+                    bounds.push([d.lat, d.lng]);
+                    
+                    const popContent = `
+                        <div dir="rtl" style="font-family: 'Assistant', sans-serif; text-align: right; background: #0b0f19; color: white; padding: 5px; border-radius: 8px;">
+                            <strong style="display:block; font-size: 14px; margin-bottom: 4px;">${d.address}</strong>
+                            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 6px;">${d.city}, PA</div>
+                            <div style="font-size: 16px; font-weight: bold; color: #34d399; font-family: monospace;">$${(d.price||0).toLocaleString()}</div>
+                            ${d.mao_rental ? `<div style="font-size: 11px; margin-top: 4px; border-top: 1px solid #374151; padding-top: 4px;">MAO מומלץ: <span style="color:#60a5fa; font-weight:bold;">$${d.mao_rental.toLocaleString()}</span></div>` : ''}
+                        </div>
+                    `;
+                    marker.bindPopup(popContent, { className: 'dark-popup' });
+                    mapMarkers.push(marker);
+                }
+            });
+            
+            if (bounds.length > 0) {
+                mapInstance.fitBounds(bounds, {padding: [40, 40]});
+            }
+        }
+        // -------------------------------------------------
 
         function renderV(isDone) {
             return isDone 
@@ -645,14 +746,12 @@
             }
         }
 
-        // פונקציה חדשה לניהול בחירה מרובה (Toggle)
         function toggleMultiField(id, key, value) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
                 if (!deal.tracker) deal.tracker = {};
                 let currentVal = deal.tracker[key];
                 
-                // ודא שהערך הקיים הוא מערך (תמיכה לאחור בגרסאות ישנות שבהן נשמר מחרוזת)
                 if (!Array.isArray(currentVal)) {
                     if (currentVal && currentVal !== 'none') {
                         currentVal = [currentVal];
@@ -661,7 +760,6 @@
                     }
                 }
                 
-                // הוספה או הסרה של הערך
                 if (currentVal.includes(value)) {
                     currentVal = currentVal.filter(v => v !== value);
                 } else {
@@ -702,7 +800,7 @@
 
         function toggleArchiveView() {
             showArchive = !showArchive;
-            document.getElementById('archive-btn-text').textContent = showArchive ? 'חזור לעסקאות פעילות' : 'צפה בארכיון';
+            document.getElementById('archive-btn-text').textContent = showArchive ? 'חזור לעסקאות פעילות' : 'ארכיון';
             document.getElementById('view-title').innerHTML = showArchive 
                 ? `<i data-lucide="archive" class="w-5 h-5 text-amber-400"></i> ארכיון עסקאות`
                 : `<i data-lucide="list-checks" class="w-5 h-5 text-amber-400"></i> רשימת עסקאות בצנרת`;
@@ -724,6 +822,9 @@
             if (!container) return;
             const displayList = pipelineDeals.filter(d => showArchive ? d.is_archived : !d.is_archived);
 
+            // עדכון המפה אם היא פתוחה במקביל
+            if (isMapView && mapInstance) { plotDealsOnMap(); }
+
             if (displayList.length === 0) {
                 container.innerHTML = `<div class="col-span-full text-center py-16 bg-gray-900/40 border border-gray-800 rounded-3xl text-gray-400 text-xs font-bold">אין כרגע עסקאות ברשימת הצנרת. כל דוחות הבודק שתסרוק נשמרים ישירות בבלוק העליון.</div>`;
                 lucide.createIcons();
@@ -734,7 +835,6 @@
                 const tr = d.tracker || {};
                 const rehabEstimate = calculateAccurateRehab(d);
 
-                // ניהול שורת המחקר/ביקורים
                 let seenArray = tr.inspector_seen || [];
                 if (!Array.isArray(seenArray)) {
                     seenArray = (seenArray && seenArray !== 'none') ? [seenArray] : [];
@@ -780,10 +880,23 @@
                                 </p>
                                 <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
                             </div>
+                            
+                            <!-- הבלוק החדש: נתוני ה-Analyzer -->
+                            <div class="bg-blue-950/20 p-3 rounded-xl border border-blue-500/30 mb-3 space-y-2">
+                                <div class="flex justify-between items-center border-b border-gray-800/60 pb-1.5">
+                                    <span class="font-black text-blue-300 flex items-center gap-1.5 text-xs"><i data-lucide="brain-circuit" class="w-3.5 h-3.5"></i> ניתוח AI (Analyzer)</span>
+                                    ${d.neighborhood_class ? `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${d.neighborhood_class}</span>` : '<span class="text-[10px] text-gray-500">ממתין לניתוח שרת...</span>'}
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div><span class="text-gray-400 block mb-0.5">ARV משוער</span><strong class="text-white">$${(d.arv||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block mb-0.5">שכירות חודשית</span><strong class="text-white">$${(d.monthly_rent_est||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block mb-0.5">MAO שכירות (10%)</span><strong class="text-emerald-400 font-black">$${(d.mao_rental||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block mb-0.5">MAO פליפ (70%)</span><strong class="text-amber-400 font-black">$${(d.mao_flip||0).toLocaleString()}</strong></div>
+                                </div>
+                                ${d.ai_summary ? `<p class="text-gray-400 text-[11px] leading-tight pt-1.5 border-t border-gray-800/60">${d.ai_summary}</p>` : ''}
+                            </div>
 
                             <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
-                                
-                                <!-- בלוק חדש: מי ראה את הנכס בשטח (Multi-Select) -->
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
                                     <label class="block font-extrabold text-gray-100 mb-2 flex items-center gap-2">
                                         ${renderV(isSeenDone)}
