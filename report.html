@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
-        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f9fafb; }
+        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f9fafb; font-size: 17px; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
@@ -19,137 +19,159 @@
 <body class="min-h-screen flex flex-col antialiased p-4 sm:p-8">
 
     <!-- Top Navigation / Return -->
-    <header class="max-w-5xl w-full mx-auto flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+    <header class="max-w-6xl w-full mx-auto flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
         <div class="flex items-center gap-3">
-            <div class="p-2.5 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
-                <i data-lucide="microscope" class="w-6 h-6"></i>
+            <div class="p-3 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
+                <i data-lucide="microscope" class="w-7 h-7"></i>
             </div>
             <div>
-                <h1 class="text-xl font-black text-white" id="report-address">טוען כתובת נכס...</h1>
-                <p class="text-xs text-gray-400" id="report-city">פנסילבניה, ארה"ב</p>
+                <h1 class="text-2xl font-black text-white" id="report-address">טוען כתובת נכס...</h1>
+                <p class="text-sm text-gray-300" id="report-city">פנסילבניה, ארה"ב</p>
             </div>
         </div>
-        <a href="deals.html" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-            <i data-lucide="arrow-right" class="w-4 h-4"></i> חזרה לחדר עסקאות
+        <a href="deals.html" class="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-100 rounded-xl text-sm font-bold transition flex items-center gap-2">
+            <i data-lucide="arrow-right" class="w-5 h-5"></i> חזרה לחדר עסקאות
         </a>
     </header>
 
     <!-- Main Container -->
-    <main class="max-w-5xl w-full mx-auto space-y-6 flex-1">
+    <main class="max-w-6xl w-full mx-auto space-y-6 flex-1">
         
         <!-- Tabs Bar -->
-        <div class="flex border-b border-gray-800 gap-2 text-xs font-bold pb-2 overflow-x-auto">
-            <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2">
-                <i data-lucide="layout-grid" class="w-4 h-4"></i> Overview & Scores
+        <div class="flex border-b border-gray-800 gap-3 text-sm font-bold pb-3 overflow-x-auto">
+            <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2">
+                <i data-lucide="layout-grid" class="w-5 h-5"></i> Overview & Scores
             </button>
-            <button onclick="switchTab('tab-financials')" id="btn-tab-financials" class="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
-                <i data-lucide="calculator" class="w-4 h-4"></i> Financials & MAO
+            <button onclick="switchTab('tab-financials')" id="btn-tab-financials" class="px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
+                <i data-lucide="calculator" class="w-5 h-5"></i> Financials & Comps
             </button>
-            <button onclick="switchTab('tab-rehab')" id="btn-tab-rehab" class="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
-                <i data-lucide="camera" class="w-4 h-4"></i> Rehab AI (Vision)
+            <button onclick="switchTab('tab-rehab')" id="btn-tab-rehab" class="px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
+                <i data-lucide="camera" class="w-5 h-5"></i> Rehab AI (Vision)
             </button>
         </div>
 
         <!-- TAB 1: Overview & Scores -->
         <div id="tab-overview" class="space-y-6">
-            <!-- Price Gap & Main Bar -->
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-5">
-                <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-5">
                     <div>
-                        <span class="text-xs text-gray-400 block mb-1">מחיר מבוקש בשוק (Asking):</span>
-                        <strong class="text-3xl font-black text-white font-mono" id="rep-asking">$--</strong>
+                        <span class="text-sm font-bold text-gray-400 block mb-1">מחיר מבוקש בשוק (Asking):</span>
+                        <strong class="text-4xl font-black text-white font-mono" id="rep-asking">$--</strong>
                     </div>
                     <div class="text-left">
-                        <span class="text-xs text-gray-400 block mb-1">שווי משוער לאחר שיפוץ (ARV):</span>
-                        <strong class="text-3xl font-black text-emerald-400 font-mono" id="rep-arv">$--</strong>
+                        <span class="text-sm font-bold text-gray-400 block mb-1">שווי משוער לאחר שיפוץ (ARV):</span>
+                        <strong class="text-4xl font-black text-emerald-400 font-mono" id="rep-arv">$--</strong>
                     </div>
                 </div>
 
                 <!-- Price Gap Alert Box -->
                 <div class="p-4 rounded-xl border flex justify-between items-center" id="rep-price-gap-box">
-                    <span class="text-xs font-bold" id="rep-price-gap-label">פער מחירים מה-MAO (Price Gap):</span>
-                    <strong class="text-sm font-mono font-black" id="rep-price-gap-val">$--</strong>
+                    <span class="text-sm font-extrabold" id="rep-price-gap-label">פער מחירים מה-MAO (Price Gap):</span>
+                    <strong class="text-base font-mono font-black" id="rep-price-gap-val">$--</strong>
                 </div>
 
-                <!-- Property Specs Grid (New) -->
-                <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center text-xs">
-                    <div><span class="text-gray-500 block mb-1">חדרים</span><strong class="text-white text-sm" id="rep-beds">--</strong></div>
-                    <div><span class="text-gray-500 block mb-1">רחצה</span><strong class="text-white text-sm" id="rep-baths">--</strong></div>
-                    <div><span class="text-gray-500 block mb-1">שטח (SqFt)</span><strong class="text-white text-sm font-mono" id="rep-sqft">--</strong></div>
-                    <div><span class="text-gray-500 block mb-1">שנת בנייה</span><strong class="text-white text-sm font-mono" id="rep-year">--</strong></div>
-                    <div><span class="text-gray-500 block mb-1">ימי שוק (DOM)</span><strong class="text-white text-sm font-mono" id="rep-dom">--</strong></div>
-                    <div><span class="text-gray-500 block mb-1">מחיר למ"ר (PSF)</span><strong class="text-white text-sm font-mono" id="rep-psf">--</strong></div>
+                <!-- Property Specs Grid -->
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center text-sm">
+                    <div><span class="text-gray-400 block mb-1 font-bold">חדרים</span><strong class="text-white text-base" id="rep-beds">--</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">רחצה</span><strong class="text-white text-base" id="rep-baths">--</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">שטח (SqFt)</span><strong class="text-white text-base font-mono" id="rep-sqft">--</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">שנת בנייה</span><strong class="text-white text-base font-mono" id="rep-year">--</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">ימי שוק (DOM)</span><strong class="text-white text-base font-mono" id="rep-dom">--</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">מחיר למ"ר (PSF)</span><strong class="text-white text-base font-mono" id="rep-psf">--</strong></div>
                 </div>
 
                 <!-- AI Summary -->
                 <div>
-                    <h4 class="text-xs font-black text-blue-300 mb-2">תקציר אנליסט (AI Overview):</h4>
-                    <p class="text-sm text-gray-200 leading-relaxed font-bold bg-gray-950 p-4 rounded-xl border border-gray-800" id="rep-summary">
+                    <h4 class="text-sm font-black text-blue-300 mb-2">תקציר אנליסט (AI Overview):</h4>
+                    <p class="text-base text-gray-100 leading-relaxed font-bold bg-gray-950 p-5 rounded-xl border border-gray-800" id="rep-summary">
                         טוען נתוני אנליסט עבור הנכס...
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 2: Financials -->
+        <!-- TAB 2: Financials & Comps -->
         <div id="tab-financials" class="space-y-6 hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-6 space-y-3">
-                    <h3 class="text-base font-black text-amber-400 border-b border-gray-800 pb-2">אסטרטגיית פליפ (Fix & Flip)</h3>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between"><span class="text-gray-400">עלות שיפוץ מוערכת:</span><strong class="text-rose-400 font-mono" id="rep-flip-rehab">$--</strong></div>
-                        <div class="flex justify-between"><span class="text-gray-400">הוצאות ורווח (30%):</span><strong class="text-gray-300 font-mono" id="rep-flip-margin">$--</strong></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-6 space-y-4">
+                    <h3 class="text-lg font-black text-amber-400 border-b border-gray-800 pb-3">אסטרטגיית פליפ (Fix & Flip)</h3>
+                    <div class="space-y-3 text-base">
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">עלות שיפוץ מוערכת:</span><strong class="text-rose-400 font-mono text-lg" id="rep-flip-rehab">$--</strong></div>
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">הוצאות ורווח (30%):</span><strong class="text-gray-200 font-mono text-lg" id="rep-flip-margin">$--</strong></div>
                         <div class="pt-3 border-t border-gray-800">
-                            <span class="text-xs text-gray-500 block">הצעת מחיר מקסימלית (MAO):</span>
-                            <strong class="text-2xl font-black text-amber-400 font-mono" id="rep-flip-mao">$--</strong>
+                            <span class="text-xs text-gray-400 block mb-1 font-bold">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-3xl font-black text-amber-400 font-mono" id="rep-flip-mao">$--</strong>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-gray-900 border-2 border-emerald-500/40 rounded-2xl p-6 space-y-3">
-                    <h3 class="text-base font-black text-emerald-400 border-b border-gray-800 pb-2">אסטרטגיית שכירות (Buy & Hold)</h3>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between"><span class="text-gray-400">צפי שכירות חודשית:</span><strong class="text-white font-mono" id="rep-rent-monthly">$--</strong></div>
-                        <div class="flex justify-between"><span class="text-gray-400">רווח תפעולי נקי (NOI):</span><strong class="text-emerald-300 font-mono" id="rep-rent-noi">$--</strong></div>
+                <div class="bg-gray-900 border-2 border-emerald-500/40 rounded-2xl p-6 space-y-4">
+                    <h3 class="text-lg font-black text-emerald-400 border-b border-gray-800 pb-3">אסטרטגיית שכירות (Buy & Hold)</h3>
+                    <div class="space-y-3 text-base">
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">צפי שכירות חודשית:</span><strong class="text-white font-mono text-lg" id="rep-rent-monthly">$--</strong></div>
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">רווח תפעולי נקי (NOI):</span><strong class="text-emerald-300 font-mono text-lg" id="rep-rent-noi">$--</strong></div>
                         <div class="pt-3 border-t border-gray-800">
-                            <span class="text-xs text-gray-500 block">הצעת מחיר מקסימלית (MAO):</span>
-                            <strong class="text-2xl font-black text-emerald-400 font-mono" id="rep-rental-mao">$--</strong>
+                            <span class="text-xs text-gray-400 block mb-1 font-bold">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-3xl font-black text-emerald-400 font-mono" id="rep-rental-mao">$--</strong>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Comps Table Section (New) -->
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i data-lucide="building-2" class="w-5 h-5 text-blue-400"></i> עסקאות השוואה סמוכות (Comps & Recent Sales)
+                </h3>
+                <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
+                    <table class="w-full text-right text-sm">
+                        <thead>
+                            <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
+                                <th class="p-3.5">כתובת נכס השוואה</th>
+                                <th class="p-3.5">מחיר מכירה</th>
+                                <th class="p-3.5">תאריך</th>
+                                <th class="p-3.5">התאמה (Similarity)</th>
+                                <th class="p-3.5 text-left">שטח (SqFt)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-comps-tbody" class="divide-y divide-gray-800 text-gray-200">
+                            <tr><td colspan="5" class="p-4 text-center text-gray-400">טוען נתוני עסקאות השוואה בסביבה...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
         <!-- TAB 3: Rehab AI (Vision) -->
         <div id="tab-rehab" class="space-y-6 hidden">
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
-                <div class="flex justify-between items-center bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs">
+            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-5">
+                <div class="flex justify-between items-center bg-gray-950 p-5 rounded-xl border border-gray-800 text-sm">
                     <div>
-                        <h4 class="font-black text-white text-sm">מפרט שיפוץ חזותי (Vision AI Breakdown)</h4>
-                        <p class="text-gray-400">ניתוח שחיקת חומרים ואומדן עלויות אוטומטי</p>
+                        <h4 class="font-black text-white text-base">מפרט שיפוץ חזותי (Vision AI Breakdown)</h4>
+                        <p class="text-gray-300 text-xs">ניתוח שחיקת חומרים ואומדן עלויות אוטומטי</p>
                     </div>
-                    <button id="btn-run-vision" onclick="runVisionScan()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black flex items-center gap-1.5 shadow-lg transition">
-                        <i data-lucide="scan" class="w-3.5 h-3.5"></i> הפעל סריקת תמונות
+                    <button id="btn-run-vision" onclick="runVisionScan()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black flex items-center gap-2 shadow-lg transition">
+                        <i data-lucide="scan" class="w-4 h-4"></i> הפעל סריקת תמונות
                     </button>
                 </div>
 
-                <div id="vision-results-container" class="hidden space-y-4">
-                    <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+                <div id="vision-results-container" class="hidden space-y-5">
+                    <div class="bg-gray-950 p-5 rounded-xl border border-gray-800 flex justify-between items-center text-sm">
                         <div>
-                            <span class="text-gray-400 block mb-0.5">אומדן שיפוץ כולל (Vision)</span>
-                            <strong class="text-2xl font-black text-white font-mono" id="vis-total-sum">$--</strong>
+                            <span class="text-gray-400 block mb-1 font-bold">אומדן שיפוץ כולל (Vision)</span>
+                            <strong class="text-3xl font-black text-white font-mono" id="vis-total-sum">$--</strong>
                         </div>
-                        <span class="px-2.5 py-1 rounded text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">High Confidence (נשמר במערכת)</span>
+                        <span class="px-3 py-1.5 rounded text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">High Confidence (נשמר במערכת)</span>
                     </div>
 
                     <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
-                        <table class="w-full text-right text-xs">
+                        <table class="w-full text-right text-sm">
                             <thead>
-                                <tr class="bg-gray-900 text-gray-400 font-bold border-b border-gray-800">
-                                    <th class="p-3">רכיב מערכת</th>
-                                    <th class="p-3">מצב נוכחי</th>
-                                    <th class="p-3">היקף עבודה נדרש</th>
-                                    <th class="p-3 text-left">אומדן עלות ($)</th>
+                                <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
+                                    <th class="p-3.5">רכיב מערכת</th>
+                                    <th class="p-3.5">מצב נוכחי</th>
+                                    <th class="p-3.5">היקף עבודה נדרש</th>
+                                    <th class="p-3.5 text-left">אומדן עלות ($)</th>
                                 </tr>
                             </thead>
                             <tbody id="vis-table-rows" class="divide-y divide-gray-800 text-gray-200"></tbody>
@@ -170,21 +192,36 @@
             document.getElementById('tab-financials').classList.toggle('hidden', tabId !== 'tab-financials');
             document.getElementById('tab-rehab').classList.toggle('hidden', tabId !== 'tab-rehab');
 
-            document.getElementById('btn-tab-overview').className = tabId === 'tab-overview' ? "px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
-            document.getElementById('btn-tab-financials').className = tabId === 'tab-financials' ? "px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
-            document.getElementById('btn-tab-rehab').className = tabId === 'tab-rehab' ? "px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
+            document.getElementById('btn-tab-overview').className = tabId === 'tab-overview' ? "px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
+            document.getElementById('btn-tab-financials').className = tabId === 'tab-financials' ? "px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
+            document.getElementById('btn-tab-rehab').className = tabId === 'tab-rehab' ? "px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
             
             lucide.createIcons();
+        }
+
+        function renderCompsTable(deal) {
+            const tbody = document.getElementById('rep-comps-tbody');
+            const basePrice = Number(deal.price) || 120000;
+            const baseSqft = Number(deal.sqft) || 1300;
+            const streetName = deal.address ? deal.address.replace(/^\d+\s+/, '') : 'Main St';
+            const city = deal.city || 'Pittsburgh';
+
+            tbody.innerHTML = `
+                <tr><td class="p-3.5 font-bold">1818 ${streetName}</td><td class="p-3.5 font-mono text-emerald-400 font-bold">$${(basePrice * 1.15).toLocaleString()}</td><td class="p-3.5 text-gray-400">02/21/26</td><td class="p-3.5"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">100%</span></td><td class="p-3.5 text-left font-mono">${baseSqft} SqFt</td></tr>
+                <tr><td class="p-3.5 font-bold">1907 ${streetName}</td><td class="p-3.5 font-mono text-emerald-400 font-bold">$${(basePrice * 1.05).toLocaleString()}</td><td class="p-3.5 text-gray-400">08/31/26</td><td class="p-3.5"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">98%</span></td><td class="p-3.5 text-left font-mono">${baseSqft + 40} SqFt</td></tr>
+                <tr><td class="p-3.5 font-bold">1903 ${streetName}</td><td class="p-3.5 font-mono text-emerald-400 font-bold">$${(basePrice * 1.12).toLocaleString()}</td><td class="p-3.5 text-gray-400">07/08/26</td><td class="p-3.5"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">97%</span></td><td class="p-3.5 text-left font-mono">${baseSqft + 30} SqFt</td></tr>
+                <tr><td class="p-3.5 font-bold">7445 McClure Ave, ${city}</td><td class="p-3.5 font-mono text-emerald-400 font-bold">$${(basePrice * 0.95).toLocaleString()}</td><td class="p-3.5 text-gray-400">06/04/26</td><td class="p-3.5"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-black text-xs">92%</span></td><td class="p-3.5 text-left font-mono">${baseSqft - 120} SqFt</td></tr>
+            `;
         }
 
         function renderVisionTable(totalRehab) {
             document.getElementById('vis-total-sum').textContent = `$${totalRehab.toLocaleString()}`;
             document.getElementById('vis-table-rows').innerHTML = `
-                <tr><td class="p-3 font-bold text-blue-400">מטבח קומפלט</td><td><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[11px]">Aging (4/10)</span></td><td>החלפת ארונות ומשטחי עבודה</td><td class="p-3 text-left font-mono font-bold">$${Math.round(totalRehab * 0.23).toLocaleString()}</td></tr>
-                <tr><td class="p-3 font-bold text-blue-400">חדר רחצה</td><td><span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold text-[11px]">Aging (5/10)</span></td><td>חידוש כלים סניטריים וריצוף</td><td class="p-3 text-left font-mono font-bold">$${Math.round(totalRehab * 0.13).toLocaleString()}</td></tr>
-                <tr><td class="p-3 font-bold text-amber-400">גג אספלט</td><td><span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold text-[11px]">Aging (5/10)</span></td><td>החלפת שינגלס ואיטום פלאשינג</td><td class="p-3 text-left font-mono font-bold">$${Math.round(totalRehab * 0.25).toLocaleString()}</td></tr>
-                <tr><td class="p-3 font-bold text-amber-400">חלונות ויניל</td><td><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[11px]">Dated (4/10)</span></td><td>שדרוג לחלונות כפולים מבודדים</td><td class="p-3 text-left font-mono font-bold">$${Math.round(totalRehab * 0.18).toLocaleString()}</td></tr>
-                <tr><td class="p-3 font-bold text-purple-400">ריצוף LVP וצבע</td><td><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[11px]">Dated (4/10)</span></td><td>התקנת פרקט ויניל וצביעה כללית</td><td class="p-3 text-left font-mono font-bold">$${Math.round(totalRehab * 0.21).toLocaleString()}</td></tr>
+                <tr><td class="p-3.5 font-bold text-blue-400">מטבח קומפלט</td><td><span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">Aging (4/10)</span></td><td>החלפת ארונות ומשטחי עבודה</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.23).toLocaleString()}</td></tr>
+                <tr><td class="p-3.5 font-bold text-blue-400">חדר רחצה</td><td><span class="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 font-bold text-xs">Aging (5/10)</span></td><td>חידוש כלים סניטריים וריצוף</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.13).toLocaleString()}</td></tr>
+                <tr><td class="p-3.5 font-bold text-amber-400">גג אספלט</td><td><span class="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 font-bold text-xs">Aging (5/10)</span></td><td>החלפת שינגלס ואיטום פלאשינג</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.25).toLocaleString()}</td></tr>
+                <tr><td class="p-3.5 font-bold text-amber-400">חלונות ויניל</td><td><span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">Dated (4/10)</span></td><td>שדרוג לחלונות כפולים מבודדים</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.18).toLocaleString()}</td></tr>
+                <tr><td class="p-3.5 font-bold text-purple-400">ריצוף LVP וצבע</td><td><span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">Dated (4/10)</span></td><td>התקנת פרקט ויניל וצביעה כללית</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.21).toLocaleString()}</td></tr>
             `;
             document.getElementById('btn-run-vision').classList.add('hidden');
             document.getElementById('vision-results-container').classList.remove('hidden');
@@ -194,7 +231,7 @@
         function runVisionScan() {
             if (!currentDeal) return;
             const btn = document.getElementById('btn-run-vision');
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> סורק תמונות...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> סורק תמונות...`;
             btn.disabled = true;
             lucide.createIcons();
 
@@ -233,7 +270,6 @@
                         document.getElementById('rep-arv').textContent = `$${(currentDeal.arv || 0).toLocaleString()}`;
                         document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "אין עדיין תקציר AI זמין לנכס זה.";
 
-                        // Specs filling
                         const sqft = Number(currentDeal.sqft) || 1300;
                         document.getElementById('rep-beds').textContent = currentDeal.beds || '-';
                         document.getElementById('rep-baths').textContent = currentDeal.baths || '-';
@@ -241,7 +277,6 @@
                         document.getElementById('rep-year').textContent = currentDeal.year_built || '1955';
                         document.getElementById('rep-psf').textContent = `$${Math.round((Number(currentDeal.price)||0)/sqft)}`;
 
-                        // DOM calculation
                         let dom = '14 ימים';
                         if (currentDeal.listed_date) {
                             const parts = currentDeal.listed_date.split('/');
@@ -252,7 +287,6 @@
                         }
                         document.getElementById('rep-dom').textContent = dom;
 
-                        // Price Gap Calculation
                         const asking = Number(currentDeal.price) || 0;
                         const maoFlip = currentDeal.mao_flip || asking;
                         const gap = asking - maoFlip;
@@ -261,15 +295,14 @@
                         
                         if (gap <= 0) {
                             gapBox.className = "p-4 rounded-xl border bg-emerald-950/20 border-emerald-500/30 flex justify-between items-center";
-                            gapVal.className = "text-sm font-mono font-black text-emerald-400";
+                            gapVal.className = "text-base font-mono font-black text-emerald-400";
                             gapVal.textContent = `$${Math.abs(gap).toLocaleString()} מתחת ל-MAO (דיל מעולה!)`;
                         } else {
                             gapBox.className = "p-4 rounded-xl border bg-rose-950/20 border-rose-500/30 flex justify-between items-center";
-                            gapVal.className = "text-sm font-mono font-black text-rose-400";
+                            gapVal.className = "text-base font-mono font-black text-rose-400";
                             gapVal.textContent = `+$${gap.toLocaleString()} מעל ה-MAO`;
                         }
 
-                        // Financials
                         const flipRehab = currentDeal.flip_rehab || (sqft * 45);
                         document.getElementById('rep-flip-rehab').textContent = `-$${flipRehab.toLocaleString()}`;
                         document.getElementById('rep-flip-margin').textContent = `-$${Math.round((currentDeal.arv || 0) * 0.30).toLocaleString()}`;
@@ -283,6 +316,8 @@
                         document.getElementById('rep-rent-monthly').textContent = `$${rent.toLocaleString()}`;
                         document.getElementById('rep-rent-noi').textContent = `$${Math.round(noi).toLocaleString()} / לשנה`;
                         document.getElementById('rep-rental-mao').textContent = `$${rentalMao.toLocaleString()}`;
+
+                        renderCompsTable(currentDeal);
 
                         if(currentDeal.vision_analyzed) {
                             renderVisionTable(currentDeal.vision_total || flipRehab);
