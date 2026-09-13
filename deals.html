@@ -28,9 +28,7 @@
 
         .indicator-pending { width: 18px; height: 18px; border-radius: 50%; background-color: #374151; border: 2px solid #9ca3af; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .indicator-done { width: 18px; height: 18px; border-radius: 50%; background-color: #10b981; border: 2px solid #34d399; color: #064e3b; font-weight: 900; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
-        .progress-bar-fill { transition: width 1s ease-in-out; }
 
-        /* Leaflet Dark Popup Customization */
         .leaflet-popup-content-wrapper { background: #111827 !important; border: 1px solid #374151; color: white; border-radius: 12px; }
         .leaflet-popup-tip { background: #111827 !important; border: 1px solid #374151; }
     </style>
@@ -58,24 +56,7 @@
                     <i data-lucide="map" class="w-4 h-4"></i>
                     <span id="map-btn-text">מפת עסקאות</span>
                 </button>
-
-                <button onclick="openCustomResearchModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition">
-                    <i data-lucide="microscope" class="w-4 h-4 text-blue-400"></i>
-                    <span>🔬 מחקר חופשי</span>
-                </button>
-
-                <button onclick="openGeneralPriceCatalogModal()" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
-                    <i data-lucide="hammer" class="w-4 h-4"></i>
-                    <span>🔨 בקרת שיפוצים</span>
-                </button>
-
-                <button onclick="toggleArchiveView()" id="btn-toggle-archive" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition">
-                    <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
-                    <span id="archive-btn-text">ארכיון</span>
-                    <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
-                </button>
-
-                <a href="index.html" target="scanner_tab" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
+                <a href="index.html" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>לסורק הראשי</span>
                 </a>
@@ -95,7 +76,6 @@
                 </div>
                 <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400"><i data-lucide="building-2" class="w-6 h-6"></i></div>
             </div>
-
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">הוגשו הצעות מחיר</span>
@@ -103,179 +83,30 @@
                 </div>
                 <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400"><i data-lucide="send" class="w-6 h-6"></i></div>
             </div>
-
-            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
-                <div>
-                    <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות שנסגרו</span>
-                    <span class="text-2xl font-black text-purple-400" id="deals-closed-count">0</span>
-                </div>
-                <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
-            </div>
-
-            <div onclick="openSavedReportsModal()" class="bg-gray-900/80 border border-emerald-500/30 hover:border-emerald-400 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-lg hover:shadow-emerald-950/40">
-                <div>
-                    <span class="text-xs font-bold text-gray-300 block mb-1 flex items-center gap-1">
-                        דוחות בודק שנשמרו
-                        <i data-lucide="external-link" class="w-3 h-3 text-emerald-400"></i>
-                    </span>
-                    <span class="text-2xl font-black text-emerald-400" id="reports-saved-count">0</span>
-                </div>
-                <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400"><i data-lucide="file-check-2" class="w-6 h-6"></i></div>
-            </div>
         </section>
 
-        <!-- Active Pipeline Header -->
+        <div id="deals-map-container" class="hidden w-full h-[550px] rounded-2xl border border-gray-800 z-10 shadow-2xl overflow-hidden mb-6"></div>
+
         <div class="flex justify-between items-center">
-            <h2 class="text-lg font-black text-white flex items-center gap-2" id="view-title">
+            <h2 class="text-lg font-black text-white flex items-center gap-2">
                 <i data-lucide="list-checks" class="w-5 h-5 text-amber-400"></i>
-                רשימת עסקאות בצנרת
+                רשימת עסקאות בצנרת לניתוח עומק
             </h2>
         </div>
 
-        <!-- Map Container -->
-        <div id="deals-map-container" class="hidden w-full h-[550px] rounded-2xl border border-gray-800 z-10 shadow-2xl overflow-hidden mb-6"></div>
-
         <!-- Pipeline Cards Grid -->
         <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></section>
-
     </main>
-
-    <!-- Modal: AI Underwriting Modal (Clean & Stable with Tabs) -->
-    <div id="ai-underwriting-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-blue-500/40 rounded-2xl max-w-5xl w-full p-4 sm:p-8 space-y-6 shadow-2xl relative text-right max-h-[96vh] overflow-y-auto custom-scrollbar">
-            
-            <div class="flex justify-between items-start border-b border-gray-800 pb-4">
-                <div>
-                    <span class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-black flex items-center gap-1.5 w-max mb-2">
-                        <i data-lucide="microscope" class="w-4 h-4"></i> דוח חיתוך עסקה מורחב (AI Underwriting)
-                    </span>
-                    <h2 class="text-2xl sm:text-3xl font-black text-white" id="uw-address">--</h2>
-                    <p class="text-sm font-bold text-gray-400 flex items-center gap-1.5 mt-1">
-                        <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i>
-                        <span id="uw-city">--</span>
-                        <span class="mx-2 text-gray-600">|</span>
-                        <span id="uw-class" class="px-2 py-0.5 rounded text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class --</span>
-                    </p>
-                </div>
-                <button onclick="closeUnderwritingModal()" class="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-xl transition"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-
-            <!-- Tabs Navigation -->
-            <div class="flex border-b border-gray-800 gap-2 text-xs font-bold pb-2">
-                <button onclick="switchUnderwritingTab('tab-overview')" id="btn-uw-overview" class="px-4 py-2 rounded-xl bg-blue-600 text-white shrink-0 flex items-center gap-1.5">
-                    <i data-lucide="layout-grid" class="w-4 h-4"></i> Overview & Scores
-                </button>
-                <button onclick="switchUnderwritingTab('tab-financials')" id="btn-uw-financials" class="px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-1.5">
-                    <i data-lucide="calculator" class="w-4 h-4"></i> Financials & MAO
-                </button>
-                <button onclick="switchUnderwritingTab('tab-rehab')" id="btn-uw-rehab" class="px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-1.5">
-                    <i data-lucide="camera" class="w-4 h-4"></i> Rehab AI (Vision)
-                </button>
-            </div>
-
-            <!-- Tab 1: Overview -->
-            <div id="tab-overview" class="space-y-4">
-                <div class="bg-gray-950 p-4 rounded-xl border-l-4 border-emerald-500 flex justify-between items-center shadow-inner">
-                    <div>
-                        <span class="text-xs font-bold text-gray-400 block mb-1">מחיר מבוקש (Asking Price):</span>
-                        <strong class="text-2xl font-black text-white font-mono" id="uw-asking-price">$--</strong>
-                    </div>
-                    <div class="text-left">
-                        <span class="text-xs font-bold text-gray-400 block mb-1">שווי משוער לאחר שיפוץ (ARV):</span>
-                        <strong class="text-2xl font-black text-emerald-400 font-mono" id="uw-arv-price">$--</strong>
-                    </div>
-                </div>
-
-                <div class="bg-blue-950/20 border border-blue-500/30 p-4 rounded-xl">
-                    <h4 class="text-xs font-black text-blue-300 flex items-center gap-1.5 mb-1.5">
-                        <i data-lucide="bot" class="w-4 h-4"></i> שורת המחץ למשא ומתן (AI Summary):
-                    </h4>
-                    <p class="text-gray-200 text-xs leading-relaxed font-bold bg-gray-900/50 p-3 rounded-xl border border-gray-800" id="uw-summary">--</p>
-                </div>
-            </div>
-
-            <!-- Tab 2: Financials -->
-            <div id="tab-financials" class="space-y-4 hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-4">
-                        <h3 class="text-base font-black text-amber-400 mb-3 border-b border-gray-800 pb-2">אסטרטגיית פליפ (Fix & Flip)</h3>
-                        <div class="space-y-2 text-xs">
-                            <div class="flex justify-between"><span class="text-gray-400 font-bold">עלות שיפוץ מוערכת:</span><strong class="text-rose-400 font-mono" id="uw-flip-rehab">$--</strong></div>
-                            <div class="flex justify-between"><span class="text-gray-400 font-bold">רווח והוצאות (30%):</span><strong class="text-gray-300 font-mono" id="uw-flip-margin">$--</strong></div>
-                            <div class="pt-2 border-t border-gray-800">
-                                <span class="text-[10px] text-gray-500 block">MAO מומלץ:</span>
-                                <strong class="text-2xl font-black text-amber-400 font-mono" id="uw-flip-mao">$--</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-gray-900 border-2 border-emerald-500/40 rounded-2xl p-4">
-                        <h3 class="text-base font-black text-emerald-400 mb-3 border-b border-gray-800 pb-2 flex justify-between items-center">
-                            <span>שכירות (Buy & Hold)</span>
-                            <select id="uw-target-cap" onchange="recalculateRentalMAO()" class="bg-gray-950 border border-emerald-500/50 rounded px-1.5 py-0.5 text-emerald-400 text-xs font-black font-mono">
-                                <option value="0.08">8%</option>
-                                <option value="0.10" selected>10%</option>
-                                <option value="0.12">12%</option>
-                            </select>
-                        </h3>
-                        <div class="space-y-2 text-xs">
-                            <div class="flex justify-between"><span class="text-gray-400 font-bold">שכירות חודשית:</span><strong class="text-white font-mono" id="uw-rent-monthly">$--</strong></div>
-                            <div class="flex justify-between"><span class="text-gray-400 font-bold">רווח תפעולי נקי (NOI):</span><strong class="text-emerald-300 font-mono" id="uw-rent-noi">$--</strong></div>
-                            <div class="pt-2 border-t border-gray-800">
-                                <span class="text-[10px] text-gray-500 block">MAO מומלץ:</span>
-                                <strong class="text-2xl font-black text-emerald-400 font-mono" id="uw-rental-mao">$--</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab 3: Rehab AI with Auto-Save -->
-            <div id="tab-rehab" class="space-y-4 hidden">
-                <div class="flex justify-between items-center bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs">
-                    <div>
-                        <h4 class="font-black text-white text-sm">מפרט שיפוץ חזותי (Vision AI)</h4>
-                        <p class="text-gray-400">נתוני שיפוץ שנשמרו אוטומטית למערכת</p>
-                    </div>
-                    <button id="btn-trigger-vision" onclick="runVisionAIScan()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black flex items-center gap-1.5 shadow-lg">
-                        <i data-lucide="scan" class="w-3.5 h-3.5"></i> הפעל סריקת תמונות
-                    </button>
-                </div>
-                <div id="vision-results-block" class="hidden space-y-3 text-xs">
-                    <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 flex justify-between items-center">
-                        <span class="text-gray-400">אומדן שיפוץ כולל:</span>
-                        <strong class="text-xl font-black text-emerald-400 font-mono" id="vis-total-display">$--</strong>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="text-center pt-2">
-                <button onclick="closeUnderwritingModal()" class="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-bold transition">סגור דוח חיתוך</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Script Logic -->
     <script>
         let pipelineDeals = [];
-        let activeUnderwritingDeal = null;
         let mapInstance = null;
         let isMapView = false;
         let mapMarkers = [];
 
         async function init() {
             loadPipelineDeals();
-        }
-
-        function switchUnderwritingTab(tabId) {
-            document.getElementById('tab-overview').classList.toggle('hidden', tabId !== 'tab-overview');
-            document.getElementById('tab-financials').classList.toggle('hidden', tabId !== 'tab-financials');
-            document.getElementById('tab-rehab').classList.toggle('hidden', tabId !== 'tab-rehab');
-
-            document.getElementById('btn-uw-overview').className = tabId === 'tab-overview' ? "px-4 py-2 rounded-xl bg-blue-600 text-white shrink-0 flex items-center gap-1.5" : "px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-1.5";
-            document.getElementById('btn-uw-financials').className = tabId === 'tab-financials' ? "px-4 py-2 rounded-xl bg-blue-600 text-white shrink-0 flex items-center gap-1.5" : "px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-1.5";
-            document.getElementById('btn-uw-rehab').className = tabId === 'tab-rehab' ? "px-4 py-2 rounded-xl bg-blue-600 text-white shrink-0 flex items-center gap-1.5" : "px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-1.5";
-            lucide.createIcons();
         }
 
         function loadPipelineDeals() {
@@ -314,11 +145,16 @@
         }
 
         function removeDealCompletely(id) {
-            if (confirm("האם להסיר את הנכס לחלוטין מחדר העסקאות?")) {
+            if (confirm("האם להסיר את הנכס מהצנרת?")) {
                 pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 loadPipelineDeals();
             }
+        }
+
+        // --- פתיחת הדוח המורחב בקובץ נפרד report.html ---
+        function openExpandedReport(dealId) {
+            window.open(`report.html?id=${dealId}`, '_blank');
         }
 
         function renderDeals() {
@@ -327,8 +163,7 @@
             const displayList = pipelineDeals.filter(d => !d.is_archived);
 
             if (displayList.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-16 bg-gray-900/40 border border-gray-800 rounded-3xl text-gray-400 text-xs font-bold">אין עסקאות פעילות בצנרת. הוסף מהסורק הראשי.</div>`;
-                lucide.createIcons();
+                container.innerHTML = `<div class="col-span-full text-center py-16 text-gray-400 font-bold">אין עסקאות פעילות בצנרת. הוסף מהסורק הראשי.</div>`;
                 return;
             }
 
@@ -341,13 +176,9 @@
                 const isAgent = seenArray.includes('agent');
                 const isContractor = seenArray.includes('contractor');
                 const isHandyman = seenArray.includes('handyman');
-                const isConditionDone = !!tr.condition && tr.condition !== '';
                 const isOfferDone = tr.offer_made === 'yes' || (!!tr.offer_amount && Number(tr.offer_amount) > 0);
                 const isEmdDone = tr.emd_deposited === 'yes' || (!!tr.emd_amount && Number(tr.emd_amount) > 0);
-                const isInspectorDone = tr.inspector_sent === 'yes';
-                const isContractorDone = tr.contractor_quote_status === 'yes' || (!!tr.contractor_quote_amount && Number(tr.contractor_quote_amount) > 0);
                 const isStatusDone = (tr.deal_status && tr.deal_status !== 'under_review') || (!!tr.negotiated_price && Number(tr.negotiated_price) > 0);
-                const isClosedDone = !!tr.deal_closed && tr.deal_closed !== '';
 
                 return `
                     <div class="bg-gray-900 border border-gray-800 hover:border-amber-500/40 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
@@ -357,7 +188,7 @@
                                     <label class="block text-sm font-black text-blue-300 mb-1 flex items-center gap-1.5">
                                         <i data-lucide="user-check" class="w-4 h-4 text-blue-400"></i> למי הנכס מיועד:
                                     </label>
-                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח / משקיע / שותף..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:border-blue-400 focus:outline-none">
+                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:outline-none">
                                 </div>
                                 <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2.5 bg-gray-950 rounded-xl border border-gray-800 transition" title="הסר מחדר עסקאות">
                                     <i data-lucide="trash-2" class="w-5 h-5"></i>
@@ -367,28 +198,28 @@
                             <div class="pt-1">
                                 <div class="flex items-center justify-between gap-2 mb-1">
                                     <h3 class="text-lg font-black text-white">${d.address}</h3>
-                                    <span class="px-2.5 py-0.5 rounded-md text-xs font-black uppercase tracking-wider border border-amber-500/30 text-amber-300 bg-amber-500/10">${d.deal_type || 'Active'}</span>
+                                    <span class="px-2.5 py-0.5 rounded-md text-xs font-black uppercase border border-amber-500/30 text-amber-300 bg-amber-500/10">${d.deal_type || 'Active'}</span>
                                 </div>
                                 <p class="text-xs font-bold text-gray-300 flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i> ${d.city}, PA ${d.zip || ''}</p>
                                 <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
                             </div>
                             
-                            <!-- כפתור חיתוך עסקאות -->
-                            <button onclick="openUnderwritingModal('${d.id}')" class="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
+                            <!-- כפתור לפתיחת הדוח הנפרד -->
+                            <button onclick="openExpandedReport('${d.id}')" class="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
                                 <i data-lucide="microscope" class="w-4 h-4"></i>
-                                <span>פתח דוח AI מורחב (Underwriting)</span>
+                                <span>פתח דוח AI מורחב (Deal Dossier)</span>
                             </button>
 
-                            <!-- שדות מעקב מלאים -->
+                            <!-- שדות מעקב -->
                             <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
                                     <label class="block font-extrabold text-gray-100 mb-2 flex items-center gap-2">
                                         ${renderV(isSeenDone)}<span>מי ראה את הנכס בשטח:</span>
                                     </label>
                                     <div class="grid grid-cols-3 gap-1.5">
-                                        <button onclick="toggleMultiField('${d.id}', 'inspector_seen', 'agent')" class="flex items-center justify-center gap-1 py-1.5 rounded-lg border transition-all text-xs font-bold ${isAgent ? 'border-emerald-500 bg-emerald-900/30 text-emerald-400' : 'border-gray-700 bg-gray-900 text-gray-400 hover:bg-gray-800'}">${isAgent ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''} מתווך</button>
-                                        <button onclick="toggleMultiField('${d.id}', 'inspector_seen', 'contractor')" class="flex items-center justify-center gap-1 py-1.5 rounded-lg border transition-all text-xs font-bold ${isContractor ? 'border-emerald-500 bg-emerald-900/30 text-emerald-400' : 'border-gray-700 bg-gray-900 text-gray-400 hover:bg-gray-800'}">${isContractor ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''} קבלן</button>
-                                        <button onclick="toggleMultiField('${d.id}', 'inspector_seen', 'handyman')" class="flex items-center justify-center gap-1 py-1.5 rounded-lg border transition-all text-xs font-bold ${isHandyman ? 'border-emerald-500 bg-emerald-900/30 text-emerald-400' : 'border-gray-700 bg-gray-900 text-gray-400 hover:bg-gray-800'}">${isHandyman ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''} בודק</button>
+                                        <button onclick="toggleMultiField('${d.id}', 'inspector_seen', 'agent')" class="flex items-center justify-center gap-1 py-1.5 rounded-lg border text-xs font-bold ${isAgent ? 'border-emerald-500 bg-emerald-900/30 text-emerald-400' : 'border-gray-700 bg-gray-900 text-gray-400'}">מתווך</button>
+                                        <button onclick="toggleMultiField('${d.id}', 'inspector_seen', 'contractor')" class="flex items-center justify-center gap-1 py-1.5 rounded-lg border text-xs font-bold ${isContractor ? 'border-emerald-500 bg-emerald-900/30 text-emerald-400' : 'border-gray-700 bg-gray-900 text-gray-400'}">קבלן</button>
+                                        <button onclick="toggleMultiField('${d.id}', 'inspector_seen', 'handyman')" class="flex items-center justify-center gap-1 py-1.5 rounded-lg border text-xs font-bold ${isHandyman ? 'border-emerald-500 bg-emerald-900/30 text-emerald-400' : 'border-gray-700 bg-gray-900 text-gray-400'}">בודק</button>
                                     </div>
                                 </div>
                             </div>
@@ -397,83 +228,6 @@
                 `;
             }).join('');
             lucide.createIcons();
-        }
-
-        function openUnderwritingModal(dealId) {
-            const deal = pipelineDeals.find(d => String(d.id) === String(dealId));
-            if (!deal) return;
-            activeUnderwritingDeal = deal;
-
-            document.getElementById('uw-address').textContent = deal.address;
-            document.getElementById('uw-city').textContent = deal.city;
-            document.getElementById('uw-class').textContent = `Class ${deal.neighborhood_class || 'B'}`;
-            document.getElementById('uw-asking-price').textContent = `$${(Number(deal.price) || 0).toLocaleString()}`;
-            document.getElementById('uw-arv-price').textContent = `$${(deal.arv || 0).toLocaleString()}`;
-            document.getElementById('uw-summary').textContent = deal.ai_summary || "ממתין לניתוח AI מלא.";
-            
-            const sqft = Number(deal.sqft) || 1300;
-            document.getElementById('uw-flip-rehab').textContent = `-$${(deal.flip_rehab || (sqft * 45)).toLocaleString()}`;
-            document.getElementById('uw-flip-mao').textContent = `$${(deal.mao_flip || 0).toLocaleString()}`;
-
-            document.getElementById('uw-target-cap').value = "0.10";
-            recalculateRentalMAO();
-
-            const btnVision = document.getElementById('btn-trigger-vision');
-            const visionBlock = document.getElementById('vision-results-block');
-            if (deal.vision_analyzed) {
-                btnVision.classList.add('hidden');
-                document.getElementById('vis-total-display').textContent = `$${(deal.flip_rehab || (sqft * 45)).toLocaleString()}`;
-                visionBlock.classList.remove('hidden');
-            } else {
-                btnVision.classList.remove('hidden');
-                visionBlock.classList.add('hidden');
-            }
-
-            switchUnderwritingTab('tab-overview');
-            document.getElementById('ai-underwriting-modal').classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        function closeUnderwritingModal() {
-            document.getElementById('ai-underwriting-modal').classList.add('hidden');
-            activeUnderwritingDeal = null;
-        }
-
-        function recalculateRentalMAO() {
-            if (!activeUnderwritingDeal) return;
-            const deal = activeUnderwritingDeal;
-            const cap = parseFloat(document.getElementById('uw-target-cap').value);
-            const rent = deal.monthly_rent_est || 1400;
-            const noi = (rent * 12) * 0.74; 
-            const rehab = deal.rental_rehab || (Number(deal.sqft || 1300) * 25);
-            const mao = Math.round((noi / cap) - rehab - 5000);
-
-            document.getElementById('uw-rent-monthly').textContent = `$${rent.toLocaleString()}`;
-            document.getElementById('uw-rent-noi').textContent = `$${Math.round(noi).toLocaleString()} / לשנה`;
-            document.getElementById('uw-rental-mao').textContent = `$${mao.toLocaleString()}`;
-        }
-
-        function runVisionAIScan() {
-            if (!activeUnderwritingDeal) return;
-            const btn = document.getElementById('btn-trigger-vision');
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> סורק תמונות...`;
-            btn.disabled = true;
-            lucide.createIcons();
-
-            setTimeout(() => {
-                activeUnderwritingDeal.vision_analyzed = true;
-                const idx = pipelineDeals.findIndex(d => String(d.id) === String(activeUnderwritingDeal.id));
-                if(idx > -1) {
-                    pipelineDeals[idx].vision_analyzed = true;
-                    localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
-                }
-
-                const sqft = Number(activeUnderwritingDeal.sqft) || 1300;
-                document.getElementById('vis-total-display').textContent = `$${(activeUnderwritingDeal.flip_rehab || (sqft * 45)).toLocaleString()}`;
-                btn.classList.add('hidden');
-                document.getElementById('vision-results-block').classList.remove('hidden');
-                lucide.createIcons();
-            }, 1500);
         }
 
         function toggleMapView() {
