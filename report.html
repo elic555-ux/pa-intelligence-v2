@@ -50,19 +50,38 @@
             </button>
         </div>
 
-        <!-- TAB 1: Overview -->
+        <!-- TAB 1: Overview & Scores -->
         <div id="tab-overview" class="space-y-6">
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+            <!-- Price Gap & Main Bar -->
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-5">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-4">
                     <div>
-                        <span class="text-xs text-gray-400 block mb-1">מחיר מבוקש בשוק:</span>
+                        <span class="text-xs text-gray-400 block mb-1">מחיר מבוקש בשוק (Asking):</span>
                         <strong class="text-3xl font-black text-white font-mono" id="rep-asking">$--</strong>
                     </div>
                     <div class="text-left">
-                        <span class="text-xs text-gray-400 block mb-1">שווי לאחר שיפוץ (ARV):</span>
+                        <span class="text-xs text-gray-400 block mb-1">שווי משוער לאחר שיפוץ (ARV):</span>
                         <strong class="text-3xl font-black text-emerald-400 font-mono" id="rep-arv">$--</strong>
                     </div>
                 </div>
+
+                <!-- Price Gap Alert Box -->
+                <div class="p-4 rounded-xl border flex justify-between items-center" id="rep-price-gap-box">
+                    <span class="text-xs font-bold" id="rep-price-gap-label">פער מחירים מה-MAO (Price Gap):</span>
+                    <strong class="text-sm font-mono font-black" id="rep-price-gap-val">$--</strong>
+                </div>
+
+                <!-- Property Specs Grid (New) -->
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center text-xs">
+                    <div><span class="text-gray-500 block mb-1">חדרים</span><strong class="text-white text-sm" id="rep-beds">--</strong></div>
+                    <div><span class="text-gray-500 block mb-1">רחצה</span><strong class="text-white text-sm" id="rep-baths">--</strong></div>
+                    <div><span class="text-gray-500 block mb-1">שטח (SqFt)</span><strong class="text-white text-sm font-mono" id="rep-sqft">--</strong></div>
+                    <div><span class="text-gray-500 block mb-1">שנת בנייה</span><strong class="text-white text-sm font-mono" id="rep-year">--</strong></div>
+                    <div><span class="text-gray-500 block mb-1">ימי שוק (DOM)</span><strong class="text-white text-sm font-mono" id="rep-dom">--</strong></div>
+                    <div><span class="text-gray-500 block mb-1">מחיר למ"ר (PSF)</span><strong class="text-white text-sm font-mono" id="rep-psf">--</strong></div>
+                </div>
+
+                <!-- AI Summary -->
                 <div>
                     <h4 class="text-xs font-black text-blue-300 mb-2">תקציר אנליסט (AI Overview):</h4>
                     <p class="text-sm text-gray-200 leading-relaxed font-bold bg-gray-950 p-4 rounded-xl border border-gray-800" id="rep-summary">
@@ -175,7 +194,7 @@
         function runVisionScan() {
             if (!currentDeal) return;
             const btn = document.getElementById('btn-run-vision');
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin">Test</i> סורק תמונות...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> סורק תמונות...`;
             btn.disabled = true;
             lucide.createIcons();
 
@@ -185,7 +204,6 @@
                 const totalRehab = currentDeal.flip_rehab || (sqft * 45);
                 currentDeal.vision_total = totalRehab;
 
-                // Save back to localStorage pipeline
                 try {
                     let deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
                     const idx = deals.findIndex(d => String(d.id) === String(currentDeal.id));
@@ -215,7 +233,43 @@
                         document.getElementById('rep-arv').textContent = `$${(currentDeal.arv || 0).toLocaleString()}`;
                         document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "אין עדיין תקציר AI זמין לנכס זה.";
 
+                        // Specs filling
                         const sqft = Number(currentDeal.sqft) || 1300;
+                        document.getElementById('rep-beds').textContent = currentDeal.beds || '-';
+                        document.getElementById('rep-baths').textContent = currentDeal.baths || '-';
+                        document.getElementById('rep-sqft').textContent = sqft.toLocaleString();
+                        document.getElementById('rep-year').textContent = currentDeal.year_built || '1955';
+                        document.getElementById('rep-psf').textContent = `$${Math.round((Number(currentDeal.price)||0)/sqft)}`;
+
+                        // DOM calculation
+                        let dom = '14 ימים';
+                        if (currentDeal.listed_date) {
+                            const parts = currentDeal.listed_date.split('/');
+                            if (parts.length === 3) {
+                                const listDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                                dom = Math.ceil(Math.abs(new Date() - listDate) / (1000 * 60 * 60 * 24)) + ' ימים';
+                            }
+                        }
+                        document.getElementById('rep-dom').textContent = dom;
+
+                        // Price Gap Calculation
+                        const asking = Number(currentDeal.price) || 0;
+                        const maoFlip = currentDeal.mao_flip || asking;
+                        const gap = asking - maoFlip;
+                        const gapBox = document.getElementById('rep-price-gap-box');
+                        const gapVal = document.getElementById('rep-price-gap-val');
+                        
+                        if (gap <= 0) {
+                            gapBox.className = "p-4 rounded-xl border bg-emerald-950/20 border-emerald-500/30 flex justify-between items-center";
+                            gapVal.className = "text-sm font-mono font-black text-emerald-400";
+                            gapVal.textContent = `$${Math.abs(gap).toLocaleString()} מתחת ל-MAO (דיל מעולה!)`;
+                        } else {
+                            gapBox.className = "p-4 rounded-xl border bg-rose-950/20 border-rose-500/30 flex justify-between items-center";
+                            gapVal.className = "text-sm font-mono font-black text-rose-400";
+                            gapVal.textContent = `+$${gap.toLocaleString()} מעל ה-MAO`;
+                        }
+
+                        // Financials
                         const flipRehab = currentDeal.flip_rehab || (sqft * 45);
                         document.getElementById('rep-flip-rehab').textContent = `-$${flipRehab.toLocaleString()}`;
                         document.getElementById('rep-flip-margin').textContent = `-$${Math.round((currentDeal.arv || 0) * 0.30).toLocaleString()}`;
@@ -230,7 +284,6 @@
                         document.getElementById('rep-rent-noi').textContent = `$${Math.round(noi).toLocaleString()} / לשנה`;
                         document.getElementById('rep-rental-mao').textContent = `$${rentalMao.toLocaleString()}`;
 
-                        // Check if Vision was already analyzed & saved
                         if(currentDeal.vision_analyzed) {
                             renderVisionTable(currentDeal.vision_total || flipRehab);
                         }
