@@ -21,7 +21,7 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
-        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f9fafb; }
+        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f9fafb; font-size: 17px; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
@@ -56,6 +56,23 @@
                     <i data-lucide="map" class="w-4 h-4"></i>
                     <span id="map-btn-text">מפת עסקאות</span>
                 </button>
+
+                <button onclick="openCustomResearchModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition">
+                    <i data-lucide="microscope" class="w-4 h-4 text-blue-400"></i>
+                    <span>🔬 מחקר חופשי</span>
+                </button>
+
+                <button onclick="openGeneralPriceCatalogModal()" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
+                    <i data-lucide="hammer" class="w-4 h-4"></i>
+                    <span>🔨 בקרת שיפוצים</span>
+                </button>
+
+                <button onclick="toggleArchiveView()" id="btn-toggle-archive" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition">
+                    <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
+                    <span id="archive-btn-text">ארכיון</span>
+                    <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
+                </button>
+
                 <a href="index.html" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>לסורק הראשי</span>
@@ -76,6 +93,7 @@
                 </div>
                 <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400"><i data-lucide="building-2" class="w-6 h-6"></i></div>
             </div>
+
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">הוגשו הצעות מחיר</span>
@@ -83,6 +101,7 @@
                 </div>
                 <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400"><i data-lucide="send" class="w-6 h-6"></i></div>
             </div>
+
             <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות שנסגרו</span>
@@ -90,29 +109,67 @@
                 </div>
                 <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
             </div>
+
+            <div onclick="openSavedReportsModal()" class="bg-gray-900/80 border border-emerald-500/30 hover:border-emerald-400 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-lg hover:shadow-emerald-950/40">
+                <div>
+                    <span class="text-xs font-bold text-gray-300 block mb-1 flex items-center gap-1">
+                        דוחות בודק שנשמרו (דוחות מפורטים)
+                        <i data-lucide="external-link" class="w-3 h-3 text-emerald-400"></i>
+                    </span>
+                    <span class="text-2xl font-black text-emerald-400" id="reports-saved-count">0</span>
+                </div>
+                <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400"><i data-lucide="file-check-2" class="w-6 h-6"></i></div>
+            </div>
         </section>
 
-        <div id="deals-map-container" class="hidden w-full h-[550px] rounded-2xl border border-gray-800 z-10 shadow-2xl overflow-hidden mb-6"></div>
-
+        <!-- Active Pipeline Header -->
         <div class="flex justify-between items-center">
-            <h2 class="text-lg font-black text-white flex items-center gap-2">
+            <h2 class="text-lg font-black text-white flex items-center gap-2" id="view-title">
                 <i data-lucide="list-checks" class="w-5 h-5 text-amber-400"></i>
-                רשימת עסקאות בצנרת לניתוח עומק
+                רשימת עסקאות בצנרת
             </h2>
         </div>
 
+        <!-- Map Container -->
+        <div id="deals-map-container" class="hidden w-full h-[550px] rounded-2xl border border-gray-800 z-10 shadow-2xl overflow-hidden mb-6"></div>
+
         <!-- Pipeline Cards Grid -->
         <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></section>
+
     </main>
+
+    <!-- Modal: Saved Inspection Reports Viewer Modal (דוחות מפורטים) -->
+    <div id="saved-reports-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-gray-900 border border-emerald-500/40 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative text-right max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="file-check-2" class="w-5 h-5 text-emerald-400"></i>
+                    דוחות בודק מפורטים שנשמרו (לצורך השוואה ושאיבת נתונים)
+                </h3>
+                <div class="flex items-center gap-3">
+                    <button onclick="clearSavedReports()" class="text-xs text-gray-500 hover:text-rose-400 transition">נקה היסטוריה</button>
+                    <button onclick="closeSavedReportsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+
+            <div id="saved-reports-modal-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+            <div class="pt-2 border-t border-gray-800 text-left">
+                <button onclick="closeSavedReportsModal()" class="px-4 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-xs font-bold">סגור</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Script Logic -->
     <script>
         let pipelineDeals = [];
+        let savedInspectionReports = [];
         let mapInstance = null;
         let isMapView = false;
         let mapMarkers = [];
 
         async function init() {
+            loadSavedReports();
             loadPipelineDeals();
         }
 
@@ -123,6 +180,56 @@
             document.getElementById('deals-offered-count').textContent = active.filter(d => d.tracker?.offer_made === 'yes').length;
             document.getElementById('deals-closed-count').textContent = active.filter(d => d.tracker?.deal_closed === 'closed').length;
             renderDeals();
+        }
+
+        function loadSavedReports() {
+            try {
+                savedInspectionReports = JSON.parse(localStorage.getItem('pa_saved_inspection_reports')) || [];
+            } catch(e) { savedInspectionReports = []; }
+            const counter = document.getElementById('reports-saved-count');
+            if (counter) counter.textContent = savedInspectionReports.length;
+            
+            const grid = document.getElementById('saved-reports-modal-grid');
+            if (!grid) return;
+            if (savedInspectionReports.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-6 text-center">אין עדיין דוחות שמורים. שמור דוחות מהדו"ח המורחב (report.html) כדי שיופיעו כאן להשוואה.</div>`;
+                return;
+            }
+            grid.innerHTML = savedInspectionReports.map((rep, idx) => `
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2">
+                    <strong class="text-white text-base block">${rep.address}</strong>
+                    <span class="text-gray-400 text-xs">${rep.city}, PA</span>
+                    <div class="text-xs text-emerald-400 font-mono">אומדן: ${rep.analysis?.rangeStr || 'לא צוין'}</div>
+                    <div class="flex justify-between items-center pt-2 border-t border-gray-900">
+                        <span class="text-[10px] text-gray-500">${rep.date || ''}</span>
+                        <button onclick="deleteSavedReport(${idx})" class="text-rose-400 text-xs hover:underline">מחק</button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function openSavedReportsModal() {
+            loadSavedReports();
+            document.getElementById('saved-reports-modal').classList.remove('hidden');
+        }
+
+        function closeSavedReportsModal() {
+            document.getElementById('saved-reports-modal').classList.add('hidden');
+        }
+
+        function deleteSavedReport(idx) {
+            savedInspectionReports.splice(idx, 1);
+            localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(savedInspectionReports));
+            loadSavedReports();
+        }
+
+        function clearSavedReports() {
+            if (confirm("למחוק את כל הדוחות השמורים?")) {
+                savedInspectionReports = [];
+                localStorage.setItem('pa_saved_inspection_reports', JSON.stringify([]));
+                loadSavedReports();
+            }
         }
 
         function renderV(isDone) {
@@ -304,7 +411,7 @@
                                     <label class="block font-extrabold text-gray-100 mb-1 flex items-center gap-2">
                                         ${renderV(isInspectorDone)}<span>נשלח בודק לבית:</span>
                                     </label>
-                                    <select onchange="updateField('${d.id}', 'inspector_sent', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                    <select onchange="updateField('${d.id}', 'inspector_sent', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2.5 py-1 text-xs font-bold">
                                         <option value="no" ${tr.inspector_sent === 'no' || !tr.inspector_sent ? 'selected' : ''}>לא</option>
                                         <option value="yes" ${tr.inspector_sent === 'yes' ? 'selected' : ''}>כן</option>
                                     </select>
