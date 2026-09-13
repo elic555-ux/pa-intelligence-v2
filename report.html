@@ -22,7 +22,7 @@
     <header class="max-w-5xl w-full mx-auto flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
         <div class="flex items-center gap-3">
             <div class="p-2.5 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
-                <i data-lucide="file-text" class="w-6 h-6"></i>
+                <i data-lucide="microscope" class="w-6 h-6"></i>
             </div>
             <div>
                 <h1 class="text-xl font-black text-white" id="report-address">טוען כתובת נכס...</h1>
@@ -53,24 +53,51 @@
         <!-- TAB 1: Overview -->
         <div id="tab-overview" class="space-y-6">
             <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
-                <h3 class="text-lg font-black text-white flex items-center gap-2">
-                    <i data-lucide="info" class="w-5 h-5 text-blue-400"></i> נתוני בסיס וסקירה כללית
-                </h3>
-                <p class="text-sm text-gray-300 leading-relaxed" id="overview-description">
-                    כאן יוצגו נתוני הבסיס של הנכס, מדדי השכונה, ותקציר המנהלים (Executive AI Summary).
-                </p>
+                <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+                    <div>
+                        <span class="text-xs text-gray-400 block mb-1">מחיר מבוקש בשוק:</span>
+                        <strong class="text-3xl font-black text-white font-mono" id="rep-asking">$--</strong>
+                    </div>
+                    <div class="text-left">
+                        <span class="text-xs text-gray-400 block mb-1">שווי לאחר שיפוץ (ARV):</span>
+                        <strong class="text-3xl font-black text-emerald-400 font-mono" id="rep-arv">$--</strong>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-xs font-black text-blue-300 mb-2">תקציר אנליסט (AI Overview):</h4>
+                    <p class="text-sm text-gray-200 leading-relaxed font-bold bg-gray-950 p-4 rounded-xl border border-gray-800" id="rep-summary">
+                        טוען נתוני אנליסט עבור הנכס...
+                    </p>
+                </div>
             </div>
         </div>
 
         <!-- TAB 2: Financials -->
         <div id="tab-financials" class="space-y-6 hidden">
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
-                <h3 class="text-lg font-black text-white flex items-center gap-2">
-                    <i data-lucide="dollar-sign" class="w-5 h-5 text-emerald-400"></i> ניתוח פיננסי וחישובי MAO
-                </h3>
-                <p class="text-sm text-gray-300 leading-relaxed">
-                    כאן יופיעו מחשבוני הפליפ (כלל ה-70%) והשכירות (Cap Rate) בצורה מרווחת ונוחה.
-                </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-6 space-y-3">
+                    <h3 class="text-base font-black text-amber-400 border-b border-gray-800 pb-2">אסטרטגיית פליפ (Fix & Flip)</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-400">עלות שיפוץ מוערכת:</span><strong class="text-rose-400 font-mono" id="rep-flip-rehab">$--</strong></div>
+                        <div class="flex justify-between"><span class="text-gray-400">הוצאות ורווח (30%):</span><strong class="text-gray-300 font-mono" id="rep-flip-margin">$--</strong></div>
+                        <div class="pt-3 border-t border-gray-800">
+                            <span class="text-xs text-gray-500 block">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-2xl font-black text-amber-400 font-mono" id="rep-flip-mao">$--</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-2 border-emerald-500/40 rounded-2xl p-6 space-y-3">
+                    <h3 class="text-base font-black text-emerald-400 border-b border-gray-800 pb-2">אסטרטגיית שכירות (Buy & Hold)</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-400">צפי שכירות חודשית:</span><strong class="text-white font-mono" id="rep-rent-monthly">$--</strong></div>
+                        <div class="flex justify-between"><span class="text-gray-400">רווח תפעולי נקי (NOI):</span><strong class="text-emerald-300 font-mono" id="rep-rent-noi">$--</strong></div>
+                        <div class="pt-3 border-t border-gray-800">
+                            <span class="text-xs text-gray-500 block">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-2xl font-black text-emerald-400 font-mono" id="rep-rental-mao">$--</strong>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -81,14 +108,14 @@
                     <i data-lucide="hammer" class="w-5 h-5 text-amber-400"></i> מפרט שיפוץ חזותי (Vision AI)
                 </h3>
                 <p class="text-sm text-gray-300 leading-relaxed">
-                    כאן יוצגו גלריית התמונות של הנכס וטבלאות ניתוח השחיקה לפי קטגוריות.
+                    כאן יוצגו נתוני השיפוץ המפורטים של הנכס מתוך ה-LocalStorage.
                 </p>
             </div>
         </div>
 
     </main>
 
-    <!-- Scripting for Tab Switching -->
+    <!-- Scripting for Data Loading & Tabs -->
     <script>
         function switchTab(tabId) {
             document.getElementById('tab-overview').classList.toggle('hidden', tabId !== 'tab-overview');
@@ -104,18 +131,40 @@
 
         window.onload = function() {
             lucide.createIcons();
-            // שליפה פשוטה של ה-ID מה-URL להצגת כותרת זמנית
             const urlParams = new URLSearchParams(window.location.search);
             const dealId = urlParams.get('id');
+            
             if(dealId) {
                 try {
                     const deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
-                    const found = deals.find(d => String(d.id) === String(dealId));
-                    if(found) {
-                        document.getElementById('report-address').textContent = found.address;
-                        document.getElementById('report-city').textContent = `${found.city}, PA`;
+                    const deal = deals.find(d => String(d.id) === String(dealId));
+                    if(deal) {
+                        document.getElementById('report-address').textContent = deal.address;
+                        document.getElementById('report-city').textContent = `${deal.city}, PA`;
+                        document.getElementById('rep-asking').textContent = `$${(Number(deal.price) || 0).toLocaleString()}`;
+                        document.getElementById('rep-arv').textContent = `$${(deal.arv || 0).toLocaleString()}`;
+                        document.getElementById('rep-summary').textContent = deal.ai_summary || "אין עדיין תקציר AI זמין לנכס זה.";
+
+                        const sqft = Number(deal.sqft) || 1300;
+                        const flipRehab = deal.flip_rehab || (sqft * 45);
+                        document.getElementById('rep-flip-rehab').textContent = `-$${flipRehab.toLocaleString()}`;
+                        document.getElementById('rep-flip-margin').textContent = `-$${Math.round((deal.arv || 0) * 0.30).toLocaleString()}`;
+                        document.getElementById('rep-flip-mao').textContent = `$${(deal.mao_flip || 0).toLocaleString()}`;
+
+                        const rent = deal.monthly_rent_est || 1400;
+                        const noi = (rent * 12) * 0.74;
+                        const rentalRehab = deal.rental_rehab || (sqft * 25);
+                        const rentalMao = Math.round((noi / 0.10) - rentalRehab - 5000);
+
+                        document.getElementById('rep-rent-monthly').textContent = `$${rent.toLocaleString()}`;
+                        document.getElementById('rep-rent-noi').textContent = `$${Math.round(noi).toLocaleString()} / לשנה`;
+                        document.getElementById('rep-rental-mao').textContent = `$${rentalMao.toLocaleString()}`;
+                    } else {
+                        document.getElementById('report-address').textContent = "הנכס לא נמצא במערכת";
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.error(e);
+                }
             }
         };
     </script>
