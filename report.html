@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח חיתוך מורחב - Deal Dossier</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f9fafb; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased p-4 sm:p-8">
+
+    <!-- Top Navigation / Return -->
+    <header class="max-w-5xl w-full mx-auto flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
+                <i data-lucide="file-text" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black text-white" id="report-address">טוען כתובת נכס...</h1>
+                <p class="text-xs text-gray-400" id="report-city">פנסילבניה, ארה"ב</p>
+            </div>
+        </div>
+        <a href="deals.html" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i> חזרה לחדר עסקאות
+        </a>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl w-full mx-auto space-y-6 flex-1">
+        
+        <!-- Tabs Bar -->
+        <div class="flex border-b border-gray-800 gap-2 text-xs font-bold pb-2 overflow-x-auto">
+            <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> Overview & Scores
+            </button>
+            <button onclick="switchTab('tab-financials')" id="btn-tab-financials" class="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
+                <i data-lucide="calculator" class="w-4 h-4"></i> Financials & MAO
+            </button>
+            <button onclick="switchTab('tab-rehab')" id="btn-tab-rehab" class="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
+                <i data-lucide="camera" class="w-4 h-4"></i> Rehab AI (Vision)
+            </button>
+        </div>
+
+        <!-- TAB 1: Overview -->
+        <div id="tab-overview" class="space-y-6">
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-400"></i> נתוני בסיס וסקירה כללית
+                </h3>
+                <p class="text-sm text-gray-300 leading-relaxed" id="overview-description">
+                    כאן יוצגו נתוני הבסיס של הנכס, מדדי השכונה, ותקציר המנהלים (Executive AI Summary).
+                </p>
+            </div>
+        </div>
+
+        <!-- TAB 2: Financials -->
+        <div id="tab-financials" class="space-y-6 hidden">
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i data-lucide="dollar-sign" class="w-5 h-5 text-emerald-400"></i> ניתוח פיננסי וחישובי MAO
+                </h3>
+                <p class="text-sm text-gray-300 leading-relaxed">
+                    כאן יופיעו מחשבוני הפליפ (כלל ה-70%) והשכירות (Cap Rate) בצורה מרווחת ונוחה.
+                </p>
+            </div>
+        </div>
+
+        <!-- TAB 3: Rehab AI -->
+        <div id="tab-rehab" class="space-y-6 hidden">
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i data-lucide="hammer" class="w-5 h-5 text-amber-400"></i> מפרט שיפוץ חזותי (Vision AI)
+                </h3>
+                <p class="text-sm text-gray-300 leading-relaxed">
+                    כאן יוצגו גלריית התמונות של הנכס וטבלאות ניתוח השחיקה לפי קטגוריות.
+                </p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Scripting for Tab Switching -->
+    <script>
+        function switchTab(tabId) {
+            document.getElementById('tab-overview').classList.toggle('hidden', tabId !== 'tab-overview');
+            document.getElementById('tab-financials').classList.toggle('hidden', tabId !== 'tab-financials');
+            document.getElementById('tab-rehab').classList.toggle('hidden', tabId !== 'tab-rehab');
+
+            document.getElementById('btn-tab-overview').className = tabId === 'tab-overview' ? "px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
+            document.getElementById('btn-tab-financials').className = tabId === 'tab-financials' ? "px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
+            document.getElementById('btn-tab-rehab').className = tabId === 'tab-rehab' ? "px-4 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
+            
+            lucide.createIcons();
+        }
+
+        window.onload = function() {
+            lucide.createIcons();
+            // שליפה פשוטה של ה-ID מה-URL להצגת כותרת זמנית
+            const urlParams = new URLSearchParams(window.location.search);
+            const dealId = urlParams.get('id');
+            if(dealId) {
+                try {
+                    const deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
+                    const found = deals.find(d => String(d.id) === String(dealId));
+                    if(found) {
+                        document.getElementById('report-address').textContent = found.address;
+                        document.getElementById('report-city').textContent = `${found.city}, PA`;
+                    }
+                } catch(e) {}
+            }
+        };
+    </script>
+</body>
+</html>
