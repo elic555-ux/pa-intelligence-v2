@@ -67,17 +67,20 @@
                 
                 <!-- Image Gallery Connected to Deal Source -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-2 rounded-2xl overflow-hidden border border-gray-700 h-72 relative shadow-2xl bg-gray-950">
-                        <img id="rep-main-img" src="" class="w-full h-full object-cover" alt="Property Main">
-                        <div class="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg font-bold border border-gray-700">תמונת נכס ראשית (MLS Source)</div>
+                    <div class="md:col-span-2 rounded-2xl overflow-hidden border border-gray-700 h-72 relative shadow-2xl bg-gray-950 flex items-center justify-center">
+                        <img id="rep-main-img" src="" class="w-full h-full object-cover hidden" alt="Property Main">
+                        <div id="no-img-text" class="text-gray-400 text-sm font-bold">טוען תמונת נכס מקורית מהסורק...</div>
+                        <div class="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg font-bold border border-gray-700">תמונת נכס ראשית (MLS Verified)</div>
                     </div>
                     <div class="grid grid-rows-2 gap-4 h-72">
-                        <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950">
-                            <img id="rep-sub-img-1" src="" class="w-full h-full object-cover" alt="Property Sub 1">
+                        <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950 flex items-center justify-center">
+                            <img id="rep-sub-img-1" src="" class="w-full h-full object-cover hidden" alt="Property Sub 1">
+                            <span class="text-gray-500 text-xs sub-placeholder">חלל פנימי</span>
                             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">פנים / חלל מרכזי</div>
                         </div>
-                        <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950">
-                            <img id="rep-sub-img-2" src="" class="w-full h-full object-cover" alt="Property Sub 2">
+                        <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950 flex items-center justify-center">
+                            <img id="rep-sub-img-2" src="" class="w-full h-full object-cover hidden" alt="Property Sub 2">
+                            <span class="text-gray-500 text-xs sub-placeholder">חלק נוסף</span>
                             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">חדר רחצה / מטבח</div>
                         </div>
                     </div>
@@ -213,7 +216,7 @@
 
     </main>
 
-    <!-- Scripting with Advanced Multi-Key Image Extractor -->
+    <!-- Scripting for Strict Source Image Extraction -->
     <script>
         let currentDeal = null;
 
@@ -354,27 +357,35 @@
                     document.getElementById('rep-arv').textContent = `$${arv.toLocaleString()}`;
                     document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "הנכס נותח במערכת ה-AI המרכזית. מציג פוטנציאל השבחה ותשואה חיובית.";
 
-                    // --- Multi-Key Image Extraction (Checks all possible source keys) ---
-                    let mainImg = "";
-                    let sub1 = "";
-                    let sub2 = "";
+                    // --- Strict Real Image Extraction ---
+                    const imgContainer = document.getElementById('no-img-text');
+                    const mainImgEl = document.getElementById('rep-main-img');
+                    const sub1El = document.getElementById('rep-sub-img-1');
+                    const sub2El = document.getElementById('rep-sub-img-2');
 
-                    // Check arrays or single strings from source
-                    const possibleImages = currentDeal.images || currentDeal.photos || currentDeal.gallery;
-                    if (Array.isArray(possibleImages) && possibleImages.length > 0) {
-                        mainImg = possibleImages[0];
-                        sub1 = possibleImages[1] || possibleImages[0];
-                        sub2 = possibleImages[2] || possibleImages[0];
-                    } else {
-                        mainImg = currentDeal.image_url || currentDeal.img || currentDeal.picture || currentDeal.photo;
-                        sub1 = currentDeal.sub_img_1 || currentDeal.image_2;
-                        sub2 = currentDeal.sub_img_2 || currentDeal.image_3;
+                    let imgList = currentDeal.images || currentDeal.photos || currentDeal.gallery || [];
+                    if (typeof imgList === 'string') {
+                        try { imgList = JSON.parse(imgList); } catch(e) { imgList = [imgList]; }
                     }
 
-                    // Fallback to high-quality default property photos if deal has no images
-                    document.getElementById('rep-main-img').src = mainImg || "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80";
-                    document.getElementById('rep-sub-img-1').src = sub1 || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80";
-                    document.getElementById('rep-sub-img-2').src = sub2 || "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80";
+                    const singleImg = currentDeal.image_url || currentDeal.img || currentDeal.picture || currentDeal.photo || "";
+
+                    if (Array.isArray(imgList) && imgList.length > 0) {
+                        mainImgEl.src = imgList[0];
+                        mainImgEl.classList.remove('hidden');
+                        if (imgList[1]) { sub1El.src = imgList[1]; sub1El.classList.remove('hidden'); document.querySelectorAll('.sub-placeholder')[0]?.remove(); }
+                        if (imgList[2]) { sub2El.src = imgList[2]; sub2El.classList.remove('hidden'); document.querySelectorAll('.sub-placeholder')[1]?.remove(); }
+                        imgContainer.style.display = 'none';
+                    } else if (singleImg) {
+                        mainImgEl.src = singleImg;
+                        mainImgEl.classList.remove('hidden');
+                        sub1El.src = singleImg; sub1El.classList.remove('hidden');
+                        sub2El.src = singleImg; sub2El.classList.remove('hidden');
+                        document.querySelectorAll('.sub-placeholder').forEach(el => el.remove());
+                        imgContainer.style.display = 'none';
+                    } else {
+                        imgContainer.textContent = "אין תמונות מקוריות זמינות לנכס זה בצנרת";
+                    }
 
                     const sqft = Number(currentDeal.sqft) || 1300;
                     document.getElementById('rep-beds').textContent = currentDeal.beds || '3';
