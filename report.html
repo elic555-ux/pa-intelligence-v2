@@ -65,20 +65,34 @@
         <div id="tab-overview" class="space-y-6">
             <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
                 
-                <!-- Image Gallery -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-2 rounded-2xl overflow-hidden border border-gray-700 h-72 relative shadow-2xl bg-gray-950">
-                        <img id="rep-main-img" src="" class="w-full h-full object-cover" alt="Property Main">
-                        <div class="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg font-bold border border-gray-700">תמונת נכס ראשית (MLS / Street View)</div>
+                <!-- Image Gallery with Direct Upload Option -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-400">גלריית תמונות הנכס (לחץ על תמונה להחלפה מיידית מהמחשב):</span>
+                        <label class="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i> העלה תמונת חזית
+                            <input type="file" accept="image/*" onchange="uploadCustomImage(event, 0)" class="hidden">
+                        </label>
                     </div>
-                    <div class="grid grid-rows-2 gap-4 h-72">
-                        <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950">
-                            <img id="rep-sub-img-1" src="" class="w-full h-full object-cover" alt="Property Sub 1">
-                            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">פנים / חלל מרכזי</div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2 rounded-2xl overflow-hidden border border-gray-700 h-72 relative shadow-2xl bg-gray-950 group">
+                            <img id="rep-main-img" src="" class="w-full h-full object-cover" alt="Property Main">
+                            <div class="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg font-bold border border-gray-700">תמונת נכס ראשית</div>
                         </div>
-                        <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950">
-                            <img id="rep-sub-img-2" src="" class="w-full h-full object-cover" alt="Property Sub 2">
-                            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">חדר רחצה / מטבח</div>
+                        <div class="grid grid-rows-2 gap-4 h-72">
+                            <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950 group">
+                                <img id="rep-sub-img-1" src="" class="w-full h-full object-cover" alt="Property Sub 1">
+                                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">פנים / חלל מרכזי</div>
+                                <label class="absolute top-2 left-2 bg-blue-600 text-white p-1 rounded cursor-pointer text-[10px] opacity-80 hover:opacity-100">החלף</label>
+                                <input type="file" accept="image/*" onchange="uploadCustomImage(event, 1)" class="absolute inset-0 opacity-0 cursor-pointer">
+                            </div>
+                            <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950 group">
+                                <img id="rep-sub-img-2" src="" class="w-full h-full object-cover" alt="Property Sub 2">
+                                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">חדר רחצה / מטבח</div>
+                                <label class="absolute top-2 left-2 bg-blue-600 text-white p-1 rounded cursor-pointer text-[10px] opacity-80 hover:opacity-100">החלף</label>
+                                <input type="file" accept="image/*" onchange="uploadCustomImage(event, 2)" class="absolute inset-0 opacity-0 cursor-pointer">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -213,9 +227,10 @@
 
     </main>
 
-    <!-- Scripting with Robust Image Fallback -->
+    <!-- Scripting with Manual Image Upload & Persistence -->
     <script>
         let currentDeal = null;
+        let allDeals = [];
 
         function switchTab(tabId) {
             document.getElementById('tab-overview').classList.toggle('hidden', tabId !== 'tab-overview');
@@ -227,6 +242,57 @@
             document.getElementById('btn-tab-rehab').className = tabId === 'tab-rehab' ? "px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2" : "px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2";
             
             lucide.createIcons();
+        }
+
+        function uploadCustomImage(event, index) {
+            const file = event.target.files[0];
+            if (!file || !currentDeal) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Img = e.target.result;
+                if (!currentDeal.custom_images) currentDeal.custom_images = [];
+                currentDeal.custom_images[index] = base64Img;
+
+                // Save back to localStorage
+                try {
+                    let deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
+                    const idx = deals.findIndex(d => String(d.id) === String(currentDeal.id));
+                    if (idx > -1) {
+                        deals[idx] = currentDeal;
+                        localStorage.setItem('pa_pipeline_deals', JSON.stringify(deals));
+                    }
+                } catch(err) { console.error(err); }
+
+                loadDealImages();
+                alert("התמונה עודכנה ונשמרה בהצלחה בדו"ח!");
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadDealImages() {
+            if (!currentDeal) return;
+            const imgs = currentDeal.custom_images || currentDeal.images || currentDeal.photos || [];
+            const singleImg = currentDeal.image_url || currentDeal.img || "";
+
+            const mainImgEl = document.getElementById('rep-main-img');
+            const sub1El = document.getElementById('rep-sub-img-1');
+            const sub2El = document.getElementById('rep-sub-img-2');
+
+            if (Array.isArray(imgs) && imgs.length > 0) {
+                mainImgEl.src = imgs[0] || singleImg || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80";
+                sub1El.src = imgs[1] || imgs[0] || singleImg || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80";
+                sub2El.src = imgs[2] || imgs[0] || singleImg || "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80";
+            } else if (singleImg) {
+                mainImgEl.src = singleImg;
+                sub1El.src = singleImg;
+                sub2El.src = singleImg;
+            } else {
+                // Default placeholder if absolutely no image exists
+                mainImgEl.src = "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80";
+                sub1El.src = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80";
+                sub2El.src = "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80";
+            }
         }
 
         function saveReportToHistory() {
@@ -337,12 +403,12 @@
             const dealId = urlParams.get('id');
             
             try {
-                const deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
+                allDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
                 if (dealId) {
-                    currentDeal = deals.find(d => String(d.id) === String(dealId));
+                    currentDeal = allDeals.find(d => String(d.id) === String(dealId));
                 }
-                if (!currentDeal && deals.length > 0) {
-                    currentDeal = deals[0];
+                if (!currentDeal && allDeals.length > 0) {
+                    currentDeal = allDeals[0];
                 }
 
                 if (currentDeal) {
@@ -354,28 +420,7 @@
                     document.getElementById('rep-arv').textContent = `$${arv.toLocaleString()}`;
                     document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "הנכס נותח במערכת ה-AI המרכזית. מציג פוטנציאל השבחה ותשואה חיובית.";
 
-                    // --- Exact Image Extractor & Smart Address Fallback ---
-                    const mainImgEl = document.getElementById('rep-main-img');
-                    const sub1El = document.getElementById('rep-sub-img-1');
-                    const sub2El = document.getElementById('rep-sub-img-2');
-
-                    // Check all possible properties where images might be stored
-                    let rawImgs = currentDeal.images || currentDeal.photos || currentDeal.gallery || currentDeal.img || currentDeal.image_url || [];
-                    if (typeof rawImgs === 'string') {
-                        try { rawImgs = JSON.parse(rawImgs); } catch(e) { rawImgs = [rawImgs]; }
-                    }
-
-                    if (Array.isArray(rawImgs) && rawImgs.length > 0) {
-                        mainImgEl.src = rawImgs[0];
-                        sub1El.src = rawImgs[1] || rawImgs[0];
-                        sub2El.src = rawImgs[2] || rawImgs[0];
-                    } else {
-                        // Smart fallback using property street view / exterior photo format based on address
-                        const queryAddr = encodeURIComponent(currentDeal.address + ", " + currentDeal.city + ", PA");
-                        mainImgEl.src = `https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80`;
-                        sub1El.src = `https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80`;
-                        sub2El.src = `https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80`;
-                    }
+                    loadDealImages();
 
                     const sqft = Number(currentDeal.sqft) || 1300;
                     document.getElementById('rep-beds').textContent = currentDeal.beds || '3';
