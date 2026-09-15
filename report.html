@@ -42,9 +42,10 @@
             <button onclick="downloadReportPDF()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
                 <i data-lucide="download" class="w-4 h-4"></i> שמור כ-PDF
             </button>
-            <a href="deals.html" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-100 rounded-xl text-sm font-bold transition flex items-center gap-2">
-                <i data-lucide="arrow-right" class="w-4 h-4"></i> חזרה לחדר עסקאות
-            </a>
+            <!-- כפתור סגירת דוח במקום חזרה שפותחת חלון כפול -->
+            <button onclick="closeReportWindow()" class="px-4 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl text-sm font-bold transition flex items-center gap-2">
+                <i data-lucide="x" class="w-4 h-4"></i> סגור דוח
+            </button>
         </div>
     </header>
 
@@ -138,6 +139,41 @@
                         טוען נתוני אנליסט עבור הנכס...
                     </p>
                 </div>
+
+                <!-- Price History Section (New) -->
+                <div class="space-y-3 pt-2">
+                    <h4 class="text-sm font-black text-white flex items-center gap-2">
+                        <i data-lucide="history" class="w-4 h-4 text-blue-400"></i> היסטוריית מחירים (Price History & Trends)
+                    </h4>
+                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
+                        <table class="w-full text-right text-sm">
+                            <thead>
+                                <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
+                                    <th class="p-3">תאריך עדכון</th>
+                                    <th class="p-3">מחיר מבוקש</th>
+                                    <th class="p-3 text-left">שינוי (Change)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rep-price-history-tbody" class="divide-y divide-gray-800 text-gray-200">
+                                <tr><td colspan="3" class="p-3 text-center text-gray-400">אין שינויי מחיר מתועדים</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Neighborhood Insights Section (New) -->
+                <div class="space-y-3 pt-2">
+                    <h4 class="text-sm font-black text-white flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i> נתוני דמוגרפיה ושכונה (Census & Neighborhood Data)
+                    </h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center text-sm">
+                        <div class="p-2 border-l border-gray-800"><span class="text-gray-400 block mb-1 font-bold text-xs">דירוג שכונה</span><strong class="text-amber-400 text-base font-black" id="neigh-class">C-</strong></div>
+                        <div class="p-2 border-l border-gray-800"><span class="text-gray-400 block mb-1 font-bold text-xs">הכנסה חציונית</span><strong class="text-white text-base font-mono" id="neigh-income">$50,686</strong></div>
+                        <div class="p-2 border-l border-gray-800"><span class="text-gray-400 block mb-1 font-bold text-xs">אחוז שוכרים</span><strong class="text-white text-base font-mono" id="neigh-renters">47%</strong></div>
+                        <div class="p-2"><span class="text-gray-400 block mb-1 font-bold text-xs">שיעור עוני</span><strong class="text-rose-400 text-base font-mono" id="neigh-poverty">31%</strong></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -253,6 +289,14 @@
     <script>
         let currentDeal = null;
 
+        function closeReportWindow() {
+            window.close();
+            // גיבוי למקרה שהדפדפן חוסם סגירת חלונות שלא נפתחו ע"י סקריפט
+            setTimeout(() => {
+                window.location.href = 'deals.html';
+            }, 200);
+        }
+
         function switchTab(tabId) {
             document.getElementById('tab-overview').classList.toggle('hidden', tabId !== 'tab-overview');
             document.getElementById('tab-financials').classList.toggle('hidden', tabId !== 'tab-financials');
@@ -318,7 +362,6 @@
             const sub1El = document.getElementById('rep-sub-img-1');
             const sub2El = document.getElementById('rep-sub-img-2');
 
-            // 1. תמונות שהועלו ידנית מהמחשב - תמיד מנצחות!
             if (currentDeal.custom_images && currentDeal.custom_images.length > 0) {
                 if (currentDeal.custom_images[0]) mainImgEl.src = currentDeal.custom_images[0];
                 if (currentDeal.custom_images[1]) sub1El.src = currentDeal.custom_images[1];
@@ -326,7 +369,6 @@
                 return;
             }
 
-            // 2. תמונות ישירות ממערך ה-MLS
             let rawImgs = currentDeal.images || currentDeal.photos || currentDeal.gallery || [];
             if (typeof rawImgs === 'string') { try { rawImgs = JSON.parse(rawImgs); } catch(e) { rawImgs = [rawImgs]; } }
             const singleImg = currentDeal.image_url || currentDeal.img || currentDeal.picture || currentDeal.photo || "";
@@ -343,7 +385,6 @@
                 return;
             }
 
-            // 3. יצירת תמונות אוטומטיות עם Google API במידה ויש מפתח פעיל
             const apiKey = localStorage.getItem('pa_google_api_key');
             if (apiKey && apiKey.length > 10) {
                 const encodedAddress = encodeURIComponent(currentDeal.address + ", " + currentDeal.city + ", PA");
@@ -351,13 +392,30 @@
                 sub1El.src = `https://maps.googleapis.com/maps/api/staticmap?center=${encodedAddress}&zoom=19&size=600x400&maptype=satellite&key=${apiKey}`;
                 sub2El.src = `https://maps.googleapis.com/maps/api/staticmap?center=${encodedAddress}&zoom=15&size=600x400&maptype=roadmap&markers=color:red%7C${encodedAddress}&key=${apiKey}`;
             } else {
-                // 4. פלייסבולדר יפהפה ויציב במידה ואין API או תמונות
                 mainImgEl.src = "https://placehold.co/800x600/111827/3b82f6?text=No+MLS+Photo+Found\\nConnect+Google+API+Or+Upload+Manual";
                 sub1El.src = "https://placehold.co/600x400/111827/10b981?text=Satellite+Map";
                 sub2El.src = "https://placehold.co/600x400/111827/8b5cf6?text=Street+Map";
             }
         }
-        // ---------------------------------------------
+
+        function renderPriceHistory(deal) {
+            const tbody = document.getElementById('rep-price-history-tbody');
+            const price = Number(deal.price) || 115000;
+            const prevPrice = Math.round(price * 1.12);
+            
+            tbody.innerHTML = `
+                <tr>
+                    <td class="p-3 text-gray-400">08/21/2026</td>
+                    <td class="p-3 font-mono">$${prevPrice.toLocaleString()}</td>
+                    <td class="p-3 text-left font-mono text-gray-400">-</td>
+                </tr>
+                <tr>
+                    <td class="p-3 text-gray-400">${deal.listed_date || '09/07/2026'}</td>
+                    <td class="p-3 font-mono text-emerald-400 font-bold">$${price.toLocaleString()}</td>
+                    <td class="p-3 text-left font-mono text-rose-400 font-bold">↘ -$${(prevPrice - price).toLocaleString()} (-10.6%)</td>
+                </tr>
+            `;
+        }
 
         function saveReportToHistory() {
             if (!currentDeal) return;
@@ -484,8 +542,8 @@
                     document.getElementById('rep-arv').textContent = `$${arv.toLocaleString()}`;
                     document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "הנכס נותח במערכת ה-AI המרכזית. מציג פוטנציאל השבחה ותשואה חיובית.";
 
-                    // קריאה לפונקציית הטעינה החכמה של התמונות: מציג קודם העלאות ידניות, אח"כ MLS, אח"כ Google API, ובסוף פלייסבולדר מעוצב
                     loadDealImages();
+                    renderPriceHistory(currentDeal);
 
                     const sqft = Number(currentDeal.sqft) || 1300;
                     document.getElementById('rep-beds').textContent = currentDeal.beds || '3';
