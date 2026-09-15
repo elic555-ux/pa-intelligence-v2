@@ -234,6 +234,21 @@
 
     </main>
 
+    <!-- API Key Modal -->
+    <div id="api-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+            <h3 class="text-xl font-black text-white mb-2">חיבור Google API</h3>
+            <p class="text-sm text-gray-400 mb-4">הדבק כאן את מפתח ה-API שהעתקת מגוגל קלאוד (מתחיל ב-AIza):</p>
+            <input type="text" id="api-key-input" class="w-full bg-gray-950 border border-gray-700 text-white rounded-xl p-3 text-left font-mono focus:border-blue-500 focus:outline-none mb-4" placeholder="AIzaSy...">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeApiModal()" class="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl hover:bg-gray-700 font-bold transition">ביטול</button>
+                <button onclick="saveApiKeyFromModal()" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-500 font-bold flex items-center gap-2 transition">
+                    <i data-lucide="save" class="w-4 h-4"></i> שמור ורענן
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripting with Google API Integration & Image Logic -->
     <script>
         let currentDeal = null;
@@ -253,11 +268,23 @@
         // --- מנגנון תמונות ו-Google API ---
         function configureGoogleAPI() {
             const currentKey = localStorage.getItem('pa_google_api_key') || '';
-            const key = prompt("הכנס כאן את מפתח ה-Google Maps API שלך כדי למשוך תמונות Street View אוטומטית:", currentKey);
-            if (key !== null) {
-                localStorage.setItem('pa_google_api_key', key.trim());
-                alert("המפתח נשמר במערכת! מרענן תמונות...");
+            document.getElementById('api-key-input').value = currentKey;
+            document.getElementById('api-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeApiModal() {
+            document.getElementById('api-modal').classList.add('hidden');
+        }
+
+        function saveApiKeyFromModal() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (key) {
+                localStorage.setItem('pa_google_api_key', key);
+                closeApiModal();
                 loadDealImages();
+            } else {
+                alert("אנא הכנס מפתח חוקי.");
             }
         }
 
