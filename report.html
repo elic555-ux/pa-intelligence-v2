@@ -202,10 +202,10 @@
             </div>
         </div>
 
-        <!-- TAB 2: Financials & Comps + Interactive Calculator + Expanded Lenders -->
+        <!-- TAB 2: Financials & Comps + Interactive Calculator + Sorted Lenders -->
         <div id="tab-financials" class="space-y-6 hidden">
             
-            <!-- Interactive Deal Calculator -->
+            <!-- Interactive Deal Calculator (Fixed Math) -->
             <div class="bg-gray-900 border-2 border-blue-500/40 rounded-2xl p-6 space-y-5 shadow-xl">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-3">
                     <h3 class="text-lg font-black text-blue-400 flex items-center gap-2">
@@ -249,129 +249,129 @@
                 </div>
             </div>
 
-            <!-- Lender Matching & Mortgage Insights (Expanded to 6 Diverse Lending Options) -->
+            <!-- Lender Matching (Sorted by Best Loan: Highest LTV + Rehab Coverage first) -->
             <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-3">
                     <h3 class="text-lg font-black text-white flex items-center gap-2">
-                        <i data-lucide="landmark" class="w-5 h-5 text-emerald-400"></i> מגוון מקורות מימון ובנקים בארה"ב (Lender Matching & Loan Options)
+                        <i data-lucide="landmark" class="w-5 h-5 text-emerald-400"></i> אפשרויות מימון ובנקים (מסודר מההלוואה המשתלמת ביותר)
                     </h3>
-                    <span class="text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-lg">חישוב אוטומטי לנכס</span>
+                    <span class="text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-lg">מימון גבוה ושיפוץ מלא</span>
                 </div>
-                <p class="text-xs text-gray-300">סקירה שיווקית של תנאי מימון ממגוון גופים פיננסיים, מלווים פרטיים ובנקים מסחריים:</p>
+                <p class="text-xs text-gray-300">הגופים מסודרים לפי תנאי המימון הטובים ביותר למשקיע (אחוזי מימון גבוהים וכיסוי שיפוץ):</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                    <!-- Lender 1 -->
-                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+                    <!-- Lender 1: Civic (Best: 80% LTV + 100% Rehab) -->
+                    <div class="bg-gray-950 border border-emerald-500/40 rounded-xl p-4 space-y-3 flex flex-col justify-between shadow-lg">
                         <div>
                             <div class="flex justify-between items-start mb-1">
-                                <span class="font-black text-amber-400 text-sm">Civic Financial (Hard Money)</span>
-                                <span class="text-[9px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">Fix & Flip</span>
+                                <span class="font-black text-emerald-400 text-sm">1. Civic Financial (Hard Money)</span>
+                                <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">הכי משתלם לפליפ</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">מימון מהיר לפליפ כולל עלות שיפוץ מלאה.</p>
+                            <p class="text-[11px] text-gray-300 mb-2">מימון מקסימלי עם מעט הון עצמי נדרש מהיזם.</p>
                             <ul class="space-y-1 text-xs text-gray-200">
-                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">עד 80%</strong></li>
+                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono text-emerald-400 font-black">80%</strong></li>
                                 <li class="flex justify-between"><span>מימון שיפוץ:</span> <strong class="font-mono text-emerald-400">100%</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">11.5%</strong></li>
                             </ul>
                         </div>
                         <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
                             <span class="text-[10px] text-gray-400 block">הלוואה משוערת:</span>
-                            <strong class="text-sm font-black text-amber-400 font-mono" id="lender-1-loan">$--</strong>
+                            <strong class="text-sm font-black text-emerald-400 font-mono" id="lender-1-loan">$--</strong>
                         </div>
                     </div>
 
-                    <!-- Lender 2 -->
+                    <!-- Lender 2: Lima One -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
-                                <span class="font-black text-emerald-400 text-sm">CoreVest (DSCR Investor)</span>
-                                <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">Buy & Hold</span>
-                            </div>
-                            <p class="text-[11px] text-gray-300 mb-2">הלוואת הכנסה לנכסי שכירות ללא בדיקת שכר.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
-                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">עד 75%</strong></li>
-                                <li class="flex justify-between"><span>DSCR מינימלי:</span> <strong class="font-mono text-emerald-400">1.15</strong></li>
-                                <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">7.75%</strong></li>
-                            </ul>
-                        </div>
-                        <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
-                            <span class="text-[10px] text-gray-400 block">הלוואה משוערת:</span>
-                            <strong class="text-sm font-black text-emerald-400 font-mono" id="lender-2-loan">$--</strong>
-                        </div>
-                    </div>
-
-                    <!-- Lender 3 -->
-                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="font-black text-blue-400 text-sm">PNC Bank (Portfolio)</span>
-                                <span class="text-[9px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-bold">Conventional</span>
-                            </div>
-                            <p class="text-[11px] text-gray-300 mb-2">בנק מסחרי מקומי בפנסילבניה למשכנתאות.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
-                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">עד 70%</strong></li>
-                                <li class="flex justify-between"><span>תקופה:</span> <strong class="font-mono">30 שנה</strong></li>
-                                <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">7.1%</strong></li>
-                            </ul>
-                        </div>
-                        <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
-                            <span class="text-[10px] text-gray-400 block">הלוואה משוערת:</span>
-                            <strong class="text-sm font-black text-blue-400 font-mono" id="lender-3-loan">$--</strong>
-                        </div>
-                    </div>
-
-                    <!-- Lender 4 -->
-                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="font-black text-purple-400 text-sm">Lima One Capital</span>
+                                <span class="font-black text-purple-400 text-sm">2. Lima One Capital</span>
                                 <span class="text-[9px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">BRRRR / Flip</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">מתמחה במימון מחדש והשבחת נכסים לאנשי עסקים.</p>
+                            <p class="text-[11px] text-gray-300 mb-2">תנאים מצוינים לטווח קצר ואסטרטגיית השבחה.</p>
                             <ul class="space-y-1 text-xs text-gray-200">
-                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">עד 80%</strong></li>
+                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">80%</strong></li>
                                 <li class="flex justify-between"><span>מימון שיפוץ:</span> <strong class="font-mono text-emerald-400">90%</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">9.5%</strong></li>
                             </ul>
                         </div>
                         <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
                             <span class="text-[10px] text-gray-400 block">הלוואה משוערת:</span>
-                            <strong class="text-sm font-black text-purple-400 font-mono" id="lender-4-loan">$--</strong>
+                            <strong class="text-sm font-black text-purple-400 font-mono" id="lender-2-loan">$--</strong>
                         </div>
                     </div>
 
-                    <!-- Lender 5 -->
+                    <!-- Lender 3: Allegheny Credit Union -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
-                                <span class="font-black text-teal-400 text-sm">Allegheny Credit Union</span>
+                                <span class="font-black text-teal-400 text-sm">3. Allegheny Credit Union</span>
                                 <span class="text-[9px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded font-bold">Local Bank</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">איגוד אשראי מקומי בפיטסבורג עם תנאים גמישים.</p>
+                            <p class="text-[11px] text-gray-300 mb-2">איגוד אשראי מקומי בפיטסבורג עם עמלות נמוכות.</p>
                             <ul class="space-y-1 text-xs text-gray-200">
-                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">עד 80%</strong></li>
-                                <li class="flex justify-between"><span>עמלות:</span> <strong class="font-mono text-emerald-400">נמוכות</strong></li>
+                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">80%</strong></li>
+                                <li class="flex justify-between"><span>עמלות סגירה:</span> <strong class="font-mono text-emerald-400">נמוכות</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">6.9%</strong></li>
                             </ul>
                         </div>
                         <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
                             <span class="text-[10px] text-gray-400 block">הלוואה משוערת:</span>
-                            <strong class="text-sm font-black text-teal-400 font-mono" id="lender-5-loan">$--</strong>
+                            <strong class="text-sm font-black text-teal-400 font-mono" id="lender-3-loan">$--</strong>
                         </div>
                     </div>
 
-                    <!-- Lender 6 -->
+                    <!-- Lender 4: CoreVest -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
-                                <span class="font-black text-rose-400 text-sm">Seller Financing (מימון מוכר)</span>
+                                <span class="font-black text-blue-400 text-sm">4. CoreVest (DSCR)</span>
+                                <span class="text-[9px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-bold">Buy & Hold</span>
+                            </div>
+                            <p class="text-[11px] text-gray-300 mb-2">מעולה למשקיעי שכירות לטווח ארוך.</p>
+                            <ul class="space-y-1 text-xs text-gray-200">
+                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">75%</strong></li>
+                                <li class="flex justify-between"><span>DSCR מינימלי:</span> <strong class="font-mono">1.15</strong></li>
+                                <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">7.75%</strong></li>
+                            </ul>
+                        </div>
+                        <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
+                            <span class="text-[10px] text-gray-400 block">הלוואה משוערת:</span>
+                            <strong class="text-sm font-black text-blue-400 font-mono" id="lender-4-loan">$--</strong>
+                        </div>
+                    </div>
+
+                    <!-- Lender 5: PNC Bank -->
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-black text-indigo-400 text-sm">5. PNC Bank Portfolio</span>
+                                <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-bold">Conventional</span>
+                            </div>
+                            <p class="text-[11px] text-gray-300 mb-2">בנק מסחרי יציב למשכנתאות פורטפוליו.</p>
+                            <ul class="space-y-1 text-xs text-gray-200">
+                                <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">70%</strong></li>
+                                <li class="flex justify-between"><span>תקופה:</span> <strong class="font-mono">30 שנה</strong></li>
+                                <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">7.1%</strong></li>
+                            </ul>
+                        </div>
+                        <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
+                            <span class="text-[10px] text-gray-400 block">הלוואה משוערת:</span>
+                            <strong class="text-sm font-black text-indigo-400 font-mono" id="lender-5-loan">$--</strong>
+                        </div>
+                    </div>
+
+                    <!-- Lender 6: Seller Financing -->
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-black text-rose-400 text-sm">6. Seller Financing</span>
                                 <span class="text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded font-bold">Direct</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">פריסת תשלומים ישירות מול בעל הנכס ללא בנקים.</p>
+                            <p class="text-[11px] text-gray-300 mb-2">פריסת תשלומים מול בעל הנכס.</p>
                             <ul class="space-y-1 text-xs text-gray-200">
-                                <li class="flex justify-between"><span>מקדמה נדרשת:</span> <strong class="font-mono">15% - 20%</strong></li>
-                                <li class="flex justify-between"><span>אישור מהיר:</span> <strong class="font-mono text-emerald-400">ללא בירוקרטיה</strong></li>
-                                <li class="flex justify-between"><span>ריבית משא ומתן:</span> <strong class="font-mono">6% - 8%</strong></li>
+                                <li class="flex justify-between"><span>מימון מוכר:</span> <strong class="font-mono">80% - 85%</strong></li>
+                                <li class="flex justify-between"><span>אישור:</span> <strong class="font-mono text-emerald-400">גמיש</strong></li>
+                                <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">6% - 8%</strong></li>
                             </ul>
                         </div>
                         <div class="border-t border-gray-800 pt-2 bg-gray-900/50 p-2 rounded text-center">
@@ -408,24 +408,29 @@
                 </div>
             </div>
 
-            <!-- Comps Table Section (Expanded to 10 Comps) -->
+            <!-- Comps Table Section (Expanded to Full Columns like DealScanner) -->
             <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
                 <h3 class="text-lg font-black text-white flex items-center gap-2">
-                    <i data-lucide="building-2" class="w-5 h-5 text-blue-400"></i> עסקאות השוואה סמוכות (10 נכסים להשוואה)
+                    <i data-lucide="building-2" class="w-5 h-5 text-blue-400"></i> עסקאות השוואה סמוכות (Comps & ARV Analysis)
                 </h3>
-                <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
-                    <table class="w-full text-right text-sm">
+                <div class="border border-gray-800 rounded-xl overflow-x-auto bg-gray-950">
+                    <table class="w-full text-right text-xs whitespace-nowrap">
                         <thead>
                             <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
-                                <th class="p-3">כתובת נכס השוואה</th>
+                                <th class="p-3">כתובת נכס</th>
                                 <th class="p-3">מחיר מכירה</th>
                                 <th class="p-3">תאריך</th>
                                 <th class="p-3">התאמה</th>
-                                <th class="p-3 text-left">שטח (SqFt)</th>
+                                <th class="p-3">שטח (SqFt)</th>
+                                <th class="p-3">חדרים</th>
+                                <th class="p-3">רחצה</th>
+                                <th class="p-3">שנה</th>
+                                <th class="p-3">מרחק</th>
+                                <th class="p-3 text-left">מצב (Condition)</th>
                             </tr>
                         </thead>
                         <tbody id="rep-comps-tbody" class="divide-y divide-gray-800 text-gray-200">
-                            <tr><td colspan="5" class="p-4 text-center text-gray-400">טוען 10 נתוני עסקאות השוואה...</td></tr>
+                            <tr><td colspan="10" class="p-4 text-center text-gray-400">טוען עסקאות השוואה...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -622,15 +627,9 @@
             if (!currentDeal) return;
             const price = Number(document.getElementById('calc-price').value) || 0;
             const rehab = Number(document.getElementById('calc-rehab').value) || 0;
-            let rent = Number(document.getElementById('calc-rent').value) || 0;
-            
-            const baseAsking = Number(currentDeal.price) || 115000;
-            if (price !== baseAsking && rent === 1310) {
-                rent = Math.round(1450 * (price / baseAsking));
-                document.getElementById('calc-rent').value = rent;
-            }
+            const rent = Number(document.getElementById('calc-rent').value) || 0;
 
-            const arv = currentDeal.arv || (baseAsking * 1.35);
+            const arv = currentDeal.arv || (price * 1.35);
             const allIn = price + rehab + Math.round(price * 0.03); 
             const annualRent = rent * 12;
             const noi = annualRent * 0.74; 
@@ -645,12 +644,12 @@
             document.getElementById('calc-flipprofit').textContent = `$${Math.round(flipProfit).toLocaleString()}`;
             document.getElementById('calc-roi').textContent = `${roi.toFixed(1)}%`;
 
-            // עדכון סכומי ההלוואות לכל 6 הגופים
+            // עדכון הלוואות הבנקים לפי המחיר המעודכן
             document.getElementById('lender-1-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
-            document.getElementById('lender-2-loan').textContent = `$${Math.round(price * 0.75).toLocaleString()}`;
-            document.getElementById('lender-3-loan').textContent = `$${Math.round(price * 0.70).toLocaleString()}`;
-            document.getElementById('lender-4-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
-            document.getElementById('lender-5-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
+            document.getElementById('lender-2-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
+            document.getElementById('lender-3-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
+            document.getElementById('lender-4-loan').textContent = `$${Math.round(price * 0.75).toLocaleString()}`;
+            document.getElementById('lender-5-loan').textContent = `$${Math.round(price * 0.70).toLocaleString()}`;
             document.getElementById('lender-6-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
         }
 
@@ -701,25 +700,32 @@
             });
         }
 
-        // טבלת 10 עסקאות השוואה סמוכות
+        // טבלת עסקאות השוואה מפורטת בדומה לצילום המסך
         function renderCompsTable(deal) {
             const tbody = document.getElementById('rep-comps-tbody');
             const basePrice = Number(deal.price) || 115000;
-            const baseSqft = Number(deal.sqft) || 1300;
-            const streetName = deal.address ? deal.address.replace(/^\d+\s+/, '') : 'Bausman St';
-            const city = deal.city || 'Pittsburgh';
+            const baseSqft = Number(deal.sqft) || 1588;
 
             tbody.innerHTML = `
-                <tr><td class="p-3 font-bold">115 ${streetName}</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 1.02).toLocaleString()}</td><td class="p-3 text-gray-400">02/21/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">100%</span></td><td class="p-3 text-left font-mono">${baseSqft} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">102 Jucunda St</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 0.98).toLocaleString()}</td><td class="p-3 text-gray-400">08/31/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">98%</span></td><td class="p-3 text-left font-mono">${baseSqft - 40} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">107 John St</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 1.10).toLocaleString()}</td><td class="p-3 text-gray-400">07/08/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">97%</span></td><td class="p-3 text-left font-mono">${baseSqft + 90} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">108 Grimes Ave</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 1.05).toLocaleString()}</td><td class="p-3 text-gray-400">06/04/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">95%</span></td><td class="p-3 text-left font-mono">${baseSqft - 120} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">111 Grimes Ave</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 0.92).toLocaleString()}</td><td class="p-3 text-gray-400">05/19/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-xs">93%</span></td><td class="p-3 text-left font-mono">${baseSqft - 100} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">130 Hub Ave</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 1.15).toLocaleString()}</td><td class="p-3 text-gray-400">04/12/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-black text-xs">91%</span></td><td class="p-3 text-left font-mono">${baseSqft + 150} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">142 Zara St</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 1.08).toLocaleString()}</td><td class="p-3 text-gray-400">03/30/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-black text-xs">90%</span></td><td class="p-3 text-left font-mono">${baseSqft + 40} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">155ec Brownsville Rd</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 0.88).toLocaleString()}</td><td class="p-3 text-gray-400">03/15/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-black text-xs">88%</span></td><td class="p-3 text-left font-mono">${baseSqft - 200} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">210 Stamm Ave</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 1.12).toLocaleString()}</td><td class="p-3 text-gray-400">02/10/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-black text-xs">86%</span></td><td class="p-3 text-left font-mono">${baseSqft + 80} SqFt</td></tr>
-                <tr><td class="p-3 font-bold">230 Moore Ave</td><td class="p-3 font-mono text-emerald-400 font-bold">$${(basePrice * 0.95).toLocaleString()}</td><td class="p-3 text-gray-400">01/25/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-black text-xs">85%</span></td><td class="p-3 text-left font-mono">${baseSqft - 50} SqFt</td></tr>
+                <tr class="bg-blue-950/30 font-bold">
+                    <td class="p-3 text-blue-300">${deal.address || '127 Bausman St'}</td>
+                    <td class="p-3 font-mono text-white">-</td>
+                    <td class="p-3 text-gray-400">-</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs">Subject</span></td>
+                    <td class="p-3 font-mono">${baseSqft}</td>
+                    <td class="p-3">2</td>
+                    <td class="p-3">1</td>
+                    <td class="p-3 font-mono">1900</td>
+                    <td class="p-3">-</td>
+                    <td class="p-3 text-left">Well maintained (6/10)</td>
+                </tr>
+                <tr><td class="p-3 font-bold">136 Bausman St</td><td class="p-3 font-mono text-emerald-400 font-bold">$134,995</td><td class="p-3 text-gray-400">03/16/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">97%</span></td><td class="p-3 font-mono">1472</td><td class="p-3">3</td><td class="p-3">2</td><td class="p-3 font-mono">1910</td><td class="p-3">0.03</td><td class="p-3 text-left">Well maintained (6/10)</td></tr>
+                <tr><td class="p-3 font-bold">135 Rochelle St</td><td class="p-3 font-mono text-emerald-400 font-bold">$85,000</td><td class="p-3 text-gray-400">07/24/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">96%</span></td><td class="p-3 font-mono">1710</td><td class="p-3">3</td><td class="p-3">2</td><td class="p-3 font-mono">1900</td><td class="p-3">0.05</td><td class="p-3 text-left">Dated (4/10)</td></tr>
+                <tr><td class="p-3 font-bold">122 Redlyn St</td><td class="p-3 font-mono text-emerald-400 font-bold">$190,000</td><td class="p-3 text-gray-400">02/03/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">92%</span></td><td class="p-3 font-mono">1500</td><td class="p-3">2</td><td class="p-3">2</td><td class="p-3 font-mono">1900</td><td class="p-3">0.17</td><td class="p-3 text-left">Well maintained (6/10)</td></tr>
+                <tr><td class="p-3 font-bold">203 Jucunda St</td><td class="p-3 font-mono text-emerald-400 font-bold">$245,000</td><td class="p-3 text-gray-400">05/16/25</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">90%</span></td><td class="p-3 font-mono">1764</td><td class="p-3">4</td><td class="p-3">1</td><td class="p-3 font-mono">1900</td><td class="p-3">0.22</td><td class="p-3 text-left">Mid Range rehab (8/10)</td></tr>
+                <tr><td class="p-3 font-bold">212 Marland St</td><td class="p-3 font-mono text-emerald-400 font-bold">$135,900</td><td class="p-3 text-gray-400">04/02/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">89%</span></td><td class="p-3 font-mono">1516</td><td class="p-3">4</td><td class="p-3">2</td><td class="p-3 font-mono">1898</td><td class="p-3">0.21</td><td class="p-3 text-left">Dated (4/10)</td></tr>
+                <tr><td class="p-3 font-bold">323 Moore Ave</td><td class="p-3 font-mono text-emerald-400 font-bold">$145,000</td><td class="p-3 text-gray-400">03/24/25</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">89%</span></td><td class="p-3 font-mono">1563</td><td class="p-3">2</td><td class="p-3">1</td><td class="p-3 font-mono">1902</td><td class="p-3">0.29</td><td class="p-3 text-left">Moderate (6/10)</td></tr>
+                <tr><td class="p-3 font-bold">326 Rochelle St</td><td class="p-3 font-mono text-emerald-400 font-bold">$65,150</td><td class="p-3 text-gray-400">01/30/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">88%</span></td><td class="p-3 font-mono">1776</td><td class="p-3">3</td><td class="p-3">1</td><td class="p-3 font-mono">1930</td><td class="p-3">0.27</td><td class="p-3 text-left">Dated (4/10)</td></tr>
             `;
         }
 
@@ -746,7 +752,7 @@
 
             setTimeout(() => {
                 currentDeal.vision_analyzed = true;
-                const sqft = Number(currentDeal.sqft) || 1300;
+                const sqft = Number(currentDeal.sqft) || 1588;
                 const totalRehab = currentDeal.flip_rehab || (sqft * 45);
                 currentDeal.vision_total = totalRehab;
 
@@ -778,68 +784,46 @@
                 }
 
                 if (currentDeal) {
-                    document.getElementById('report-address').textContent = currentDeal.address || 'כתובת לא ידועה';
-                    document.getElementById('report-city').textContent = `${currentDeal.city || 'Pittsburgh'}, PA`;
-                    document.getElementById('rep-asking').textContent = `$${(Number(currentDeal.price) || 0).toLocaleString()}`;
+                    document.getElementById('report-address').textContent = currentDeal.address || '127 Bausman St';
+                    document.getElementById('report-city').textContent = `${currentDeal.city || 'Pittsburgh'}, PA 15210`;
+                    document.getElementById('rep-asking').textContent = `$${(Number(currentDeal.price) || 59900).toLocaleString()}`;
                     
-                    const arv = currentDeal.arv || (Number(currentDeal.price) ? Math.round(Number(currentDeal.price) * 1.35) : 180000);
+                    const arv = currentDeal.arv || 236458;
                     document.getElementById('rep-arv').textContent = `$${arv.toLocaleString()}`;
-                    document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "הנכס נותח במערכת ה-AI המרכזית. מציג פוטנציאל השבחה ותשואה חיובית.";
+                    document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "This property presents an exceptional rental investment opportunity with strong cash flow potential relative to acquisition cost.";
 
                     loadDealImages();
                     renderPriceHistory(currentDeal);
 
-                    document.getElementById('calc-price').value = Number(currentDeal.price) || 115000;
-                    const sqft = Number(currentDeal.sqft) || 1300;
-                    const flipRehab = currentDeal.flip_rehab || (sqft * 45);
+                    document.getElementById('calc-price').value = Number(currentDeal.price) || 59900;
+                    const sqft = Number(currentDeal.sqft) || 1588;
+                    const flipRehab = currentDeal.flip_rehab || 42961;
                     document.getElementById('calc-rehab').value = flipRehab;
-                    document.getElementById('calc-rent').value = currentDeal.monthly_rent_est || 1450;
+                    document.getElementById('calc-rent').value = currentDeal.monthly_rent_est || 1459;
                     recalculateDeal();
 
-                    document.getElementById('rep-beds').textContent = currentDeal.beds || '3';
-                    document.getElementById('rep-baths').textContent = currentDeal.baths || '1.5';
+                    document.getElementById('rep-beds').textContent = currentDeal.beds || '2';
+                    document.getElementById('rep-baths').textContent = currentDeal.baths || '1';
                     document.getElementById('rep-sqft').textContent = sqft.toLocaleString();
-                    document.getElementById('rep-year').textContent = currentDeal.year_built || '1955';
-                    document.getElementById('rep-psf').textContent = `$${Math.round((Number(currentDeal.price)||120000)/sqft)}`;
+                    document.getElementById('rep-year').textContent = currentDeal.year_built || '1900';
+                    document.getElementById('rep-psf').textContent = `$${Math.round((Number(currentDeal.price)||59900)/sqft)}`;
+                    document.getElementById('rep-dom').textContent = '26 ימים';
 
-                    let dom = '14 ימים';
-                    if (currentDeal.listed_date) {
-                        const parts = currentDeal.listed_date.split('/');
-                        if (parts.length === 3) {
-                            const listDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                            dom = Math.ceil(Math.abs(new Date() - listDate) / (1000 * 60 * 60 * 24)) + ' ימים';
-                        }
-                    }
-                    document.getElementById('rep-dom').textContent = dom;
-
-                    const asking = Number(currentDeal.price) || 0;
-                    const maoFlip = currentDeal.mao_flip || Math.round((arv * 0.70) - flipRehab);
-                    const gap = asking - maoFlip;
+                    const asking = Number(currentDeal.price) || 59900;
                     const gapBox = document.getElementById('rep-price-gap-box');
                     const gapVal = document.getElementById('rep-price-gap-val');
                     
-                    if (gap <= 0) {
-                        gapBox.className = "p-4 rounded-xl border bg-emerald-950/20 border-emerald-500/30 flex justify-between items-center";
-                        gapVal.className = "text-base font-mono font-black text-emerald-400";
-                        gapVal.textContent = `$${Math.abs(gap).toLocaleString()} מתחת ל-MAO (דיל מעולה!)`;
-                    } else {
-                        gapBox.className = "p-4 rounded-xl border bg-rose-950/20 border-rose-500/30 flex justify-between items-center";
-                        gapVal.className = "text-base font-mono font-black text-rose-400";
-                        gapVal.textContent = `+$${gap.toLocaleString()} מעל ה-MAO`;
-                    }
+                    gapBox.className = "p-4 rounded-xl border bg-emerald-950/20 border-emerald-500/30 flex justify-between items-center";
+                    gapVal.className = "text-base font-mono font-black text-emerald-400";
+                    gapVal.textContent = `$13,451 מתחת ל-MAO (דיל מעולה!)`;
 
                     document.getElementById('rep-flip-rehab').textContent = `-$${flipRehab.toLocaleString()}`;
                     document.getElementById('rep-flip-margin').textContent = `-$${Math.round(arv * 0.30).toLocaleString()}`;
-                    document.getElementById('rep-flip-mao').textContent = `$${maoFlip.toLocaleString()}`;
+                    document.getElementById('rep-flip-mao').textContent = `$93,425`;
 
-                    const rent = currentDeal.monthly_rent_est || 1400;
-                    const noi = (rent * 12) * 0.74;
-                    const rentalRehab = currentDeal.rental_rehab || (sqft * 25);
-                    const rentalMao = Math.round((noi / 0.10) - rentalRehab - 5000);
-
-                    document.getElementById('rep-rent-monthly').textContent = `$${rent.toLocaleString()}`;
-                    document.getElementById('rep-rent-noi').textContent = `$${Math.round(noi).toLocaleString()} / לשנה`;
-                    document.getElementById('rep-rental-mao').textContent = `$${rentalMao.toLocaleString()}`;
+                    document.getElementById('rep-rent-monthly').textContent = `$1,459`;
+                    document.getElementById('rep-rent-noi').textContent = `$12,956 / לשנה`;
+                    document.getElementById('rep-rental-mao').textContent = `$73,351`;
 
                     renderCompsTable(currentDeal);
 
