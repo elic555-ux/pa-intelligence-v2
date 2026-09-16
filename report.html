@@ -16,6 +16,42 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+        /* ========================================================
+           מצב הדפסה (Light Mode) שמופעל רק בעת יצירת ה-PDF
+           ======================================================== */
+        .pdf-export-mode { background-color: #ffffff !important; color: #111827 !important; }
+        .pdf-export-mode .bg-gray-900, .pdf-export-mode .bg-gray-950 { background-color: #ffffff !important; }
+        .pdf-export-mode .border-gray-800, .pdf-export-mode .border-gray-700 { border-color: #e5e7eb !important; border-width: 1px !important; }
+        .pdf-export-mode .text-white, .pdf-export-mode .text-gray-100, .pdf-export-mode .text-gray-200, .pdf-export-mode .text-gray-300, .pdf-export-mode .text-gray-400 { color: #111827 !important; }
+        
+        /* התאמת צבעים בולטים שיהיו קריאים על רקע לבן */
+        .pdf-export-mode .text-emerald-400 { color: #059669 !important; }
+        .pdf-export-mode .text-amber-400 { color: #d97706 !important; }
+        .pdf-export-mode .text-blue-400 { color: #2563eb !important; }
+        .pdf-export-mode .text-rose-400 { color: #e11d48 !important; }
+        .pdf-export-mode .text-purple-400 { color: #9333ea !important; }
+        .pdf-export-mode .text-teal-400 { color: #0d9488 !important; }
+        .pdf-export-mode .text-indigo-400 { color: #4f46e5 !important; }
+        
+        /* התאמת קופסאות רקע ומדדים */
+        .pdf-export-mode .bg-emerald-950\/40, .pdf-export-mode .bg-emerald-950\/20, .pdf-export-mode .bg-emerald-500\/20 { background-color: #d1fae5 !important; border-color: #34d399 !important; color: #065f46 !important; }
+        .pdf-export-mode .text-emerald-300 { color: #065f46 !important; }
+        
+        .pdf-export-mode .bg-blue-950\/40, .pdf-export-mode .bg-blue-950\/20, .pdf-export-mode .bg-blue-500\/20, .pdf-export-mode .bg-blue-950\/30 { background-color: #dbeafe !important; border-color: #93c5fd !important; color: #1e3a8a !important; }
+        .pdf-export-mode .text-blue-300 { color: #1e3a8a !important; }
+
+        .pdf-export-mode .bg-amber-500\/20 { background-color: #fef3c7 !important; border-color: #fcd34d !important; color: #92400e !important; }
+        .pdf-export-mode .text-amber-300 { color: #92400e !important; }
+
+        .pdf-export-mode .bg-rose-500\/20, .pdf-export-mode .bg-rose-950\/20 { background-color: #ffe4e6 !important; border-color: #fda4af !important; color: #9f1239 !important; }
+        .pdf-export-mode .text-rose-300 { color: #9f1239 !important; }
+        
+        .pdf-export-mode .bg-gray-800 { background-color: #f3f4f6 !important; color: #374151 !important; border-color: #e5e7eb !important; }
+
+        /* הסתרת כפתורי העלאה בהדפסה */
+        .pdf-export-mode label.cursor-pointer { display: none !important; }
+        .pdf-export-mode input { background-color: transparent !important; color: #111827 !important; border: none !important; font-weight: bold; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased p-4 sm:p-8">
@@ -49,9 +85,9 @@
     </header>
 
     <!-- Main Printable Container -->
-    <main id="report-printable-area" class="max-w-6xl w-full mx-auto space-y-6 flex-1">
+    <main id="report-printable-area" class="max-w-6xl w-full mx-auto space-y-6 flex-1 pb-10">
         
-        <!-- Tabs Bar -->
+        <!-- Tabs Bar (מוסתר אוטומטית בהדפסה) -->
         <div id="tabs-bar" class="flex border-b border-gray-800 gap-3 text-sm font-bold pb-3 overflow-x-auto">
             <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2">
                 <i data-lucide="layout-grid" class="w-5 h-5"></i> Overview & Scores
@@ -271,7 +307,7 @@
                         <div class="flex justify-between"><span>מס רכישה (Transfer Tax ~1% בממוצע לקונה):</span><span class="font-mono text-gray-200" id="cc-tax">$--</span></div>
                         <div class="flex justify-between"><span>חברת טייטל ועורכי דין (Title & Escrow):</span><span class="font-mono text-gray-200" id="cc-title">$--</span></div>
                         <div class="flex justify-between"><span>אגרות רישום וביטוח ראשוני (Recording & Ins):</span><span class="font-mono text-gray-200" id="cc-misc">$--</span></div>
-                        <p class="text-[10px] text-gray-500 mt-2 italic">* עמלת תיווך ממוצעת בארה"ב (Broker Fee) משולמת בדרך כלל על ידי המוכר ולא נכללת כאן, למעט במקרים של עמלת סיטונאי (Wholesale Fee) שיש להוסיף למחיר הרכישה.</p>
+                        <p class="text-[10px] text-gray-500 mt-2 italic">* עמלת תיווך ממוצעת בארה"ב משולמת בדרך כלל על ידי המוכר ולא נכללת כאן.</p>
                     </div>
                 </div>
 
@@ -295,7 +331,7 @@
                 </div>
             </div>
 
-            <!-- Lender Matching: HZARNU ET HA BANKIM! -->
+            <!-- Lender Matching -->
             <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-3">
                     <h3 class="text-lg font-black text-white flex items-center gap-2">
@@ -308,7 +344,7 @@
                     <div class="bg-gray-950 border border-emerald-500/40 rounded-xl p-4 space-y-3 flex flex-col justify-between shadow-lg">
                         <div>
                             <div class="flex justify-between items-start mb-1">
-                                <span class="font-black text-emerald-400 text-sm">1. Civic Financial (Hard Money)</span>
+                                <span class="font-black text-emerald-400 text-sm">1. Civic Financial</span>
                                 <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">הכי משתלם לפליפ</span>
                             </div>
                             <ul class="space-y-1 text-xs text-gray-200 mt-2">
@@ -477,7 +513,7 @@
 
         </div>
 
-        <!-- TAB 3: Rehab AI (Vision) -->
+        <!-- TAB 3: Rehab AI (Vision) - DETAILED REPORT -->
         <div id="tab-rehab" class="space-y-6 hidden">
             
             <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
@@ -622,7 +658,7 @@
         }
 
         // ==========================================
-        // פונקציית שמירת ה-PDF המשודרגת (התיקון כאן)
+        // פונקציית שמירת ה-PDF עם עיצוב בהיר להדפסה
         // ==========================================
         function downloadReportPDF() {
             const element = document.getElementById('report-printable-area');
@@ -630,7 +666,7 @@
             if (!element || !btn) return;
 
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> מכין PDF...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> מכין PDF בהיר...`;
             btn.disabled = true;
             lucide.createIcons();
 
@@ -639,16 +675,21 @@
             document.getElementById('tab-rehab').classList.remove('hidden');
             document.getElementById('tabs-bar').classList.add('hidden');
 
+            // הוספת קלאס המעביר את הדף למצב בהיר המותאם להדפסה
+            document.body.classList.add('pdf-export-mode');
+
             const opt = {
                 margin:       [10, 10, 10, 10],
                 filename:     `Deal_Report_${(currentDeal?.address || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: '#0b0f19' },
+                html2canvas:  { scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' }, // רקע לבן לצילום
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             setTimeout(() => {
                 html2pdf().set(opt).from(element).save().then(() => {
+                    // כיבוי מצב ההדפסה והחזרת העיצוב הכהה הרגיל
+                    document.body.classList.remove('pdf-export-mode');
                     document.getElementById('tabs-bar').classList.remove('hidden');
                     switchTab('tab-overview'); 
                     btn.innerHTML = originalHtml;
@@ -657,6 +698,7 @@
                 }).catch(err => {
                     console.error('PDF Error:', err);
                     alert('שגיאה ביצירת ה-PDF. ייתכן וקיימת חסימת אבטחת תמונות מצד גוגל. מומלץ ללחוץ על Ctrl+P במקלדת כדי להדפיס ולשמור כ-PDF.');
+                    document.body.classList.remove('pdf-export-mode');
                     document.getElementById('tabs-bar').classList.remove('hidden');
                     switchTab('tab-overview');
                     btn.innerHTML = originalHtml;
