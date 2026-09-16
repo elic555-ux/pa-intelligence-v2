@@ -78,11 +78,11 @@
                     <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
                 </button>
 
-                <!-- שינוי כפתור לסורק הראשי שסוגר את הלשונית כדי לחשוף את הסורק ברקע -->
-                <button onclick="window.close(); window.location.href='index.html';" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
+                <!-- כפתור מעודכן לחזרה לסורק - נפתח באותה לשונית ייעודית ולא סוגר את הצנרת -->
+                <a href="index.html" target="scanner_window" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>לסורק הראשי</span>
-                </button>
+                </a>
             </div>
         </div>
     </header>
@@ -158,7 +158,7 @@
                 </div>
             </div>
 
-            <!-- הגריד של הדוחות השמורים, יתמלא דרך ה-JS -->
+            <!-- הגריד של הדוחות השמורים -->
             <div id="saved-reports-modal-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
 
             <div class="pt-2 border-t border-gray-800 text-left">
@@ -167,7 +167,7 @@
         </div>
     </div>
 
-    <!-- Modal: General Market Hub & Rehab Price Catalog (בקרת שיפוצים) -->
+    <!-- Modal: General Market Hub & Rehab Price Catalog -->
     <div id="general-price-catalog-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative text-right max-h-[92vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
@@ -308,12 +308,17 @@
             updateItemPricingDetails();
         }
 
-        function loadPipelineDeals() {
-            try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || []; } catch(e) { pipelineDeals = []; }
+        // פונקציית עזר שמעדכנת רק את המספרים העליונים בלי לרענן את כל המסך
+        function updateDashboardCounters() {
             const active = pipelineDeals.filter(d => !d.is_archived);
             document.getElementById('deals-total-count').textContent = active.length;
             document.getElementById('deals-offered-count').textContent = active.filter(d => d.tracker?.offer_made === 'yes').length;
             document.getElementById('deals-closed-count').textContent = active.filter(d => d.tracker?.deal_closed === 'closed').length;
+        }
+
+        function loadPipelineDeals() {
+            try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || []; } catch(e) { pipelineDeals = []; }
+            updateDashboardCounters();
             renderDeals();
         }
 
@@ -477,13 +482,15 @@
             return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`;
         }
 
-        function updateField(id, key, value) {
+        // פונקציה חדשה ששומרת נתונים בשקט ולא מקפיצה את המסך החוצה
+        function updateField(id, key, value, redraw = false) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[key] = value;
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
-                loadPipelineDeals();
+                updateDashboardCounters();
+                if (redraw) renderDeals();
             }
         }
 
@@ -496,7 +503,8 @@
                 if (currentVal.includes(value)) { currentVal = currentVal.filter(v => v !== value); } else { currentVal.push(value); }
                 deal.tracker[key] = currentVal;
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
-                loadPipelineDeals();
+                updateDashboardCounters();
+                renderDeals();
             }
         }
 
@@ -504,7 +512,8 @@
             if (confirm("האם להסיר את הנכס מהצנרת?")) {
                 pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
-                loadPipelineDeals();
+                updateDashboardCounters();
+                renderDeals();
             }
         }
 
@@ -565,7 +574,7 @@
                                     <label class="block text-sm font-black text-blue-300 mb-1 flex items-center gap-1.5">
                                         <i data-lucide="user-check" class="w-4 h-4 text-blue-400"></i> למי הנכס מיועד:
                                     </label>
-                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value)" placeholder="הזן שם לקוח..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:outline-none">
+                                    <input type="text" value="${tr.target_buyer || ''}" oninput="updateField('${d.id}', 'target_buyer', this.value, false)" onblur="renderDeals()" placeholder="הזן שם לקוח..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white font-extrabold focus:outline-none">
                                 </div>
                                 <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2.5 bg-gray-950 rounded-xl border border-gray-800 transition" title="הסר">
                                     <i data-lucide="trash-2" class="w-5 h-5"></i>
@@ -581,7 +590,6 @@
                                 <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
                             </div>
                             
-                            <!-- כפתור לפתיחת הדוח הנפרד -->
                             <button onclick="openExpandedReport('${d.id}')" class="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
                                 <i data-lucide="microscope" class="w-4 h-4"></i>
                                 <span>פתח דוח AI מורחב (Deal Dossier)</span>
@@ -604,7 +612,7 @@
                                     <label class="block font-extrabold text-gray-100 mb-1 flex items-center gap-2">
                                         ${renderV(isConditionDone)}<span>מצב הדירה:</span>
                                     </label>
-                                    <select onchange="updateField('${d.id}', 'condition', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2.5 py-1.5 font-bold text-sm">
+                                    <select onchange="updateField('${d.id}', 'condition', this.value, true)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2.5 py-1.5 font-bold text-sm">
                                         <option value="" ${!tr.condition ? 'selected' : ''}>-- בחר מצב נכס --</option>
                                         <option value="excellent" ${tr.condition === 'excellent' ? 'selected' : ''}>מעולה</option>
                                         <option value="light_cosmetic" ${tr.condition === 'light_cosmetic' ? 'selected' : ''}>קוסמטיקה קלה</option>
@@ -627,11 +635,11 @@
                                         ${renderV(isOfferDone)}<span>הוגשה הצעה:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'offer_made', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateField('${d.id}', 'offer_made', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="no" ${tr.offer_made === 'no' || !tr.offer_made ? 'selected' : ''}>לא</option>
                                             <option value="yes" ${tr.offer_made === 'yes' ? 'selected' : ''}>כן</option>
                                         </select>
-                                        <input type="number" placeholder="סכום ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="סכום ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1 text-xs font-bold">
                                     </div>
                                 </div>
 
@@ -640,11 +648,11 @@
                                         ${renderV(isEmdDone)}<span>הפקדת EMD:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'emd_deposited', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateField('${d.id}', 'emd_deposited', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="no" ${tr.emd_deposited === 'no' || !tr.emd_deposited ? 'selected' : ''}>לא</option>
                                             <option value="yes" ${tr.emd_deposited === 'yes' ? 'selected' : ''}>כן</option>
                                         </select>
-                                        <input type="number" placeholder="סכום ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value)" class="bg-gray-900 border border-gray-700 text-blue-300 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="סכום ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-blue-300 rounded-lg px-2 py-1 text-xs font-bold">
                                     </div>
                                 </div>
 
@@ -652,7 +660,7 @@
                                     <label class="block font-extrabold text-gray-100 mb-1 flex items-center gap-2">
                                         ${renderV(isInspectorDone)}<span>נשלח בודק לבית:</span>
                                     </label>
-                                    <select onchange="updateField('${d.id}', 'inspector_sent', this.value)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                    <select onchange="updateField('${d.id}', 'inspector_sent', this.value, true)" class="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                         <option value="no" ${tr.inspector_sent === 'no' || !tr.inspector_sent ? 'selected' : ''}>לא</option>
                                         <option value="yes" ${tr.inspector_sent === 'yes' ? 'selected' : ''}>כן</option>
                                     </select>
@@ -663,11 +671,11 @@
                                         ${renderV(isContractorDone)}<span>הצעת מחיר קבלן:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'contractor_quote_status', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateField('${d.id}', 'contractor_quote_status', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="no" ${tr.contractor_quote_status === 'no' || !tr.contractor_quote_status ? 'selected' : ''}>לא</option>
                                             <option value="yes" ${tr.contractor_quote_status === 'yes' ? 'selected' : ''}>כן</option>
                                         </select>
-                                        <input type="number" placeholder="סכום ($)" value="${tr.contractor_quote_amount || ''}" oninput="updateField('${d.id}', 'contractor_quote_amount', this.value)" class="bg-gray-900 border border-gray-700 text-amber-300 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="סכום ($)" value="${tr.contractor_quote_amount || ''}" oninput="updateField('${d.id}', 'contractor_quote_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-amber-300 rounded-lg px-2 py-1 text-xs font-bold">
                                     </div>
                                 </div>
 
@@ -676,12 +684,12 @@
                                         ${renderV(isStatusDone)}<span>סטטוס העסקה:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'deal_status', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateField('${d.id}', 'deal_status', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="under_review" ${tr.deal_status === 'under_review' || !tr.deal_status ? 'selected' : ''}>בבדיקה</option>
                                             <option value="negotiating_new_price" ${tr.deal_status === 'negotiating_new_price' ? 'selected' : ''}>מו"מ מחיר חדש</option>
                                             <option value="awaiting_client" ${tr.deal_status === 'awaiting_client' ? 'selected' : ''}>ממתין ללקוח</option>
                                         </select>
-                                        <input type="number" placeholder="מחיר מו"מ ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value)" class="bg-gray-900 border border-gray-700 text-purple-300 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="מחיר מו"מ ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-purple-300 rounded-lg px-2 py-1 text-xs font-bold">
                                     </div>
                                 </div>
 
@@ -690,12 +698,12 @@
                                         ${renderV(isClosedDone)}<span>סגירת עסקה:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'deal_closed', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateField('${d.id}', 'deal_closed', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="" ${!tr.deal_closed ? 'selected' : ''}>-- בחר סטטוס --</option>
                                             <option value="not_closed" ${tr.deal_closed === 'not_closed' ? 'selected' : ''}>לא נסגרה</option>
                                             <option value="closed" ${tr.deal_closed === 'closed' ? 'selected' : ''}>נסגרה עסקה</option>
                                         </select>
-                                        <input type="number" placeholder="מחיר סגירה ($)" value="${tr.final_closing_price || ''}" oninput="updateField('${d.id}', 'final_closing_price', this.value)" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="מחיר סגירה ($)" value="${tr.final_closing_price || ''}" oninput="updateField('${d.id}', 'final_closing_price', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1 text-xs font-bold">
                                     </div>
                                 </div>
                             </div>
