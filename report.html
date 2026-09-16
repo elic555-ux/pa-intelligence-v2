@@ -18,14 +18,17 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
 
         /* ========================================================
-           מצב הדפסה (Light Mode) שמופעל רק בעת יצירת ה-PDF
+           מצב הדפסה (Light Mode & Fixed Width) 
            ======================================================== */
         .pdf-export-mode { background-color: #ffffff !important; color: #111827 !important; }
+        /* קיבוע רוחב לפני הצילום כדי למנוע מעיכת טבלאות וטקסט חופף */
+        .pdf-export-mode #report-printable-area { width: 1100px !important; max-width: 1100px !important; margin: 0 auto !important; }
+        
         .pdf-export-mode .bg-gray-900, .pdf-export-mode .bg-gray-950 { background-color: #ffffff !important; }
         .pdf-export-mode .border-gray-800, .pdf-export-mode .border-gray-700 { border-color: #e5e7eb !important; border-width: 1px !important; }
         .pdf-export-mode .text-white, .pdf-export-mode .text-gray-100, .pdf-export-mode .text-gray-200, .pdf-export-mode .text-gray-300, .pdf-export-mode .text-gray-400 { color: #111827 !important; }
         
-        /* התאמת צבעים בולטים שיהיו קריאים על רקע לבן */
+        /* צבעים מותאמים לרקע לבן */
         .pdf-export-mode .text-emerald-400 { color: #059669 !important; }
         .pdf-export-mode .text-amber-400 { color: #d97706 !important; }
         .pdf-export-mode .text-blue-400 { color: #2563eb !important; }
@@ -34,7 +37,6 @@
         .pdf-export-mode .text-teal-400 { color: #0d9488 !important; }
         .pdf-export-mode .text-indigo-400 { color: #4f46e5 !important; }
         
-        /* התאמת קופסאות רקע ומדדים */
         .pdf-export-mode .bg-emerald-950\/40, .pdf-export-mode .bg-emerald-950\/20, .pdf-export-mode .bg-emerald-500\/20 { background-color: #d1fae5 !important; border-color: #34d399 !important; color: #065f46 !important; }
         .pdf-export-mode .text-emerald-300 { color: #065f46 !important; }
         
@@ -49,9 +51,11 @@
         
         .pdf-export-mode .bg-gray-800 { background-color: #f3f4f6 !important; color: #374151 !important; border-color: #e5e7eb !important; }
 
-        /* הסתרת כפתורי העלאה בהדפסה */
         .pdf-export-mode label.cursor-pointer { display: none !important; }
         .pdf-export-mode input { background-color: transparent !important; color: #111827 !important; border: none !important; font-weight: bold; }
+        
+        /* הסרת גלילת צד לטבלאות בהדפסה */
+        .pdf-export-mode .overflow-x-auto { overflow: visible !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased p-4 sm:p-8">
@@ -87,7 +91,7 @@
     <!-- Main Printable Container -->
     <main id="report-printable-area" class="max-w-6xl w-full mx-auto space-y-6 flex-1 pb-10">
         
-        <!-- Tabs Bar (מוסתר אוטומטית בהדפסה) -->
+        <!-- Tabs Bar -->
         <div id="tabs-bar" class="flex border-b border-gray-800 gap-3 text-sm font-bold pb-3 overflow-x-auto">
             <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2">
                 <i data-lucide="layout-grid" class="w-5 h-5"></i> Overview & Scores
@@ -307,7 +311,7 @@
                         <div class="flex justify-between"><span>מס רכישה (Transfer Tax ~1% בממוצע לקונה):</span><span class="font-mono text-gray-200" id="cc-tax">$--</span></div>
                         <div class="flex justify-between"><span>חברת טייטל ועורכי דין (Title & Escrow):</span><span class="font-mono text-gray-200" id="cc-title">$--</span></div>
                         <div class="flex justify-between"><span>אגרות רישום וביטוח ראשוני (Recording & Ins):</span><span class="font-mono text-gray-200" id="cc-misc">$--</span></div>
-                        <p class="text-[10px] text-gray-500 mt-2 italic">* עמלת תיווך ממוצעת בארה"ב משולמת בדרך כלל על ידי המוכר ולא נכללת כאן.</p>
+                        <p class="text-[10px] text-gray-500 mt-2 italic">* עמלת תיווך ממוצעת בארה"ב (Broker Fee) משולמת בדרך כלל על ידי המוכר ולא נכללת כאן, למעט במקרים של עמלת סיטונאי (Wholesale Fee) שיש להוסיף למחיר הרכישה.</p>
                     </div>
                 </div>
 
@@ -658,7 +662,7 @@
         }
 
         // ==========================================
-        // פונקציית שמירת ה-PDF עם עיצוב בהיר להדפסה
+        // פונקציית שמירת ה-PDF עם עיצוב בהיר ורוחב מקובע
         // ==========================================
         function downloadReportPDF() {
             const element = document.getElementById('report-printable-area');
@@ -675,20 +679,19 @@
             document.getElementById('tab-rehab').classList.remove('hidden');
             document.getElementById('tabs-bar').classList.add('hidden');
 
-            // הוספת קלאס המעביר את הדף למצב בהיר המותאם להדפסה
             document.body.classList.add('pdf-export-mode');
 
             const opt = {
                 margin:       [10, 10, 10, 10],
                 filename:     `Deal_Report_${(currentDeal?.address || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' }, // רקע לבן לצילום
+                // windowWidth: 1200 מכריח את הצילום להיות רחב לפני שהוא מתכווץ ל-A4
+                html2canvas:  { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', windowWidth: 1200 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             setTimeout(() => {
                 html2pdf().set(opt).from(element).save().then(() => {
-                    // כיבוי מצב ההדפסה והחזרת העיצוב הכהה הרגיל
                     document.body.classList.remove('pdf-export-mode');
                     document.getElementById('tabs-bar').classList.remove('hidden');
                     switchTab('tab-overview'); 
