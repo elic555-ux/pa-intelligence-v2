@@ -78,7 +78,7 @@
                     <span id="archive-badge-count" class="px-2 py-0.5 bg-gray-950 rounded-full text-amber-400 font-mono text-[10px] font-black border border-gray-600">0</span>
                 </button>
 
-                <!-- כפתור לסורק - פותח באותה לשונית של הסורק בלי לסגור את החלון הנוכחי -->
+                <!-- הקישור לסורק -->
                 <a href="index.html" target="scanner_window" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>לסורק הראשי</span>
@@ -90,10 +90,10 @@
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
-        <!-- Top Metrics -->
+        <!-- Top Metrics / Smart Filters -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <!-- קובייה לחיצה - מחזירה אותך לצנרת אם אתה בארכיון -->
-            <div onclick="showActiveDeals()" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition shadow-lg hover:bg-gray-900">
+            <!-- כפתור סינון עסקאות פעילות (מאפס סינון) -->
+            <div onclick="setFilter('all'); showActiveDeals();" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition shadow-lg hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות פעילות בצנרת</span>
                     <span class="text-2xl font-black text-amber-400" id="deals-total-count">0</span>
@@ -101,7 +101,8 @@
                 <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400"><i data-lucide="building-2" class="w-6 h-6"></i></div>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
+            <!-- כפתור סינון הצעות מחיר -->
+            <div onclick="setFilter('offered')" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-blue-500/40 transition shadow-lg hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">הוגשו הצעות מחיר</span>
                     <span class="text-2xl font-black text-blue-400" id="deals-offered-count">0</span>
@@ -109,7 +110,8 @@
                 <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400"><i data-lucide="send" class="w-6 h-6"></i></div>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
+            <!-- כפתור סינון עסקאות סגורות -->
+            <div onclick="setFilter('closed')" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-purple-500/40 transition shadow-lg hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות שנסגרו</span>
                     <span class="text-2xl font-black text-purple-400" id="deals-closed-count">0</span>
@@ -117,6 +119,7 @@
                 <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
             </div>
 
+            <!-- דוחות שמורים -->
             <div onclick="openSavedReportsModal()" class="bg-gray-900/80 border border-emerald-500/30 hover:border-emerald-400 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-lg hover:shadow-emerald-950/40 hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-300 block mb-1 flex items-center gap-1">
@@ -291,7 +294,8 @@
         let savedInspectionReports = [];
         let mapInstance = null;
         let isMapView = false;
-        let isArchiveView = false; // משתנה למעקב אחר מצב ארכיון
+        let isArchiveView = false;
+        let currentFilter = 'all'; // משתנה לסינון הנכסים במסך
 
         const CITY_COST_MULTIPLIER = { "Pittsburgh": 1.15, "Homestead": 1.15, "Philadelphia": 1.25, "Allentown": 1.12 };
         const REHAB_PRICE_CATALOG = {
@@ -307,14 +311,31 @@
             updateItemPricingDetails();
         }
 
-        // --- פונקציות ארכיון (חדש ומתוקן) ---
+        // --- פונקציות ארכיון וסינון ---
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            const title = document.getElementById('view-title');
+            
+            if (currentFilter === 'offered') {
+                title.innerHTML = `<i data-lucide="send" class="w-5 h-5 text-blue-400"></i> עסקאות עם הצעת מחיר`;
+            } else if (currentFilter === 'closed') {
+                title.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 text-purple-400"></i> עסקאות שנסגרו`;
+            } else {
+                title.innerHTML = isArchiveView 
+                    ? `<i data-lucide="archive" class="w-5 h-5 text-amber-400"></i> ארכיון עסקאות`
+                    : `<i data-lucide="list-checks" class="w-5 h-5 text-amber-400"></i> רשימת עסקאות בצנרת`;
+            }
+            renderDeals();
+            lucide.createIcons();
+        }
+
         function toggleArchiveView() {
             isArchiveView = !isArchiveView;
+            currentFilter = 'all'; // איפוס סינון בכניסה/יציאה מארכיון
             const btn = document.getElementById('btn-toggle-archive');
             const title = document.getElementById('view-title');
             
             if (isArchiveView) {
-                // שינוי לכפתור סגירה ברור בצבע אדום כשנמצאים בארכיון
                 btn.className = "flex items-center gap-1.5 px-3.5 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition relative";
                 btn.innerHTML = `
                     <i data-lucide="x-circle" class="w-4 h-4"></i>
@@ -323,7 +344,6 @@
                 `;
                 title.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-amber-400"></i> ארכיון עסקאות`;
             } else {
-                // חזרה לכפתור ארכיון רגיל
                 btn.className = "flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition relative";
                 btn.innerHTML = `
                     <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
@@ -336,10 +356,11 @@
             lucide.createIcons();
         }
 
-        // פונקציה שמחזירה אותנו מיד למצב פעיל כשלוחצים על הקובייה למעלה
         function showActiveDeals() {
             if (isArchiveView) {
                 toggleArchiveView();
+            } else {
+                setFilter('all');
             }
         }
 
@@ -502,18 +523,10 @@
             resBox.innerHTML = `<strong>תוצאת בקרת הצעת קבלן:</strong> ההצעה בסך $${total.toLocaleString()} נבדקה בהצלחה מול מחירי השוק בפנסילבניה ונמצאה בטווח סביר.`;
         }
 
-        function handleStandaloneInspectionUpload(event) {
-            alert("קובץ הדוח נסרק בהצלחה! תוכל לצפות בדוח המלא.");
-        }
+        function handleStandaloneInspectionUpload(event) { alert("קובץ הדוח נסרק בהצלחה! תוכל לצפות בדוח המלא."); }
+        function triggerDetailedReportModal() { alert("פתח דוח מפורט זמין דרך כרטיסיות הצנרת."); }
 
-        function triggerDetailedReportModal() {
-            alert("פתח דוח מפורט זמין דרך כרטיסיות הצנרת.");
-        }
-        // -----------------------------------------------------------
-
-        function renderV(isDone) {
-            return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`;
-        }
+        function renderV(isDone) { return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`; }
 
         // --- שדות הקלדה ואוטומציה ---
         function updateField(id, key, value, redraw = false) {
@@ -532,7 +545,7 @@
             if (deal) {
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[toggleKey] = value;
-                if (value === 'no') deal.tracker[amountKey] = ''; // איפוס הסכום כשמעבירים ל"לא"
+                if (value === 'no') deal.tracker[amountKey] = ''; 
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
@@ -544,7 +557,7 @@
             if(deal) {
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[toggleKey] = value;
-                if(value === 'under_review') deal.tracker[amountKey] = ''; // איפוס
+                if(value === 'under_review') deal.tracker[amountKey] = '';
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
@@ -556,7 +569,7 @@
             if(deal) {
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[toggleKey] = value;
-                if(value === 'not_closed' || value === '') deal.tracker[amountKey] = ''; // איפוס
+                if(value === 'not_closed' || value === '') deal.tracker[amountKey] = '';
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
@@ -577,7 +590,7 @@
             }
         }
 
-        // --- הצעות מחיר מרובות מקבלנים (תוקן והוחזר) ---
+        // --- הצעות מחיר מרובות מקבלנים ---
         function updateContractorStatus(id, value) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
@@ -588,7 +601,7 @@
                         deal.tracker.contractors = [{name: '', amount: ''}];
                     }
                 } else {
-                    deal.tracker.contractors = []; // מוחק את כל הקבלנים אם סומן "לא"
+                    deal.tracker.contractors = []; 
                 }
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
@@ -685,10 +698,23 @@
         function renderDeals() {
             const container = document.getElementById('pipeline-deals-grid');
             if (!container) return;
-            const displayList = pipelineDeals.filter(d => isArchiveView ? d.is_archived : !d.is_archived);
+            
+            // סינון חכם לפי הכפתור שנלחץ למעלה
+            let baseList = pipelineDeals.filter(d => isArchiveView ? d.is_archived : !d.is_archived);
+            let displayList = baseList;
+
+            if (currentFilter === 'offered') {
+                displayList = baseList.filter(d => d.tracker?.offer_made === 'yes');
+            } else if (currentFilter === 'closed') {
+                displayList = baseList.filter(d => d.tracker?.deal_closed === 'closed');
+            }
 
             if (displayList.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-16 text-gray-400 font-bold">${isArchiveView ? 'אין עסקאות בארכיון.' : 'אין עסקאות פעילות בצנרת. הוסף מהסורק הראשי.'}</div>`;
+                let msg = 'אין עסקאות פעילות בצנרת.';
+                if (isArchiveView) msg = 'אין עסקאות בארכיון.';
+                if (currentFilter === 'offered') msg = 'לא נמצאו עסקאות שהוגשה עבורן הצעת מחיר.';
+                if (currentFilter === 'closed') msg = 'לא נמצאו עסקאות שנסגרו בהצלחה.';
+                container.innerHTML = `<div class="col-span-full text-center py-16 text-gray-400 font-bold">${msg}</div>`;
                 return;
             }
 
@@ -747,6 +773,7 @@
                                 <span>פתח דוח AI מורחב (Deal Dossier)</span>
                             </button>
 
+                            <!-- מעקב צנרת -->
                             <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
                                     <label class="block font-extrabold text-gray-100 mb-2 flex items-center gap-2">
