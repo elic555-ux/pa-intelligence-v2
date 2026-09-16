@@ -92,7 +92,8 @@
         
         <!-- Top Metrics -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
+            <!-- קובייה לחיצה - מחזירה אותך לצנרת אם אתה בארכיון -->
+            <div onclick="showActiveDeals()" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition shadow-lg hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות פעילות בצנרת</span>
                     <span class="text-2xl font-black text-amber-400" id="deals-total-count">0</span>
@@ -116,7 +117,7 @@
                 <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
             </div>
 
-            <div onclick="openSavedReportsModal()" class="bg-gray-900/80 border border-emerald-500/30 hover:border-emerald-400 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-lg hover:shadow-emerald-950/40">
+            <div onclick="openSavedReportsModal()" class="bg-gray-900/80 border border-emerald-500/30 hover:border-emerald-400 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-lg hover:shadow-emerald-950/40 hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-300 block mb-1 flex items-center gap-1">
                         דוחות בודק שנשמרו
@@ -175,7 +176,7 @@
                 <button onclick="closeGeneralPriceCatalogModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- הטאבים שתוקנו להציג את הצבעים הנכונים בלחיצה -->
+            <!-- הטאבים -->
             <div class="flex border-b border-gray-800 gap-2 text-xs font-bold pb-2 overflow-x-auto">
                 <button onclick="switchGeneralModalTab('tab-gen-inspector')" id="btn-gen-tab-inspector" class="px-3.5 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 shrink-0">
                     🔍 בדיקת דוח בודק (PDF)
@@ -306,21 +307,40 @@
             updateItemPricingDetails();
         }
 
-        // --- פונקציות ארכיון ---
+        // --- פונקציות ארכיון (חדש ומתוקן) ---
         function toggleArchiveView() {
             isArchiveView = !isArchiveView;
-            const btnText = document.getElementById('archive-btn-text');
+            const btn = document.getElementById('btn-toggle-archive');
             const title = document.getElementById('view-title');
             
             if (isArchiveView) {
-                btnText.textContent = "חזור לצנרת";
+                // שינוי לכפתור סגירה ברור בצבע אדום כשנמצאים בארכיון
+                btn.className = "flex items-center gap-1.5 px-3.5 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition relative";
+                btn.innerHTML = `
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                    <span id="archive-btn-text">סגור ארכיון</span>
+                    <span id="archive-badge-count" class="px-2 py-0.5 bg-gray-950 rounded-full text-rose-400 font-mono text-[10px] font-black border border-gray-600">${pipelineDeals.filter(d=>d.is_archived).length}</span>
+                `;
                 title.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-amber-400"></i> ארכיון עסקאות`;
             } else {
-                btnText.textContent = "ארכיון";
+                // חזרה לכפתור ארכיון רגיל
+                btn.className = "flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition relative";
+                btn.innerHTML = `
+                    <i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>
+                    <span id="archive-btn-text">ארכיון</span>
+                    <span id="archive-badge-count" class="px-2 py-0.5 bg-gray-950 rounded-full text-amber-400 font-mono text-[10px] font-black border border-gray-600">${pipelineDeals.filter(d=>d.is_archived).length}</span>
+                `;
                 title.innerHTML = `<i data-lucide="list-checks" class="w-5 h-5 text-amber-400"></i> רשימת עסקאות בצנרת`;
             }
             renderDeals();
             lucide.createIcons();
+        }
+
+        // פונקציה שמחזירה אותנו מיד למצב פעיל כשלוחצים על הקובייה למעלה
+        function showActiveDeals() {
+            if (isArchiveView) {
+                toggleArchiveView();
+            }
         }
 
         function archiveDeal(id) {
@@ -403,7 +423,7 @@
         function deleteSavedReport(idx) { savedInspectionReports.splice(idx, 1); localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(savedInspectionReports)); loadSavedReports(); }
         function clearSavedReports() { if (confirm("למחוק את כל הדוחות השמורים?")) { savedInspectionReports = []; localStorage.setItem('pa_saved_inspection_reports', JSON.stringify([])); loadSavedReports(); } }
 
-        // --- פונקציות בקרת שיפוצים (תוקנו הטאבים) ---
+        // --- פונקציות בקרת שיפוצים ---
         function openGeneralPriceCatalogModal() { document.getElementById('general-price-catalog-modal').classList.remove('hidden'); switchGeneralModalTab('tab-gen-inspector'); }
         function closeGeneralPriceCatalogModal() { document.getElementById('general-price-catalog-modal').classList.add('hidden'); }
         function switchGeneralModalTab(tabId) {
@@ -482,12 +502,20 @@
             resBox.innerHTML = `<strong>תוצאת בקרת הצעת קבלן:</strong> ההצעה בסך $${total.toLocaleString()} נבדקה בהצלחה מול מחירי השוק בפנסילבניה ונמצאה בטווח סביר.`;
         }
 
-        function handleStandaloneInspectionUpload(event) { alert("קובץ הדוח נסרק בהצלחה! תוכל לצפות בדוח המלא."); }
-        function triggerDetailedReportModal() { alert("פתח דוח מפורט זמין דרך כרטיסיות הצנרת."); }
+        function handleStandaloneInspectionUpload(event) {
+            alert("קובץ הדוח נסרק בהצלחה! תוכל לצפות בדוח המלא.");
+        }
 
-        function renderV(isDone) { return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`; }
+        function triggerDetailedReportModal() {
+            alert("פתח דוח מפורט זמין דרך כרטיסיות הצנרת.");
+        }
+        // -----------------------------------------------------------
 
-        // --- עדכון שדות בכרטיסייה בלי לרענן מסך ---
+        function renderV(isDone) {
+            return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`;
+        }
+
+        // --- שדות הקלדה ואוטומציה ---
         function updateField(id, key, value, redraw = false) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
@@ -549,7 +577,7 @@
             }
         }
 
-        // --- הצעות מחיר מרובות מקבלנים ---
+        // --- הצעות מחיר מרובות מקבלנים (תוקן והוחזר) ---
         function updateContractorStatus(id, value) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
@@ -602,7 +630,6 @@
             }
         }
 
-        // בניית רשימת הצעות הקבלנים (עד 3)
         function renderContractorsList(dealId, contractors = []) {
             if (!Array.isArray(contractors) || contractors.length === 0) {
                 contractors = [{name: '', amount: ''}];
@@ -621,7 +648,6 @@
                 html += `<button onclick="addContractor('${dealId}')" class="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 mt-1"><i data-lucide="plus" class="w-3 h-3"></i> הוסף הצעת קבלן נוספת (עד 3)</button>`;
             }
             
-            // מציג את ההצעה הזולה ביותר אם יש יותר מאחת
             const amounts = contractors.map(c => Number(c.amount)).filter(a => a > 0);
             if (amounts.length > 1) {
                 const minAmount = Math.min(...amounts);
@@ -640,7 +666,9 @@
             }
         }
 
-        function openExpandedReport(dealId) { window.open(`report.html?id=${dealId}`, '_blank'); }
+        function openExpandedReport(dealId) {
+            window.open(`report.html?id=${dealId}`, '_blank');
+        }
 
         function calculateAccurateRehab(deal) {
             const tr = deal.tracker || {};
@@ -719,7 +747,6 @@
                                 <span>פתח דוח AI מורחב (Deal Dossier)</span>
                             </button>
 
-                            <!-- מעקב צנרת עם מספרים כתומים -->
                             <div class="space-y-2 pt-2 border-t border-gray-800 text-sm">
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
                                     <label class="block font-extrabold text-gray-100 mb-2 flex items-center gap-2">
@@ -790,7 +817,6 @@
                                     </select>
                                 </div>
 
-                                <!-- תפריט הקבלנים מרובה הצעות -->
                                 <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
                                     <div class="flex justify-between items-center">
                                         <label class="block font-extrabold text-gray-100 flex items-center gap-2">
