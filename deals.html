@@ -78,7 +78,6 @@
                     <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
                 </button>
 
-                <!-- כפתור מעודכן לחזרה לסורק - נפתח באותה לשונית ייעודית ולא סוגר את הצנרת -->
                 <a href="index.html" target="scanner_window" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>לסורק הראשי</span>
@@ -308,7 +307,7 @@
             updateItemPricingDetails();
         }
 
-        // פונקציית עזר שמעדכנת רק את המספרים העליונים בלי לרענן את כל המסך
+        // עדכון סטטיסטיקות בלי לרענן את כל המסך
         function updateDashboardCounters() {
             const active = pipelineDeals.filter(d => !d.is_archived);
             document.getElementById('deals-total-count').textContent = active.length;
@@ -336,10 +335,8 @@
                 return;
             }
             grid.innerHTML = savedInspectionReports.map((rep, idx) => {
-                // חיפוש ה-ID של הנכס כדי שנוכל לפתוח אותו
                 const match = pipelineDeals.find(d => d.address === rep.address);
                 const dealIdParam = match ? match.id : '';
-                
                 return `
                     <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2 flex flex-col justify-between">
                         <div>
@@ -360,44 +357,18 @@
             lucide.createIcons();
         }
 
-        function openSavedReportsModal() {
-            loadSavedReports();
-            document.getElementById('saved-reports-modal').classList.remove('hidden');
-        }
-
-        function closeSavedReportsModal() {
-            document.getElementById('saved-reports-modal').classList.add('hidden');
-        }
-
-        function deleteSavedReport(idx) {
-            savedInspectionReports.splice(idx, 1);
-            localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(savedInspectionReports));
-            loadSavedReports();
-        }
-
-        function clearSavedReports() {
-            if (confirm("למחוק את כל הדוחות השמורים?")) {
-                savedInspectionReports = [];
-                localStorage.setItem('pa_saved_inspection_reports', JSON.stringify([]));
-                loadSavedReports();
-            }
-        }
+        function openSavedReportsModal() { loadSavedReports(); document.getElementById('saved-reports-modal').classList.remove('hidden'); }
+        function closeSavedReportsModal() { document.getElementById('saved-reports-modal').classList.add('hidden'); }
+        function deleteSavedReport(idx) { savedInspectionReports.splice(idx, 1); localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(savedInspectionReports)); loadSavedReports(); }
+        function clearSavedReports() { if (confirm("למחוק את כל הדוחות השמורים?")) { savedInspectionReports = []; localStorage.setItem('pa_saved_inspection_reports', JSON.stringify([])); loadSavedReports(); } }
 
         // --- פונקציות בקרת שיפוצים ---
-        function openGeneralPriceCatalogModal() {
-            document.getElementById('general-price-catalog-modal').classList.remove('hidden');
-            switchGeneralModalTab('tab-gen-inspector');
-        }
-
-        function closeGeneralPriceCatalogModal() {
-            document.getElementById('general-price-catalog-modal').classList.add('hidden');
-        }
-
+        function openGeneralPriceCatalogModal() { document.getElementById('general-price-catalog-modal').classList.remove('hidden'); switchGeneralModalTab('tab-gen-inspector'); }
+        function closeGeneralPriceCatalogModal() { document.getElementById('general-price-catalog-modal').classList.add('hidden'); }
         function switchGeneralModalTab(tabId) {
             document.getElementById('tab-gen-inspector').classList.toggle('hidden', tabId !== 'tab-gen-inspector');
             document.getElementById('tab-gen-catalog').classList.toggle('hidden', tabId !== 'tab-gen-catalog');
             document.getElementById('tab-gen-audit').classList.toggle('hidden', tabId !== 'tab-gen-audit');
-
             document.getElementById('btn-gen-tab-inspector').className = tabId === 'tab-gen-inspector' ? "px-3.5 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 shrink-0" : "px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0";
             document.getElementById('btn-gen-tab-catalog').className = tabId === 'tab-gen-catalog' ? "px-3.5 py-1.5 rounded-lg bg-amber-600/20 text-amber-300 border border-amber-500/30 shrink-0" : "px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0";
             document.getElementById('btn-gen-tab-audit').className = tabId === 'tab-gen-audit' ? "px-3.5 py-1.5 rounded-lg bg-amber-600/20 text-amber-300 border border-amber-500/30 shrink-0" : "px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0";
@@ -408,12 +379,10 @@
             const city = document.getElementById('rehab-city-select')?.value || 'Pittsburgh';
             const box = document.getElementById('item-pricing-details');
             if (!select || !box) return;
-
             const item = REHAB_PRICE_CATALOG[select.value] || REHAB_PRICE_CATALOG.roof_full;
             const mult = CITY_COST_MULTIPLIER[city] || 1.15;
             const adjMin = Math.round(item.baseMin * mult);
             const adjMax = Math.round(item.baseMax * mult);
-
             box.innerHTML = `
                 <div class="flex justify-between items-start border-b border-gray-800 pb-2">
                     <div>
@@ -439,15 +408,12 @@
             const city = document.getElementById('rehab-city-select')?.value || 'Pittsburgh';
             const box = document.getElementById('item-pricing-details');
             if (!query || !box) return;
-
             const mult = CITY_COST_MULTIPLIER[city] || 1.15;
             let estMin = 450, estMax = 1200;
             if (query.includes('אסלה')) { estMin = 220; estMax = 480; }
             else if (query.includes('ברז')) { estMin = 150; estMax = 320; }
-
             const adjMin = Math.round(estMin * mult);
             const adjMax = Math.round(estMax * mult);
-
             box.innerHTML = `
                 <div class="flex justify-between items-start border-b border-gray-800 pb-2">
                     <div>
@@ -469,20 +435,9 @@
             resBox.innerHTML = `<strong>תוצאת בקרת הצעת קבלן:</strong> ההצעה בסך $${total.toLocaleString()} נבדקה בהצלחה מול מחירי השוק בפנסילבניה ונמצאה בטווח סביר.`;
         }
 
-        function handleStandaloneInspectionUpload(event) {
-            alert("קובץ הדוח נסרק בהצלחה! תוכל לצפות בדוח המלא.");
-        }
+        function renderV(isDone) { return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`; }
 
-        function triggerDetailedReportModal() {
-            alert("פתח דוח מפורט זמין דרך כרטיסיות הצנרת.");
-        }
-        // -----------------------------------------------------------
-
-        function renderV(isDone) {
-            return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`;
-        }
-
-        // פונקציה חדשה ששומרת נתונים בשקט ולא מקפיצה את המסך החוצה
+        // הפונקציה לשמירת הקלדות חופשיות בלי לקפוץ במסך
         function updateField(id, key, value, redraw = false) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
@@ -491,6 +446,43 @@
                 localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 if (redraw) renderDeals();
+            }
+        }
+
+        // פונקציות לאיפוס אוטומטי של שדות מספר ברגע שבוחרים "לא" ב-Select
+        function updateYesNoField(id, toggleKey, amountKey, value) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            if (deal) {
+                if (!deal.tracker) deal.tracker = {};
+                deal.tracker[toggleKey] = value;
+                if (value === 'no') deal.tracker[amountKey] = ''; 
+                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                updateDashboardCounters();
+                renderDeals();
+            }
+        }
+
+        function updateStatusField(id, toggleKey, amountKey, value) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            if(deal) {
+                if (!deal.tracker) deal.tracker = {};
+                deal.tracker[toggleKey] = value;
+                if(value === 'under_review') deal.tracker[amountKey] = '';
+                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                updateDashboardCounters();
+                renderDeals();
+            }
+        }
+
+        function updateClosedField(id, toggleKey, amountKey, value) {
+            const deal = pipelineDeals.find(d => String(d.id) === String(id));
+            if(deal) {
+                if (!deal.tracker) deal.tracker = {};
+                deal.tracker[toggleKey] = value;
+                if(value === 'not_closed' || value === '') deal.tracker[amountKey] = ''; 
+                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
+                updateDashboardCounters();
+                renderDeals();
             }
         }
 
@@ -517,9 +509,7 @@
             }
         }
 
-        function openExpandedReport(dealId) {
-            window.open(`report.html?id=${dealId}`, '_blank');
-        }
+        function openExpandedReport(dealId) { window.open(`report.html?id=${dealId}`, '_blank'); }
 
         function calculateAccurateRehab(deal) {
             const tr = deal.tracker || {};
@@ -528,12 +518,8 @@
             const cond = tr.condition || deal.condition || '';
             let minRehab = 0, maxRehab = 0, detectedItems = [];
 
-            if (text.includes('roof') || text.includes('גג') || text.includes('leak') || cond === 'leaks') {
-                minRehab += 6500; maxRehab += 9500; detectedItems.push("תיקון גג");
-            }
-            if (cond === 'full_gut' || text.includes('gut') || text.includes('rehab')) {
-                minRehab += Math.round(sqft * 42); maxRehab += Math.round(sqft * 58); detectedItems.push("שיפוץ מלא");
-            }
+            if (text.includes('roof') || text.includes('גג') || text.includes('leak') || cond === 'leaks') { minRehab += 6500; maxRehab += 9500; detectedItems.push("תיקון גג"); }
+            if (cond === 'full_gut' || text.includes('gut') || text.includes('rehab')) { minRehab += Math.round(sqft * 42); maxRehab += Math.round(sqft * 58); detectedItems.push("שיפוץ מלא"); }
             if (minRehab === 0) return { range: "$4,500 – $8,500", details: "תחזוקה וקוסמטיקה קלה" };
             return { range: `$${minRehab.toLocaleString()} – $${maxRehab.toLocaleString()}`, details: detectedItems.join(' + ') };
         }
@@ -635,11 +621,11 @@
                                         ${renderV(isOfferDone)}<span>הוגשה הצעה:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'offer_made', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateYesNoField('${d.id}', 'offer_made', 'offer_amount', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="no" ${tr.offer_made === 'no' || !tr.offer_made ? 'selected' : ''}>לא</option>
                                             <option value="yes" ${tr.offer_made === 'yes' ? 'selected' : ''}>כן</option>
                                         </select>
-                                        <input type="number" placeholder="סכום ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="סכום ($)" value="${tr.offer_amount || ''}" oninput="updateField('${d.id}', 'offer_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-amber-400 rounded-lg px-2 py-1 text-xs font-bold focus:border-amber-400 focus:outline-none">
                                     </div>
                                 </div>
 
@@ -648,11 +634,11 @@
                                         ${renderV(isEmdDone)}<span>הפקדת EMD:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'emd_deposited', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateYesNoField('${d.id}', 'emd_deposited', 'emd_amount', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="no" ${tr.emd_deposited === 'no' || !tr.emd_deposited ? 'selected' : ''}>לא</option>
                                             <option value="yes" ${tr.emd_deposited === 'yes' ? 'selected' : ''}>כן</option>
                                         </select>
-                                        <input type="number" placeholder="סכום ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-blue-300 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="סכום ($)" value="${tr.emd_amount || ''}" oninput="updateField('${d.id}', 'emd_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-amber-400 rounded-lg px-2 py-1 text-xs font-bold focus:border-amber-400 focus:outline-none">
                                     </div>
                                 </div>
 
@@ -671,11 +657,11 @@
                                         ${renderV(isContractorDone)}<span>הצעת מחיר קבלן:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'contractor_quote_status', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateYesNoField('${d.id}', 'contractor_quote_status', 'contractor_quote_amount', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="no" ${tr.contractor_quote_status === 'no' || !tr.contractor_quote_status ? 'selected' : ''}>לא</option>
                                             <option value="yes" ${tr.contractor_quote_status === 'yes' ? 'selected' : ''}>כן</option>
                                         </select>
-                                        <input type="number" placeholder="סכום ($)" value="${tr.contractor_quote_amount || ''}" oninput="updateField('${d.id}', 'contractor_quote_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-amber-300 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="סכום ($)" value="${tr.contractor_quote_amount || ''}" oninput="updateField('${d.id}', 'contractor_quote_amount', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-amber-400 rounded-lg px-2 py-1 text-xs font-bold focus:border-amber-400 focus:outline-none">
                                     </div>
                                 </div>
 
@@ -684,12 +670,12 @@
                                         ${renderV(isStatusDone)}<span>סטטוס העסקה:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'deal_status', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateStatusField('${d.id}', 'deal_status', 'negotiated_price', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="under_review" ${tr.deal_status === 'under_review' || !tr.deal_status ? 'selected' : ''}>בבדיקה</option>
                                             <option value="negotiating_new_price" ${tr.deal_status === 'negotiating_new_price' ? 'selected' : ''}>מו"מ מחיר חדש</option>
                                             <option value="awaiting_client" ${tr.deal_status === 'awaiting_client' ? 'selected' : ''}>ממתין ללקוח</option>
                                         </select>
-                                        <input type="number" placeholder="מחיר מו"מ ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-purple-300 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="מחיר מו"מ ($)" value="${tr.negotiated_price || ''}" oninput="updateField('${d.id}', 'negotiated_price', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-amber-400 rounded-lg px-2 py-1 text-xs font-bold focus:border-amber-400 focus:outline-none">
                                     </div>
                                 </div>
 
@@ -698,12 +684,12 @@
                                         ${renderV(isClosedDone)}<span>סגירת עסקה:</span>
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <select onchange="updateField('${d.id}', 'deal_closed', this.value, true)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
+                                        <select onchange="updateClosedField('${d.id}', 'deal_closed', 'final_closing_price', this.value)" class="bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold">
                                             <option value="" ${!tr.deal_closed ? 'selected' : ''}>-- בחר סטטוס --</option>
                                             <option value="not_closed" ${tr.deal_closed === 'not_closed' ? 'selected' : ''}>לא נסגרה</option>
                                             <option value="closed" ${tr.deal_closed === 'closed' ? 'selected' : ''}>נסגרה עסקה</option>
                                         </select>
-                                        <input type="number" placeholder="מחיר סגירה ($)" value="${tr.final_closing_price || ''}" oninput="updateField('${d.id}', 'final_closing_price', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-emerald-400 rounded-lg px-2 py-1 text-xs font-bold">
+                                        <input type="number" placeholder="מחיר סגירה ($)" value="${tr.final_closing_price || ''}" oninput="updateField('${d.id}', 'final_closing_price', this.value, false)" onblur="renderDeals()" class="bg-gray-900 border border-gray-700 text-amber-400 rounded-lg px-2 py-1 text-xs font-bold focus:border-amber-400 focus:outline-none">
                                     </div>
                                 </div>
                             </div>
