@@ -18,11 +18,13 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
 
         /* ========================================================
-           מצב הדפסה (Light Mode & Fixed Width) 
+           מצב הדפסה (Light Mode & A4 Fit) 
+           להקטין ולהתאים בדיוק למידות של דף מודפס
            ======================================================== */
-        .pdf-export-mode { background-color: #ffffff !important; color: #111827 !important; }
-        /* קיבוע רוחב לפני הצילום כדי למנוע מעיכת טבלאות וטקסט חופף */
-        .pdf-export-mode #report-printable-area { width: 1100px !important; max-width: 1100px !important; margin: 0 auto !important; }
+        .pdf-export-mode { background-color: #ffffff !important; color: #111827 !important; font-size: 13px !important; }
+        
+        /* קיבוע רוחב ל-A4 בפיקסלים כדי למנוע דריסת אלמנטים */
+        .pdf-export-mode #report-printable-area { width: 790px !important; max-width: 790px !important; margin: 0 auto !important; padding: 0 10px !important; }
         
         .pdf-export-mode .bg-gray-900, .pdf-export-mode .bg-gray-950 { background-color: #ffffff !important; }
         .pdf-export-mode .border-gray-800, .pdf-export-mode .border-gray-700 { border-color: #e5e7eb !important; border-width: 1px !important; }
@@ -37,25 +39,42 @@
         .pdf-export-mode .text-teal-400 { color: #0d9488 !important; }
         .pdf-export-mode .text-indigo-400 { color: #4f46e5 !important; }
         
+        /* הקטנת פונטים של כותרות וטקסטים בולטים כדי שלא יעלו אחד על השני */
+        .pdf-export-mode .text-4xl { font-size: 1.8rem !important; line-height: 1.2 !important; }
+        .pdf-export-mode .text-3xl { font-size: 1.5rem !important; line-height: 1.2 !important; }
+        .pdf-export-mode .text-2xl { font-size: 1.25rem !important; }
+        .pdf-export-mode .text-xl { font-size: 1.1rem !important; }
+        .pdf-export-mode .text-lg { font-size: 1rem !important; }
+        
+        /* הקטנת ריווחים כדי לחסוך מקום בדף */
+        .pdf-export-mode .p-7 { padding: 1.25rem !important; }
+        .pdf-export-mode .p-6 { padding: 1rem !important; }
+        .pdf-export-mode .p-4 { padding: 0.75rem !important; }
+        .pdf-export-mode .gap-6 { gap: 1rem !important; }
+        .pdf-export-mode .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.25rem !important; }
+        
+        /* הקטנת גובה התמונות כדי שלא יתפסו חצי דף */
+        .pdf-export-mode .h-80 { height: 14rem !important; }
+        
+        /* הקטנת טבלאות וביטול שורות ארוכות מדי שגורמות למעיכה */
+        .pdf-export-mode table { font-size: 10px !important; }
+        .pdf-export-mode th, .pdf-export-mode td { padding: 4px 6px !important; white-space: normal !important; word-break: break-word !important; }
+        .pdf-export-mode .whitespace-nowrap { white-space: normal !important; }
+
+        /* צבעי רקע מותאמים */
         .pdf-export-mode .bg-emerald-950\/40, .pdf-export-mode .bg-emerald-950\/20, .pdf-export-mode .bg-emerald-500\/20 { background-color: #d1fae5 !important; border-color: #34d399 !important; color: #065f46 !important; }
         .pdf-export-mode .text-emerald-300 { color: #065f46 !important; }
-        
         .pdf-export-mode .bg-blue-950\/40, .pdf-export-mode .bg-blue-950\/20, .pdf-export-mode .bg-blue-500\/20, .pdf-export-mode .bg-blue-950\/30 { background-color: #dbeafe !important; border-color: #93c5fd !important; color: #1e3a8a !important; }
         .pdf-export-mode .text-blue-300 { color: #1e3a8a !important; }
-
         .pdf-export-mode .bg-amber-500\/20 { background-color: #fef3c7 !important; border-color: #fcd34d !important; color: #92400e !important; }
         .pdf-export-mode .text-amber-300 { color: #92400e !important; }
-
         .pdf-export-mode .bg-rose-500\/20, .pdf-export-mode .bg-rose-950\/20 { background-color: #ffe4e6 !important; border-color: #fda4af !important; color: #9f1239 !important; }
         .pdf-export-mode .text-rose-300 { color: #9f1239 !important; }
-        
         .pdf-export-mode .bg-gray-800 { background-color: #f3f4f6 !important; color: #374151 !important; border-color: #e5e7eb !important; }
 
+        /* הסתרת כפתורי העלאה בהדפסה */
         .pdf-export-mode label.cursor-pointer { display: none !important; }
-        .pdf-export-mode input { background-color: transparent !important; color: #111827 !important; border: none !important; font-weight: bold; }
-        
-        /* הסרת גלילת צד לטבלאות בהדפסה */
-        .pdf-export-mode .overflow-x-auto { overflow: visible !important; }
+        .pdf-export-mode input { background-color: transparent !important; color: #111827 !important; border: none !important; font-weight: bold; padding: 0 !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased p-4 sm:p-8">
@@ -311,7 +330,7 @@
                         <div class="flex justify-between"><span>מס רכישה (Transfer Tax ~1% בממוצע לקונה):</span><span class="font-mono text-gray-200" id="cc-tax">$--</span></div>
                         <div class="flex justify-between"><span>חברת טייטל ועורכי דין (Title & Escrow):</span><span class="font-mono text-gray-200" id="cc-title">$--</span></div>
                         <div class="flex justify-between"><span>אגרות רישום וביטוח ראשוני (Recording & Ins):</span><span class="font-mono text-gray-200" id="cc-misc">$--</span></div>
-                        <p class="text-[10px] text-gray-500 mt-2 italic">* עמלת תיווך ממוצעת בארה"ב (Broker Fee) משולמת בדרך כלל על ידי המוכר ולא נכללת כאן, למעט במקרים של עמלת סיטונאי (Wholesale Fee) שיש להוסיף למחיר הרכישה.</p>
+                        <p class="text-[10px] text-gray-500 mt-2 italic">* עמלת תיווך ממוצעת בארה"ב (Broker Fee) משולמת בדרך כלל על ידי המוכר ולא נכללת כאן.</p>
                     </div>
                 </div>
 
@@ -517,7 +536,7 @@
 
         </div>
 
-        <!-- TAB 3: Rehab AI (Vision) - DETAILED REPORT -->
+        <!-- TAB 3: Rehab AI (Vision) -->
         <div id="tab-rehab" class="space-y-6 hidden">
             
             <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
@@ -662,7 +681,7 @@
         }
 
         // ==========================================
-        // פונקציית שמירת ה-PDF עם עיצוב בהיר ורוחב מקובע
+        // פונקציית שמירת ה-PDF עם עיצוב בהיר ורוחב מותאם
         // ==========================================
         function downloadReportPDF() {
             const element = document.getElementById('report-printable-area');
@@ -682,11 +701,10 @@
             document.body.classList.add('pdf-export-mode');
 
             const opt = {
-                margin:       [10, 10, 10, 10],
+                margin:       [5, 5, 5, 5],
                 filename:     `Deal_Report_${(currentDeal?.address || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                // windowWidth: 1200 מכריח את הצילום להיות רחב לפני שהוא מתכווץ ל-A4
-                html2canvas:  { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', windowWidth: 1200 },
+                html2canvas:  { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
@@ -818,7 +836,6 @@
             roiEl.textContent = `${roi.toFixed(1)}%`;
             roiEl.className = roi >= 0 ? "text-lg font-black text-blue-400 font-mono" : "text-lg font-black text-rose-400 font-mono";
 
-            // עדכון הלוואות הבנקים לפי המחיר המעודכן
             document.getElementById('lender-1-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
             document.getElementById('lender-2-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
             document.getElementById('lender-3-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
