@@ -18,14 +18,16 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
 
         /* ========================================================
-           מצב הדפסה (Light Mode & A4 Fit) 
-           להקטין ולהתאים בדיוק למידות של דף מודפס
+           מצב הדפסה (Light Mode, A4 Scale & Page Break Fix) 
            ======================================================== */
-        .pdf-export-mode { background-color: #ffffff !important; color: #111827 !important; font-size: 13px !important; }
+        .pdf-export-mode { background-color: #ffffff !important; color: #111827 !important; }
         
-        /* קיבוע רוחב ל-A4 בפיקסלים כדי למנוע דריסת אלמנטים */
-        .pdf-export-mode #report-printable-area { width: 790px !important; max-width: 790px !important; margin: 0 auto !important; padding: 0 10px !important; }
+        /* אנו קובעים רוחב אידיאלי של 1000 פיקסלים. html2pdf יכווץ אותו אוטומטית ל-A4 */
+        .pdf-export-mode #report-printable-area { width: 1000px !important; max-width: 1000px !important; margin: 0 auto !important; padding: 20px !important; }
         
+        /* מניעת חיתוך אלמנטים באמצע דף */
+        .pdf-no-break { page-break-inside: avoid !important; break-inside: avoid !important; }
+
         .pdf-export-mode .bg-gray-900, .pdf-export-mode .bg-gray-950 { background-color: #ffffff !important; }
         .pdf-export-mode .border-gray-800, .pdf-export-mode .border-gray-700 { border-color: #e5e7eb !important; border-width: 1px !important; }
         .pdf-export-mode .text-white, .pdf-export-mode .text-gray-100, .pdf-export-mode .text-gray-200, .pdf-export-mode .text-gray-300, .pdf-export-mode .text-gray-400 { color: #111827 !important; }
@@ -39,29 +41,6 @@
         .pdf-export-mode .text-teal-400 { color: #0d9488 !important; }
         .pdf-export-mode .text-indigo-400 { color: #4f46e5 !important; }
         
-        /* הקטנת פונטים של כותרות וטקסטים בולטים כדי שלא יעלו אחד על השני */
-        .pdf-export-mode .text-4xl { font-size: 1.8rem !important; line-height: 1.2 !important; }
-        .pdf-export-mode .text-3xl { font-size: 1.5rem !important; line-height: 1.2 !important; }
-        .pdf-export-mode .text-2xl { font-size: 1.25rem !important; }
-        .pdf-export-mode .text-xl { font-size: 1.1rem !important; }
-        .pdf-export-mode .text-lg { font-size: 1rem !important; }
-        
-        /* הקטנת ריווחים כדי לחסוך מקום בדף */
-        .pdf-export-mode .p-7 { padding: 1.25rem !important; }
-        .pdf-export-mode .p-6 { padding: 1rem !important; }
-        .pdf-export-mode .p-4 { padding: 0.75rem !important; }
-        .pdf-export-mode .gap-6 { gap: 1rem !important; }
-        .pdf-export-mode .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.25rem !important; }
-        
-        /* הקטנת גובה התמונות כדי שלא יתפסו חצי דף */
-        .pdf-export-mode .h-80 { height: 14rem !important; }
-        
-        /* הקטנת טבלאות וביטול שורות ארוכות מדי שגורמות למעיכה */
-        .pdf-export-mode table { font-size: 10px !important; }
-        .pdf-export-mode th, .pdf-export-mode td { padding: 4px 6px !important; white-space: normal !important; word-break: break-word !important; }
-        .pdf-export-mode .whitespace-nowrap { white-space: normal !important; }
-
-        /* צבעי רקע מותאמים */
         .pdf-export-mode .bg-emerald-950\/40, .pdf-export-mode .bg-emerald-950\/20, .pdf-export-mode .bg-emerald-500\/20 { background-color: #d1fae5 !important; border-color: #34d399 !important; color: #065f46 !important; }
         .pdf-export-mode .text-emerald-300 { color: #065f46 !important; }
         .pdf-export-mode .bg-blue-950\/40, .pdf-export-mode .bg-blue-950\/20, .pdf-export-mode .bg-blue-500\/20, .pdf-export-mode .bg-blue-950\/30 { background-color: #dbeafe !important; border-color: #93c5fd !important; color: #1e3a8a !important; }
@@ -72,9 +51,9 @@
         .pdf-export-mode .text-rose-300 { color: #9f1239 !important; }
         .pdf-export-mode .bg-gray-800 { background-color: #f3f4f6 !important; color: #374151 !important; border-color: #e5e7eb !important; }
 
-        /* הסתרת כפתורי העלאה בהדפסה */
+        /* ביטול שדות העלאה בהדפסה */
         .pdf-export-mode label.cursor-pointer { display: none !important; }
-        .pdf-export-mode input { background-color: transparent !important; color: #111827 !important; border: none !important; font-weight: bold; padding: 0 !important; }
+        .pdf-export-mode input { background-color: transparent !important; color: #111827 !important; border: none !important; font-weight: bold; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased p-4 sm:p-8">
@@ -125,7 +104,7 @@
 
         <!-- TAB 1: Overview & Scores -->
         <div id="tab-overview" class="space-y-6">
-            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
+            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6 pdf-no-break">
                 
                 <!-- Investment Scores Bar -->
                 <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 flex flex-wrap items-center justify-between gap-4">
@@ -212,93 +191,91 @@
                     <div><span class="text-gray-400 block mb-1 font-bold">ימי שוק (DOM)</span><strong class="text-white text-base font-mono" id="rep-dom">--</strong></div>
                     <div><span class="text-gray-400 block mb-1 font-bold">מחיר למ"ר (PSF)</span><strong class="text-white text-base font-mono" id="rep-psf">--</strong></div>
                 </div>
+            </div>
 
-                <!-- AI Summary -->
-                <div>
-                    <h4 class="text-sm font-black text-blue-300 mb-2">תקציר אנליסט (AI Overview):</h4>
-                    <p class="text-base text-gray-100 leading-relaxed font-bold bg-gray-950 p-5 rounded-xl border border-gray-800" id="rep-summary">
-                        טוען נתוני אנליסט עבור הנכס...
-                    </p>
-                </div>
+            <!-- AI Summary - PDF Break Avoid -->
+            <div class="pdf-no-break">
+                <h4 class="text-sm font-black text-blue-300 mb-2">תקציר אנליסט (AI Overview):</h4>
+                <p class="text-base text-gray-100 leading-relaxed font-bold bg-gray-950 p-5 rounded-xl border border-gray-800" id="rep-summary">
+                    טוען נתוני אנליסט עבור הנכס...
+                </p>
+            </div>
 
-                <!-- Neighborhood Insights Section -->
-                <div class="space-y-4 pt-4 border-t border-gray-800">
-                    <h4 class="text-lg font-black text-white flex items-center gap-2">
-                        <i data-lucide="map-pin" class="w-5 h-5 text-emerald-400"></i> נתוני שכונה ואזור (Neighborhood Insights)
-                    </h4>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
-                            <i data-lucide="building" class="w-6 h-6 text-blue-400 mb-2"></i>
-                            <span class="text-xs text-gray-400 font-bold">עירייה / מחוז (Municipality)</span>
-                            <strong class="text-lg font-black text-white" id="neigh-muni">30th Ward - PITTSBURGH</strong>
-                        </div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
-                            <i data-lucide="map" class="w-6 h-6 text-blue-400 mb-2"></i>
-                            <span class="text-xs text-gray-400 font-bold">שכונה (Neighborhood)</span>
-                            <strong class="text-lg font-black text-white" id="neigh-name">Knoxville</strong>
-                        </div>
+            <!-- Neighborhood Insights Section -->
+            <div class="space-y-4 pt-4 border-t border-gray-800 pdf-no-break">
+                <h4 class="text-lg font-black text-white flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5 text-emerald-400"></i> נתוני שכונה ואזור (Neighborhood Insights)
+                </h4>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                        <i data-lucide="building" class="w-6 h-6 text-blue-400 mb-2"></i>
+                        <span class="text-xs text-gray-400 font-bold">עירייה / מחוז (Municipality)</span>
+                        <strong class="text-lg font-black text-white" id="neigh-muni">30th Ward - PITTSBURGH</strong>
                     </div>
-
-                    <h5 class="text-sm font-bold text-gray-400 mt-2">מדדי למ"ס אמריקאי (Census Data Metrics):</h5>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <div class="bg-blue-950/20 border-2 border-blue-500/40 rounded-xl p-4 flex flex-col items-center text-center">
-                            <span class="text-xs text-blue-300 font-bold mb-1">דירוג שכונה</span>
-                            <strong class="text-2xl font-black text-blue-400" id="neigh-class">C-</strong>
-                        </div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
-                            <span class="text-xs text-gray-400 font-bold mb-1">הכנסה חציונית</span>
-                            <strong class="text-xl font-black text-white font-mono" id="neigh-income">$50,686</strong>
-                        </div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
-                            <span class="text-xs text-gray-400 font-bold mb-1">אחוז שוכרים</span>
-                            <strong class="text-xl font-black text-white font-mono" id="neigh-renters">47%</strong>
-                        </div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
-                            <span class="text-xs text-gray-400 font-bold mb-1">השכלה אקדמית</span>
-                            <strong class="text-xl font-black text-white font-mono" id="neigh-edu">24%</strong>
-                        </div>
-                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
-                            <span class="text-xs text-gray-400 font-bold mb-1">שיעור עוני</span>
-                            <strong class="text-xl font-black text-rose-400 font-mono" id="neigh-poverty">31%</strong>
-                        </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                        <i data-lucide="map" class="w-6 h-6 text-blue-400 mb-2"></i>
+                        <span class="text-xs text-gray-400 font-bold">שכונה (Neighborhood)</span>
+                        <strong class="text-lg font-black text-white" id="neigh-name">Knoxville</strong>
                     </div>
                 </div>
 
-                <!-- Price History Section -->
-                <div class="space-y-3 pt-4 border-t border-gray-800">
-                    <h4 class="text-sm font-black text-white flex items-center gap-2">
-                        <i data-lucide="history" class="w-4 h-4 text-blue-400"></i> היסטוריית מחירים (Price History & Trends)
-                    </h4>
-                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
-                        <table class="w-full text-right text-sm">
-                            <thead>
-                                <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
-                                    <th class="p-3">תאריך עדכון</th>
-                                    <th class="p-3">מחיר מבוקש</th>
-                                    <th class="p-3 text-left">שינוי (Change)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rep-price-history-tbody" class="divide-y divide-gray-800 text-gray-200">
-                                <tr><td colspan="3" class="p-3 text-center text-gray-400">אין שינויי מחיר מתועדים</td></tr>
-                            </tbody>
-                        </table>
+                <h5 class="text-sm font-bold text-gray-400 mt-2">מדדי למ"ס אמריקאי (Census Data Metrics):</h5>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="bg-blue-950/20 border-2 border-blue-500/40 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-blue-300 font-bold mb-1">דירוג שכונה</span>
+                        <strong class="text-2xl font-black text-blue-400" id="neigh-class">C-</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">הכנסה חציונית</span>
+                        <strong class="text-xl font-black text-white font-mono" id="neigh-income">$50,686</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">אחוז שוכרים</span>
+                        <strong class="text-xl font-black text-white font-mono" id="neigh-renters">47%</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">השכלה אקדמית</span>
+                        <strong class="text-xl font-black text-white font-mono" id="neigh-edu">24%</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">שיעור עוני</span>
+                        <strong class="text-xl font-black text-rose-400 font-mono" id="neigh-poverty">31%</strong>
                     </div>
                 </div>
+            </div>
 
+            <!-- Price History Section -->
+            <div class="space-y-3 pt-4 border-t border-gray-800 pdf-no-break">
+                <h4 class="text-sm font-black text-white flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4 text-blue-400"></i> היסטוריית מחירים (Price History & Trends)
+                </h4>
+                <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
+                    <table class="w-full text-right text-sm">
+                        <thead>
+                            <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
+                                <th class="p-3">תאריך עדכון</th>
+                                <th class="p-3">מחיר מבוקש</th>
+                                <th class="p-3 text-left">שינוי (Change)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-price-history-tbody" class="divide-y divide-gray-800 text-gray-200">
+                            <tr><td colspan="3" class="p-3 text-center text-gray-400">אין שינויי מחיר מתועדים</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- TAB 2: Financials & Comps + Interactive Calculator -->
+        <!-- TAB 2: Financials & Comps -->
         <div id="tab-financials" class="space-y-6 hidden">
             
             <!-- Interactive Deal Calculator -->
-            <div class="bg-gray-900 border-2 border-blue-500/40 rounded-2xl p-6 space-y-5 shadow-xl">
+            <div class="bg-gray-900 border-2 border-blue-500/40 rounded-2xl p-6 space-y-5 shadow-xl pdf-no-break">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-3">
                     <h3 class="text-lg font-black text-blue-400 flex items-center gap-2">
-                        <i data-lucide="sliders" class="w-5 h-5"></i> מחשבון עסקאות אינטראקטיבי (Interactive Deal Calculator)
+                        <i data-lucide="sliders" class="w-5 h-5"></i> מחשבון עסקאות (Deal Calculator)
                     </h3>
-                    <span class="text-xs text-gray-400">שנה נתונים וראה חישוב מחדש בשידור חי</span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -320,17 +297,15 @@
                     </div>
                 </div>
 
-                <!-- Closing Costs Breakdown -->
                 <div class="bg-gray-950 border border-gray-800 rounded-xl p-4">
                     <div class="flex justify-between items-center mb-2 cursor-pointer" onclick="document.getElementById('closing-details').classList.toggle('hidden')">
-                        <span class="text-sm font-bold text-gray-300 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> עלויות סגירה ונלוות (Closing Costs) <span class="text-xs text-blue-400">(לחץ לפירוט)</span></span>
+                        <span class="text-sm font-bold text-gray-300 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> עלויות סגירה ונלוות (Closing Costs)</span>
                         <strong class="text-base font-mono text-white" id="calc-closing-total">$--</strong>
                     </div>
                     <div id="closing-details" class="hidden border-t border-gray-800 pt-3 mt-2 space-y-2 text-xs text-gray-400">
-                        <div class="flex justify-between"><span>מס רכישה (Transfer Tax ~1% בממוצע לקונה):</span><span class="font-mono text-gray-200" id="cc-tax">$--</span></div>
-                        <div class="flex justify-between"><span>חברת טייטל ועורכי דין (Title & Escrow):</span><span class="font-mono text-gray-200" id="cc-title">$--</span></div>
-                        <div class="flex justify-between"><span>אגרות רישום וביטוח ראשוני (Recording & Ins):</span><span class="font-mono text-gray-200" id="cc-misc">$--</span></div>
-                        <p class="text-[10px] text-gray-500 mt-2 italic">* עמלת תיווך ממוצעת בארה"ב (Broker Fee) משולמת בדרך כלל על ידי המוכר ולא נכללת כאן.</p>
+                        <div class="flex justify-between"><span>מס רכישה (Transfer Tax):</span><span class="font-mono text-gray-200" id="cc-tax">$--</span></div>
+                        <div class="flex justify-between"><span>חברת טייטל ועורכי דין:</span><span class="font-mono text-gray-200" id="cc-title">$--</span></div>
+                        <div class="flex justify-between"><span>אגרות רישום וביטוח ראשוני:</span><span class="font-mono text-gray-200" id="cc-misc">$--</span></div>
                     </div>
                 </div>
 
@@ -354,15 +329,40 @@
                 </div>
             </div>
 
-            <!-- Lender Matching -->
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
-                <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <h3 class="text-lg font-black text-white flex items-center gap-2">
-                        <i data-lucide="landmark" class="w-5 h-5 text-emerald-400"></i> אפשרויות מימון ובנקים (מסודר מההלוואה המשתלמת ביותר)
-                    </h3>
-                    <span class="text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-lg">מימון גבוה ושיפוץ מלא</span>
+            <!-- Financial Analysis Grids - PDF Break Avoid Wrapper -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pdf-no-break">
+                <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-6 space-y-4">
+                    <h3 class="text-lg font-black text-amber-400 border-b border-gray-800 pb-3">אסטרטגיית פליפ (Fix & Flip)</h3>
+                    <div class="space-y-3 text-base">
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">עלות שיפוץ מוערכת:</span><strong class="text-rose-400 font-mono text-lg" id="rep-flip-rehab">$--</strong></div>
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">הוצאות ורווח (30%):</span><strong class="text-gray-200 font-mono text-lg" id="rep-flip-margin">$--</strong></div>
+                        <div class="pt-3 border-t border-gray-800">
+                            <span class="text-xs text-gray-400 block mb-1 font-bold">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-3xl font-black text-amber-400 font-mono" id="rep-flip-mao">$--</strong>
+                        </div>
+                    </div>
                 </div>
 
+                <div class="bg-gray-900 border-2 border-emerald-500/40 rounded-2xl p-6 space-y-4">
+                    <h3 class="text-lg font-black text-emerald-400 border-b border-gray-800 pb-3">אסטרטגיית שכירות (Buy & Hold)</h3>
+                    <div class="space-y-3 text-base">
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">צפי שכירות חודשית:</span><strong class="text-white font-mono text-lg" id="rep-rent-monthly">$--</strong></div>
+                        <div class="flex justify-between"><span class="text-gray-300 font-bold">רווח תפעולי נקי (NOI):</span><strong class="text-emerald-300 font-mono text-lg" id="rep-rent-noi">$--</strong></div>
+                        <div class="pt-3 border-t border-gray-800">
+                            <span class="text-xs text-gray-400 block mb-1 font-bold">הצעת מחיר מקסימלית (MAO):</span>
+                            <strong class="text-3xl font-black text-emerald-400 font-mono" id="rep-rental-mao">$--</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lender Matching - PDF Break Avoid -->
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4 pdf-no-break">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                    <h3 class="text-lg font-black text-white flex items-center gap-2">
+                        <i data-lucide="landmark" class="w-5 h-5 text-emerald-400"></i> אפשרויות מימון ובנקים
+                    </h3>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                     <div class="bg-gray-950 border border-emerald-500/40 rounded-xl p-4 space-y-3 flex flex-col justify-between shadow-lg">
                         <div>
@@ -469,35 +469,8 @@
                 </div>
             </div>
 
-            <!-- Financial Analysis Grids -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-6 space-y-4">
-                    <h3 class="text-lg font-black text-amber-400 border-b border-gray-800 pb-3">אסטרטגיית פליפ (Fix & Flip)</h3>
-                    <div class="space-y-3 text-base">
-                        <div class="flex justify-between"><span class="text-gray-300 font-bold">עלות שיפוץ מוערכת:</span><strong class="text-rose-400 font-mono text-lg" id="rep-flip-rehab">$--</strong></div>
-                        <div class="flex justify-between"><span class="text-gray-300 font-bold">הוצאות ורווח (30%):</span><strong class="text-gray-200 font-mono text-lg" id="rep-flip-margin">$--</strong></div>
-                        <div class="pt-3 border-t border-gray-800">
-                            <span class="text-xs text-gray-400 block mb-1 font-bold">הצעת מחיר מקסימלית (MAO):</span>
-                            <strong class="text-3xl font-black text-amber-400 font-mono" id="rep-flip-mao">$--</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-gray-900 border-2 border-emerald-500/40 rounded-2xl p-6 space-y-4">
-                    <h3 class="text-lg font-black text-emerald-400 border-b border-gray-800 pb-3">אסטרטגיית שכירות (Buy & Hold)</h3>
-                    <div class="space-y-3 text-base">
-                        <div class="flex justify-between"><span class="text-gray-300 font-bold">צפי שכירות חודשית:</span><strong class="text-white font-mono text-lg" id="rep-rent-monthly">$--</strong></div>
-                        <div class="flex justify-between"><span class="text-gray-300 font-bold">רווח תפעולי נקי (NOI):</span><strong class="text-emerald-300 font-mono text-lg" id="rep-rent-noi">$--</strong></div>
-                        <div class="pt-3 border-t border-gray-800">
-                            <span class="text-xs text-gray-400 block mb-1 font-bold">הצעת מחיר מקסימלית (MAO):</span>
-                            <strong class="text-3xl font-black text-emerald-400 font-mono" id="rep-rental-mao">$--</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sales Comps Table Section -->
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+            <!-- Sales Comps Table Section - PDF Break Avoid -->
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4 pdf-no-break">
                 <h3 class="text-lg font-black text-white flex items-center gap-2">
                     <i data-lucide="building-2" class="w-5 h-5 text-blue-400"></i> עסקאות מכירה סמוכות (Sales Comps & ARV Analysis)
                 </h3>
@@ -515,8 +488,8 @@
                 </div>
             </div>
 
-            <!-- Rent Comps Table Section -->
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+            <!-- Rent Comps Table Section - PDF Break Avoid -->
+            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4 pdf-no-break">
                 <h3 class="text-lg font-black text-white flex items-center gap-2">
                     <i data-lucide="key" class="w-5 h-5 text-emerald-400"></i> ניתוח שכר דירה בסביבה (Rent Analysis & Active Listings)
                 </h3>
@@ -539,7 +512,7 @@
         <!-- TAB 3: Rehab AI (Vision) -->
         <div id="tab-rehab" class="space-y-6 hidden">
             
-            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
+            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6 pdf-no-break">
                 <!-- Header / Scan Button -->
                 <div class="flex justify-between items-center border-b border-gray-800 pb-4">
                     <div>
@@ -681,7 +654,7 @@
         }
 
         // ==========================================
-        // פונקציית שמירת ה-PDF עם עיצוב בהיר ורוחב מותאם
+        // פונקציית שמירת ה-PDF (רוחב טבעי למניעת מעיכה)
         // ==========================================
         function downloadReportPDF() {
             const element = document.getElementById('report-printable-area');
@@ -700,12 +673,15 @@
 
             document.body.classList.add('pdf-export-mode');
 
+            // הוספת פקודת page-break-inside avoid כדי שכללי ה-CSS ימנעו חיתוך של בלוקים באמצע דף
             const opt = {
-                margin:       [5, 5, 5, 5],
+                margin:       [10, 10, 10, 10], // מרווחים נעימים בשולי הדף
                 filename:     `Deal_Report_${(currentDeal?.address || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                // windowWidth 1000 שומר על הפרופורציות ואז מתכווץ בצורה חלקה ל-A4
+                html2canvas:  { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', windowWidth: 1000 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] } // מאפשר עבודה חלקה עם קלאס pdf-no-break שלנו
             };
 
             setTimeout(() => {
@@ -893,7 +869,7 @@
 
                 const tablesContainer = document.getElementById('vis-detailed-tables');
                 tablesContainer.innerHTML = `
-                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950 shadow-xl">
+                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950 shadow-xl pdf-no-break">
                         <div class="bg-gray-900 p-4 border-b border-gray-800 font-black text-amber-400 flex justify-between items-center text-lg">
                             <span>מערכות מרכזיות (Major Systems)</span><span>$22,484</span>
                         </div>
@@ -916,7 +892,7 @@
                         </div>
                     </div>
 
-                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950 shadow-xl">
+                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950 shadow-xl pdf-no-break">
                         <div class="bg-gray-900 p-4 border-b border-gray-800 font-black text-blue-400 flex justify-between items-center text-lg">
                             <span>גימורי פנים (Interior Finishes)</span><span>$10,501</span>
                         </div>
@@ -938,7 +914,7 @@
                         </div>
                     </div>
 
-                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950 shadow-xl">
+                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950 shadow-xl pdf-no-break">
                         <div class="bg-gray-900 p-4 border-b border-gray-800 font-black text-emerald-400 flex justify-between items-center text-lg">
                             <span>חוץ ומבנה (Exterior & Structure)</span><span>$9,976</span>
                         </div>
