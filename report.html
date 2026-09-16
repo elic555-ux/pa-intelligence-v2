@@ -94,7 +94,7 @@
                     </div>
                 </div>
 
-                <!-- Advanced Image Gallery -->
+                <!-- Advanced Image Gallery with Manual Upload & API Fallback -->
                 <div class="space-y-2 border border-gray-800 rounded-2xl p-4 bg-gray-950/50">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm font-bold text-gray-300">גלריית תמונות הנכס (לחץ 'החלף' להעלאה מהמחשב):</span>
@@ -205,7 +205,7 @@
         <!-- TAB 2: Financials & Comps + Interactive Calculator + Sorted Lenders -->
         <div id="tab-financials" class="space-y-6 hidden">
             
-            <!-- Interactive Deal Calculator (Fixed with ARV input) -->
+            <!-- Interactive Deal Calculator -->
             <div class="bg-gray-900 border-2 border-blue-500/40 rounded-2xl p-6 space-y-5 shadow-xl">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-3">
                     <h3 class="text-lg font-black text-blue-400 flex items-center gap-2">
@@ -263,15 +263,13 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                    <!-- Lender 1: Civic -->
                     <div class="bg-gray-950 border border-emerald-500/40 rounded-xl p-4 space-y-3 flex flex-col justify-between shadow-lg">
                         <div>
                             <div class="flex justify-between items-start mb-1">
                                 <span class="font-black text-emerald-400 text-sm">1. Civic Financial (Hard Money)</span>
                                 <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">הכי משתלם לפליפ</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">מימון מקסימלי עם מעט הון עצמי נדרש מהיזם.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
+                            <ul class="space-y-1 text-xs text-gray-200 mt-2">
                                 <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono text-emerald-400 font-black">80%</strong></li>
                                 <li class="flex justify-between"><span>מימון שיפוץ:</span> <strong class="font-mono text-emerald-400">100%</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">11.5%</strong></li>
@@ -282,16 +280,13 @@
                             <strong class="text-sm font-black text-emerald-400 font-mono" id="lender-1-loan">$--</strong>
                         </div>
                     </div>
-
-                    <!-- Lender 2: Lima One -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
                                 <span class="font-black text-purple-400 text-sm">2. Lima One Capital</span>
                                 <span class="text-[9px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">BRRRR / Flip</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">תנאים מצוינים לטווח קצר ואסטרטגיית השבחה.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
+                            <ul class="space-y-1 text-xs text-gray-200 mt-2">
                                 <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">80%</strong></li>
                                 <li class="flex justify-between"><span>מימון שיפוץ:</span> <strong class="font-mono text-emerald-400">90%</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">9.5%</strong></li>
@@ -302,16 +297,13 @@
                             <strong class="text-sm font-black text-purple-400 font-mono" id="lender-2-loan">$--</strong>
                         </div>
                     </div>
-
-                    <!-- Lender 3: Allegheny Credit Union -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
                                 <span class="font-black text-teal-400 text-sm">3. Allegheny Credit Union</span>
                                 <span class="text-[9px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded font-bold">Local Bank</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">איגוד אשראי מקומי בפיטסבורג עם עמלות נמוכות.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
+                            <ul class="space-y-1 text-xs text-gray-200 mt-2">
                                 <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">80%</strong></li>
                                 <li class="flex justify-between"><span>עמלות סגירה:</span> <strong class="font-mono text-emerald-400">נמוכות</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">6.9%</strong></li>
@@ -322,16 +314,13 @@
                             <strong class="text-sm font-black text-teal-400 font-mono" id="lender-3-loan">$--</strong>
                         </div>
                     </div>
-
-                    <!-- Lender 4: CoreVest -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
                                 <span class="font-black text-blue-400 text-sm">4. CoreVest (DSCR)</span>
                                 <span class="text-[9px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-bold">Buy & Hold</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">מעולה למשקיעי שכירות לטווח ארוך.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
+                            <ul class="space-y-1 text-xs text-gray-200 mt-2">
                                 <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">75%</strong></li>
                                 <li class="flex justify-between"><span>DSCR מינימלי:</span> <strong class="font-mono">1.15</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">7.75%</strong></li>
@@ -342,16 +331,13 @@
                             <strong class="text-sm font-black text-blue-400 font-mono" id="lender-4-loan">$--</strong>
                         </div>
                     </div>
-
-                    <!-- Lender 5: PNC Bank -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
                                 <span class="font-black text-indigo-400 text-sm">5. PNC Bank Portfolio</span>
                                 <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-bold">Conventional</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">בנק מסחרי יציב למשכנתאות פורטפוליו.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
+                            <ul class="space-y-1 text-xs text-gray-200 mt-2">
                                 <li class="flex justify-between"><span>LTV רכישה:</span> <strong class="font-mono">70%</strong></li>
                                 <li class="flex justify-between"><span>תקופה:</span> <strong class="font-mono">30 שנה</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">7.1%</strong></li>
@@ -362,16 +348,13 @@
                             <strong class="text-sm font-black text-indigo-400 font-mono" id="lender-5-loan">$--</strong>
                         </div>
                     </div>
-
-                    <!-- Lender 6: Seller Financing -->
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-1">
                                 <span class="font-black text-rose-400 text-sm">6. Seller Financing</span>
                                 <span class="text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded font-bold">Direct</span>
                             </div>
-                            <p class="text-[11px] text-gray-300 mb-2">פריסת תשלומים מול בעל הנכס.</p>
-                            <ul class="space-y-1 text-xs text-gray-200">
+                            <ul class="space-y-1 text-xs text-gray-200 mt-2">
                                 <li class="flex justify-between"><span>מימון מוכר:</span> <strong class="font-mono">80% - 85%</strong></li>
                                 <li class="flex justify-between"><span>אישור:</span> <strong class="font-mono text-emerald-400">גמיש</strong></li>
                                 <li class="flex justify-between"><span>ריבית:</span> <strong class="font-mono">6% - 8%</strong></li>
@@ -385,6 +368,7 @@
                 </div>
             </div>
 
+            <!-- Financial Analysis Grids -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-gray-900 border-2 border-amber-500/40 rounded-2xl p-6 space-y-4">
                     <h3 class="text-lg font-black text-amber-400 border-b border-gray-800 pb-3">אסטרטגיית פליפ (Fix & Flip)</h3>
@@ -416,7 +400,7 @@
                 <h3 class="text-lg font-black text-white flex items-center gap-2">
                     <i data-lucide="building-2" class="w-5 h-5 text-blue-400"></i> עסקאות השוואה סמוכות (Comps & ARV Analysis)
                 </h3>
-                <div class="border border-gray-800 rounded-xl overflow-x-auto bg-gray-950">
+                <div class="border border-gray-800 rounded-xl overflow-x-auto bg-gray-950 custom-scrollbar">
                     <table class="w-full text-right text-xs whitespace-nowrap">
                         <thead>
                             <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
@@ -440,71 +424,86 @@
             </div>
         </div>
 
-        <!-- TAB 3: Rehab AI (Vision) -->
+        <!-- TAB 3: Rehab AI (Vision) - DETAILED REPORT -->
         <div id="tab-rehab" class="space-y-6 hidden">
-            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-5">
-                <div class="flex justify-between items-center bg-gray-950 p-5 rounded-xl border border-gray-800 text-sm">
+            
+            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
+                <!-- Header / Scan Button -->
+                <div class="flex justify-between items-center border-b border-gray-800 pb-4">
                     <div>
-                        <h4 class="font-black text-white text-base">מפרט שיפוץ חזותי (Vision AI Breakdown)</h4>
-                        <p class="text-gray-300 text-xs">ניתוח שחיקת חומרים ואומדן עלויות אוטומטי</p>
+                        <h3 class="text-xl font-black text-white">מפרט שיפוץ חזותי מורחב (Detailed Rehab Report)</h3>
+                        <p class="text-gray-400 text-sm">הערכת מצב ואומדן עלויות מבוסס בינה מלאכותית.</p>
                     </div>
                     <button id="btn-run-vision" onclick="runVisionScan()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black flex items-center gap-2 shadow-lg transition">
                         <i data-lucide="scan" class="w-4 h-4"></i> הפעל סריקת תמונות
                     </button>
                 </div>
 
-                <div id="vision-results-container" class="hidden space-y-5">
-                    <div class="bg-gray-950 p-5 rounded-xl border border-gray-800 flex justify-between items-center text-sm">
-                        <div>
-                            <span class="text-gray-400 block mb-1 font-bold">אומדן שיפוץ כולל (Vision)</span>
-                            <strong class="text-3xl font-black text-white font-mono" id="vis-total-sum">$--</strong>
+                <!-- Hidden Container for Results -->
+                <div id="vision-results-container" class="hidden space-y-8">
+                    
+                    <!-- Summary Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-5 text-center">
+                            <span class="text-sm font-bold text-gray-400 block mb-1">אומדן שיפוץ כולל (Total Cost)</span>
+                            <strong class="text-3xl font-black text-rose-400 font-mono" id="vis-total-sum">$--</strong>
                         </div>
-                        <span class="px-3 py-1.5 rounded text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">High Confidence (נשמר במערכת)</span>
+                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-5 text-center flex flex-col justify-center">
+                            <span class="text-sm font-bold text-gray-400 block mb-1">יעד שיפוץ (Target Level)</span>
+                            <strong class="text-xl font-black text-white">Basic Rehab (7/10)</strong>
+                        </div>
+                        <div class="bg-gray-950 border border-gray-800 rounded-xl p-5 text-center flex flex-col justify-center">
+                            <span class="text-sm font-bold text-gray-400 block mb-1">רמת ביטחון באומדן</span>
+                            <strong class="text-xl font-black text-emerald-400">High Confidence</strong>
+                        </div>
                     </div>
 
-                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
-                        <table class="w-full text-right text-sm">
-                            <thead>
-                                <tr class="bg-gray-900 text-gray-300 font-black border-b border-gray-800">
-                                    <th class="p-3.5">רכיב מערכת</th>
-                                    <th class="p-3.5">מצב נוכחי</th>
-                                    <th class="p-3.5">היקף עבודה נדרש</th>
-                                    <th class="p-3.5 text-left">אומדן עלות ($)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="vis-table-rows" class="divide-y divide-gray-800 text-gray-200"></tbody>
-                        </table>
+                    <!-- Category Breakdown -->
+                    <div>
+                        <h4 class="text-base font-black text-white mb-3">חלוקת תקציב לפי קטגוריות (Cost Breakdown)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                            <div class="bg-gray-950 border-l-4 border-amber-500 p-4 rounded-r-xl border-y border-r border-gray-800">
+                                <span class="text-xs text-gray-400 font-bold">מערכות מרכזיות (Major Systems)</span>
+                                <div class="flex justify-between items-end mt-1">
+                                    <strong class="text-lg font-mono text-white" id="vis-cat1-val">$--</strong>
+                                    <span class="text-sm font-bold text-amber-500">52%</span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-950 border-l-4 border-blue-500 p-4 rounded-r-xl border-y border-r border-gray-800">
+                                <span class="text-xs text-gray-400 font-bold">גימורי פנים (Interior Finishes)</span>
+                                <div class="flex justify-between items-end mt-1">
+                                    <strong class="text-lg font-mono text-white" id="vis-cat2-val">$--</strong>
+                                    <span class="text-sm font-bold text-blue-500">24%</span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-950 border-l-4 border-emerald-500 p-4 rounded-r-xl border-y border-r border-gray-800">
+                                <span class="text-xs text-gray-400 font-bold">חוץ ומבנה (Exterior & Structure)</span>
+                                <div class="flex justify-between items-end mt-1">
+                                    <strong class="text-lg font-mono text-white" id="vis-cat3-val">$--</strong>
+                                    <span class="text-sm font-bold text-emerald-500">24%</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Tables Container -->
+                    <div class="space-y-6" id="vis-detailed-tables">
+                        <!-- Tables will be injected here by Javascript -->
+                    </div>
+
                 </div>
             </div>
         </div>
 
     </main>
 
-    <!-- API Key Modal -->
-    <div id="api-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-            <h3 class="text-xl font-black text-white mb-2">חיבור Google API</h3>
-            <p class="text-sm text-gray-400 mb-4">הדבק כאן את מפתח ה-API שהעתקת מגוגל קלאוד (מתחיל ב-AIza):</p>
-            <input type="text" id="api-key-input" class="w-full bg-gray-950 border border-gray-700 text-white rounded-xl p-3 text-left font-mono focus:border-blue-500 focus:outline-none mb-4" placeholder="AIzaSy...">
-            <div class="flex justify-end gap-3">
-                <button onclick="closeApiModal()" class="px-4 py-2 bg-gray-800 text-gray-300 rounded-xl hover:bg-gray-700 font-bold transition">ביטול</button>
-                <button onclick="saveApiKeyFromModal()" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-500 font-bold flex items-center gap-2 transition">
-                    <i data-lucide="save" class="w-4 h-4"></i> שמור ורענן
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripting with Google API Integration & Image Logic -->
+    <!-- Scripting -->
     <script>
         let currentDeal = null;
 
         function closeReportWindow() {
             window.close();
-            setTimeout(() => {
-                window.location.href = 'deals.html';
-            }, 200);
+            setTimeout(() => { window.location.href = 'deals.html'; }, 200);
         }
 
         function switchTab(tabId) {
@@ -536,30 +535,22 @@
                 localStorage.setItem('pa_google_api_key', key);
                 closeApiModal();
                 loadDealImages();
-            } else {
-                alert("אנא הכנס מפתח חוקי.");
-            }
+            } else { alert("אנא הכנס מפתח חוקי."); }
         }
 
         function uploadCustomImage(event, index) {
             const file = event.target.files[0];
             if (!file || !currentDeal) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Img = e.target.result;
                 if (!currentDeal.custom_images) currentDeal.custom_images = [];
                 currentDeal.custom_images[index] = base64Img;
-
                 try {
                     let deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
                     const idx = deals.findIndex(d => String(d.id) === String(currentDeal.id));
-                    if (idx > -1) {
-                        deals[idx] = currentDeal;
-                        localStorage.setItem('pa_pipeline_deals', JSON.stringify(deals));
-                    }
+                    if (idx > -1) { deals[idx] = currentDeal; localStorage.setItem('pa_pipeline_deals', JSON.stringify(deals)); }
                 } catch(err) { console.error(err); }
-
                 loadDealImages();
             };
             reader.readAsDataURL(file);
@@ -583,15 +574,9 @@
             const singleImg = currentDeal.image_url || currentDeal.img || currentDeal.picture || currentDeal.photo || "";
 
             if (Array.isArray(rawImgs) && rawImgs.length > 0) {
-                mainImgEl.src = rawImgs[0];
-                sub1El.src = rawImgs[1] || rawImgs[0];
-                sub2El.src = rawImgs[2] || rawImgs[0];
-                return;
+                mainImgEl.src = rawImgs[0]; sub1El.src = rawImgs[1] || rawImgs[0]; sub2El.src = rawImgs[2] || rawImgs[0]; return;
             } else if (singleImg) {
-                mainImgEl.src = singleImg;
-                sub1El.src = singleImg;
-                sub2El.src = singleImg;
-                return;
+                mainImgEl.src = singleImg; sub1El.src = singleImg; sub2El.src = singleImg; return;
             }
 
             const apiKey = localStorage.getItem('pa_google_api_key');
@@ -611,18 +596,9 @@
             const tbody = document.getElementById('rep-price-history-tbody');
             const price = Number(deal.price) || 115000;
             const prevPrice = Math.round(price * 1.12);
-            
             tbody.innerHTML = `
-                <tr>
-                    <td class="p-3 text-gray-400">08/21/2026</td>
-                    <td class="p-3 font-mono">$${prevPrice.toLocaleString()}</td>
-                    <td class="p-3 text-left font-mono text-gray-400">-</td>
-                </tr>
-                <tr>
-                    <td class="p-3 text-gray-400">${deal.listed_date || '09/07/2026'}</td>
-                    <td class="p-3 font-mono text-emerald-400 font-bold">$${price.toLocaleString()}</td>
-                    <td class="p-3 text-left font-mono text-rose-400 font-bold">↘ -$${(prevPrice - price).toLocaleString()} (-10.6%)</td>
-                </tr>
+                <tr><td class="p-3 text-gray-400">08/21/2026</td><td class="p-3 font-mono">$${prevPrice.toLocaleString()}</td><td class="p-3 text-left font-mono text-gray-400">-</td></tr>
+                <tr><td class="p-3 text-gray-400">${deal.listed_date || '09/07/2026'}</td><td class="p-3 font-mono text-emerald-400 font-bold">$${price.toLocaleString()}</td><td class="p-3 text-left font-mono text-rose-400 font-bold">↘ -$${(prevPrice - price).toLocaleString()} (-10.6%)</td></tr>
             `;
         }
 
@@ -653,7 +629,6 @@
             roiEl.textContent = `${roi.toFixed(1)}%`;
             roiEl.className = roi >= 0 ? "text-lg font-black text-blue-400 font-mono" : "text-lg font-black text-rose-400 font-mono";
 
-            // עדכון הלוואות הבנקים לפי המחיר המעודכן
             document.getElementById('lender-1-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
             document.getElementById('lender-2-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
             document.getElementById('lender-3-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
@@ -662,54 +637,6 @@
             document.getElementById('lender-6-loan').textContent = `$${Math.round(price * 0.80).toLocaleString()}`;
         }
 
-        function saveReportToHistory() {
-            if (!currentDeal) return;
-            try {
-                let saved = JSON.parse(localStorage.getItem('pa_saved_inspection_reports')) || [];
-                const reportObj = {
-                    address: currentDeal.address,
-                    city: currentDeal.city,
-                    zip: currentDeal.zip || '15210',
-                    analysis: {
-                        rangeStr: `$${(currentDeal.mao_flip || 0).toLocaleString()} (MAO)`,
-                        items: [
-                            { domain: "הערכת פליפ ושכירות", findings: `ARV: $${(currentDeal.arv||0).toLocaleString()}`, remedy: `Asking: $${(currentDeal.price||0).toLocaleString()}`, min: currentDeal.flip_rehab || 15000, max: currentDeal.flip_rehab || 25000 }
-                        ]
-                    },
-                    date: new Date().toLocaleDateString('he-IL')
-                };
-                saved.unshift(reportObj);
-                localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(saved));
-                alert(`הדוח עבור "${currentDeal.address}" נשמר בהצלחה!`);
-            } catch(e) {
-                alert("שגיאה בשמירת הדו\"ח.");
-            }
-        }
-
-        function downloadReportPDF() {
-            const element = document.getElementById('report-printable-area');
-            if (!element) return;
-
-            document.getElementById('tab-overview').classList.remove('hidden');
-            document.getElementById('tab-financials').classList.remove('hidden');
-            document.getElementById('tab-rehab').classList.remove('hidden');
-            document.getElementById('tabs-bar').classList.add('hidden');
-
-            const opt = {
-                margin:       [10, 10, 10, 10],
-                filename:     `Deal_Report_${(currentDeal?.address || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0b0f19' },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(element).save().then(() => {
-                document.getElementById('tabs-bar').classList.remove('hidden');
-                switchTab('tab-overview');
-            });
-        }
-
-        // טבלת עסקאות השוואה מפורטת
         function renderCompsTable(deal) {
             const tbody = document.getElementById('rep-comps-tbody');
             const basePrice = Number(deal.price) || 115000;
@@ -717,16 +644,7 @@
 
             tbody.innerHTML = `
                 <tr class="bg-blue-950/30 font-bold">
-                    <td class="p-3 text-blue-300">${deal.address || '127 Bausman St'}</td>
-                    <td class="p-3 font-mono text-white">-</td>
-                    <td class="p-3 text-gray-400">-</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs">Subject</span></td>
-                    <td class="p-3 font-mono">${baseSqft}</td>
-                    <td class="p-3">2</td>
-                    <td class="p-3">1</td>
-                    <td class="p-3 font-mono">1900</td>
-                    <td class="p-3">-</td>
-                    <td class="p-3 text-left">Well maintained (6/10)</td>
+                    <td class="p-3 text-blue-300">${deal.address || '127 Bausman St'}</td><td class="p-3 font-mono text-white">-</td><td class="p-3 text-gray-400">-</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs">Subject</span></td><td class="p-3 font-mono">${baseSqft}</td><td class="p-3">2</td><td class="p-3">1</td><td class="p-3 font-mono">1900</td><td class="p-3">-</td><td class="p-3 text-left">Well maintained (6/10)</td>
                 </tr>
                 <tr><td class="p-3 font-bold">136 Bausman St</td><td class="p-3 font-mono text-emerald-400 font-bold">$134,995</td><td class="p-3 text-gray-400">03/16/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">97%</span></td><td class="p-3 font-mono">1472</td><td class="p-3">3</td><td class="p-3">2</td><td class="p-3 font-mono">1910</td><td class="p-3">0.03</td><td class="p-3 text-left">Well maintained (6/10)</td></tr>
                 <tr><td class="p-3 font-bold">135 Rochelle St</td><td class="p-3 font-mono text-emerald-400 font-bold">$85,000</td><td class="p-3 text-gray-400">07/24/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">96%</span></td><td class="p-3 font-mono">1710</td><td class="p-3">3</td><td class="p-3">2</td><td class="p-3 font-mono">1900</td><td class="p-3">0.05</td><td class="p-3 text-left">Dated (4/10)</td></tr>
@@ -736,20 +654,6 @@
                 <tr><td class="p-3 font-bold">323 Moore Ave</td><td class="p-3 font-mono text-emerald-400 font-bold">$145,000</td><td class="p-3 text-gray-400">03/24/25</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">89%</span></td><td class="p-3 font-mono">1563</td><td class="p-3">2</td><td class="p-3">1</td><td class="p-3 font-mono">1902</td><td class="p-3">0.29</td><td class="p-3 text-left">Moderate (6/10)</td></tr>
                 <tr><td class="p-3 font-bold">326 Rochelle St</td><td class="p-3 font-mono text-emerald-400 font-bold">$65,150</td><td class="p-3 text-gray-400">01/30/26</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">88%</span></td><td class="p-3 font-mono">1776</td><td class="p-3">3</td><td class="p-3">1</td><td class="p-3 font-mono">1930</td><td class="p-3">0.27</td><td class="p-3 text-left">Dated (4/10)</td></tr>
             `;
-        }
-
-        function renderVisionTable(totalRehab) {
-            document.getElementById('vis-total-sum').textContent = `$${totalRehab.toLocaleString()}`;
-            document.getElementById('vis-table-rows').innerHTML = `
-                <tr><td class="p-3.5 font-bold text-blue-400">מטבח קומפלט</td><td><span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">Aging (4/10)</span></td><td>החלפת ארונות ומשטחי עבודה</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.23).toLocaleString()}</td></tr>
-                <tr><td class="p-3.5 font-bold text-blue-400">חדר רחצה</td><td><span class="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 font-bold text-xs">Aging (5/10)</span></td><td>חידוש כלים סניטריים וריצוף</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.13).toLocaleString()}</td></tr>
-                <tr><td class="p-3.5 font-bold text-amber-400">גג אספלט</td><td><span class="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 font-bold text-xs">Aging (5/10)</span></td><td>החלפת שינגלס ואיטום פלאשינג</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.25).toLocaleString()}</td></tr>
-                <tr><td class="p-3.5 font-bold text-amber-400">חלונות ויניל</td><td><span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">Dated (4/10)</span></td><td>שדרוג לחלונות כפולים מבודדים</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.18).toLocaleString()}</td></tr>
-                <tr><td class="p-3.5 font-bold text-purple-400">ריצוף LVP וצבע</td><td><span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-bold text-xs">Dated (4/10)</span></td><td>התקנת פרקט ויניל וצביעה כללית</td><td class="p-3.5 text-left font-mono font-bold text-base">$${Math.round(totalRehab * 0.21).toLocaleString()}</td></tr>
-            `;
-            document.getElementById('btn-run-vision').classList.add('hidden');
-            document.getElementById('vision-results-container').classList.remove('hidden');
-            lucide.createIcons();
         }
 
         function runVisionScan() {
@@ -763,18 +667,88 @@
                 currentDeal.vision_analyzed = true;
                 const sqft = Number(currentDeal.sqft) || 1588;
                 const totalRehab = currentDeal.flip_rehab || (sqft * 45);
-                currentDeal.vision_total = totalRehab;
+                
+                document.getElementById('vis-total-sum').textContent = `$${Math.round(totalRehab).toLocaleString()}`;
+                
+                const majorCost = totalRehab * 0.52;
+                const interiorCost = totalRehab * 0.24;
+                const exteriorCost = totalRehab * 0.24;
 
-                try {
-                    let deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
-                    const idx = deals.findIndex(d => String(d.id) === String(currentDeal.id));
-                    if(idx > -1) {
-                        deals[idx] = currentDeal;
-                        localStorage.setItem('pa_pipeline_deals', JSON.stringify(deals));
-                    }
-                } catch(e) {}
+                document.getElementById('vis-cat1-val').textContent = `$${Math.round(majorCost).toLocaleString()}`;
+                document.getElementById('vis-cat2-val').textContent = `$${Math.round(interiorCost).toLocaleString()}`;
+                document.getElementById('vis-cat3-val').textContent = `$${Math.round(exteriorCost).toLocaleString()}`;
 
-                renderVisionTable(totalRehab);
+                const tablesContainer = document.getElementById('vis-detailed-tables');
+                tablesContainer.innerHTML = `
+                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
+                        <div class="bg-gray-900 p-3 border-b border-gray-800 font-black text-amber-400 flex justify-between">
+                            <span>מערכות מרכזיות (Major Systems)</span><span>$${Math.round(majorCost).toLocaleString()}</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-right text-xs">
+                                <thead>
+                                    <tr class="bg-gray-900/50 text-gray-400 border-b border-gray-800">
+                                        <th class="p-3">רכיב (System)</th><th class="p-3">מצב (Rank)</th><th class="p-3">מצב נוכחי (Current)</th><th class="p-3">היקף עבודה (Scope)</th><th class="p-3">ביטחון</th><th class="p-3 text-left">אומדן ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800 text-gray-200">
+                                    <tr><td class="p-3 font-bold">גג (Roof)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">נדרשת הערכה בשטח</td><td class="p-3">-</td><td class="p-3 text-rose-400">Low</td><td class="p-3 text-left font-mono font-bold">$${Math.round(majorCost * 0.28).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">מטבח (Kitchen)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">תקין אך מיושן.</td><td class="p-3">חידוש ארונות ופרזול.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(majorCost * 0.20).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">ריצוף (Flooring)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">שחיקה נראית לעין.</td><td class="p-3">תיקון/החלפה באזורים ראשיים.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(majorCost * 0.19).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">מיזוג (HVAC)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">נדרשת הערכה בשטח.</td><td class="p-3">-</td><td class="p-3 text-rose-400">Low</td><td class="p-3 text-left font-mono font-bold">$0</td></tr>
+                                    <tr><td class="p-3 font-bold">חדר רחצה 1</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">תקין אך מיושן.</td><td class="p-3">החלפת כלים סניטריים וצבע.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(majorCost * 0.33).toLocaleString()}</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
+                        <div class="bg-gray-900 p-3 border-b border-gray-800 font-black text-blue-400 flex justify-between">
+                            <span>גימורי פנים (Interior Finishes)</span><span>$${Math.round(interiorCost).toLocaleString()}</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-right text-xs">
+                                <thead>
+                                    <tr class="bg-gray-900/50 text-gray-400 border-b border-gray-800">
+                                        <th class="p-3">רכיב (Area)</th><th class="p-3">מצב (Rank)</th><th class="p-3">מצב נוכחי (Current)</th><th class="p-3">היקף עבודה (Scope)</th><th class="p-3">ביטחון</th><th class="p-3 text-left">אומדן ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800 text-gray-200">
+                                    <tr><td class="p-3 font-bold">קירות (Drywall)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">Maintained (6)</span></td><td class="p-3">מצב טוב, ללא נזק חזותי.</td><td class="p-3">תיקונים קלים במידת הצורך.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(interiorCost * 0.50).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">צבע (Paint)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">צבע מיושן עם שחיקה.</td><td class="p-3">צביעה מחדש של סלון וחדרים.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(interiorCost * 0.27).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">תאורה (Lights)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">פועל אך מיושן.</td><td class="p-3">החלפת גופי תאורה ישנים.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(interiorCost * 0.06).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">דלתות פנים</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">פועל אך מיושן.</td><td class="p-3">צביעת דלתות לחידוש מראה.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$500</td></tr>
+                                    <tr><td class="p-3 font-bold">ניקיון פנים</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">נדרש ניקיון כללי.</td><td class="p-3">ניקיון יסודי לכל המשטחים.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$500</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
+                        <div class="bg-gray-900 p-3 border-b border-gray-800 font-black text-emerald-400 flex justify-between">
+                            <span>חוץ ומבנה (Exterior & Structure)</span><span>$${Math.round(exteriorCost).toLocaleString()}</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-right text-xs">
+                                <thead>
+                                    <tr class="bg-gray-900/50 text-gray-400 border-b border-gray-800">
+                                        <th class="p-3">רכיב (Area)</th><th class="p-3">מצב (Rank)</th><th class="p-3">מצב נוכחי (Current)</th><th class="p-3">היקף עבודה (Scope)</th><th class="p-3">ביטחון</th><th class="p-3 text-left">אומדן ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800 text-gray-200">
+                                    <tr><td class="p-3 font-bold">חלונות (Windows)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">פועל אך מיושן.</td><td class="p-3">החלפת חלונות להתייעלות.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(exteriorCost * 0.38).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">חיפוי (Siding)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">Maintained (6)</span></td><td class="p-3">מצב טוב, בלאי קל.</td><td class="p-3">ניקוי ותיקונים קלים.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$${Math.round(exteriorCost * 0.17).toLocaleString()}</td></tr>
+                                    <tr><td class="p-3 font-bold">מרזבים (Gutters)</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">נדרשת הערכה בשטח.</td><td class="p-3">-</td><td class="p-3 text-rose-400">Low</td><td class="p-3 text-left font-mono font-bold">$720</td></tr>
+                                    <tr><td class="p-3 font-bold">ניקיון חוץ</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">נדרש ניקיון כללי.</td><td class="p-3">ניקוי חצר ופינוי פסולת.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$648</td></tr>
+                                    <tr><td class="p-3 font-bold">דלתות חוץ</td><td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Aging (5)</span></td><td class="p-3">פועל אך מיושן.</td><td class="p-3">החלפת דלת כניסה מרכזית.</td><td class="p-3 text-emerald-400">High</td><td class="p-3 text-left font-mono font-bold">$500</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('btn-run-vision').classList.add('hidden');
+                document.getElementById('vision-results-container').classList.remove('hidden');
             }, 1200);
         }
 
@@ -785,12 +759,8 @@
             
             try {
                 const deals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || [];
-                if (dealId) {
-                    currentDeal = deals.find(d => String(d.id) === String(dealId));
-                }
-                if (!currentDeal && deals.length > 0) {
-                    currentDeal = deals[0];
-                }
+                if (dealId) { currentDeal = deals.find(d => String(d.id) === String(dealId)); }
+                if (!currentDeal && deals.length > 0) { currentDeal = deals[0]; }
 
                 if (currentDeal) {
                     document.getElementById('report-address').textContent = currentDeal.address || '127 Bausman St';
@@ -799,8 +769,7 @@
                     
                     const arv = currentDeal.arv || 236458;
                     document.getElementById('rep-arv').textContent = `$${arv.toLocaleString()}`;
-                    document.getElementById('rep-summary').textContent = currentDeal.ai_summary || "This property presents an exceptional rental investment opportunity with strong cash flow potential relative to acquisition cost.";
-
+                    
                     loadDealImages();
                     renderPriceHistory(currentDeal);
 
@@ -808,12 +777,9 @@
                     const sqft = Number(currentDeal.sqft) || 1588;
                     const flipRehab = currentDeal.flip_rehab || 42961;
                     document.getElementById('calc-rehab').value = flipRehab;
-                    
-                    // הזנת ARV למחשבון
                     document.getElementById('calc-arv').value = arv;
-                    
                     document.getElementById('calc-rent').value = currentDeal.monthly_rent_est || 1459;
-                    recalculateDeal();
+                    recalculateDeal(); // Updates calculator & lenders
 
                     document.getElementById('rep-beds').textContent = currentDeal.beds || '2';
                     document.getElementById('rep-baths').textContent = currentDeal.baths || '1';
@@ -822,33 +788,42 @@
                     document.getElementById('rep-psf').textContent = `$${Math.round((Number(currentDeal.price)||59900)/sqft)}`;
                     document.getElementById('rep-dom').textContent = '26 ימים';
 
+                    // לוגיקה חכמה לטעינה בזמן אמת של פער ה-MAO ושכירות ש"דרסתי" בטעות קודם
                     const asking = Number(currentDeal.price) || 59900;
+                    const maoFlip = currentDeal.mao_flip || Math.round((arv * 0.70) - flipRehab);
+                    const gap = asking - maoFlip;
                     const gapBox = document.getElementById('rep-price-gap-box');
                     const gapVal = document.getElementById('rep-price-gap-val');
                     
-                    gapBox.className = "p-4 rounded-xl border bg-emerald-950/20 border-emerald-500/30 flex justify-between items-center";
-                    gapVal.className = "text-base font-mono font-black text-emerald-400";
-                    gapVal.textContent = `$13,451 מתחת ל-MAO (דיל מעולה!)`;
+                    if (gap <= 0) {
+                        gapBox.className = "p-4 rounded-xl border bg-emerald-950/20 border-emerald-500/30 flex justify-between items-center";
+                        gapVal.className = "text-base font-mono font-black text-emerald-400";
+                        gapVal.textContent = `$${Math.abs(gap).toLocaleString()} מתחת ל-MAO (דיל מעולה!)`;
+                    } else {
+                        gapBox.className = "p-4 rounded-xl border bg-rose-950/20 border-rose-500/30 flex justify-between items-center";
+                        gapVal.className = "text-base font-mono font-black text-rose-400";
+                        gapVal.textContent = `+$${gap.toLocaleString()} מעל ה-MAO`;
+                    }
 
                     document.getElementById('rep-flip-rehab').textContent = `-$${flipRehab.toLocaleString()}`;
                     document.getElementById('rep-flip-margin').textContent = `-$${Math.round(arv * 0.30).toLocaleString()}`;
-                    document.getElementById('rep-flip-mao').textContent = `$93,425`;
+                    document.getElementById('rep-flip-mao').textContent = `$${maoFlip.toLocaleString()}`;
 
-                    document.getElementById('rep-rent-monthly').textContent = `$1,459`;
-                    document.getElementById('rep-rent-noi').textContent = `$12,956 / לשנה`;
-                    document.getElementById('rep-rental-mao').textContent = `$73,351`;
+                    const rent = currentDeal.monthly_rent_est || 1459;
+                    const noi = (rent * 12) * 0.74;
+                    const rentalRehab = currentDeal.rental_rehab || (sqft * 25);
+                    const rentalMao = Math.round((noi / 0.10) - rentalRehab - 5000);
+
+                    document.getElementById('rep-rent-monthly').textContent = `$${rent.toLocaleString()}`;
+                    document.getElementById('rep-rent-noi').textContent = `$${Math.round(noi).toLocaleString()} / לשנה`;
+                    document.getElementById('rep-rental-mao').textContent = `$${rentalMao.toLocaleString()}`;
 
                     renderCompsTable(currentDeal);
 
-                    if(currentDeal.vision_analyzed) {
-                        renderVisionTable(currentDeal.vision_total || flipRehab);
-                    }
                 } else {
                     document.getElementById('report-address').textContent = "לא נמצאו נתונים בצנרת העסקאות";
                 }
-            } catch(e) {
-                console.error(e);
-            }
+            } catch(e) { console.error(e); }
         };
     </script>
 </body>
