@@ -26,6 +26,16 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
 
+        /* הסרת חיצי העלאה והורדה משדות מספרים (Spinners) */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
         .indicator-pending { width: 18px; height: 18px; border-radius: 50%; background-color: #374151; border: 2px solid #9ca3af; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .indicator-done { width: 18px; height: 18px; border-radius: 50%; background-color: #10b981; border: 2px solid #34d399; color: #064e3b; font-weight: 900; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
 
@@ -68,10 +78,11 @@
                     <span id="archive-badge-count" class="px-2 py-0.2 bg-gray-900 rounded-full text-amber-400 font-mono text-[11px]">0</span>
                 </button>
 
-                <a href="index.html" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
+                <!-- שינוי כפתור לסורק הראשי שסוגר את הלשונית כדי לחשוף את הסורק ברקע -->
+                <button onclick="window.close(); window.location.href='index.html';" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>לסורק הראשי</span>
-                </a>
+                </button>
             </div>
         </div>
     </header>
@@ -139,7 +150,7 @@
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <h3 class="text-base font-extrabold text-white flex items-center gap-2">
                     <i data-lucide="file-check-2" class="w-5 h-5 text-emerald-400"></i>
-                    דוחות בודק מפורטים שנשמרו (לצורך השוואה ושאיבת נתונים)
+                    דוחות בודק מפורטים שנשמרו
                 </h3>
                 <div class="flex items-center gap-3">
                     <button onclick="clearSavedReports()" class="text-xs text-gray-500 hover:text-rose-400 transition">נקה היסטוריה</button>
@@ -147,6 +158,7 @@
                 </div>
             </div>
 
+            <!-- הגריד של הדוחות השמורים, יתמלא דרך ה-JS -->
             <div id="saved-reports-modal-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
 
             <div class="pt-2 border-t border-gray-800 text-left">
@@ -155,7 +167,7 @@
         </div>
     </div>
 
-    <!-- Modal: General Market Hub & Rehab Price Catalog (בקרת שיפוצים - תוקן ופעיל) -->
+    <!-- Modal: General Market Hub & Rehab Price Catalog (בקרת שיפוצים) -->
     <div id="general-price-catalog-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative text-right max-h-[92vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
@@ -318,17 +330,28 @@
                 grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-6 text-center">אין עדיין דוחות שמורים. שמור דוחות מהדו"ח המורחב (report.html) כדי שיופיעו כאן להשוואה.</div>`;
                 return;
             }
-            grid.innerHTML = savedInspectionReports.map((rep, idx) => `
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2">
-                    <strong class="text-white text-base block">${rep.address}</strong>
-                    <span class="text-gray-400 text-xs">${rep.city}, PA</span>
-                    <div class="text-xs text-emerald-400 font-mono">אומדן: ${rep.analysis?.rangeStr || 'לא צוין'}</div>
-                    <div class="flex justify-between items-center pt-2 border-t border-gray-900">
-                        <span class="text-[10px] text-gray-500">${rep.date || ''}</span>
-                        <button onclick="deleteSavedReport(${idx})" class="text-rose-400 text-xs hover:underline">מחק</button>
+            grid.innerHTML = savedInspectionReports.map((rep, idx) => {
+                // חיפוש ה-ID של הנכס כדי שנוכל לפתוח אותו
+                const match = pipelineDeals.find(d => d.address === rep.address);
+                const dealIdParam = match ? match.id : '';
+                
+                return `
+                    <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2 flex flex-col justify-between">
+                        <div>
+                            <strong class="text-white text-base block">${rep.address}</strong>
+                            <span class="text-gray-400 text-xs">${rep.city}, PA</span>
+                            <div class="text-xs text-emerald-400 font-mono mt-1">אומדן: ${rep.analysis?.rangeStr || 'לא צוין'}</div>
+                        </div>
+                        <div class="flex justify-between items-center pt-3 border-t border-gray-900 mt-2">
+                            <button onclick="window.open('report.html?id=${dealIdParam}', '_blank')" class="px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-lg text-xs font-bold transition flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> צפה בדוח</button>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] text-gray-500">${rep.date || ''}</span>
+                                <button onclick="deleteSavedReport(${idx})" class="text-rose-400 text-xs hover:underline">מחק</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             lucide.createIcons();
         }
 
@@ -355,7 +378,7 @@
             }
         }
 
-        // --- פונקציות בקרת שיפוצים (תוקנו לחלוטין) ---
+        // --- פונקציות בקרת שיפוצים ---
         function openGeneralPriceCatalogModal() {
             document.getElementById('general-price-catalog-modal').classList.remove('hidden');
             switchGeneralModalTab('tab-gen-inspector');
