@@ -39,8 +39,8 @@
             <button onclick="saveReportToHistory()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
                 <i data-lucide="bookmark" class="w-4 h-4"></i> שמור דוח
             </button>
-            <button id="btn-download-pdf" onclick="downloadReportPDF()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
-                <i data-lucide="download" class="w-4 h-4"></i> שמור כ-PDF מפורט
+            <button id="btn-download-pdf" onclick="generateMatrixPDF()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> שמור כ-PDF סופי
             </button>
             <button onclick="closeReportWindow()" class="px-4 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl text-sm font-bold transition flex items-center gap-2">
                 <i data-lucide="x" class="w-4 h-4"></i> סגור דוח
@@ -159,7 +159,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
                         <i data-lucide="building" class="w-6 h-6 text-blue-400 mb-2"></i>
-                        <span class="text-xs text-gray-400 font-bold">עירייה / מחוז</span>
+                        <span class="text-xs text-gray-400 font-bold">עירייה / מחוז (Municipality)</span>
                         <strong class="text-lg font-black text-white mt-1" id="neigh-muni">30th Ward - PITTSBURGH</strong>
                     </div>
                     <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
@@ -282,7 +282,7 @@
                 </div>
             </div>
 
-            <!-- בנקים מוצגים במסך (בהדפסה הם יוחלפו לטבלה) -->
+            <!-- בנקים מוצגים במסך (בהדפסה הם יוחלפו לטבלה מסודרת) -->
             <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
                 <div class="flex justify-between items-center border-b border-gray-800 pb-3">
                     <h3 class="text-lg font-black text-white flex items-center gap-2">
@@ -525,7 +525,6 @@
 
         // ==========================================
         // הפתרון המוחלט: יצירת PDF באמצעות בניית מטריצת HTML קשיחה ברוחב מקסימלי (1400px)
-        // מונע לחלוטין את "באג הדחיסה" ומאפשר שורה אחת ישרה, ואז מכווץ (Zoom Out) לתוך דף ה-PDF.
         // ==========================================
         function generateMatrixPDF() {
             const btn = document.getElementById('btn-download-pdf');
@@ -533,14 +532,12 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> מכין PDF רשמי...`;
             btn.disabled = true;
 
-            // שאיבת הנתונים הראשיים מהמסך
             const address = document.getElementById('report-address').innerText;
             const city = document.getElementById('report-city').innerText;
             const asking = document.getElementById('rep-asking').innerText;
             const arv = document.getElementById('rep-arv').innerText;
             const gap = document.getElementById('rep-price-gap-val').innerText;
             
-            // פונקציית עזר לניקוי טבלאות ממסך דינמי והפיכתן לקשיחות ובלתי ניתנות לשבירה (nowrap)
             function cleanTableHTML(tableId) {
                 const table = document.getElementById(tableId);
                 if (!table) return '';
@@ -557,14 +554,13 @@
                     th.style.backgroundColor = '#f1f5f9';
                     th.style.fontWeight = 'bold';
                     th.style.textAlign = 'right';
-                    th.style.whiteSpace = 'nowrap'; // קריטי לרוחב מלא
+                    th.style.whiteSpace = 'nowrap';
                 });
                 clone.querySelectorAll('td').forEach(td => {
                     td.style.border = '1px solid #cbd5e1';
                     td.style.padding = '10px';
                     td.style.textAlign = 'right';
-                    td.style.whiteSpace = 'nowrap'; // קריטי לרוחב מלא
-                    // זיהוי אנגלית ומספרים ועטיפה ב-LTR כדי למנוע את קפיצת האותיות השבורות
+                    td.style.whiteSpace = 'nowrap';
                     if (/^[a-zA-Z0-9\s\$\.,\%\-\/()]+$/.test(td.innerText.trim())) {
                         td.setAttribute('dir', 'ltr');
                     }
@@ -575,7 +571,6 @@
             const salesCompsHTML = cleanTableHTML('tbl-sales-comps');
             const rentCompsHTML = cleanTableHTML('tbl-rent-comps');
 
-            // שאיבת נתוני המחשבון והמימון
             const isVisionRun = document.getElementById('vis-total-sum').innerText !== '$--';
             const rehabTotal = document.getElementById('vis-total-sum').innerText;
             const allIn = document.getElementById('calc-allin').innerText;
@@ -583,7 +578,6 @@
             const flipProfit = document.getElementById('calc-flipprofit').innerText;
             const roi = document.getElementById('calc-roi').innerText;
 
-            // בניית טבלאות AI עם dir=ltr לאנגלית כדי ששום מילה לא תידחס או תתהפך
             let rehabContent = '<p style="text-align:center; padding: 30px; font-size: 16px; border: 1px dashed #ccc; background: #f9fafb;">הדוח החזותי (Vision AI) לא הופעל עדיין עבור נכס זה.</p>';
             if (isVisionRun) {
                 rehabContent = `
@@ -621,8 +615,6 @@
                 `;
             }
 
-            // יצירת תבנית המטריצה הסופית ב-HTML רחב במיוחד (1400px)
-            // הרוחב העצום מבטיח שכל תא יקבל את המקום שלו, והטקסט לעולם לא יימעך.
             const htmlStr = `
                 <div id="pdf-export-container" style="width: 1400px; padding: 40px; background: white; color: black; direction: rtl; font-family: 'Assistant', sans-serif;">
                     
@@ -771,7 +763,6 @@
                 </div>
             `;
 
-            // השתלת הטופס למסך אבל מוסתר מעין המשתמש
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlStr;
             tempDiv.style.position = 'absolute';
@@ -779,7 +770,6 @@
             tempDiv.style.top = '0';
             document.body.appendChild(tempDiv);
 
-            // הגדרת PDF מותאמת: לוקח קנבס עצום של 1400px ומכווץ אותו בקלילות לדף A4 ללא פגיעה בטקסט
             const opt = {
                 margin: [10, 10, 10, 10],
                 filename: `Deal_Report_${address.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
@@ -790,7 +780,7 @@
 
             setTimeout(() => {
                 html2pdf().set(opt).from(tempDiv.firstElementChild).save().then(() => {
-                    document.body.removeChild(tempDiv); // מחיקת הטופס הנסתר לאחר ההורדה
+                    document.body.removeChild(tempDiv);
                     btn.innerHTML = originalHtml;
                     btn.disabled = false;
                 }).catch(err => {
@@ -975,10 +965,10 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-800 text-gray-200">
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">גג (Roof)</td><td class="p-4">5 Aging</td><td class="p-4 text-gray-400">Requires on-site evaluation</td><td class="p-4 text-gray-500">-</td><td class="p-4">Low</td><td class="p-4 text-left font-mono font-black text-base">$6,303</td></tr>
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">מטבח (Kitchen)</td><td class="p-4">5 Aging</td><td class="p-4 text-gray-300">Functional but outdated.</td><td class="p-4 text-gray-300">Reface or paint cabinets, update hardware.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$4,630</td></tr>
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">ריצוף (Flooring)</td><td class="p-4">5 Aging</td><td class="p-4 text-gray-300">Aging with some wear visible.</td><td class="p-4 text-gray-300">Repair or replace flooring in high-traffic areas.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$4,288</td></tr>
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">מיזוג (HVAC)</td><td class="p-4">5 Aging</td><td class="p-4 text-gray-400">Requires on-site evaluation</td><td class="p-4 text-gray-500">-</td><td class="p-4">Low</td><td class="p-4 text-left font-mono font-black text-base">$0</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">גג (Roof)</td><td class="p-4" dir="ltr">5 Aging</td><td class="p-4 text-gray-400" dir="ltr">Requires on-site evaluation</td><td class="p-4 text-gray-500" dir="ltr">-</td><td class="p-4" dir="ltr">Low</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$6,303</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">מטבח (Kitchen)</td><td class="p-4" dir="ltr">5 Aging</td><td class="p-4 text-gray-300" dir="ltr">Functional but outdated.</td><td class="p-4 text-gray-300" dir="ltr">Reface or paint cabinets.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$4,630</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">ריצוף (Flooring)</td><td class="p-4" dir="ltr">5 Aging</td><td class="p-4 text-gray-300" dir="ltr">Aging with some wear visible.</td><td class="p-4 text-gray-300" dir="ltr">Repair or replace flooring.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$4,288</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">מיזוג (HVAC)</td><td class="p-4" dir="ltr">5 Aging</td><td class="p-4 text-gray-400" dir="ltr">Requires on-site evaluation</td><td class="p-4 text-gray-500" dir="ltr">-</td><td class="p-4" dir="ltr">Low</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$0</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -996,9 +986,9 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-800 text-gray-200">
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">קירות (Drywall)</td><td class="p-4">6 Well-maintained</td><td class="p-4 text-gray-300">Generally good condition with no major visible damage.</td><td class="p-4 text-gray-300">Minor repairs where necessary.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$5,203</td></tr>
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">צבע (Paint)</td><td class="p-4">5 Aging</td><td class="p-4 text-gray-300">Aging paint with some wear visible.</td><td class="p-4 text-gray-300">Repaint walls in living room and bedrooms.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$2,893</td></tr>
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">תאורה (Lights)</td><td class="p-4">5 Aging</td><td class="p-4 text-gray-300">Functional but outdated.</td><td class="p-4 text-gray-300">Replace outdated light fixtures.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$605</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">קירות (Drywall)</td><td class="p-4" dir="ltr">6 Well-maintained</td><td class="p-4 text-gray-300" dir="ltr">Generally good condition.</td><td class="p-4 text-gray-300" dir="ltr">Minor repairs where necessary.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$5,203</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">צבע (Paint)</td><td class="p-4" dir="ltr">5 Aging</td><td class="p-4 text-gray-300" dir="ltr">Aging paint.</td><td class="p-4 text-gray-300" dir="ltr">Repaint walls.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$2,893</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">תאורה (Lights)</td><td class="p-4" dir="ltr">5 Aging</td><td class="p-4 text-gray-300" dir="ltr">Functional but outdated.</td><td class="p-4 text-gray-300" dir="ltr">Replace outdated light fixtures.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$605</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1016,9 +1006,9 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-800 text-gray-200">
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">חלונות (Windows)</td><td class="p-4">5 Aging</td><td class="p-4 text-gray-300">Functional but outdated.</td><td class="p-4 text-gray-300">Replace windows for energy efficiency.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$3,780</td></tr>
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">חיפוי (Siding)</td><td class="p-4">6 Well-maintained</td><td class="p-4 text-gray-300">Good condition with minor wear.</td><td class="p-4 text-gray-300">Clean and repair minor issues.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$1,728</td></tr>
-                                    <tr><td class="p-4 font-bold flex items-center gap-2">תיקוני לבנים (Brick)</td><td class="p-4">6 Well-maintained</td><td class="p-4 text-gray-300">Good condition with minor wear.</td><td class="p-4 text-gray-300">Clean brick surfaces.</td><td class="p-4">High</td><td class="p-4 text-left font-mono font-black text-base">$1,080</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">חלונות (Windows)</td><td class="p-4" dir="ltr">5 Aging</td><td class="p-4 text-gray-300" dir="ltr">Outdated.</td><td class="p-4 text-gray-300" dir="ltr">Replace windows.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$3,780</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">חיפוי (Siding)</td><td class="p-4" dir="ltr">6 Well-maintained</td><td class="p-4 text-gray-300" dir="ltr">Good condition.</td><td class="p-4 text-gray-300" dir="ltr">Clean & repair.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$1,728</td></tr>
+                                    <tr><td class="p-4 font-bold flex items-center gap-2">תיקוני לבנים (Brick)</td><td class="p-4" dir="ltr">6 Well-maintained</td><td class="p-4 text-gray-300" dir="ltr">Good condition.</td><td class="p-4 text-gray-300" dir="ltr">Clean brick.</td><td class="p-4" dir="ltr">High</td><td class="p-4 text-left font-mono font-black text-base" dir="ltr">$1,080</td></tr>
                                 </tbody>
                             </table>
                         </div>
