@@ -12,7 +12,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.7"
+VERSION = "1.8"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -25,7 +25,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.7"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.8"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -420,7 +420,7 @@ REDFIN_USER_AGENT = (
 )
 
 
-def redfin_city_sold_rows(max_pages=8, page_size=350):
+def redfin_city_sold_rows(max_pages=2, page_size=350):
     """
     Best-effort Redfin downloadable sold-search CSV adapter.
     This is intentionally non-fatal because it is not a stable public API.
@@ -433,7 +433,7 @@ def redfin_city_sold_rows(max_pages=8, page_size=350):
             "al": 1, "market": "pittsburgh", "num_homes": page_size,
             "ord": "redfin-recommended-asc", "page_number": page,
             "start": (page - 1) * page_size,
-            "region_id": 15702, "region_type": 6,
+            "region_id": 15213, "region_type": 2,
             "sf": "1,2,3,5,6,7", "status": 9,
             "uipt": "1,2,3,4,5,6,7,8", "v": 8,
             "sold_within_days": 730,
@@ -493,7 +493,7 @@ def _plausible_sqft(value):
 
 
 def discover_same_building_sold_comps(target, subject):
-    rows, errors = redfin_city_sold_rows()
+    rows, errors, headers = redfin_city_sold_rows()
     comps = []
 
     for row in rows:
@@ -503,6 +503,8 @@ def discover_same_building_sold_comps(target, subject):
 
         unit = extract_unit(address)
         sold_price = _num(_csv_value(row, "PRICE", "SALE PRICE", "SOLD PRICE"))
+        raw_status = clean(_csv_value(row, "STATUS", "PROPERTY STATUS"))
+        raw_sale_type = clean(_csv_value(row, "SALE TYPE", "LISTING TYPE"))
         if not unit or norm(unit) == norm(target.get("unit")) or sold_price is None:
             continue
 
@@ -561,6 +563,8 @@ def discover_same_building_sold_comps(target, subject):
             "match_reasons": reasons,
             "source": "Redfin downloadable sold-search CSV",
             "source_url": source_url or None,
+            "raw_status": raw_status or None,
+            "raw_sale_type": raw_sale_type or None,
             "verification": (
                 "unit_level_closed_sale_verified"
                 if sold_date else "unit_level_sale_price_date_unverified"
@@ -835,10 +839,12 @@ def build_result(address, city, state, zipcode):
                     "baths": _num(os.getenv("TARGET_BATHS", "1")),
                     "sqft": _num(os.getenv("TARGET_SQFT")),
                 }
-                sold_comps, source_errors, source_rows = discover_same_building_sold_comps(
+                sold_comps, source_errors, source_rows, source_headers = discover_same_building_sold_comps(
                     target, subject
                 )
-                sold_comps, verification_warnings = verify_candidate_comps(sold_comps)
+                # Redfin individual property pages return HTTP 405 from GitHub
+                # Actions, so V1.8 validates the sold-search CSV itself instead.
+                verification_warnings = []
                 result["subject_for_comp_matching"] = subject
                 result["sold_comps"] = sold_comps
                 result["sold_comps_count"] = len(sold_comps)
@@ -851,7 +857,7 @@ def build_result(address, city, state, zipcode):
                     "verified_closed_comps_found"
                     if verified_count
                     else (
-                        "unit_sale_records_found_but_not_verified"
+                        "same_building_rows_found_without_sold_date"
                         if sold_comps
                         else ("source_unavailable" if source_errors else "no_matching_unit_sales_found")
                     )
@@ -859,7 +865,10 @@ def build_result(address, city, state, zipcode):
                 result["sold_comps_source"] = {
                     "name": "Redfin downloadable sold-search CSV",
                     "rows_scanned": source_rows,
+                    "headers": source_headers,
                     "errors": source_errors,
+                    "search_scope": "ZIP 15213 recently-sold filter",
+                    "sold_within_days": 730,
                     "verification_warnings": verification_warnings,
                     "stability": "best_effort_undocumented_endpoint",
                 }
@@ -957,7 +966,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - UNIT SOLD COMPS DISCOVERY")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - SOLD CSV VALIDATION")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -986,6 +995,7 @@ def print_summary(result):
         print(f"Verified closed comps: {result.get('verified_closed_comps_count', 0)}")
         source = result.get("sold_comps_source") or {}
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
+        print(f"CSV headers: {source.get('headers', [])}")
         for err in source.get("errors", []):
             print(f"  Source warning: {err}")
         for warning in source.get("verification_warnings", []):
@@ -997,6 +1007,8 @@ def print_summary(result):
                 f"{comp.get('beds')} bd / {comp.get('baths')} ba | "
                 f"{comp.get('sqft') or 'sqft unavailable'} sqft | "
                 f"Score={comp.get('comp_score')} | "
+                f"Status={comp.get('raw_status') or '[blank]'} | "
+                f"SaleType={comp.get('raw_sale_type') or '[blank]'} | "
                 f"Verification={comp.get('verification')}"
             )
         print(f"ARV status: {result.get('arv_status')}")
