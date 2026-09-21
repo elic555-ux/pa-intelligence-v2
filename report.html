@@ -758,7 +758,7 @@
         };
 
         // =========================================================================
-        // מנוע PDF ברוחב 660px - מרווח שוליים בטוח וגופנים עדינים למניעת גלישה
+        // מנוע PDF מיושר ללא סטיות אופקיות (Zero-Offset) וחלוקת אחוזים מדויקת
         // =========================================================================
         function generateCleanPDF() {
             const btn = document.getElementById('btn-download-pdf');
@@ -779,7 +779,7 @@
                 Array.from(tbody.rows).forEach(row => {
                     res += '<tr>';
                     Array.from(row.cells).forEach(cell => {
-                        res += `<td style="padding: 2px 3px; border: 1px solid #cbd5e1; text-align: right; white-space: nowrap;">${wrap(cell.innerText.trim())}</td>`;
+                        res += `<td style="padding: 2px 3px; border: 1px solid #cbd5e1; text-align: right; overflow: hidden; white-space: nowrap;">${wrap(cell.innerText.trim())}</td>`;
                     });
                     res += '</tr>';
                 });
@@ -800,8 +800,15 @@
                     
                     <div class="no-split" style="margin-bottom: 5px;">
                         <h4 style="background:#e0f2fe; padding:2px 4px; margin:0; border:1px solid #cbd5e1; border-bottom:none; color:#1e3a8a; font-size:8.5px;">מערכות מרכזיות &nbsp;${wrap('(Major Systems)')} &nbsp;-&nbsp; ${wrap('$22,484')}</h4>
-                        <table style="width:100%; border-collapse:collapse; font-size:7px;">
-                            <tr style="background:#f8fafc;"><th style="padding:2px; border:1px solid #cbd5e1;">רכיב</th><th style="padding:2px; border:1px solid #cbd5e1;">מצב</th><th style="padding:2px; border:1px solid #cbd5e1;">מצב נוכחי</th><th style="padding:2px; border:1px solid #cbd5e1;">עבודה נדרשת</th><th style="padding:2px; border:1px solid #cbd5e1;">ביטחון</th><th style="padding:2px; border:1px solid #cbd5e1;">אומדן</th></tr>
+                        <table style="width:100%; border-collapse:collapse; font-size:7px; table-layout: fixed;">
+                            <tr style="background:#f8fafc;">
+                                <th style="width: 15%; padding:2px; border:1px solid #cbd5e1;">רכיב</th>
+                                <th style="width: 15%; padding:2px; border:1px solid #cbd5e1;">מצב</th>
+                                <th style="width: 30%; padding:2px; border:1px solid #cbd5e1;">מצב נוכחי</th>
+                                <th style="width: 20%; padding:2px; border:1px solid #cbd5e1;">עבודה נדרשת</th>
+                                <th style="width: 10%; padding:2px; border:1px solid #cbd5e1;">ביטחון</th>
+                                <th style="width: 10%; padding:2px; border:1px solid #cbd5e1;">אומדן</th>
+                            </tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">גג &nbsp;${wrap('(Roof)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('5 Aging')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Requires evaluation')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('-')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Low')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$6,303')}</td></tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">מטבח &nbsp;${wrap('(Kitchen)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('5 Aging')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Functional but outdated')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Reface cabinets')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$4,630')}</td></tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">ריצוף &nbsp;${wrap('(Flooring)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('5 Aging')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Aging with wear')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Repair flooring')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$4,288')}</td></tr>
@@ -812,8 +819,15 @@
 
                     <div class="no-split" style="margin-bottom: 5px;">
                         <h4 style="background:#e0f2fe; padding:2px 4px; margin:0; border:1px solid #cbd5e1; border-bottom:none; color:#1e3a8a; font-size:8.5px;">גימורי פנים &nbsp;${wrap('(Interior Finishes)')} &nbsp;-&nbsp; ${wrap('$10,501')}</h4>
-                        <table style="width:100%; border-collapse:collapse; font-size:7px;">
-                            <tr style="background:#f8fafc;"><th style="padding:2px; border:1px solid #cbd5e1;">רכיב</th><th style="padding:2px; border:1px solid #cbd5e1;">מצב</th><th style="padding:2px; border:1px solid #cbd5e1;">מצב נוכחי</th><th style="padding:2px; border:1px solid #cbd5e1;">עבודה נדרשת</th><th style="padding:2px; border:1px solid #cbd5e1;">ביטחון</th><th style="padding:2px; border:1px solid #cbd5e1;">אומדן</th></tr>
+                        <table style="width:100%; border-collapse:collapse; font-size:7px; table-layout: fixed;">
+                            <tr style="background:#f8fafc;">
+                                <th style="width: 15%; padding:2px; border:1px solid #cbd5e1;">רכיב</th>
+                                <th style="width: 15%; padding:2px; border:1px solid #cbd5e1;">מצב</th>
+                                <th style="width: 30%; padding:2px; border:1px solid #cbd5e1;">מצב נוכחי</th>
+                                <th style="width: 20%; padding:2px; border:1px solid #cbd5e1;">עבודה נדרשת</th>
+                                <th style="width: 10%; padding:2px; border:1px solid #cbd5e1;">ביטחון</th>
+                                <th style="width: 10%; padding:2px; border:1px solid #cbd5e1;">אומדן</th>
+                            </tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">קירות &nbsp;${wrap('(Drywall)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('6 Maintained')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Good condition')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Minor repairs')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$5,203')}</td></tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">צבע &nbsp;${wrap('(Paint)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('5 Aging')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Aging paint')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Repaint walls')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$2,893')}</td></tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">תאורה &nbsp;${wrap('(Lights)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('5 Aging')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Outdated')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Replace fixtures')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$605')}</td></tr>
@@ -823,8 +837,15 @@
 
                     <div class="no-split">
                         <h4 style="background:#e0f2fe; padding:2px 4px; margin:0; border:1px solid #cbd5e1; border-bottom:none; color:#1e3a8a; font-size:8.5px;">חוץ ומבנה &nbsp;${wrap('(Exterior & Structure)')} &nbsp;-&nbsp; ${wrap('$9,976')}</h4>
-                        <table style="width:100%; border-collapse:collapse; font-size:7px;">
-                            <tr style="background:#f8fafc;"><th style="padding:2px; border:1px solid #cbd5e1;">רכיב</th><th style="padding:2px; border:1px solid #cbd5e1;">מצב</th><th style="padding:2px; border:1px solid #cbd5e1;">מצב נוכחי</th><th style="padding:2px; border:1px solid #cbd5e1;">עבודה נדרשת</th><th style="padding:2px; border:1px solid #cbd5e1;">ביטחון</th><th style="padding:2px; border:1px solid #cbd5e1;">אומדן</th></tr>
+                        <table style="width:100%; border-collapse:collapse; font-size:7px; table-layout: fixed;">
+                            <tr style="background:#f8fafc;">
+                                <th style="width: 15%; padding:2px; border:1px solid #cbd5e1;">רכיב</th>
+                                <th style="width: 15%; padding:2px; border:1px solid #cbd5e1;">מצב</th>
+                                <th style="width: 30%; padding:2px; border:1px solid #cbd5e1;">מצב נוכחי</th>
+                                <th style="width: 20%; padding:2px; border:1px solid #cbd5e1;">עבודה נדרשת</th>
+                                <th style="width: 10%; padding:2px; border:1px solid #cbd5e1;">ביטחון</th>
+                                <th style="width: 10%; padding:2px; border:1px solid #cbd5e1;">אומדן</th>
+                            </tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">חלונות &nbsp;${wrap('(Windows)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('5 Aging')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Outdated')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Replace windows')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$3,780')}</td></tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">חיפוי &nbsp;${wrap('(Siding)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('6 Maintained')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Good condition')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Clean & repair')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$1,728')}</td></tr>
                             <tr><td style="padding:2px; border:1px solid #cbd5e1;">לבנים &nbsp;${wrap('(Brick)')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('6 Maintained')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Good condition')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('Clean brick')}</td><td style="padding:2px; border:1px solid #cbd5e1;">${wrap('High')}</td><td style="padding:2px; border:1px solid #cbd5e1; font-weight:bold;">${wrap('$1,080')}</td></tr>
@@ -834,25 +855,25 @@
                 `;
             }
 
-            // תבנית HTML קשיחה ברוחב 660px
+            // תבנית HTML קשיחה ברוחב 680px עם שוליים מאוזנים למניעת כל חיתוך צדדי
             const templateHtml = `
-            <div id="pdf-root" style="width: 660px; padding: 10px 14px; background: #ffffff; color: #000000; direction: rtl; font-family: 'Assistant', sans-serif; box-sizing: border-box;">
+            <div id="pdf-root" style="width: 680px; margin: 0 auto; padding: 8px 12px; background: #ffffff; color: #000000; direction: rtl; font-family: 'Assistant', sans-serif; box-sizing: border-box;">
                 <style>
                     #pdf-root * { box-sizing: border-box; }
                     #pdf-root table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 6.8px; table-layout: fixed; }
-                    #pdf-root th, #pdf-root td { border: 1px solid #cbd5e1; padding: 2px 3px; text-align: right; word-wrap: break-word; }
+                    #pdf-root th, #pdf-root td { border: 1px solid #cbd5e1; padding: 2px 3px; text-align: right; word-wrap: break-word; overflow: hidden; }
                     #pdf-root th { background-color: #f8fafc; font-weight: bold; }
                     .page-break { page-break-before: always; clear: both; }
                     .no-split { page-break-inside: avoid !important; break-inside: avoid !important; }
                     .en-text { direction: ltr !important; display: inline-block !important; unicode-bidi: isolate !important; text-align: left; }
-                    h2 { color: #1e3a8a; border-bottom: 1.5px solid #1e3a8a; padding-bottom: 1px; margin-top: 6px; margin-bottom: 3px; font-size: 10px; }
+                    h2 { color: #1e3a8a; border-bottom: 1.5px solid #1e3a8a; padding-bottom: 1px; margin-top: 5px; margin-bottom: 3px; font-size: 9.5px; }
                     h3 { color: #334155; margin-top: 4px; margin-bottom: 2px; font-size: 8.5px; }
                 </style>
 
                 <!-- ================= עמוד 1 ================= -->
                 <div class="no-split">
                     <div style="background: #1e3a8a; color: white; padding: 5px; text-align: center; border-radius: 4px; margin-bottom: 5px;">
-                        <h1 style="margin: 0 0 1px 0; font-size: 12.5px; color: white;">דוח השקעה מורחב &nbsp;-&nbsp; ${wrap(getTxt('report-address'))}</h1>
+                        <h1 style="margin: 0 0 1px 0; font-size: 12px; color: white;">דוח השקעה מורחב &nbsp;-&nbsp; ${wrap(getTxt('report-address'))}</h1>
                         <p style="margin: 0; font-size: 8px; color: #bae6fd;">${wrap(getTxt('report-city'))}</p>
                     </div>
 
@@ -950,14 +971,14 @@
                     </table>
 
                     <h3>אפשרויות מימון ובנקים &nbsp;${wrap('(Lenders Matrix)')}</h3>
-                    <table style="font-size: 7.5px;">
+                    <table style="font-size: 7.2px; table-layout: fixed;">
                         <tr>
                             <th style="width: 25%;">בנק / חברה</th>
                             <th style="width: 18%;">סוג מימון</th>
-                            <th style="width: 15%;">LTV &nbsp;רכישה</th>
+                            <th style="width: 14%;">LTV &nbsp;רכישה</th>
                             <th style="width: 15%;">מימון שיפוץ</th>
-                            <th style="width: 12%;">ריבית</th>
-                            <th style="width: 15%;">סכום הלוואה</th>
+                            <th style="width: 11%;">ריבית</th>
+                            <th style="width: 17%;">סכום הלוואה</th>
                         </tr>
                         <tr><td>${wrap('Civic Financial')}</td><td>${wrap('Hard Money')}</td><td>${wrap('80%')}</td><td style="color: #059669; font-weight: bold;">${wrap('100%')}</td><td>${wrap('11.5%')}</td><td style="font-weight: bold;">${wrap(getTxt('lender-1-loan'))}</td></tr>
                         <tr><td>${wrap('Lima One Capital')}</td><td>${wrap('BRRRR / Flip')}</td><td>${wrap('80%')}</td><td style="color: #059669; font-weight: bold;">${wrap('90%')}</td><td>${wrap('9.5%')}</td><td style="font-weight: bold;">${wrap(getTxt('lender-2-loan'))}</td></tr>
@@ -970,14 +991,35 @@
 
                 <div class="no-split">
                     <h3>עסקאות מכירה סמוכות &nbsp;${wrap('(Sales Comps)')}</h3>
-                    <table style="font-size: 6.8px;">
-                        <tr><th>כתובת</th><th>מחיר</th><th>תאריך</th><th>התאמה</th><th>שטח</th><th>חדר</th><th>רחצה</th><th>שנה</th><th>מרחק</th><th>מצב</th></tr>
+                    <table style="font-size: 6.8px; table-layout: fixed;">
+                        <tr style="background:#f8fafc;">
+                            <th style="width: 18%;">כתובת</th>
+                            <th style="width: 11%;">מחיר</th>
+                            <th style="width: 9%;">תאריך</th>
+                            <th style="width: 8%;">התאמה</th>
+                            <th style="width: 8%;">שטח</th>
+                            <th style="width: 6%;">חדר</th>
+                            <th style="width: 6%;">רחצה</th>
+                            <th style="width: 7%;">שנה</th>
+                            <th style="width: 8%;">מרחק</th>
+                            <th style="width: 19%;">מצב</th>
+                        </tr>
                         ${salesComps}
                     </table>
 
                     <h3>ניתוח שכר דירה בסביבה &nbsp;${wrap('(Rent Comps)')}</h3>
-                    <table style="font-size: 6.8px;">
-                        <tr><th>כתובת</th><th>שכירות</th><th>תאריך</th><th>התאמה</th><th>שטח</th><th>חדר</th><th>רחצה</th><th>שנה</th><th>מרחק</th></tr>
+                    <table style="font-size: 6.8px; table-layout: fixed;">
+                        <tr style="background:#f8fafc;">
+                            <th style="width: 20%;">כתובת</th>
+                            <th style="width: 13%;">שכירות</th>
+                            <th style="width: 10%;">תאריך</th>
+                            <th style="width: 9%;">התאמה</th>
+                            <th style="width: 9%;">שטח</th>
+                            <th style="width: 7%;">חדר</th>
+                            <th style="width: 7%;">רחצה</th>
+                            <th style="width: 9%;">שנה</th>
+                            <th style="width: 16%;">מרחק</th>
+                        </tr>
                         ${rentComps}
                     </table>
                 </div>
@@ -990,32 +1032,25 @@
             </div>
             `;
 
+            // הצבה באזור מוסתר ללא סטיות מיקום (ללא fixed וללא left שגויים)
             const container = document.createElement('div');
-            container.style.position = 'fixed';
-            container.style.left = '0px';
+            container.style.position = 'absolute';
             container.style.top = '0px';
-            container.style.width = '660px';
-            container.style.direction = 'ltr';
-            container.style.zIndex = '-99999';
-            container.style.opacity = '0';
-            container.style.pointerEvents = 'none';
+            container.style.left = '-9999px';
+            container.style.width = '680px';
+            container.style.direction = 'rtl';
             container.innerHTML = templateHtml;
             document.body.appendChild(container);
 
             const opt = {
-                margin: [4, 6, 4, 6],
+                margin: [4, 4, 4, 4],
                 filename: `Deal_Report_${(getTxt('report-address') || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 1.0 },
                 html2canvas: { 
                     scale: 2, 
                     useCORS: true, 
-                    letterRendering: true, 
-                    width: 660, 
-                    windowWidth: 660,
-                    x: 0,
-                    y: 0,
-                    scrollX: 0,
-                    scrollY: 0
+                    letterRendering: true,
+                    logging: false
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'], before: '.page-break', avoid: '.no-split' }
