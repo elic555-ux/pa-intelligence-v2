@@ -12,7 +12,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.8"
+VERSION = "1.8.1"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -25,7 +25,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.8"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.8.1"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -463,10 +463,8 @@ def redfin_city_sold_rows(max_pages=2, page_size=350):
             errors.append(f"page_{page}: {type(exc).__name__}: {exc}")
             break
 
-    return all_rows, errors
-
-
-
+    headers = list(all_rows[0].keys()) if all_rows else []
+    return all_rows, errors, headers
 def _parse_sale_date(value):
     text = clean(value)
     if not text:
@@ -580,10 +578,7 @@ def discover_same_building_sold_comps(target, subject):
         key=lambda c: (c["comp_score"], c["sold_date"] or ""),
         reverse=True,
     )
-    return comps, errors, len(rows)
-
-
-
+    return comps, errors, len(rows), headers
 def _page_text(html):
     text = re.sub(r"(?is)<script.*?</script>", " ", html or "")
     text = re.sub(r"(?is)<style.*?</style>", " ", text)
