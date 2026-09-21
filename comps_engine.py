@@ -4,6 +4,7 @@ import csv
 import io
 import os
 from datetime import datetime, date
+from html import unescape
 import re
 import sys
 from datetime import datetime, timezone
@@ -11,7 +12,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.6"
+VERSION = "1.7"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -24,7 +25,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.6"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.7"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -578,6 +579,85 @@ def discover_same_building_sold_comps(target, subject):
     return comps, errors, len(rows)
 
 
+
+def _page_text(html):
+    text = re.sub(r"(?is)<script.*?</script>", " ", html or "")
+    text = re.sub(r"(?is)<style.*?</style>", " ", text)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def verify_redfin_closed_sale(comp):
+    """
+    Secondary verification against the individual Redfin property page.
+    A CSV price is NOT accepted as a sold price unless the property page
+    contains a SOLD event with the same price and an identifiable date.
+    """
+    url = clean(comp.get("source_url"))
+    price = comp.get("sold_price")
+    if not url or price is None:
+        return comp, "missing_property_url_or_price"
+
+    try:
+        r = requests.get(
+            url,
+            headers={"User-Agent": REDFIN_USER_AGENT, "Accept": "text/html,*/*"},
+            timeout=25,
+        )
+        r.raise_for_status()
+        text = _page_text(r.text)
+    except Exception as exc:
+        return comp, f"property_page_error: {type(exc).__name__}: {exc}"
+
+    # Require the page itself to identify the property as sold.
+    if not re.search(r"\bSOLD\b", text, flags=re.I):
+        return comp, "no_sold_event_on_property_page"
+
+    price_int = int(round(float(price)))
+    price_patterns = {
+        f"${price_int:,}",
+        f"${price_int}",
+    }
+    if not any(p in text for p in price_patterns):
+        return comp, "csv_price_not_confirmed_on_property_page"
+
+    # Prefer explicit sale-history phrasing, then SOLD header phrasing.
+    date_patterns = [
+        r"(?:Sold|SOLD)\s+(?:on\s+)?([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
+        r"(?:Sold|SOLD)\s+(?:on\s+)?(\d{1,2}/\d{1,2}/\d{2,4})",
+        r"(\d{1,2}/\d{1,2}/\d{2,4})\s+(?:Sold|SOLD)",
+    ]
+    verified_date = None
+    for pat in date_patterns:
+        m = re.search(pat, text)
+        if m:
+            verified_date = _parse_sale_date(m.group(1))
+            if verified_date:
+                break
+
+    if not verified_date:
+        return comp, "sold_event_found_but_date_not_parsed"
+
+    out = dict(comp)
+    out["sold_date"] = verified_date
+    out["verification"] = "unit_level_closed_sale_verified"
+    out["verification_source"] = "Redfin individual property page"
+    out["verification_url"] = url
+    return out, None
+
+
+def verify_candidate_comps(comps):
+    verified = []
+    warnings = []
+    for comp in comps:
+        checked, warning = verify_redfin_closed_sale(comp)
+        verified.append(checked)
+        if warning:
+            warnings.append(f"Unit {comp.get('unit')}: {warning}")
+    return verified, warnings
+
+
 def conservative_arv_from_comps(comps, subject):
     verified = [
         c for c in comps
@@ -758,6 +838,7 @@ def build_result(address, city, state, zipcode):
                 sold_comps, source_errors, source_rows = discover_same_building_sold_comps(
                     target, subject
                 )
+                sold_comps, verification_warnings = verify_candidate_comps(sold_comps)
                 result["subject_for_comp_matching"] = subject
                 result["sold_comps"] = sold_comps
                 result["sold_comps_count"] = len(sold_comps)
@@ -765,15 +846,21 @@ def build_result(address, city, state, zipcode):
                     1 for c in sold_comps
                     if c.get("verification") == "unit_level_closed_sale_verified"
                 )
+                verified_count = result["verified_closed_comps_count"]
                 result["sold_comps_status"] = (
-                    "unit_sale_records_found_pending_date_verification"
-                    if sold_comps
-                    else ("source_unavailable" if source_errors else "no_matching_unit_sales_found")
+                    "verified_closed_comps_found"
+                    if verified_count
+                    else (
+                        "unit_sale_records_found_but_not_verified"
+                        if sold_comps
+                        else ("source_unavailable" if source_errors else "no_matching_unit_sales_found")
+                    )
                 )
                 result["sold_comps_source"] = {
                     "name": "Redfin downloadable sold-search CSV",
                     "rows_scanned": source_rows,
                     "errors": source_errors,
+                    "verification_warnings": verification_warnings,
                     "stability": "best_effort_undocumented_endpoint",
                 }
                 result["sold_comps_source_requirement"] = [
@@ -901,13 +988,16 @@ def print_summary(result):
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
         for err in source.get("errors", []):
             print(f"  Source warning: {err}")
+        for warning in source.get("verification_warnings", []):
+            print(f"  Verification warning: {warning}")
         for comp in result.get("sold_comps", [])[:10]:
             print(
                 f"  COMP Unit {comp.get('unit')} | "
                 f"${comp.get('sold_price'):,.0f} | {comp.get('sold_date') or 'date unavailable'} | "
                 f"{comp.get('beds')} bd / {comp.get('baths')} ba | "
                 f"{comp.get('sqft') or 'sqft unavailable'} sqft | "
-                f"Score={comp.get('comp_score')}"
+                f"Score={comp.get('comp_score')} | "
+                f"Verification={comp.get('verification')}"
             )
         print(f"ARV status: {result.get('arv_status')}")
         if result.get("arv") is not None:
