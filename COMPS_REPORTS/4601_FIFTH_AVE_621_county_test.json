@@ -1,8 +1,8 @@
 {
   "engine": "Allegheny County Comps Engine",
-  "version": "1.3",
+  "version": "1.4.1",
   "phase": "property_resolution_building_reference_and_sales_history",
-  "generated_at": "2026-09-21T13:51:50+00:00",
+  "generated_at": "2026-09-21T14:33:40+00:00",
   "input": {
     "address": "4601 Fifth Ave #621",
     "city": "Pittsburgh",
@@ -42,7 +42,7 @@
   "resolution_type": "coop_or_multiunit_building_reference",
   "status": "building_reference_resolved",
   "arv": null,
-  "arv_status": "not_calculated_phase_1",
+  "arv_status": "not_calculated_without_verified_unit_comps",
   "comps": [],
   "comps_status": "not_selected_phase_1",
   "source": {
@@ -149,5 +149,36 @@
     "unit_parcel_required": false,
     "county_parcel_role": "building_reference_only",
     "arv_allowed_from_master_parcel_sales": false
-  }
+  },
+  "sold_comps": [],
+  "sold_comps_status": "requires_unit_level_source",
+  "sold_comps_source_requirement": [
+    "same_building_unit_level_closed_sale",
+    "verifiable_sale_date",
+    "verifiable_sale_price",
+    "unit_number",
+    "beds_baths_sqft_when_available"
+  ],
+  "comp_search_plan": {
+    "address": "4601 Fifth Ave #621, Pittsburgh, PA 15213",
+    "building_address": "4601 Fifth Ave, Pittsburgh, PA 15213",
+    "requested_unit": "621",
+    "strategy": "same_building_first",
+    "sale_status": "sold_closed_only",
+    "initial_lookback_months": 12,
+    "expanded_lookback_months": 24,
+    "target_beds": null,
+    "target_baths": null,
+    "target_sqft": null,
+    "filters": {
+      "same_building": true,
+      "exclude_active_listings": true,
+      "exclude_pending_listings": true,
+      "exclude_master_parcel_sales": true,
+      "prefer_same_beds": true,
+      "prefer_similar_baths": true,
+      "prefer_sqft_within_pct": 25
+    }
+  },
+  "arv_confidence": "unavailable"
 }
