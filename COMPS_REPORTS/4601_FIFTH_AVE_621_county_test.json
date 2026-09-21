@@ -1,8 +1,8 @@
 {
   "engine": "Allegheny County Comps Engine",
-  "version": "1.5.1",
+  "version": "1.6",
   "phase": "property_resolution_building_reference_and_sales_history",
-  "generated_at": "2026-09-21T14:55:08+00:00",
+  "generated_at": "2026-09-21T15:00:25+00:00",
   "input": {
     "address": "4601 Fifth Ave #621",
     "city": "Pittsburgh",
@@ -41,8 +41,8 @@
   ],
   "resolution_type": "coop_or_multiunit_building_reference",
   "status": "building_reference_resolved",
-  "arv": 120000.0,
-  "arv_status": "calculated_from_same_building_unit_sales",
+  "arv": null,
+  "arv_status": "not_calculated_without_enough_verified_unit_comps",
   "comps": [],
   "comps_status": "not_selected_phase_1",
   "source": {
@@ -163,8 +163,8 @@
       "sold_date": null,
       "beds": 2.0,
       "baths": 1.0,
-      "sqft": 135.0,
-      "price_per_sqft": 851.85,
+      "sqft": null,
+      "price_per_sqft": null,
       "comp_score": 135.0,
       "match_reasons": [
         "same_building",
@@ -175,7 +175,7 @@
       ],
       "source": "Redfin downloadable sold-search CSV",
       "source_url": "https://www.redfin.com/PA/Pittsburgh/4601-Fifth-Ave-15213/unit-525/home/102229336",
-      "verification": "unit_level_sold_search_record"
+      "verification": "unit_level_sale_price_date_unverified"
     },
     {
       "unit": "221",
@@ -196,7 +196,7 @@
       ],
       "source": "Redfin downloadable sold-search CSV",
       "source_url": "https://www.redfin.com/PA/Pittsburgh/4601-Fifth-Ave-15213/unit-221/home/75155568",
-      "verification": "unit_level_sold_search_record"
+      "verification": "unit_level_sale_price_date_unverified"
     },
     {
       "unit": "322",
@@ -217,11 +217,12 @@
       ],
       "source": "Redfin downloadable sold-search CSV",
       "source_url": "https://www.redfin.com/PA/Pittsburgh/4601-Fifth-Ave-15213/unit-322/home/75131781",
-      "verification": "unit_level_sold_search_record"
+      "verification": "unit_level_sale_price_date_unverified"
     }
   ],
   "sold_comps_count": 3,
-  "sold_comps_status": "unit_sold_records_found",
+  "verified_closed_comps_count": 0,
+  "sold_comps_status": "unit_sale_records_found_pending_date_verification",
   "sold_comps_source": {
     "name": "Redfin downloadable sold-search CSV",
     "rows_scanned": 2808,
@@ -256,6 +257,6 @@
       "prefer_sqft_within_pct": 25
     }
   },
-  "arv_method": "median_same_building_sale_price",
-  "arv_confidence": "low"
+  "arv_method": "insufficient_date_verified_closed_sales",
+  "arv_confidence": "unavailable"
 }
