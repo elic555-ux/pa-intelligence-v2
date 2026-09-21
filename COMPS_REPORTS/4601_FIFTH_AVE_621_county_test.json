@@ -1,8 +1,8 @@
 {
   "engine": "Allegheny County Comps Engine",
-  "version": "1.4.1",
+  "version": "1.5",
   "phase": "property_resolution_building_reference_and_sales_history",
-  "generated_at": "2026-09-21T14:33:40+00:00",
+  "generated_at": "2026-09-21T14:49:29+00:00",
   "input": {
     "address": "4601 Fifth Ave #621",
     "city": "Pittsburgh",
@@ -42,7 +42,7 @@
   "resolution_type": "coop_or_multiunit_building_reference",
   "status": "building_reference_resolved",
   "arv": null,
-  "arv_status": "not_calculated_without_verified_unit_comps",
+  "arv_status": "not_calculated_without_enough_verified_unit_comps",
   "comps": [],
   "comps_status": "not_selected_phase_1",
   "source": {
@@ -150,13 +150,27 @@
     "county_parcel_role": "building_reference_only",
     "arv_allowed_from_master_parcel_sales": false
   },
+  "subject_for_comp_matching": {
+    "beds": 2.0,
+    "baths": 1.0,
+    "sqft": null
+  },
   "sold_comps": [],
-  "sold_comps_status": "requires_unit_level_source",
+  "sold_comps_count": 0,
+  "sold_comps_status": "source_unavailable",
+  "sold_comps_source": {
+    "name": "Redfin downloadable sold-search CSV",
+    "rows_scanned": 0,
+    "errors": [
+      "page_1: NameError: name 'USER_AGENT' is not defined"
+    ],
+    "stability": "best_effort_undocumented_endpoint"
+  },
   "sold_comps_source_requirement": [
     "same_building_unit_level_closed_sale",
-    "verifiable_sale_date",
     "verifiable_sale_price",
     "unit_number",
+    "sale_date_preferred",
     "beds_baths_sqft_when_available"
   ],
   "comp_search_plan": {
@@ -180,5 +194,6 @@
       "prefer_sqft_within_pct": 25
     }
   },
+  "arv_method": "insufficient_verified_comps",
   "arv_confidence": "unavailable"
 }
