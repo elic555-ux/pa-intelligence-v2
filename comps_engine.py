@@ -7,7 +7,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.4"
+VERSION = "1.4.1"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -20,7 +20,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.4"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.4.1"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -507,7 +507,11 @@ def build_result(address, city, state, zipcode):
                     "beds_baths_sqft_when_available",
                 ]
                 result["comp_search_plan"] = {
-                    "address": target["full_address"],
+                    "address": (
+                        f"{target['house_number']} {target['street']}"
+                        + (f" #{target['unit']}" if target.get("unit") else "")
+                        + f", {target['city']}, {target['state']} {target['zip']}"
+                    ),
                     "building_address": (
                         f"{target['house_number']} {target['street']}, "
                         f"{target['city']}, {target['state']} {target['zip']}"
