@@ -1,151 +1,553 @@
-
-Today 1:49 PM
-
-1769ed7f-8307-4ba7-97eb-d4cb669b412b.zip
-Zip Archive
-זה הפרויקט שבניתי עד עכשיו , אני רוצה אותך מתכנת בכיר , תבדוק אותו , תבחן אותו מכל הכיוונים ברמה של QA ותגיד לי מה הבנתה ומשם נתקדם 
-
-
-Pasted markdown.md
-File
-המטרה שלי בדוח המורחב להגיע למה שהוא דומה כמו באתר הזה . 
-
-3088673a-a1b5-420e-9be1-ca8201e43b45.png
-לא השתנה כלום , או שאני לא יודע וכן השתנה משהו 
-
-3b97cbfe-939b-4e29-b8c4-a2e45dd433ef.png
-de6e2ead-a9ba-4334-8c88-55ff8ba6461d.png
- יש שעון שרץ בזמן הסריקה , הרצתי שוב סריקה ויש תוצאה טובה יותר . יש דרך להציג גם נכסים שהם Off market ?
-
-
-כן. ואני רואה שהסריקה עצמה עבדה: הכמות עלתה מ־190 ל־197 נכסים, כלומר נוספו 7 תוצאות. השעון/חלונית "פעולה מתבצעת ברקע" גם נראה שימושי, ולכן כרגע נשאיר אותו.
-
-לגבי Off Market — כן, ובהחלט כדאי, אבל הייתי עושה זאת בצורה שלא תעמיס על הסריקה הראשית.
-
-יש למעשה שני סוגים שחשוב להפריד:
-
-נכס שהיה אצלנו Active והפך ל-Off Market — זה קל וזול מאוד. אנחנו כבר מכירים את הנכס, ובסריקות הבאות אפשר לזהות שהוא נעלם/שינה סטטוס ולשמור אותו בהיסטוריה במקום למחוק אותו.
-
-נכסי Off Market שמעולם לא היו אצלנו במערכת — זו כבר שכבת Discovery אחרת. כאן נרצה בהמשך להשתמש ב-County/Parcel records, Tax, Sheriff, Probate וכדומה כדי למצוא נכסים שאינם מפורסמים כרגע למכירה.
-
-אני חושב שכדאי להוסיף למסך הראשי קטגוריה נפרדת, למשל:
-
-🏠 Off Market
-
-ובפילטר "סוג נכס" יהיו בין היתר:
-
-For Sale | Price Drop | Off Market | Sheriff | Tax | REO | Probate
-
-אבל לא הייתי משנה עכשיו את הממשק. קודם צריך לגרום למנוע לדעת בצורה אמינה מהו Off Market ולשמור את היסטוריית הסטטוס.
-
-יש גם יתרון גדול: נכס שעבר למשל:
-
-$185K Active → $175K Price Drop → Pending → Off Market → Relisted $159K
-
-לא יופיע כחמישה נכסים שונים. זה יהיה נכס אחד עם Timeline, וכאשר הוא חוזר לשוק המערכת תוכל להתריע:
-
-🔥 RELISTED — נכס מוכר חזר לשוק
-מחיר קודם: $175,000
-מחיר חדש: $159,000
-שינוי: ‎-9.1%
-
-זה בדיוק סוג המידע שאני רוצה שהסורק שלנו יפיק.
-
-הצעד הבא שאני ממליץ עליו: לפני Off Market, נבדוק שהמנגנון החדש של scan_log ו־New/Updated באמת נכתב נכון אחרי הסריקה שעשית. אם הוא תקין, השינוי הבא ב־orchestrator.py יהיה Property Status History + זיהוי Off Market, ותקבל ממני שוב את הקובץ המלא להחלפה.
-
-
-מעולה 
-
-מצוין. בשלב הבא נעבוד על Status History + זיהוי Off Market, בלי לגעת עדיין בעיצוב או בחדר העסקאות.
-
-נשמור על אותו עיקרון: שינוי קטן ומבוקר → קובץ מלא → הרצה → בדיקה של התוצאות → ורק אם הכול תקין ממשיכים.
-
-המטרה הקרובה היא שהמערכת תתחיל "לזכור" את מחזור החיים של כל נכס, ולא רק את מצבו ברגע הסריקה. זה יהיה בסיס חשוב מאוד בהמשך לזיהוי Price Drop, Pending, Off Market ו-Relisted.
-
-
-מעולה 
-
-מעולה. ממשיכים לפי התוכנית. בשלב הבא נטפל ב־Status History → Off Market → Relisted, תוך שמירה על כל מה שכבר עובד בסורק.
-
-
-סבבה צא לדרך 
-
-יצאנו לדרך. הכנתי את הגרסה המלאה החדשה של orchestrator.py ובדקתי אותה לפני המסירה: הקובץ עובר py_compile, ובדקתי גם תרחיש מלא של Active → נעלם מסריקה → מועמד Off Market → חוזר ל-Active.
-
-חשוב: בשלב הזה אני לא מסמן נכס כ-Off Market ודאי רק משום שנעלם מסריקת Redfin אחת, כי זה עלול ליצור מידע שגוי. המנגנון החדש דורש שתי החמצות רצופות ומסמן אותו כ־off_market_candidate. אם הנכס חוזר בסריקה, הוא חוזר אוטומטית ל־active והאירוע נרשם בהיסטוריה.
-
-בנוסף, לכל נכס מתחילה להיבנות status_history, נשמר missing_scan_count, ונכס ישן מהמאגר לא יסומן בטעות רק משום שלא הופיע בסריקה החדשה — קודם הסורק החדש חייב לראות אותו לפחות פעם אחת.
-
-
-עכשיו עושים רק בדיקה אחת
-החלף רק את orchestrator.py ב-GitHub. אל תשנה כרגע HTML או קובץ אחר.
-
-לאחר מכן הפעל סריקה יזומה אחת. בסיום הלוג אמור להציג גם שדה חדש בסגנון:
-
-X חדשים | X עודכנו | X ללא שינוי | X מועמדי Off Market | סה״כ במאגר X
-
-בשלב הזה ייתכן מאוד שיופיע 0 מועמדי Off Market — וזה תקין, כי בכוונה אנחנו לא מסמנים את כל המאגר הישן כ-Off Market.
-
-אחרי הסריקה הראשונה שלח לי צילום של התוצאה. אם היא תקינה, נעשה סריקה שנייה ונבדוק שהמערכת באמת מתחילה לבנות Timeline של סטטוס הנכסים בלי כפילויות ובלי סימוני Off Market שגויים.
-
-
-
-Library
-/
-orchestrator.py
-
-
-
-551
-552
-553
-554
-555
-556
-557
-558
-559
-560
-561
-562
-563
-564
-565
-566
-567
-568
-569
-570
-571
-572
-573
-574
-575
-576
-577
-578
-579
-580
-581
-582
-583
-584
-585
-586
-587
-588
-589
-590
-591
-592
-593
-594
-595
-596
-597
-598
-599
 import os
+import sys
+import json
+import re
+import csv
+import io
+import random
+from copy import deepcopy
+from datetime import datetime, timedelta
+
+import pytz
+import requests
+
+EST_TZ = pytz.timezone("US/Eastern")
+PROPERTIES_FILE = "properties.json"
+CONFIG_FILE = "scan_config.json"
+SCAN_LOG_FILE = "scan_log.json"
+OFF_MARKET_MISS_THRESHOLD = 2
+
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+]
+
+SECTOR_LOOKBACK_DAYS = {
+    "mls": 90,
+    "reo": 90,
+    "sheriff": 45,
+    "tax": 45,
+    "06_probate_estates": 180,
+}
+
+REGION_MAP = {
+    "Pittsburgh": {"market": "pittsburgh", "region_id": "15702", "region_type": "6"},
+    "Allegheny": {"market": "pittsburgh", "region_id": "2362", "region_type": "5"},
+    "Philadelphia": {"market": "philadelphia", "region_id": "15502", "region_type": "6"},
+    "Allentown": {"market": "allentown", "region_id": "3144", "region_type": "6"},
+    "Reading": {"market": "reading", "region_id": "17387", "region_type": "6"},
+    "Erie": {"market": "erie", "region_id": "6758", "region_type": "6"},
+    "Scranton": {"market": "scranton", "region_id": "19404", "region_type": "6"},
+    "Bethlehem": {"market": "allentown", "region_id": "3531", "region_type": "6"},
+    "Lancaster": {"market": "lancaster", "region_id": "11902", "region_type": "6"},
+}
+
+DISTRESS_KEYWORDS = [
+    "as-is", "as is", "investor", "handyman", "fixer", "tlc", "cash only",
+    "rehab", "contractor special", "needs work", "estate sale", "foreclosure",
+]
+
+STREET_SUFFIXES = {
+    "street": "st", "st.": "st", "avenue": "ave", "ave.": "ave",
+    "road": "rd", "rd.": "rd", "boulevard": "blvd", "blvd.": "blvd",
+    "drive": "dr", "dr.": "dr", "lane": "ln", "ln.": "ln",
+    "court": "ct", "ct.": "ct", "place": "pl", "pl.": "pl",
+    "terrace": "ter", "highway": "hwy", "parkway": "pkwy",
+}
+
+
+def now_est():
+    """Return a fresh Eastern Time timestamp for every operation."""
+    return datetime.now(EST_TZ)
+
+
+def iso_now_est():
+    return now_est().isoformat(timespec="seconds")
+
+
+def safe_number(value, default=0, number_type=float):
+    try:
+        if value is None or value == "":
+            return default
+        return number_type(float(str(value).replace(",", "").strip()))
+    except (TypeError, ValueError):
+        return default
+
+
+def normalize_address(address):
+    """Normalize an address conservatively for duplicate detection."""
+    if not address:
+        return ""
+    text = str(address).lower().strip()
+    text = re.sub(r"[,.#]", " ", text)
+    parts = [p for p in re.split(r"\s+", text) if p]
+    parts = [STREET_SUFFIXES.get(p, p) for p in parts]
+    return " ".join(parts)
+
+
+def normalize_addr_key(address, city="", zip_code=""):
+    """
+    Stable property key used by the scanner.
+    Address is primary; city/ZIP are included when available to reduce collisions.
+    """
+    address_norm = normalize_address(address)
+    city_norm = re.sub(r"[^a-z0-9]", "", str(city).lower())
+    zip_norm = re.sub(r"[^0-9]", "", str(zip_code))[:5]
+    raw = "|".join(part for part in [address_norm, city_norm, zip_norm] if part)
+    return re.sub(r"[^a-z0-9|]", "", raw)
+
+
+def property_key(item):
+    if not isinstance(item, dict):
+        return ""
+    key = normalize_addr_key(item.get("address"), item.get("city"), item.get("zip"))
+    if key:
+        return key
+    return str(item.get("id") or "").strip()
+
+
+def calculate_deal_score(deal_type, price, margin_est=25):
+    # Compatibility score only. It will be replaced later by the full scoring engine.
+    score = 50
+    dt = (deal_type or "").lower()
+    score += min(30, int(margin_est * 0.8))
+    if "sheriff" in dt:
+        score += 15
+    elif "tax" in dt:
+        score += 12
+    elif "probate" in dt or "fsbo" in dt:
+        score += 10
+    elif "foreclosure" in dt or "reo" in dt:
+        score += 8
+
+    if price and price < 90000:
+        score += 5
+    elif price and price > 250000:
+        score -= 5
+    return max(40, min(99, score))
+
+
+def load_json_file(path, default):
+    if not os.path.exists(path):
+        return deepcopy(default)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"⚠️ לא ניתן לקרוא את {path}: {exc}")
+        return deepcopy(default)
+
+
+def atomic_write_json(path, data):
+    """Write JSON safely so an interrupted run does not destroy the main file."""
+    temp_path = f"{path}.tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(temp_path, path)
+
+
+def load_server_config():
+    data = load_json_file(CONFIG_FILE, None)
+    return data if isinstance(data, dict) else None
+
+
+def load_existing_properties():
+    data = load_json_file(PROPERTIES_FILE, [])
+    if not isinstance(data, list):
+        print("⚠️ properties.json אינו מערך תקין. ממשיך עם מאגר ריק כדי לא לקרוס.")
+        return {}
+
+    prop_dict = {}
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        key = property_key(item)
+        if key:
+            prop_dict[key] = item
+    return prop_dict
+
+
+def append_scan_log(entry):
+    """Keep a bounded audit trail for every scanner execution."""
+    log = load_json_file(SCAN_LOG_FILE, [])
+    if not isinstance(log, list):
+        log = []
+    log.append(entry)
+    # Keep the file small while retaining a useful audit trail.
+    log = log[-1000:]
+    atomic_write_json(SCAN_LOG_FILE, log)
+
+
+def classify_strategy(deal_type, price, beds, summary=""):
+    dt = (deal_type or "").lower()
+    text = f"{dt} {summary}".lower()
+    is_distressed = any(kw in text for kw in DISTRESS_KEYWORDS) or any(
+        k in dt for k in ["sheriff", "tax", "probate", "foreclosure", "reo"]
+    )
+    beds_num = safe_number(beds, 3, int)
+    base_rent = 950 + (beds_num * 250)
+    projected_rent = max(900, int(base_rent + (safe_number(price, 0, float) * 0.002)))
+    annual_rent = projected_rent * 12
+    gross_yield = round((annual_rent / max(safe_number(price, 1, float), 1)) * 100, 1)
+
+    if not is_distressed and safe_number(price, 0, float) >= 60000:
+        return {
+            "strategy": "turnkey",
+            "strategy_label": "🔑 Turnkey (מניב מיידי)",
+            "projected_rent": f"${projected_rent:,} / חודש",
+            "gross_yield": f"{gross_yield}% תשואה",
+        }
+    return {
+        "strategy": "value_add",
+        "strategy_label": "🔨 Value-Add (השבחה ומצוקה)",
+        "projected_rent": f"${projected_rent:,} / חודש",
+        "gross_yield": f"{gross_yield}% תשואה (לאחר שיפוץ)",
+    }
+
+
+def fetch_live_mls_for_city(city_name, min_p, max_p):
+    clean_city = city_name.strip()
+    target = REGION_MAP.get(clean_city)
+    if not target:
+        print(f"⚠️ האזור '{clean_city}' אינו ממופה ל-Redfin. מדלג כדי לא לסרוק אזור שגוי.")
+        return []
+
+    url = "https://www.redfin.com/stingray/api/gis-csv"
+    params = {
+        "al": "1",
+        "market": target["market"],
+        "min_price": str(int(min_p)),
+        "max_price": str(int(max_p)),
+        "num_homes": "350",
+        "region_id": target["region_id"],
+        "region_type": target["region_type"],
+        "status": "9",
+        "v": "8",
+    }
+    headers = {
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept": "text/csv,text/plain,*/*",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
+
+    discovered = []
+    try:
+        print(f"📡 סורק נתונים חיים עבור אזור: {clean_city}...")
+        resp = requests.get(url, params=params, headers=headers, timeout=20)
+        if resp.status_code != 200 or "ADDRESS" not in resp.text:
+            print(f"⚠️ לא נמשכו נתוני MLS תקינים עבור {clean_city}. HTTP {resp.status_code}")
+            return []
+
+        reader = csv.DictReader(io.StringIO(resp.text))
+        for row in reader:
+            addr = row.get("ADDRESS")
+            raw_price = row.get("PRICE")
+            if not addr or not raw_price:
+                continue
+
+            price = safe_number(raw_price, 0, int)
+            if price <= 0:
+                continue
+
+            dom = max(0, safe_number(row.get("DAYS ON MARKET"), 0, int))
+            if dom > SECTOR_LOOKBACK_DAYS["mls"]:
+                continue
+
+            listed_dt = now_est() - timedelta(days=dom)
+            listed_date_str = listed_dt.strftime("%d/%m/%Y")
+            beds = safe_number(row.get("BEDS"), 3, int)
+            baths = safe_number(row.get("BATHS"), 1.5, float)
+            sqft = safe_number(row.get("SQUARE FEET"), 1350, int)
+            row_city = row.get("CITY") or clean_city
+            zip_code = row.get("ZIP OR POSTAL CODE") or ""
+            home_url = row.get(
+                "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
+            ) or ""
+            if home_url and not home_url.startswith("http"):
+                home_url = f"https://www.redfin.com{home_url}"
+
+            strategy_data = classify_strategy("MLS", price, beds)
+            mls_number = row.get("MLS#") or normalize_addr_key(addr, row_city, zip_code)
+            discovered.append({
+                "id": f"PA-MLS-{mls_number}",
+                "docket_id": f"MLS-{mls_number}",
+                "address": addr,
+                "city": row_city,
+                "county": "Allegheny" if clean_city in ["Pittsburgh", "Allegheny"] else "",
+                "zip": zip_code,
+                "price": price,
+                "deal_type": "MLS (Realtor / Redfin)",
+                "source": "Redfin",
+                "source_type": "mls",
+                "data_status": "live",
+                "strategy": strategy_data["strategy"],
+                "strategy_label": strategy_data["strategy_label"],
+                "gross_yield": strategy_data["gross_yield"],
+                "beds": beds,
+                "baths": baths,
+                "sqft": sqft,
+                "year_built": safe_number(row.get("YEAR BUILT"), 0, int) or None,
+                "lot_size": row.get("LOT SIZE") or "",
+                "projected_rent": strategy_data["projected_rent"],
+                "summary": f"עסקה פעילה ב-{row_city} ({dom} ימים בשוק). מחיר מבוקש ${price:,}.",
+                "url": home_url,
+                "listed_date": listed_date_str,
+                "days_on_market": dom,
+                "last_source_check": iso_now_est(),
+                "market_status": "active",
+            })
+    except requests.RequestException as exc:
+        print(f"⚠️ שגיאת רשת בסריקת {clean_city}: {exc}")
+    except Exception as exc:
+        print(f"⚠️ שגיאה לא צפויה בסריקת {clean_city}: {exc}")
+
+    return discovered
+
+
+def get_placeholder_sector_results(active_sectors):
+    """
+    The old orchestrator injected hard-coded REO/Sheriff/Tax/Probate properties.
+    They are intentionally disabled in LIVE mode. Each sector will be connected
+    to a verified source in a later controlled step.
+    """
+    pending = [s for s in active_sectors if s != "mls"]
+    if pending:
+        print("ℹ️ הסקטורים הבאים עדיין אינם מחוברים למקור LIVE ולכן לא יוזרקו נתוני דמה: " + ", ".join(pending))
+    return []
+
+
+def comparable_changed(old, new):
+    """Detect meaningful source changes without treating timestamps as updates."""
+    tracked_fields = [
+        "price", "deal_type", "beds", "baths", "sqft", "year_built",
+        "lot_size", "url", "days_on_market", "listed_date", "source_type",
+    ]
+    return any(old.get(field) != new.get(field) for field in tracked_fields)
+
+
+def append_status_event(history, status, timestamp, scan_id, reason=""):
+    """Append a status transition only when the status actually changes."""
+    if not isinstance(history, list):
+        history = []
+    last_status = history[-1].get("status") if history and isinstance(history[-1], dict) else None
+    if last_status != status:
+        event = {"date": timestamp, "status": status, "scan_id": scan_id}
+        if reason:
+            event["reason"] = reason
+        history.append(event)
+    return history
+
+
+def merge_property(existing, incoming, scan_id):
+    """
+    Merge source data into an existing property without deleting enrichment,
+    notes, analysis or other fields added by later parts of the system.
+    """
+    timestamp = iso_now_est()
+    if existing is None:
+        merged = deepcopy(incoming)
+        merged["first_seen"] = timestamp
+        merged["last_seen"] = timestamp
+        merged["last_scan_id"] = scan_id
+        merged["scan_status"] = "new"
+        merged["seen_count"] = 1
+        merged["missing_scan_count"] = 0
+        merged["market_status"] = incoming.get("market_status") or "active"
+        merged["price_history"] = [{"date": timestamp, "price": incoming.get("price"), "source": incoming.get("source", "")}]
+        merged["status_history"] = append_status_event([], merged["market_status"], timestamp, scan_id, "first discovery")
+        return merged, "new"
+
+    previous_market_status = existing.get("market_status") or "active"
+    changed = comparable_changed(existing, incoming) or previous_market_status != "active"
+    old_price = existing.get("price")
+    new_price = incoming.get("price")
+
+    merged = deepcopy(existing)
+    merged.update(incoming)
+    merged["first_seen"] = existing.get("first_seen") or timestamp
+    merged["last_seen"] = timestamp
+    merged["last_scan_id"] = scan_id
+    merged["seen_count"] = safe_number(existing.get("seen_count"), 0, int) + 1
+    merged["missing_scan_count"] = 0
+    merged["market_status"] = "active"
+    merged["scan_status"] = "updated" if changed else "unchanged"
+
+    price_history = existing.get("price_history")
+    if not isinstance(price_history, list):
+        price_history = []
+    if not price_history and old_price is not None:
+        price_history.append({"date": existing.get("first_seen") or timestamp, "price": old_price, "source": existing.get("source", "")})
+    if new_price is not None and old_price != new_price:
+        price_history.append({"date": timestamp, "price": new_price, "source": incoming.get("source", "")})
+    merged["price_history"] = price_history
+
+    status_history = existing.get("status_history")
+    if not isinstance(status_history, list):
+        status_history = []
+        status_history = append_status_event(status_history, previous_market_status, existing.get("last_seen") or timestamp, scan_id, "history initialized")
+    reason = "reappeared in live MLS" if previous_market_status != "active" else "confirmed in live MLS"
+    merged["status_history"] = append_status_event(status_history, "active", timestamp, scan_id, reason)
+
+    return merged, "updated" if changed else "unchanged"
+
+
+def mark_missing_mls_candidates(existing_props, seen_keys, scanned_cities, scan_id):
+    """
+    Mark previously scanner-managed MLS properties that disappear from a live scan
+    as OFF-MARKET CANDIDATES after repeated misses. This is deliberately not called
+    verified off-market: disappearance can also be caused by upstream API limits or
+    listing/feed changes.
+    """
+    timestamp = iso_now_est()
+    scanned_city_keys = {str(c).strip().lower() for c in scanned_cities}
+    candidates = 0
+
+    for key, prop in existing_props.items():
+        if key in seen_keys:
+            continue
+        if prop.get("source_type") != "mls" or prop.get("data_status") != "live":
+            continue
+        if not prop.get("last_scan_id"):
+            # Legacy records are not classified from absence until this scanner has
+            # positively seen them at least once. This prevents mass false positives.
+            continue
+        if str(prop.get("city") or "").strip().lower() not in scanned_city_keys:
+            continue
+
+        misses = safe_number(prop.get("missing_scan_count"), 0, int) + 1
+        prop["missing_scan_count"] = misses
+        prop["last_missing_scan_id"] = scan_id
+
+        if misses >= OFF_MARKET_MISS_THRESHOLD and prop.get("market_status") == "active":
+            prop["market_status"] = "off_market_candidate"
+            prop["scan_status"] = "updated"
+            prop["status_history"] = append_status_event(
+                prop.get("status_history"),
+                "off_market_candidate",
+                timestamp,
+                scan_id,
+                f"not returned in {misses} consecutive live MLS scans",
+            )
+            candidates += 1
+
+    return candidates
+
+
+def run_orchestrator():
+    scan_started = now_est()
+    scan_id = scan_started.strftime("SCAN-%Y%m%d-%H%M%S")
+    print(f"🚀 מתחיל ריצת מנוע סריקה מרכזי... {scan_id}")
+
+    github_event = os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch")
+    is_manual_trigger = github_event == "workflow_dispatch"
+    server_config = load_server_config()
+
+    log_entry = {
+        "scan_id": scan_id,
+        "started_at": scan_started.isoformat(timespec="seconds"),
+        "trigger": "manual" if is_manual_trigger else "scheduled",
+        "status": "started",
+        "active_sectors": [],
+        "cities": [],
+        "source_results": 0,
+        "after_filters": 0,
+        "new": 0,
+        "updated": 0,
+        "unchanged": 0,
+        "off_market_candidates": 0,
+        "errors": [],
+    }
+
+    if not server_config:
+        log_entry["status"] = "failed"
+        log_entry["errors"].append("scan_config.json missing or invalid")
+        log_entry["finished_at"] = iso_now_est()
+        append_scan_log(log_entry)
+        print("⚠️ קובץ תצורה לא נמצא או אינו תקין. מסיים ריצה.")
+        return
+
+    is_auto_scan_enabled = server_config.get("autoScanEnabled", True)
+    if not is_manual_trigger and not is_auto_scan_enabled:
+        log_entry["status"] = "skipped"
+        log_entry["skip_reason"] = "auto scan disabled"
+        log_entry["finished_at"] = iso_now_est()
+        append_scan_log(log_entry)
+        print("🛑 הטייס האוטומטי כבוי בממשק האתר. הסריקה המתוזמנת מבוטלת.")
+        return
+
+    user_selected_sectors = server_config.get(
+        "sectors", ["mls", "reo", "sheriff", "tax", "06_probate_estates"]
+    )
+    active_sectors_now = []
+
+    if is_manual_trigger:
+        print("⚡ פקודת שיגור ידנית התקבלה. סורק את הסקטורים שסומנו בממשק...")
+        active_sectors_now = list(user_selected_sectors)
+    else:
+        schedules = server_config.get("schedules", {})
+        current_hour = now_est().strftime("%H:00")
+        current_day = now_est().strftime("%A")
+        print(f"⏰ השעה בחוף המזרחי: {current_day}, {current_hour}")
+
+        for sec, sched in schedules.items():
+            s_day = sched.get("day", "Everyday")
+            s_time = sched.get("time", "08:00")
+            if s_time == current_hour and (s_day == "Everyday" or s_day == current_day):
+                active_sectors_now.append(sec)
+
+        active_sectors_now = [s for s in active_sectors_now if s in user_selected_sectors]
+        if not active_sectors_now:
+            log_entry["status"] = "skipped"
+            log_entry["skip_reason"] = "no sector scheduled for this hour"
+            log_entry["finished_at"] = iso_now_est()
+            append_scan_log(log_entry)
+            print("💤 אין סורקים שמתוזמנים לשעה זו. הריצה נרשמה בלוג ומסתיימת.")
+            return
+
+    min_price = safe_number(server_config.get("minPrice"), 0, float)
+    max_price = safe_number(server_config.get("maxPrice"), 190000, float)
+    min_sqft = safe_number(server_config.get("minSqft"), 0, int)
+    max_sqft = safe_number(server_config.get("maxSqft"), 99999, int)
+    min_beds = safe_number(server_config.get("minBeds"), 0, int)
+    max_beds = safe_number(server_config.get("maxBeds"), 99, int)
+    cities_list = server_config.get("cities") or ["Pittsburgh"]
+
+    log_entry["active_sectors"] = active_sectors_now
+    log_entry["cities"] = cities_list
+
+    print(f"🎯 אזורי יעד: {cities_list}")
+    print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds}")
+    print(f"📋 סקטורים פעילים: {active_sectors_now}")
+
+    live_results = []
+    if "mls" in active_sectors_now:
+        for city in cities_list:
+            live_results.extend(fetch_live_mls_for_city(city, min_price, max_price))
+
+    combined = live_results + get_placeholder_sector_results(active_sectors_now)
+    log_entry["source_results"] = len(combined)
+
+    final_filtered = []
+    for prop in combined:
+        p_price = safe_number(prop.get("price"), 0, float)
+        p_sqft = safe_number(prop.get("sqft"), 0, int)
+        p_beds = safe_number(prop.get("beds"), 0, int)
+        if not (min_price <= p_price <= max_price):
+            continue
+        if not (min_sqft <= p_sqft <= max_sqft):
+            continue
+        if not (min_beds <= p_beds <= max_beds):
+            continue
+        final_filtered.append(prop)
+
+    log_entry["after_filters"] = len(final_filtered)
+    print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
+
     existing_props_dict = load_existing_properties()
     seen_keys = set()
     for deal in final_filtered:
@@ -194,4 +596,3 @@ import os
 
 if __name__ == "__main__":
     run_orchestrator()
-
