@@ -7,7 +7,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.3"
+VERSION = "1.4"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -20,7 +20,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.3"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.4"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -492,6 +492,47 @@ def build_result(address, city, state, zipcode):
                     "county_parcel_role": "building_reference_only",
                     "arv_allowed_from_master_parcel_sales": False,
                 }
+
+                # PHASE 2 SAFETY GATE:
+                # County/WPRDC sales are parcel-level. Because the requested
+                # co-op unit is not independently parcelized here, they cannot
+                # prove a sale belongs to Unit 621. Do not manufacture comps.
+                result["sold_comps"] = []
+                result["sold_comps_status"] = "requires_unit_level_source"
+                result["sold_comps_source_requirement"] = [
+                    "same_building_unit_level_closed_sale",
+                    "verifiable_sale_date",
+                    "verifiable_sale_price",
+                    "unit_number",
+                    "beds_baths_sqft_when_available",
+                ]
+                result["comp_search_plan"] = {
+                    "address": target["full_address"],
+                    "building_address": (
+                        f"{target['house_number']} {target['street']}, "
+                        f"{target['city']}, {target['state']} {target['zip']}"
+                    ),
+                    "requested_unit": target["unit"],
+                    "strategy": "same_building_first",
+                    "sale_status": "sold_closed_only",
+                    "initial_lookback_months": 12,
+                    "expanded_lookback_months": 24,
+                    "target_beds": None,
+                    "target_baths": None,
+                    "target_sqft": None,
+                    "filters": {
+                        "same_building": True,
+                        "exclude_active_listings": True,
+                        "exclude_pending_listings": True,
+                        "exclude_master_parcel_sales": True,
+                        "prefer_same_beds": True,
+                        "prefer_similar_baths": True,
+                        "prefer_sqft_within_pct": 25,
+                    },
+                }
+                result["arv"] = None
+                result["arv_status"] = "not_calculated_without_verified_unit_comps"
+                result["arv_confidence"] = "unavailable"
                 return result
 
             result["resolution_message"] = (
@@ -540,7 +581,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 1")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 1+2 SAFETY GATE")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -564,7 +605,15 @@ def print_summary(result):
         print(f"Message: {result.get('resolution_message', '')}")
         print("County parcel sales: SUPPRESSED (not unit-level history)")
         print("Next strategy: SAME-BUILDING SOLD UNITS")
-        print("\nℹ️ עדיין אין ARV ואין בחירת Sold Comps בשלב זה.")
+        print(f"Sold comps status: {result.get('sold_comps_status')}")
+        print(f"ARV status: {result.get('arv_status')}")
+        plan = result.get("comp_search_plan") or {}
+        print(
+            "Comp window: "
+            f"{plan.get('initial_lookback_months')} months "
+            f"(expand to {plan.get('expanded_lookback_months')} if needed)"
+        )
+        print("\nℹ️ אין ARV עד שיש עסקאות Unit סגורות ומאומתות.")
         return
 
     if result["status"] != "resolved":
