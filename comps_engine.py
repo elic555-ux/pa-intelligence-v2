@@ -10,7 +10,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.5"
+VERSION = "1.5.1"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -23,7 +23,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.5"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.5.1"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -411,6 +411,13 @@ def extract_unit(address_value):
     return unit
 
 
+REDFIN_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/142.0.0.0 Safari/537.36"
+)
+
+
 def redfin_city_sold_rows(max_pages=8, page_size=350):
     """
     Best-effort Redfin downloadable sold-search CSV adapter.
@@ -433,7 +440,7 @@ def redfin_city_sold_rows(max_pages=8, page_size=350):
             r = requests.get(
                 base_url, params=params,
                 headers={
-                    "User-Agent": USER_AGENT,
+                    "User-Agent": REDFIN_USER_AGENT,
                     "Accept": "text/csv,text/plain,*/*",
                     "Referer": "https://www.redfin.com/city/15702/PA/Pittsburgh/recently-sold",
                 },
