@@ -639,6 +639,7 @@
                             <tr class="text-gray-200 border-b border-gray-800"><td class="py-2.5 font-bold">גג (Roof)</td><td>5 Aging</td><td>Requires evaluation</td><td>-</td><td>Low</td><td class="text-left font-mono font-bold">$6,303</td></tr>
                             <tr class="text-gray-200 border-b border-gray-800"><td class="py-2.5 font-bold">מטבח (Kitchen)</td><td>5 Aging</td><td>Functional but outdated</td><td>Reface cabinets</td><td>High</td><td class="text-left font-mono font-bold">$4,630</td></tr>
                             <tr class="text-gray-200 border-b border-gray-800"><td class="py-2.5 font-bold">ריצוף (Flooring)</td><td>5 Aging</td><td>Aging with wear</td><td>Repair flooring</td><td>High</td><td class="text-left font-mono font-bold">$4,288</td></tr>
+                            <tr class="text-gray-200 border-b border-gray-800"><td class="py-2.5 font-bold">מיזוג (HVAC)</td><td>5 Aging</td><td>Requires evaluation</td><td>-</td><td>Low</td><td class="text-left font-mono font-bold">$0</td></tr>
                             <tr class="text-gray-200"><td class="py-2.5 font-bold">חדר רחצה (Bath)</td><td>5 Aging</td><td>Functional but outdated</td><td>Replace fixtures</td><td>High</td><td class="text-left font-mono font-bold">$7,263</td></tr>
                         </table>
                     </div>
@@ -757,7 +758,7 @@
         };
 
         // =========================================================================
-        // מנוע PDF ברוחב A4 מלא (794px) עם טבלאות ומלל מוקטנים פרופורציונלית
+        // מנוע PDF ברוחב מלא A4 (700px) עם טבלאות ומלל מוקטנים ללא חיתוך
         // =========================================================================
         function generateCleanPDF() {
             const btn = document.getElementById('btn-download-pdf');
@@ -770,7 +771,7 @@
             const getImg = id => { const el = document.getElementById(id); return el ? el.src : ''; };
             const wrap = t => `<span class="en-text">${t}</span>`;
 
-            // שאיבת טבלאות השוואה
+            // שאיבת טבלאות השוואה עם ריפוד מהודק
             const extractRows = tbodyId => {
                 const tbody = document.getElementById(tbodyId);
                 if (!tbody) return '<tr><td colspan="10" style="text-align:center;">אין נתונים</td></tr>';
@@ -778,7 +779,7 @@
                 Array.from(tbody.rows).forEach(row => {
                     res += '<tr>';
                     Array.from(row.cells).forEach(cell => {
-                        res += `<td style="padding: 2.5px 3.5px; border: 1px solid #cbd5e1; text-align: right; overflow: hidden; white-space: nowrap;">${wrap(cell.innerText.trim())}</td>`;
+                        res += `<td style="padding: 2.5px 4px; border: 1px solid #cbd5e1; text-align: right; overflow: hidden; white-space: nowrap;">${wrap(cell.innerText.trim())}</td>`;
                     });
                     res += '</tr>';
                 });
@@ -790,7 +791,7 @@
 
             // נתוני שיפוץ חזותי
             const isVis = getTxt('vis-total-sum') && getTxt('vis-total-sum') !== '$--';
-            let rehabSection = '<div style="text-align:center; padding:12px; border:1px dashed #cbd5e1; background:#f8fafc; font-size:9.5px;">הדוח החזותי (Vision AI) לא הופעל עבור נכס זה.</div>';
+            let rehabSection = '<div style="text-align:center; padding:12px; border:1px dashed #cbd5e1; background:#f8fafc; font-size:10px;">הדוח החזותי (Vision AI) לא הופעל עבור נכס זה.</div>';
             if (isVis) {
                 rehabSection = `
                     <div style="background:#fff1f2; text-align:center; border:1px solid #fda4af; padding:5px; border-radius:4px; margin-bottom:6px;">
@@ -854,12 +855,12 @@
                 `;
             }
 
-            // תבנית HTML מלאה ברוחב 794px שמתפרסת במדויק על כל דף ה-A4
+            // תבנית HTML מלאה המוגדרת ברוחב 700px שמתפרסת ללא שוליים ריקים
             const templateHtml = `
-            <div id="pdf-root" style="width: 794px; padding: 14px 18px; background: #ffffff; color: #000000; direction: rtl; font-family: 'Assistant', sans-serif; box-sizing: border-box;">
+            <div id="pdf-root" style="width: 700px; padding: 12px 14px; background: #ffffff; color: #000000; direction: rtl; font-family: 'Assistant', sans-serif; box-sizing: border-box;">
                 <style>
                     #pdf-root * { box-sizing: border-box; }
-                    #pdf-root table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 7.5px; table-layout: fixed; }
+                    #pdf-root table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 7.5px; table-layout: fixed; }
                     #pdf-root th, #pdf-root td { border: 1px solid #cbd5e1; padding: 2.5px 3.5px; text-align: right; word-wrap: break-word; overflow: hidden; }
                     #pdf-root th { background-color: #f8fafc; font-weight: bold; font-size: 8px; }
                     .page-break { page-break-before: always; clear: both; }
@@ -869,22 +870,22 @@
                     h3 { color: #334155; margin-top: 5px; margin-bottom: 3px; font-size: 9.5px; }
                 </style>
 
-                <!-- ================= עמוד 1: מפרט נכס ושכונה ================= -->
+                <!-- ================= עמוד 1 ================= -->
                 <div class="no-split">
                     <div style="background: #1e3a8a; color: white; padding: 6px; text-align: center; border-radius: 4px; margin-bottom: 6px;">
                         <h1 style="margin: 0 0 2px 0; font-size: 14px; color: white;">דוח השקעה מורחב &nbsp;-&nbsp; ${wrap(getTxt('report-address'))}</h1>
                         <p style="margin: 0; font-size: 9px; color: #bae6fd;">${wrap(getTxt('report-city'))}</p>
                     </div>
 
-                    <!-- תמונות פרופורציונליות חסכוניות -->
+                    <!-- תמונות קומפקטיות -->
                     <table style="border: none; margin-bottom: 6px;">
                         <tr>
                             <td style="width: 58%; padding-left: 6px; border: none; vertical-align: top;">
-                                <img src="${getImg('rep-main-img')}" style="width: 100%; height: 130px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1;">
+                                <img src="${getImg('rep-main-img')}" style="width: 100%; height: 135px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1;">
                             </td>
                             <td style="width: 42%; padding: 0; border: none; vertical-align: top;">
-                                <img src="${getImg('rep-sub-img-1')}" style="width: 100%; height: 62px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 6px;">
-                                <img src="${getImg('rep-sub-img-2')}" style="width: 100%; height: 62px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1;">
+                                <img src="${getImg('rep-sub-img-1')}" style="width: 100%; height: 64px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 6px;">
+                                <img src="${getImg('rep-sub-img-2')}" style="width: 100%; height: 64px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1;">
                             </td>
                         </tr>
                     </table>
@@ -933,14 +934,14 @@
 
                 <div class="page-break"></div>
 
-                <!-- ================= עמוד 2: דוח פיננסי מלא ================= -->
+                <!-- ================= עמוד 2 ================= -->
                 <h2>דוח פיננסי מלא &nbsp;${wrap('(Financials & Valuation)')}</h2>
                 <div class="no-split">
                     <table style="font-size: 8px;">
                         <tr>
                             <th style="background: #fef3c7;">מחיר רכישה</th><td>${wrap('$' + Number(getVal('calc-price')).toLocaleString())}</td>
                             <th style="background: #fef3c7;">עלות שיפוץ</th><td>${wrap('$' + Number(getVal('calc-rehab')).toLocaleString())}</td>
-                            <th style="background: #fef3c7;">ARV מוערך</th><td>${wrap('$' + Number(getVal('calc-arv')).toLocaleString())}</td>
+                            <th style="background: #fef3c7;">שווי מוערך &nbsp;(ARV)</th><td>${wrap('$' + Number(getVal('calc-arv')).toLocaleString())}</td>
                             <th style="background: #fef3c7;">שכירות צפויה</th><td>${wrap('$' + Number(getVal('calc-rent')).toLocaleString())}</td>
                         </tr>
                         <tr style="background: #f0fdf4;">
@@ -1032,17 +1033,18 @@
             </div>
             `;
 
+            // הצבה באזור מוסתר ומיושר בדיוק ל-700px ללא שוליים מיותרים
             const container = document.createElement('div');
             container.style.position = 'absolute';
             container.style.top = '0px';
             container.style.left = '-9999px';
-            container.style.width = '794px';
+            container.style.width = '700px';
             container.style.direction = 'rtl';
             container.innerHTML = templateHtml;
             document.body.appendChild(container);
 
             const opt = {
-                margin: [8, 8, 8, 8],
+                margin: [6, 6, 6, 6],
                 filename: `Deal_Report_${(getTxt('report-address') || 'Property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
