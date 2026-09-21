@@ -7,25 +7,9 @@ from pathlib import Path
 
 import requests
 
-# ============================================================
-# PA Real Estate Intelligence Hub
-# Allegheny County Comps Engine - Phase 1
-#
-# מטרה בשלב זה:
-# 1. לזהות Parcel/Unit לפי כתובת.
-# 2. להחזיר נתוני Assessment רשמיים.
-# 3. להחזיר Sales History רשמי עבור ה-Parcel.
-# 4. לשמור JSON שקוף עם מקור לכל נתון.
-#
-# בשלב זה בכוונה:
-# - לא בוחר Sold Comps.
-# - לא מחשב ARV.
-# - לא משנה properties.json / analyzer.py / orchestrator.py.
-# ============================================================
+VERSION = "1.1"
 
-VERSION = "1.0"
-
-CKAN_BASE = "https://data.wprdc.org/api/3/action/datastore_search"
+CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
 SALES_RESOURCE_ID = "5bbe6c55-bce6-4edb-9d04-68edeb6bf7b1"
 
@@ -35,10 +19,21 @@ DEFAULT_STATE = "PA"
 DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
-TIMEOUT = 20
+TIMEOUT = 25
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.1"}
 
-HEADERS = {
-    "User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.0"
+SUFFIXES = {
+    "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
+    "STREET": "ST", "ST": "ST",
+    "ROAD": "RD", "RD": "RD",
+    "DRIVE": "DR", "DR": "DR",
+    "LANE": "LN", "LN": "LN",
+    "BOULEVARD": "BLVD", "BLVD": "BLVD",
+    "COURT": "CT", "CT": "CT",
+    "PLACE": "PL", "PL": "PL",
+    "HIGHWAY": "HWY", "HWY": "HWY",
+    "PARKWAY": "PKWY", "PKWY": "PKWY",
+    "TERRACE": "TER", "TER": "TER",
 }
 
 
@@ -46,482 +41,420 @@ def utc_now():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def clean_text(value):
-    if value is None:
-        return ""
-    return re.sub(r"\s+", " ", str(value).strip())
+def clean(value):
+    return re.sub(r"\s+", " ", str(value or "").strip())
 
 
-def normalize(value):
-    value = clean_text(value).upper()
-    value = value.replace(".", "")
+def norm(value):
+    value = clean(value).upper().replace(".", "")
     value = re.sub(r"[^A-Z0-9]+", " ", value)
     return re.sub(r"\s+", " ", value).strip()
 
 
-def normalize_street(value):
-    text = normalize(value)
-    replacements = {
-        " AVENUE": " AVE",
-        " STREET": " ST",
-        " ROAD": " RD",
-        " DRIVE": " DR",
-        " LANE": " LN",
-        " BOULEVARD": " BLVD",
-        " COURT": " CT",
-        " PLACE": " PL",
-        " HIGHWAY": " HWY",
-        " PARKWAY": " PKWY",
-        " TERRACE": " TER",
-    }
-    for old, new in replacements.items():
-        if text.endswith(old):
-            text = text[:-len(old)] + new
-    return text
+def street_tokens(value):
+    tokens = norm(value).split()
+    if tokens and tokens[-1] in SUFFIXES:
+        tokens[-1] = SUFFIXES[tokens[-1]]
+    return tokens
+
+
+def street_core(value):
+    tokens = street_tokens(value)
+    if tokens and tokens[-1] in set(SUFFIXES.values()):
+        tokens = tokens[:-1]
+    return " ".join(tokens)
 
 
 def parse_address(address):
-    """
-    מפרק כתובת בסיסית:
-    4601 Fifth Ave #621
-    4601 Fifth Ave Unit 621
-    4601 Fifth Ave Apt 621
-    """
-    raw = clean_text(address)
-
+    raw = clean(address)
     unit = ""
-    unit_match = re.search(
+
+    m = re.search(
         r"(?:#|UNIT\s+|APT\s+|APARTMENT\s+|SUITE\s+)([A-Za-z0-9\-]+)\s*$",
-        raw,
-        flags=re.IGNORECASE,
+        raw, re.I
     )
-    if unit_match:
-        unit = clean_text(unit_match.group(1))
-        raw = raw[:unit_match.start()].strip(" ,")
+    if m:
+        unit = clean(m.group(1))
+        raw = raw[:m.start()].strip(" ,")
 
-    match = re.match(r"^\s*(\d+[A-Za-z]?)\s+(.+?)\s*$", raw)
-    if not match:
-        raise ValueError(
-            "לא הצלחתי לפרק את הכתובת. השתמש בפורמט כגון: "
-            "'4601 Fifth Ave #621'"
-        )
+    m = re.match(r"^\s*(\d+[A-Za-z]?)\s+(.+?)\s*$", raw)
+    if not m:
+        raise ValueError("כתובת לא תקינה. לדוגמה: 4601 Fifth Ave #621")
 
-    house = match.group(1)
-    street = match.group(2)
-
-    return {
-        "house_number": house,
-        "street": street,
-        "unit": unit,
-    }
+    return {"house_number": m.group(1), "street": m.group(2), "unit": unit}
 
 
-def ckan_search(resource_id, filters=None, q=None, limit=100):
-    params = {
-        "resource_id": resource_id,
-        "limit": limit,
-    }
-
+def ckan_search(resource_id, filters=None, q=None, limit=500):
+    params = {"resource_id": resource_id, "limit": limit}
     if filters:
         params["filters"] = json.dumps(filters, separators=(",", ":"))
-
     if q:
         params["q"] = q
 
-    response = requests.get(
-        CKAN_BASE,
-        params=params,
-        headers=HEADERS,
-        timeout=TIMEOUT,
-    )
-    response.raise_for_status()
-
-    payload = response.json()
+    r = requests.get(CKAN_SEARCH, params=params, headers=HEADERS, timeout=TIMEOUT)
+    r.raise_for_status()
+    payload = r.json()
     if not payload.get("success"):
-        raise RuntimeError("WPRDC API החזיר success=false")
-
-    result = payload.get("result") or {}
-    return result.get("records") or []
+        raise RuntimeError("WPRDC API returned success=false")
+    return (payload.get("result") or {}).get("records") or []
 
 
-def assessment_candidates(house_number, city, zip_code):
+def unique_records(records):
+    seen = set()
+    result = []
+    for rec in records:
+        key = (
+            clean(rec.get("PARID")),
+            clean(rec.get("PROPERTYHOUSENUM")),
+            clean(rec.get("PROPERTYADDRESS")),
+            clean(rec.get("PROPERTYUNIT")),
+        )
+        if key not in seen:
+            seen.add(key)
+            result.append(rec)
+    return result
+
+
+def get_candidates(target):
     """
-    חיפוש ראשוני רחב יחסית לפי מספר בית + עיר.
-    ZIP נוסף כאשר הוא קיים.
+    חיפוש מדורג.
+    לא מניח ש-Unit הוא Parcel נפרד (חשוב במיוחד ב-Co-op).
     """
-    filters = {
-        "PROPERTYHOUSENUM": str(house_number),
-        "PROPERTYCITY": city,
-    }
-    if zip_code:
-        filters["PROPERTYZIP"] = str(zip_code)
+    house = target["house_number"]
+    city = target["city"]
+    zipcode = target["zip"]
+    street = target["street"]
 
-    records = ckan_search(
-        ASSESSMENT_RESOURCE_ID,
-        filters=filters,
-        limit=500,
+    attempts = []
+
+    def add(label, filters=None, q=None):
+        try:
+            rows = ckan_search(
+                ASSESSMENT_RESOURCE_ID,
+                filters=filters,
+                q=q,
+                limit=500
+            )
+            attempts.append({"label": label, "count": len(rows), "error": None})
+            return rows
+        except Exception as exc:
+            attempts.append({"label": label, "count": 0, "error": str(exc)})
+            return []
+
+    records = []
+
+    # 1. House + City + ZIP
+    filters = {"PROPERTYHOUSENUM": house, "PROPERTYCITY": city}
+    if zipcode:
+        filters["PROPERTYZIP"] = zipcode
+    records += add("house_city_zip", filters=filters)
+
+    # 2. House + City
+    records += add(
+        "house_city",
+        filters={"PROPERTYHOUSENUM": house, "PROPERTYCITY": city}
     )
 
-    # Fallback: אם פורמט ZIP/City במאגר שונה, ננסה מספר בית בלבד
-    # ואז נסנן מקומית.
-    if not records:
-        records = ckan_search(
-            ASSESSMENT_RESOURCE_ID,
-            filters={"PROPERTYHOUSENUM": str(house_number)},
-            limit=500,
-        )
+    # 3. House only - then local street filtering
+    records += add("house_only", filters={"PROPERTYHOUSENUM": house})
 
-    return records
+    # 4. Free-text fallback for street core / address variants
+    core = street_core(street)
+    if core:
+        records += add("street_core_text", q=f"{house} {core}")
+
+    records = unique_records(records)
+
+    # Keep candidates whose street is plausibly the requested street.
+    target_core = street_core(street)
+    plausible = []
+    for rec in records:
+        rec_core = street_core(rec.get("PROPERTYADDRESS"))
+        if target_core and rec_core:
+            if target_core == rec_core or target_core in rec_core or rec_core in target_core:
+                plausible.append(rec)
+
+    # If the API search returned no street match, retain all house-number
+    # candidates for diagnostics, but they will not resolve automatically.
+    return (plausible if plausible else records), attempts
 
 
-def score_candidate(record, target):
+def score_candidate(rec, target):
     score = 0
     reasons = []
 
-    rec_house = normalize(record.get("PROPERTYHOUSENUM"))
-    rec_street = normalize_street(record.get("PROPERTYADDRESS"))
-    rec_city = normalize(record.get("PROPERTYCITY"))
-    rec_zip = normalize(record.get("PROPERTYZIP"))
-    rec_unit = normalize(record.get("PROPERTYUNIT"))
-
-    target_house = normalize(target["house_number"])
-    target_street = normalize_street(target["street"])
-    target_city = normalize(target["city"])
-    target_zip = normalize(target["zip"])
-    target_unit = normalize(target["unit"])
-
-    if rec_house == target_house:
+    if norm(rec.get("PROPERTYHOUSENUM")) == norm(target["house_number"]):
         score += 30
-        reasons.append("house_number_exact")
+        reasons.append("house_exact")
 
-    if rec_street == target_street:
-        score += 40
-        reasons.append("street_exact")
-    elif target_street and (
-        target_street in rec_street or rec_street in target_street
-    ):
-        score += 25
-        reasons.append("street_partial")
+    rc = street_core(rec.get("PROPERTYADDRESS"))
+    tc = street_core(target["street"])
+    if rc and tc and rc == tc:
+        score += 50
+        reasons.append("street_core_exact")
+    elif rc and tc and (rc in tc or tc in rc):
+        score += 30
+        reasons.append("street_core_partial")
 
-    if target_city and rec_city == target_city:
+    if norm(rec.get("PROPERTYCITY")) == norm(target["city"]):
         score += 10
         reasons.append("city_exact")
 
-    if target_zip and rec_zip == target_zip:
+    rz = norm(rec.get("PROPERTYZIP"))
+    tz = norm(target["zip"])
+    if rz and tz and rz == tz:
         score += 10
         reasons.append("zip_exact")
 
-    if target_unit:
-        if rec_unit == target_unit:
-            score += 50
+    ru = norm(rec.get("PROPERTYUNIT"))
+    tu = norm(target["unit"])
+    if tu:
+        if ru == tu:
+            score += 60
             reasons.append("unit_exact")
-        elif rec_unit:
-            score -= 20
-            reasons.append("unit_mismatch")
+        elif ru:
+            score -= 25
+            reasons.append("different_unit")
         else:
-            score -= 10
-            reasons.append("unit_missing_in_county_record")
+            # Blank unit is NOT fatal: co-op/master-parcel possibility.
+            reasons.append("county_unit_blank")
 
     return score, reasons
 
 
-def resolve_property(address, city, state, zip_code):
-    parsed = parse_address(address)
-
-    target = {
-        **parsed,
-        "city": clean_text(city),
-        "state": clean_text(state),
-        "zip": clean_text(zip_code),
-    }
-
-    candidates = assessment_candidates(
-        target["house_number"],
-        target["city"],
-        target["zip"],
-    )
-
-    scored = []
-    for record in candidates:
-        score, reasons = score_candidate(record, target)
-        if score > 0:
-            scored.append({
-                "score": score,
-                "reasons": reasons,
-                "record": record,
-            })
-
-    scored.sort(key=lambda x: x["score"], reverse=True)
-
+def classify_structure(scored, target):
+    """
+    Determines whether we have:
+    - exact unit parcel,
+    - likely master/co-op parcel,
+    - multiple condo parcels,
+    - unresolved.
+    """
     if not scored:
-        return target, None, []
+        return "unresolved", None
 
-    best = scored[0]
+    exact_unit = [
+        x for x in scored
+        if "unit_exact" in x["reasons"] and x["score"] >= 100
+    ]
+    if exact_unit:
+        return "exact_unit_parcel", exact_unit[0]
 
-    # דורשים התאמה חזקה. ביחידה/Condo חשוב במיוחד לא לקבל Parcel שגוי.
-    if best["score"] < 70:
-        return target, None, scored[:10]
+    same_address = [
+        x for x in scored
+        if "house_exact" in x["reasons"]
+        and ("street_core_exact" in x["reasons"] or "street_core_partial" in x["reasons"])
+        and x["score"] >= 80
+    ]
 
-    return target, best, scored[:10]
+    blank_units = [x for x in same_address if not norm(x["record"].get("PROPERTYUNIT"))]
+    nonblank_units = [x for x in same_address if norm(x["record"].get("PROPERTYUNIT"))]
+
+    # One strong same-address parcel with no unit: do not pretend unit 621
+    # is independently assessed. Treat as building/master parcel candidate.
+    if len(blank_units) == 1 and not nonblank_units:
+        return "likely_master_or_coop_parcel", blank_units[0]
+
+    # Several blank-unit parcels can exist at one street number; unsafe to pick.
+    if len(blank_units) > 1 and not nonblank_units:
+        return "multiple_master_parcel_candidates", None
+
+    if nonblank_units:
+        return "multiple_unit_parcels_no_exact_unit", None
+
+    return "unresolved", None
 
 
-def sales_history_for_parcel(parcel_id):
+def sales_for_parcel(parcel_id):
     if not parcel_id:
         return []
-
-    records = ckan_search(
-        SALES_RESOURCE_ID,
-        filters={"PARID": str(parcel_id)},
-        limit=500,
-    )
-
-    def date_key(record):
-        return clean_text(record.get("SALEDATE"))
-
-    return sorted(records, key=date_key, reverse=True)
+    rows = ckan_search(SALES_RESOURCE_ID, filters={"PARID": parcel_id}, limit=500)
+    return rows
 
 
-def assessment_public_view(record):
-    if not record:
-        return None
-
+def compact_assessment(rec):
     fields = [
-        "PARID",
-        "PROPERTYHOUSENUM",
-        "PROPERTYFRACTION",
-        "PROPERTYADDRESS",
-        "PROPERTYCITY",
-        "PROPERTYSTATE",
-        "PROPERTYUNIT",
-        "PROPERTYZIP",
-        "MUNIDESC",
-        "SCHOOLDESC",
-        "NEIGHCODE",
-        "NEIGHDESC",
-        "CLASS",
-        "CLASSDESC",
-        "USECODE",
-        "USEDESC",
-        "SALEDATE",
-        "SALEPRICE",
-        "SALECODE",
-        "SALEDESC",
-        "PREVSALEDATE",
-        "PREVSALEPRICE",
-        "PREVSALEDATE2",
-        "PREVSALEPRICE2",
-        "COUNTYBUILDING",
-        "COUNTYLAND",
-        "COUNTYTOTAL",
-        "FAIRMARKETBUILDING",
-        "FAIRMARKETLAND",
-        "FAIRMARKETTOTAL",
-        "STYLE",
-        "STYLEDESC",
-        "STORIES",
-        "YEARBLT",
-        "GRADE",
-        "GRADEDESC",
-        "CONDITION",
-        "CONDITIONDESC",
-        "TOTALROOMS",
-        "BEDROOMS",
-        "FULLBATHS",
-        "HALFBATHS",
-        "FINISHEDLIVINGAREA",
-        "TAXYEAR",
-        "ASOFDATE",
+        "PARID", "PROPERTYHOUSENUM", "PROPERTYADDRESS", "PROPERTYUNIT",
+        "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP",
+        "MUNIDESC", "SCHOOLDESC", "NEIGHCODE", "NEIGHDESC",
+        "CLASSDESC", "USECODE", "USEDESC",
+        "SALEDATE", "SALEPRICE", "SALECODE", "SALEDESC",
+        "PREVSALEDATE", "PREVSALEPRICE", "PREVSALEDATE2", "PREVSALEPRICE2",
+        "FAIRMARKETTOTAL", "YEARBLT", "STYLEDESC", "STORIES",
+        "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS",
+        "FINISHEDLIVINGAREA", "TAXYEAR", "ASOFDATE",
     ]
-    return {field: record.get(field) for field in fields}
+    return {k: rec.get(k) for k in fields}
 
 
-def sale_public_view(record):
-    fields = [
-        "PARID",
-        "FULL_ADDRESS",
-        "PROPERTYHOUSENUM",
-        "PROPERTYADDRESSDIR",
-        "PROPERTYADDRESSSTREET",
-        "PROPERTYADDRESSSUF",
-        "PROPERTYADDRESSUNITDESC",
-        "PROPERTYUNITNO",
-        "PROPERTYCITY",
-        "PROPERTYSTATE",
-        "PROPERTYZIP",
-        "MUNIDESC",
-        "RECORDDATE",
-        "SALEDATE",
-        "PRICE",
-        "SALECODE",
-        "SALEDESC",
-        "DEEDBOOK",
-        "DEEDPAGE",
-        "INSTRTYP",
-        "INSTRTYPDESC",
+def compact_sale(rec):
+    # Preserve useful fields even if schema names vary.
+    preferred = [
+        "PARID", "FULL_ADDRESS", "PROPERTYHOUSENUM",
+        "PROPERTYADDRESSSTREET", "PROPERTYADDRESSSUF",
+        "PROPERTYUNITNO", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP",
+        "RECORDDATE", "SALEDATE", "PRICE", "SALEPRICE",
+        "SALECODE", "SALEDESC", "DEEDBOOK", "DEEDPAGE",
+        "INSTRTYP", "INSTRTYPDESC",
     ]
-    return {field: record.get(field) for field in fields}
+    return {k: rec.get(k) for k in preferred if k in rec}
 
 
-def build_result(address, city, state, zip_code):
-    target, best, alternatives = resolve_property(
-        address, city, state, zip_code
-    )
+def build_result(address, city, state, zipcode):
+    parsed = parse_address(address)
+    target = {
+        **parsed,
+        "city": clean(city),
+        "state": clean(state),
+        "zip": clean(zipcode),
+    }
+
+    records, attempts = get_candidates(target)
+    scored = []
+    for rec in records:
+        score, reasons = score_candidate(rec, target)
+        scored.append({"score": score, "reasons": reasons, "record": rec})
+    scored.sort(key=lambda x: x["score"], reverse=True)
+
+    structure, chosen = classify_structure(scored, target)
 
     result = {
         "engine": "Allegheny County Comps Engine",
         "version": VERSION,
         "phase": "property_resolution_and_sales_history",
         "generated_at": utc_now(),
-        "input": {
-            "address": address,
-            "city": city,
-            "state": state,
-            "zip": zip_code,
-        },
+        "input": {"address": address, "city": city, "state": state, "zip": zipcode},
         "parsed_input": target,
-        "status": "not_found",
+        "search_attempts": attempts,
+        "resolution_type": structure,
+        "status": "unresolved",
         "arv": None,
         "arv_status": "not_calculated_phase_1",
         "comps": [],
         "comps_status": "not_selected_phase_1",
-        "sources": {
-            "assessment": {
-                "publisher": "Allegheny County / WPRDC",
-                "resource_id": ASSESSMENT_RESOURCE_ID,
-                "data_type": "official_county_assessment",
-            },
-            "sales": {
-                "publisher": "Allegheny County / WPRDC",
-                "resource_id": SALES_RESOURCE_ID,
-                "data_type": "official_county_sales_transactions",
-                "validation_note": (
-                    "SALECODE/SALEDESC must be evaluated before a sale "
-                    "is used as a market comparable."
-                ),
-            },
+        "source": {
+            "publisher": "Allegheny County / WPRDC",
+            "assessment_resource_id": ASSESSMENT_RESOURCE_ID,
+            "sales_resource_id": SALES_RESOURCE_ID,
         },
+        "candidate_count": len(scored),
+        "top_candidates": [
+            {
+                "score": x["score"],
+                "reasons": x["reasons"],
+                "PARID": x["record"].get("PARID"),
+                "PROPERTYHOUSENUM": x["record"].get("PROPERTYHOUSENUM"),
+                "PROPERTYADDRESS": x["record"].get("PROPERTYADDRESS"),
+                "PROPERTYUNIT": x["record"].get("PROPERTYUNIT"),
+                "PROPERTYCITY": x["record"].get("PROPERTYCITY"),
+                "PROPERTYZIP": x["record"].get("PROPERTYZIP"),
+                "USEDESC": x["record"].get("USEDESC"),
+            }
+            for x in scored[:20]
+        ],
     }
 
-    if not best:
-        result["resolution"] = {
-            "matched": False,
-            "message": (
-                "לא נמצאה התאמת Parcel חזקה מספיק. "
-                "לא בוצע ניחוש אוטומטי."
-            ),
-            "candidate_count": len(alternatives),
-            "top_candidates": [
-                {
-                    "score": item["score"],
-                    "reasons": item["reasons"],
-                    "PARID": item["record"].get("PARID"),
-                    "PROPERTYADDRESS": item["record"].get("PROPERTYADDRESS"),
-                    "PROPERTYUNIT": item["record"].get("PROPERTYUNIT"),
-                    "PROPERTYCITY": item["record"].get("PROPERTYCITY"),
-                    "PROPERTYZIP": item["record"].get("PROPERTYZIP"),
-                }
-                for item in alternatives
-            ],
-        }
+    if not chosen:
+        result["resolution_message"] = (
+            "לא נמצאה התאמה יחידה ובטוחה. המנוע לא בוחר Parcel בניחוש."
+        )
         return result
 
-    record = best["record"]
-    parcel_id = record.get("PARID")
-    sales = sales_history_for_parcel(parcel_id)
+    rec = chosen["record"]
+    parcel_id = clean(rec.get("PARID"))
+    sales = sales_for_parcel(parcel_id)
 
     result["status"] = "resolved"
     result["resolution"] = {
-        "matched": True,
-        "score": best["score"],
-        "reasons": best["reasons"],
         "parcel_id": parcel_id,
-        "unit": record.get("PROPERTYUNIT"),
-        "county_address": " ".join(
-            part for part in [
-                clean_text(record.get("PROPERTYHOUSENUM")),
-                clean_text(record.get("PROPERTYADDRESS")),
-            ] if part
-        ),
+        "score": chosen["score"],
+        "reasons": chosen["reasons"],
+        "requested_unit": target["unit"],
+        "county_unit": clean(rec.get("PROPERTYUNIT")),
+        "unit_verified": "unit_exact" in chosen["reasons"],
+        "master_parcel_warning": structure == "likely_master_or_coop_parcel",
     }
-    result["assessment"] = assessment_public_view(record)
-    result["sales_history"] = [sale_public_view(x) for x in sales]
-    result["sales_history_count"] = len(sales)
 
+    if structure == "likely_master_or_coop_parcel":
+        result["resolution_message"] = (
+            "נמצאה כתובת County חזקה אך PROPERTYUNIT ריק. "
+            "ה-Parcel מטופל כ-master/co-op candidate בלבד; "
+            "אין טענה ש-Unit המבוקש הוא Parcel נפרד."
+        )
+    else:
+        result["resolution_message"] = "נמצאה התאמת Unit/Parcel חזקה."
+
+    result["assessment"] = compact_assessment(rec)
+    result["sales_history"] = [compact_sale(x) for x in sales]
+    result["sales_history_count"] = len(sales)
     return result
 
 
 def safe_filename(address):
-    name = normalize(address).replace(" ", "_")
-    return re.sub(r"[^A-Z0-9_\-]", "", name) or "PROPERTY"
+    return re.sub(r"[^A-Z0-9_\-]", "", norm(address).replace(" ", "_")) or "PROPERTY"
 
 
 def print_summary(result):
-    print("\n" + "=" * 72)
-    print("ALLEGHENY COUNTY COMPS ENGINE - PHASE 1")
-    print("=" * 72)
-    print(f"Input: {result['input']['address']}, "
-          f"{result['input']['city']}, {result['input']['state']} "
-          f"{result['input']['zip']}")
+    print("\n" + "=" * 76)
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 1")
+    print("=" * 76)
+    i = result["input"]
+    print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
     print(f"Status: {result['status']}")
+    print(f"Resolution type: {result['resolution_type']}")
 
-    resolution = result.get("resolution") or {}
-    if not resolution.get("matched"):
-        print("❌ Parcel לא זוהה בוודאות מספקת.")
-        for item in resolution.get("top_candidates", [])[:5]:
+    print("\nSearch attempts:")
+    for a in result.get("search_attempts", []):
+        print(f"  - {a['label']}: {a['count']} rows" + (f" | ERROR: {a['error']}" if a['error'] else ""))
+
+    if result["status"] != "resolved":
+        print("\n❌ לא נמצאה התאמה בטוחה.")
+        for c in result.get("top_candidates", [])[:10]:
             print(
-                f"  Candidate: PARID={item.get('PARID')} | "
-                f"Unit={item.get('PROPERTYUNIT')} | "
-                f"Score={item.get('score')}"
+                f"  Candidate: PARID={c.get('PARID')} | "
+                f"{c.get('PROPERTYHOUSENUM')} {c.get('PROPERTYADDRESS')} | "
+                f"Unit={c.get('PROPERTYUNIT')} | Score={c.get('score')} | "
+                f"Use={c.get('USEDESC')}"
             )
-        print("לא חושב ARV ולא נבחרו Comps.")
+        print("\nלא חושב ARV ולא נבחרו Comps.")
         return
 
-    assessment = result.get("assessment") or {}
-    print(f"✅ PARID: {resolution.get('parcel_id')}")
-    print(f"County Unit: {resolution.get('unit')}")
-    print(f"Use: {assessment.get('USEDESC')}")
-    print(f"Beds: {assessment.get('BEDROOMS')}")
-    print(f"Full Baths: {assessment.get('FULLBATHS')}")
-    print(f"Half Baths: {assessment.get('HALFBATHS')}")
-    print(f"Living Area: {assessment.get('FINISHEDLIVINGAREA')}")
-    print(f"Year Built: {assessment.get('YEARBLT')}")
-    print(f"Neighborhood: {assessment.get('NEIGHDESC')}")
+    r = result["resolution"]
+    a = result.get("assessment") or {}
+    print(f"\n✅ PARID: {r['parcel_id']}")
+    print(f"Requested Unit: {r['requested_unit']}")
+    print(f"County Unit: {r['county_unit'] or '[blank]'}")
+    print(f"Unit verified: {r['unit_verified']}")
+    print(f"Master/Co-op warning: {r['master_parcel_warning']}")
+    print(f"Message: {result['resolution_message']}")
+    print(f"Use: {a.get('USEDESC')}")
+    print(f"Beds: {a.get('BEDROOMS')}")
+    print(f"Full Baths: {a.get('FULLBATHS')}")
+    print(f"Living Area: {a.get('FINISHEDLIVINGAREA')}")
+    print(f"Year Built: {a.get('YEARBLT')}")
     print(f"Sales history rows: {result.get('sales_history_count', 0)}")
 
     for sale in result.get("sales_history", [])[:10]:
+        price = sale.get("PRICE", sale.get("SALEPRICE"))
         print(
-            "  • "
-            f"{sale.get('SALEDATE')} | "
-            f"${sale.get('PRICE')} | "
-            f"Code={sale.get('SALECODE')} | "
-            f"{sale.get('SALEDESC')}"
+            f"  • {sale.get('SALEDATE')} | ${price} | "
+            f"Code={sale.get('SALECODE')} | {sale.get('SALEDESC')}"
         )
 
-    print("\nℹ️ Phase 1: ARV לא מחושב ו-Comps עדיין לא נבחרים.")
+    print("\nℹ️ Phase 1 בלבד: עדיין אין ARV ואין בחירת Sold Comps.")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Allegheny County property resolver and sales-history tester."
-    )
-    parser.add_argument("--address", default=DEFAULT_ADDRESS)
-    parser.add_argument("--city", default=DEFAULT_CITY)
-    parser.add_argument("--state", default=DEFAULT_STATE)
-    parser.add_argument("--zip", dest="zip_code", default=DEFAULT_ZIP)
-    parser.add_argument(
-        "--output-dir",
-        default=str(OUTPUT_DIR),
-        help="Folder for JSON test reports.",
-    )
-    args = parser.parse_args()
+    p = argparse.ArgumentParser()
+    p.add_argument("--address", default=DEFAULT_ADDRESS)
+    p.add_argument("--city", default=DEFAULT_CITY)
+    p.add_argument("--state", default=DEFAULT_STATE)
+    p.add_argument("--zip", dest="zipcode", default=DEFAULT_ZIP)
+    p.add_argument("--output-dir", default=str(OUTPUT_DIR))
+    args = p.parse_args()
 
     try:
-        result = build_result(
-            args.address,
-            args.city,
-            args.state,
-            args.zip_code,
-        )
+        result = build_result(args.address, args.city, args.state, args.zipcode)
     except requests.RequestException as exc:
         print(f"❌ שגיאת תקשורת מול WPRDC: {exc}")
         sys.exit(2)
@@ -531,19 +464,17 @@ def main():
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / f"{safe_filename(args.address)}_county_test.json"
+    temp = output_file.with_suffix(".tmp")
 
-    output_file = output_dir / (
-        f"{safe_filename(args.address)}_county_test.json"
-    )
-    temp_file = output_file.with_suffix(".tmp")
-
-    with open(temp_file, "w", encoding="utf-8") as f:
+    with open(temp, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-    temp_file.replace(output_file)
+    temp.replace(output_file)
 
     print_summary(result)
     print(f"\n📄 JSON נשמר: {output_file}")
 
+    # unresolved remains a deliberate non-success so GitHub Actions highlights it.
     if result["status"] != "resolved":
         sys.exit(3)
 
