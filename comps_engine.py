@@ -7,7 +7,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.1"
+VERSION = "1.2"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -20,7 +20,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.1"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.2"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -34,6 +34,15 @@ SUFFIXES = {
     "HIGHWAY": "HWY", "HWY": "HWY",
     "PARKWAY": "PKWY", "PKWY": "PKWY",
     "TERRACE": "TER", "TER": "TER",
+}
+
+ORDINAL_WORDS = {
+    "FIRST": "1ST", "SECOND": "2ND", "THIRD": "3RD", "FOURTH": "4TH",
+    "FIFTH": "5TH", "SIXTH": "6TH", "SEVENTH": "7TH", "EIGHTH": "8TH",
+    "NINTH": "9TH", "TENTH": "10TH", "ELEVENTH": "11TH", "TWELFTH": "12TH",
+    "THIRTEENTH": "13TH", "FOURTEENTH": "14TH", "FIFTEENTH": "15TH",
+    "SIXTEENTH": "16TH", "SEVENTEENTH": "17TH", "EIGHTEENTH": "18TH",
+    "NINETEENTH": "19TH", "TWENTIETH": "20TH",
 }
 
 
@@ -53,6 +62,12 @@ def norm(value):
 
 def street_tokens(value):
     tokens = norm(value).split()
+
+    # Normalize spelled-out ordinal street names used by listing sites
+    # to the numeric form commonly used by Allegheny County records:
+    # FIFTH -> 5TH, FIRST -> 1ST, etc.
+    tokens = [ORDINAL_WORDS.get(token, token) for token in tokens]
+
     if tokens and tokens[-1] in SUFFIXES:
         tokens[-1] = SUFFIXES[tokens[-1]]
     return tokens
@@ -224,11 +239,12 @@ def score_candidate(rec, target):
 
 def classify_structure(scored, target):
     """
-    Determines whether we have:
-    - exact unit parcel,
-    - likely master/co-op parcel,
-    - multiple condo parcels,
-    - unresolved.
+    Safe resolution rules:
+    - exact_unit_parcel: exact requested unit is independently assessed.
+    - likely_master_or_coop_parcel: exactly one strong same-address blank-unit parcel.
+    - building_parcel_candidates: multiple strong parcels at same building address.
+      In this case we deliberately do NOT choose one automatically.
+    - unresolved: no safe match.
     """
     if not scored:
         return "unresolved", None
@@ -243,21 +259,27 @@ def classify_structure(scored, target):
     same_address = [
         x for x in scored
         if "house_exact" in x["reasons"]
-        and ("street_core_exact" in x["reasons"] or "street_core_partial" in x["reasons"])
-        and x["score"] >= 80
+        and "street_core_exact" in x["reasons"]
+        and x["score"] >= 90
     ]
 
-    blank_units = [x for x in same_address if not norm(x["record"].get("PROPERTYUNIT"))]
-    nonblank_units = [x for x in same_address if norm(x["record"].get("PROPERTYUNIT"))]
+    blank_units = [
+        x for x in same_address
+        if not norm(x["record"].get("PROPERTYUNIT"))
+    ]
+    nonblank_units = [
+        x for x in same_address
+        if norm(x["record"].get("PROPERTYUNIT"))
+    ]
 
-    # One strong same-address parcel with no unit: do not pretend unit 621
-    # is independently assessed. Treat as building/master parcel candidate.
     if len(blank_units) == 1 and not nonblank_units:
         return "likely_master_or_coop_parcel", blank_units[0]
 
-    # Several blank-unit parcels can exist at one street number; unsafe to pick.
-    if len(blank_units) > 1 and not nonblank_units:
-        return "multiple_master_parcel_candidates", None
+    # Critical safety rule: if County has several strong parcels for the
+    # same building address and none matches Unit 621, expose all candidates.
+    # Never guess which parcel represents the requested co-op unit.
+    if len(same_address) > 1:
+        return "building_parcel_candidates", None
 
     if nonblank_units:
         return "multiple_unit_parcels_no_exact_unit", None
@@ -355,9 +377,15 @@ def build_result(address, city, state, zipcode):
     }
 
     if not chosen:
-        result["resolution_message"] = (
-            "לא נמצאה התאמה יחידה ובטוחה. המנוע לא בוחר Parcel בניחוש."
-        )
+        if structure == "building_parcel_candidates":
+            result["resolution_message"] = (
+                "נמצאו מספר Parcels חזקים באותה כתובת בניין, אך אין התאמת Unit "
+                "נפרדת. המנוע מציג את מועמדי הבניין ואינו בוחר Parcel בניחוש."
+            )
+        else:
+            result["resolution_message"] = (
+                "לא נמצאה התאמה יחידה ובטוחה. המנוע לא בוחר Parcel בניחוש."
+            )
         return result
 
     rec = chosen["record"]
@@ -408,7 +436,8 @@ def print_summary(result):
         print(f"  - {a['label']}: {a['count']} rows" + (f" | ERROR: {a['error']}" if a['error'] else ""))
 
     if result["status"] != "resolved":
-        print("\n❌ לא נמצאה התאמה בטוחה.")
+        print("\n❌ לא נמצאה התאמה יחידה ובטוחה.")
+        print(f"Message: {result.get('resolution_message', '')}")
         for c in result.get("top_candidates", [])[:10]:
             print(
                 f"  Candidate: PARID={c.get('PARID')} | "
