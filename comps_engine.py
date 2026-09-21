@@ -1,5 +1,8 @@
 import argparse
 import json
+import csv
+import io
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -7,7 +10,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.4.1"
+VERSION = "1.5"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -20,7 +23,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.4.1"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.5"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -359,6 +362,203 @@ def infer_building_reference(scored, target):
 
     return None
 
+
+def _num(value):
+    if value is None:
+        return None
+    text = str(value).replace("$", "").replace(",", "").strip()
+    if not text or text.lower() in {"nan", "n/a", "na", "-"}:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _csv_value(row, *names):
+    normalized = {norm(k).replace(" ", "_"): v for k, v in row.items()}
+    for name in names:
+        key = norm(name).replace(" ", "_")
+        if key in normalized and clean(normalized[key]):
+            return normalized[key]
+    return None
+
+
+def _split_building_and_unit(address_value):
+    raw = clean(address_value).upper()
+    unit = ""
+    m = re.search(r"(?:#|\bUNIT\s+|\bAPT\s+)([A-Z0-9-]+)\s*$", raw)
+    if m:
+        unit = m.group(1)
+        raw = raw[:m.start()].strip(" ,")
+    return raw, unit
+
+
+def same_building(address_value, target):
+    building, _ = _split_building_and_unit(address_value)
+    text = norm(building)
+    m = re.match(r"^\s*(\d+[A-Z]?)\s+(.+?)\s*$", text)
+    if not m:
+        return False
+    return (
+        norm(m.group(1)) == norm(target["house_number"])
+        and street_core(m.group(2)) == street_core(target["street"])
+    )
+
+
+def extract_unit(address_value):
+    _, unit = _split_building_and_unit(address_value)
+    return unit
+
+
+def redfin_city_sold_rows(max_pages=8, page_size=350):
+    """
+    Best-effort Redfin downloadable sold-search CSV adapter.
+    This is intentionally non-fatal because it is not a stable public API.
+    """
+    base_url = "https://www.redfin.com/stingray/api/gis-csv"
+    all_rows, errors = [], []
+
+    for page in range(1, max_pages + 1):
+        params = {
+            "al": 1, "market": "pittsburgh", "num_homes": page_size,
+            "ord": "redfin-recommended-asc", "page_number": page,
+            "start": (page - 1) * page_size,
+            "region_id": 15702, "region_type": 6,
+            "sf": "1,2,3,5,6,7", "status": 9,
+            "uipt": "1,2,3,4,5,6,7,8", "v": 8,
+            "sold_within_days": 730,
+        }
+        try:
+            r = requests.get(
+                base_url, params=params,
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Accept": "text/csv,text/plain,*/*",
+                    "Referer": "https://www.redfin.com/city/15702/PA/Pittsburgh/recently-sold",
+                },
+                timeout=30,
+            )
+            r.raise_for_status()
+            text = r.text.lstrip("\ufeff").strip()
+            if not text or "<html" in text[:200].lower():
+                errors.append(f"page_{page}: non_csv_response")
+                break
+            rows = list(csv.DictReader(io.StringIO(text)))
+            if not rows:
+                break
+            all_rows.extend(rows)
+            if len(rows) < page_size:
+                break
+        except Exception as exc:
+            errors.append(f"page_{page}: {type(exc).__name__}: {exc}")
+            break
+
+    return all_rows, errors
+
+
+def discover_same_building_sold_comps(target, subject):
+    rows, errors = redfin_city_sold_rows()
+    comps = []
+
+    for row in rows:
+        address = _csv_value(row, "ADDRESS", "PROPERTY ADDRESS")
+        if not same_building(address, target):
+            continue
+
+        unit = extract_unit(address)
+        sold_price = _num(_csv_value(row, "PRICE", "SALE PRICE", "SOLD PRICE"))
+        if not unit or norm(unit) == norm(target.get("unit")) or sold_price is None:
+            continue
+
+        beds = _num(_csv_value(row, "BEDS", "BEDROOMS"))
+        baths = _num(_csv_value(row, "BATHS", "BATHROOMS"))
+        sqft = _num(_csv_value(row, "SQUARE FEET", "SQFT", "LIVING AREA"))
+        sold_date = clean(_csv_value(row, "SOLD DATE", "SALE DATE", "LAST SALE DATE"))
+        source_url = clean(_csv_value(
+            row,
+            "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
+            "URL",
+        ))
+
+        score = 100.0
+        reasons = ["same_building", "different_unit", "sold_search_feed"]
+
+        if subject.get("beds") is not None and beds is not None:
+            if beds == subject["beds"]:
+                score += 20
+                reasons.append("same_beds")
+            else:
+                score -= 15 * abs(beds - subject["beds"])
+
+        if subject.get("baths") is not None and baths is not None:
+            if baths == subject["baths"]:
+                score += 15
+                reasons.append("same_baths")
+            else:
+                score -= 10 * abs(baths - subject["baths"])
+
+        if subject.get("sqft") and sqft:
+            delta = abs(sqft - subject["sqft"]) / subject["sqft"]
+            if delta <= .10:
+                score += 20
+                reasons.append("sqft_within_10pct")
+            elif delta <= .25:
+                score += 10
+                reasons.append("sqft_within_25pct")
+            else:
+                score -= 20
+
+        comps.append({
+            "unit": unit,
+            "address": clean(address),
+            "sold_price": sold_price,
+            "sold_date": sold_date or None,
+            "beds": beds,
+            "baths": baths,
+            "sqft": sqft,
+            "price_per_sqft": round(sold_price / sqft, 2) if sqft else None,
+            "comp_score": round(score, 1),
+            "match_reasons": reasons,
+            "source": "Redfin downloadable sold-search CSV",
+            "source_url": source_url or None,
+            "verification": "unit_level_sold_search_record",
+        })
+
+    unique = {}
+    for c in comps:
+        unique[(norm(c["unit"]), c["sold_date"], c["sold_price"])] = c
+
+    comps = sorted(
+        unique.values(),
+        key=lambda c: (c["comp_score"], c["sold_date"] or ""),
+        reverse=True,
+    )
+    return comps, errors, len(rows)
+
+
+def conservative_arv_from_comps(comps, subject):
+    verified = [
+        c for c in comps
+        if c.get("sold_price") and c.get("verification") == "unit_level_sold_search_record"
+    ]
+    if len(verified) < 3:
+        return None, "insufficient_verified_comps", "unavailable"
+
+    top = verified[:5]
+
+    if subject.get("sqft"):
+        ppsf = sorted(c["price_per_sqft"] for c in top if c.get("price_per_sqft"))
+        if len(ppsf) >= 3:
+            n = len(ppsf)
+            med = ppsf[n//2] if n % 2 else (ppsf[n//2-1] + ppsf[n//2]) / 2
+            return round(med * subject["sqft"], -3), "median_same_building_ppsf", "medium"
+
+    prices = sorted(c["sold_price"] for c in top)
+    n = len(prices)
+    med = prices[n//2] if n % 2 else (prices[n//2-1] + prices[n//2]) / 2
+    return round(med, -3), "median_same_building_sale_price", "low"
+
 def sales_for_parcel(parcel_id):
     if not parcel_id:
         return []
@@ -497,13 +697,33 @@ def build_result(address, city, state, zipcode):
                 # County/WPRDC sales are parcel-level. Because the requested
                 # co-op unit is not independently parcelized here, they cannot
                 # prove a sale belongs to Unit 621. Do not manufacture comps.
-                result["sold_comps"] = []
-                result["sold_comps_status"] = "requires_unit_level_source"
+                subject = {
+                    "beds": _num(os.getenv("TARGET_BEDS", "2")),
+                    "baths": _num(os.getenv("TARGET_BATHS", "1")),
+                    "sqft": _num(os.getenv("TARGET_SQFT")),
+                }
+                sold_comps, source_errors, source_rows = discover_same_building_sold_comps(
+                    target, subject
+                )
+                result["subject_for_comp_matching"] = subject
+                result["sold_comps"] = sold_comps
+                result["sold_comps_count"] = len(sold_comps)
+                result["sold_comps_status"] = (
+                    "unit_sold_records_found"
+                    if sold_comps
+                    else ("source_unavailable" if source_errors else "no_matching_unit_sales_found")
+                )
+                result["sold_comps_source"] = {
+                    "name": "Redfin downloadable sold-search CSV",
+                    "rows_scanned": source_rows,
+                    "errors": source_errors,
+                    "stability": "best_effort_undocumented_endpoint",
+                }
                 result["sold_comps_source_requirement"] = [
                     "same_building_unit_level_closed_sale",
-                    "verifiable_sale_date",
                     "verifiable_sale_price",
                     "unit_number",
+                    "sale_date_preferred",
                     "beds_baths_sqft_when_available",
                 ]
                 result["comp_search_plan"] = {
@@ -534,9 +754,17 @@ def build_result(address, city, state, zipcode):
                         "prefer_sqft_within_pct": 25,
                     },
                 }
-                result["arv"] = None
-                result["arv_status"] = "not_calculated_without_verified_unit_comps"
-                result["arv_confidence"] = "unavailable"
+                arv, arv_method, arv_confidence = conservative_arv_from_comps(
+                    sold_comps, subject
+                )
+                result["arv"] = arv
+                result["arv_method"] = arv_method
+                result["arv_status"] = (
+                    "calculated_from_same_building_unit_sales"
+                    if arv is not None
+                    else "not_calculated_without_enough_verified_unit_comps"
+                )
+                result["arv_confidence"] = arv_confidence
                 return result
 
             result["resolution_message"] = (
@@ -585,7 +813,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 1+2 SAFETY GATE")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - UNIT SOLD COMPS DISCOVERY")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -610,14 +838,36 @@ def print_summary(result):
         print("County parcel sales: SUPPRESSED (not unit-level history)")
         print("Next strategy: SAME-BUILDING SOLD UNITS")
         print(f"Sold comps status: {result.get('sold_comps_status')}")
+        print(f"Sold comps found: {result.get('sold_comps_count', 0)}")
+        source = result.get("sold_comps_source") or {}
+        print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
+        for err in source.get("errors", []):
+            print(f"  Source warning: {err}")
+        for comp in result.get("sold_comps", [])[:10]:
+            print(
+                f"  COMP Unit {comp.get('unit')} | "
+                f"${comp.get('sold_price'):,.0f} | {comp.get('sold_date') or 'date unavailable'} | "
+                f"{comp.get('beds')} bd / {comp.get('baths')} ba | "
+                f"{comp.get('sqft') or 'sqft unavailable'} sqft | "
+                f"Score={comp.get('comp_score')}"
+            )
         print(f"ARV status: {result.get('arv_status')}")
+        if result.get("arv") is not None:
+            print(
+                f"ARV: ${result['arv']:,.0f} | "
+                f"Method={result.get('arv_method')} | "
+                f"Confidence={result.get('arv_confidence')}"
+            )
         plan = result.get("comp_search_plan") or {}
         print(
             "Comp window: "
             f"{plan.get('initial_lookback_months')} months "
             f"(expand to {plan.get('expanded_lookback_months')} if needed)"
         )
-        print("\nℹ️ אין ARV עד שיש עסקאות Unit סגורות ומאומתות.")
+        if result.get("arv") is None:
+            print("\nℹ️ אין ARV עד שיש לפחות 3 עסקאות Unit מתאימות.")
+        else:
+            print("\n✅ ARV חושב על בסיס עסקאות Unit באותו בניין.")
         return
 
     if result["status"] != "resolved":
