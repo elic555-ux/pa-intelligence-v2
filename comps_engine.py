@@ -7,7 +7,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.2"
+VERSION = "1.3"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -20,7 +20,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.2"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.3"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -287,6 +287,78 @@ def classify_structure(scored, target):
     return "unresolved", None
 
 
+
+def same_address_candidates(scored):
+    """Return strong County records for the exact building address."""
+    return [
+        x for x in scored
+        if "house_exact" in x["reasons"]
+        and "street_core_exact" in x["reasons"]
+        and x["score"] >= 90
+    ]
+
+
+def infer_building_reference(scored, target):
+    """
+    For unit addresses where County exposes multiple blank-unit parcels,
+    identify a *building reference* without pretending the requested unit
+    is independently parcelized.
+
+    Residential multi-unit uses are preferred over auxiliary/commercial
+    parcels. This is a building-level reference only and is never treated
+    as proof of Unit ownership/parcel identity.
+    """
+    if not norm(target.get("unit")):
+        return None
+
+    candidates = same_address_candidates(scored)
+    if len(candidates) < 2:
+        return None
+
+    ranked = []
+    for item in candidates:
+        rec = item["record"]
+        use = norm(rec.get("USEDESC"))
+        bonus = 0
+        reasons = []
+
+        residential_markers = (
+            "APART", "APARTMENT", "MULTI", "CONDO", "COOP",
+            "CO OP", "RESIDENTIAL", "40 UNITS", "40+ UNITS"
+        )
+        auxiliary_markers = ("AUX", "COMM AUX", "PARKING", "GARAGE")
+
+        if any(marker in use for marker in residential_markers):
+            bonus += 40
+            reasons.append("residential_multiunit_use")
+        if any(marker in use for marker in auxiliary_markers):
+            bonus -= 30
+            reasons.append("auxiliary_or_nonunit_use")
+
+        ranked.append({
+            **item,
+            "building_reference_score": item["score"] + bonus,
+            "building_reference_reasons": reasons,
+        })
+
+    ranked.sort(key=lambda x: x["building_reference_score"], reverse=True)
+
+    if not ranked:
+        return None
+
+    best = ranked[0]
+    second_score = ranked[1]["building_reference_score"] if len(ranked) > 1 else -999
+
+    # Require affirmative residential evidence and a clear lead.
+    if (
+        "residential_multiunit_use" in best["building_reference_reasons"]
+        and best["building_reference_score"] >= 120
+        and best["building_reference_score"] - second_score >= 20
+    ):
+        return best
+
+    return None
+
 def sales_for_parcel(parcel_id):
     if not parcel_id:
         return []
@@ -343,7 +415,7 @@ def build_result(address, city, state, zipcode):
     result = {
         "engine": "Allegheny County Comps Engine",
         "version": VERSION,
-        "phase": "property_resolution_and_sales_history",
+        "phase": "property_resolution_building_reference_and_sales_history",
         "generated_at": utc_now(),
         "input": {"address": address, "city": city, "state": state, "zip": zipcode},
         "parsed_input": target,
@@ -378,9 +450,53 @@ def build_result(address, city, state, zipcode):
 
     if not chosen:
         if structure == "building_parcel_candidates":
+            building_ref = infer_building_reference(scored, target)
+            if building_ref:
+                rec = building_ref["record"]
+                parcel_id = clean(rec.get("PARID"))
+                result["status"] = "building_reference_resolved"
+                result["resolution_type"] = "coop_or_multiunit_building_reference"
+                result["building_reference"] = {
+                    "parcel_id": parcel_id,
+                    "scope": "building_only_not_unit",
+                    "requested_unit": target["unit"],
+                    "county_unit": clean(rec.get("PROPERTYUNIT")),
+                    "unit_verified": False,
+                    "score": building_ref["building_reference_score"],
+                    "reasons": (
+                        building_ref["reasons"]
+                        + building_ref["building_reference_reasons"]
+                    ),
+                    "usedesc": rec.get("USEDESC"),
+                }
+                result["assessment"] = compact_assessment(rec)
+
+                # County parcel sales are intentionally NOT fetched here.
+                # A master/building parcel sale must never be presented as
+                # the requested co-op unit's sale history.
+                result["sales_history"] = []
+                result["sales_history_count"] = 0
+                result["sales_history_status"] = (
+                    "suppressed_for_building_reference_not_unit_history"
+                )
+                result["resolution_message"] = (
+                    "זוהה Parcel מגורים רב-יחידתי כ-Building Reference בלבד. "
+                    "ה-Unit המבוקש אינו מאומת כ-Parcel נפרד, ולכן היסטוריית מכירות "
+                    "של ה-Parcel אינה מיוחסת ליחידה. Sold Comps ל-Co-op חייבים "
+                    "להגיע מעסקאות Unit באותו בניין."
+                )
+                result["next_comp_strategy"] = {
+                    "property_structure": "coop_or_multiunit",
+                    "priority": "same_building_sold_units",
+                    "unit_parcel_required": False,
+                    "county_parcel_role": "building_reference_only",
+                    "arv_allowed_from_master_parcel_sales": False,
+                }
+                return result
+
             result["resolution_message"] = (
                 "נמצאו מספר Parcels חזקים באותה כתובת בניין, אך אין התאמת Unit "
-                "נפרדת. המנוע מציג את מועמדי הבניין ואינו בוחר Parcel בניחוש."
+                "נפרדת ולא ניתן לזהות בבטחה Parcel מגורים ראשי."
             )
         else:
             result["resolution_message"] = (
@@ -434,6 +550,22 @@ def print_summary(result):
     print("\nSearch attempts:")
     for a in result.get("search_attempts", []):
         print(f"  - {a['label']}: {a['count']} rows" + (f" | ERROR: {a['error']}" if a['error'] else ""))
+
+    if result["status"] == "building_reference_resolved":
+        b = result["building_reference"]
+        a = result.get("assessment") or {}
+        print("\n✅ Building Reference identified safely.")
+        print(f"Building PARID: {b['parcel_id']}")
+        print(f"Scope: {b['scope']}")
+        print(f"Requested Unit: {b['requested_unit']}")
+        print(f"County Unit: {b['county_unit'] or '[blank]'}")
+        print(f"Unit verified: {b['unit_verified']}")
+        print(f"Use: {a.get('USEDESC')}")
+        print(f"Message: {result.get('resolution_message', '')}")
+        print("County parcel sales: SUPPRESSED (not unit-level history)")
+        print("Next strategy: SAME-BUILDING SOLD UNITS")
+        print("\nℹ️ עדיין אין ARV ואין בחירת Sold Comps בשלב זה.")
+        return
 
     if result["status"] != "resolved":
         print("\n❌ לא נמצאה התאמה יחידה ובטוחה.")
@@ -503,8 +635,9 @@ def main():
     print_summary(result)
     print(f"\n📄 JSON נשמר: {output_file}")
 
-    # unresolved remains a deliberate non-success so GitHub Actions highlights it.
-    if result["status"] != "resolved":
+    # A verified unit parcel OR a safe building-level reference is success.
+    # Truly unresolved cases remain exit code 3 so GitHub Actions highlights them.
+    if result["status"] not in {"resolved", "building_reference_resolved"}:
         sys.exit(3)
 
 
