@@ -18,6 +18,7 @@
         .kpi-active-sheriff { background-color: rgba(244, 63, 94, 0.2) !important; border-color: #fb7185 !important; box-shadow: 0 0 20px rgba(251, 113, 133, 0.5); transform: translateY(-2px); }
         .kpi-active-tax { background-color: rgba(168, 85, 247, 0.2) !important; border-color: #c084fc !important; box-shadow: 0 0 20px rgba(192, 132, 252, 0.5); transform: translateY(-2px); }
         .kpi-active-probate { background-color: rgba(16, 185, 129, 0.2) !important; border-color: #34d399 !important; box-shadow: 0 0 20px rgba(52, 211, 153, 0.5); transform: translateY(-2px); }
+        .kpi-active-offmarket { background-color: rgba(20, 184, 166, 0.2) !important; border-color: #2dd4bf !important; box-shadow: 0 0 20px rgba(45, 212, 191, 0.5); transform: translateY(-2px); }
         .kpi-active-archive { background-color: rgba(107, 114, 128, 0.2) !important; border-color: #6b7280 !important; box-shadow: 0 0 20px rgba(107, 114, 128, 0.5); transform: translateY(-2px); }
         
         .watchlist-btn-active { background-color: #f59e0b !important; color: #0f172a !important; border-color: #fbbf24 !important; box-shadow: 0 0 20px 2px rgba(245, 158, 11, 0.5); transform: translateY(-1px); }
@@ -48,7 +49,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.5 AI</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.6 AI</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -88,7 +89,7 @@
     <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
         <!-- KPI Cards -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div></button>
             <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS וירידות מחיר</span><i data-lucide="trending-down" class="w-4 h-4 text-cyan-400"></i></div><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div></button>
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div></button>
@@ -96,6 +97,8 @@
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
             <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות ו-FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-2xl font-black text-emerald-300" id="count-probate">0</div></button>
             
+            <button onclick="setCategory('offmarket')" id="btn-cat-offmarket" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-teal-500/30 transition hover:border-teal-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-teal-300">Off Market</span><i data-lucide="house-x" class="w-4 h-4 text-teal-400"></i></div><div class="text-2xl font-black text-teal-300" id="count-offmarket">0</div></button>
+
             <button onclick="setCategory('archive')" id="btn-cat-archive" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-gray-600/30 transition hover:border-gray-500 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-400">ארכיון מוסתר</span><i data-lucide="archive" class="w-4 h-4 text-gray-500"></i></div><div class="text-2xl font-black text-gray-400" id="count-archive">0</div></button>
         </section>
 
@@ -850,6 +853,15 @@
             }
         }
 
+        // V8.6: Off Market status helper.
+        // off_market_candidate is included because the orchestrator assigns it
+        // only after repeated misses, avoiding a false Off Market on one scan.
+        function isOffMarketProperty(p) {
+            const status = String((p && (p.status || p.listing_status || p.market_status)) || '')
+                .trim().toLowerCase().replace(/[\s-]+/g, '_');
+            return status === 'off_market' || status === 'off_market_candidate' || status === 'offmarket';
+        }
+
         function updateCounts() {
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
@@ -862,14 +874,15 @@
             document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
             document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
             document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
+            document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
             
             document.getElementById('count-archive').textContent = available.filter(p => p.is_archived).length;
         }
 
         function setCategory(cat) {
             activeCategory = cat;
-            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate', 'archive'].forEach(c => {
-                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate', 'kpi-active-archive');
+            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate', 'offmarket', 'archive'].forEach(c => {
+                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate', 'kpi-active-offmarket', 'kpi-active-archive');
                 if (c === cat) document.getElementById(`btn-cat-${c}`)?.classList.add(`kpi-active-${c}`);
             });
             renderCards();
@@ -900,6 +913,7 @@
                     if (activeCategory === 'sheriff' && !dt.includes('sheriff')) return false;
                     if (activeCategory === 'tax' && !dt.includes('tax')) return false;
                     if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
+                    if (activeCategory === 'offmarket' && !isOffMarketProperty(p)) return false;
                 }
 
                 if (stratF !== 'all' && p.strategy !== stratF) return false;
