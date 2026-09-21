@@ -3,6 +3,7 @@ import json
 import csv
 import io
 import os
+from datetime import datetime, date
 import re
 import sys
 from datetime import datetime, timezone
@@ -10,7 +11,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.5.1"
+VERSION = "1.6"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -23,7 +24,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.5.1"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.6"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -464,6 +465,32 @@ def redfin_city_sold_rows(max_pages=8, page_size=350):
     return all_rows, errors
 
 
+
+def _parse_sale_date(value):
+    text = clean(value)
+    if not text:
+        return None
+    formats = (
+        "%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y",
+        "%b %d, %Y", "%B %d, %Y",
+    )
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt).date().isoformat()
+        except ValueError:
+            pass
+    return None
+
+
+def _plausible_sqft(value):
+    n = _num(value)
+    # Prevent malformed CSV values such as 135 from being treated as
+    # living area for a 2-bedroom apartment.
+    if n is None:
+        return None
+    return n if 300 <= n <= 10000 else None
+
+
 def discover_same_building_sold_comps(target, subject):
     rows, errors = redfin_city_sold_rows()
     comps = []
@@ -480,8 +507,12 @@ def discover_same_building_sold_comps(target, subject):
 
         beds = _num(_csv_value(row, "BEDS", "BEDROOMS"))
         baths = _num(_csv_value(row, "BATHS", "BATHROOMS"))
-        sqft = _num(_csv_value(row, "SQUARE FEET", "SQFT", "LIVING AREA"))
-        sold_date = clean(_csv_value(row, "SOLD DATE", "SALE DATE", "LAST SALE DATE"))
+        sqft = _plausible_sqft(_csv_value(row, "SQUARE FEET", "SQFT", "LIVING AREA"))
+        sold_date_raw = _csv_value(
+            row, "SOLD DATE", "SALE DATE", "LAST SALE DATE",
+            "DATE SOLD", "CLOSE DATE", "CLOSED DATE"
+        )
+        sold_date = _parse_sale_date(sold_date_raw)
         source_url = clean(_csv_value(
             row,
             "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
@@ -529,7 +560,10 @@ def discover_same_building_sold_comps(target, subject):
             "match_reasons": reasons,
             "source": "Redfin downloadable sold-search CSV",
             "source_url": source_url or None,
-            "verification": "unit_level_sold_search_record",
+            "verification": (
+                "unit_level_closed_sale_verified"
+                if sold_date else "unit_level_sale_price_date_unverified"
+            ),
         })
 
     unique = {}
@@ -547,10 +581,22 @@ def discover_same_building_sold_comps(target, subject):
 def conservative_arv_from_comps(comps, subject):
     verified = [
         c for c in comps
-        if c.get("sold_price") and c.get("verification") == "unit_level_sold_search_record"
+        if c.get("sold_price")
+        and c.get("sold_date")
+        and c.get("verification") == "unit_level_closed_sale_verified"
     ]
     if len(verified) < 3:
-        return None, "insufficient_verified_comps", "unavailable"
+        return None, "insufficient_date_verified_closed_sales", "unavailable"
+
+    # Reject stale records from ARV. Same-building co-op comps may expand
+    # to 24 months, but not beyond that without explicit review.
+    cutoff = date.today().replace(year=date.today().year - 2)
+    verified = [
+        c for c in verified
+        if datetime.strptime(c["sold_date"], "%Y-%m-%d").date() >= cutoff
+    ]
+    if len(verified) < 3:
+        return None, "insufficient_recent_verified_closed_sales", "unavailable"
 
     top = verified[:5]
 
@@ -715,8 +761,12 @@ def build_result(address, city, state, zipcode):
                 result["subject_for_comp_matching"] = subject
                 result["sold_comps"] = sold_comps
                 result["sold_comps_count"] = len(sold_comps)
+                result["verified_closed_comps_count"] = sum(
+                    1 for c in sold_comps
+                    if c.get("verification") == "unit_level_closed_sale_verified"
+                )
                 result["sold_comps_status"] = (
-                    "unit_sold_records_found"
+                    "unit_sale_records_found_pending_date_verification"
                     if sold_comps
                     else ("source_unavailable" if source_errors else "no_matching_unit_sales_found")
                 )
@@ -846,6 +896,7 @@ def print_summary(result):
         print("Next strategy: SAME-BUILDING SOLD UNITS")
         print(f"Sold comps status: {result.get('sold_comps_status')}")
         print(f"Sold comps found: {result.get('sold_comps_count', 0)}")
+        print(f"Verified closed comps: {result.get('verified_closed_comps_count', 0)}")
         source = result.get("sold_comps_source") or {}
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
         for err in source.get("errors", []):
