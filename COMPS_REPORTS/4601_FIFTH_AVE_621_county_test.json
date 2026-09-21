@@ -1,8 +1,8 @@
 {
   "engine": "Allegheny County Comps Engine",
-  "version": "1.5",
+  "version": "1.5.1",
   "phase": "property_resolution_building_reference_and_sales_history",
-  "generated_at": "2026-09-21T14:49:29+00:00",
+  "generated_at": "2026-09-21T14:55:08+00:00",
   "input": {
     "address": "4601 Fifth Ave #621",
     "city": "Pittsburgh",
@@ -41,8 +41,8 @@
   ],
   "resolution_type": "coop_or_multiunit_building_reference",
   "status": "building_reference_resolved",
-  "arv": null,
-  "arv_status": "not_calculated_without_enough_verified_unit_comps",
+  "arv": 120000.0,
+  "arv_status": "calculated_from_same_building_unit_sales",
   "comps": [],
   "comps_status": "not_selected_phase_1",
   "source": {
@@ -155,15 +155,77 @@
     "baths": 1.0,
     "sqft": null
   },
-  "sold_comps": [],
-  "sold_comps_count": 0,
-  "sold_comps_status": "source_unavailable",
+  "sold_comps": [
+    {
+      "unit": "525",
+      "address": "4601 Fifth #525",
+      "sold_price": 115000.0,
+      "sold_date": null,
+      "beds": 2.0,
+      "baths": 1.0,
+      "sqft": 135.0,
+      "price_per_sqft": 851.85,
+      "comp_score": 135.0,
+      "match_reasons": [
+        "same_building",
+        "different_unit",
+        "sold_search_feed",
+        "same_beds",
+        "same_baths"
+      ],
+      "source": "Redfin downloadable sold-search CSV",
+      "source_url": "https://www.redfin.com/PA/Pittsburgh/4601-Fifth-Ave-15213/unit-525/home/102229336",
+      "verification": "unit_level_sold_search_record"
+    },
+    {
+      "unit": "221",
+      "address": "4601 Fifth #221",
+      "sold_price": 119900.0,
+      "sold_date": null,
+      "beds": 2.0,
+      "baths": 1.0,
+      "sqft": null,
+      "price_per_sqft": null,
+      "comp_score": 135.0,
+      "match_reasons": [
+        "same_building",
+        "different_unit",
+        "sold_search_feed",
+        "same_beds",
+        "same_baths"
+      ],
+      "source": "Redfin downloadable sold-search CSV",
+      "source_url": "https://www.redfin.com/PA/Pittsburgh/4601-Fifth-Ave-15213/unit-221/home/75155568",
+      "verification": "unit_level_sold_search_record"
+    },
+    {
+      "unit": "322",
+      "address": "4601 Fifth Ave #322",
+      "sold_price": 134000.0,
+      "sold_date": null,
+      "beds": 2.0,
+      "baths": 1.0,
+      "sqft": null,
+      "price_per_sqft": null,
+      "comp_score": 135.0,
+      "match_reasons": [
+        "same_building",
+        "different_unit",
+        "sold_search_feed",
+        "same_beds",
+        "same_baths"
+      ],
+      "source": "Redfin downloadable sold-search CSV",
+      "source_url": "https://www.redfin.com/PA/Pittsburgh/4601-Fifth-Ave-15213/unit-322/home/75131781",
+      "verification": "unit_level_sold_search_record"
+    }
+  ],
+  "sold_comps_count": 3,
+  "sold_comps_status": "unit_sold_records_found",
   "sold_comps_source": {
     "name": "Redfin downloadable sold-search CSV",
-    "rows_scanned": 0,
-    "errors": [
-      "page_1: NameError: name 'USER_AGENT' is not defined"
-    ],
+    "rows_scanned": 2808,
+    "errors": [],
     "stability": "best_effort_undocumented_endpoint"
   },
   "sold_comps_source_requirement": [
@@ -194,6 +256,6 @@
       "prefer_sqft_within_pct": 25
     }
   },
-  "arv_method": "insufficient_verified_comps",
-  "arv_confidence": "unavailable"
+  "arv_method": "median_same_building_sale_price",
+  "arv_confidence": "low"
 }
