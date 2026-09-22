@@ -13,7 +13,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.1"
+VERSION = "2.2"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -26,7 +26,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.1"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.2"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -601,6 +601,123 @@ def _page_text(html):
 
 
 
+
+def homes_sold_index_comps(target, subject, max_pages=12):
+    """
+    Discover same-building closed sales from Homes.com's public ZIP sold index.
+    No sale is hardcoded. Each accepted row must contain the exact building,
+    a unit number, SOLD + date, and a price in the same local text window.
+    """
+    zipcode = clean(target.get("zip"))
+    street = clean(target.get("street"))
+    house = clean(target.get("house_number"))
+    target_unit = norm(target.get("unit"))
+    headers = {
+        "User-Agent": REDFIN_USER_AGENT,
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    errors, comps, seen = [], [], set()
+
+    # Homes uses /sold/ and /sold/pN/ pagination.
+    urls = [f"https://www.homes.com/pittsburgh-pa/{zipcode}/sold/"] + [
+        f"https://www.homes.com/pittsburgh-pa/{zipcode}/sold/p{i}/"
+        for i in range(2, max_pages + 1)
+    ]
+
+    # Accept Fifth/5th spelling variants.
+    street_variants = {norm(street), norm(street.replace("FIFTH", "5TH"))}
+    street_variants |= {s.replace("FIFTH", "5TH") for s in list(street_variants)}
+
+    for page_url in urls:
+        try:
+            r = requests.get(page_url, headers=headers, timeout=25)
+            if r.status_code >= 400:
+                errors.append(f"Homes sold page HTTP {r.status_code}: {page_url}")
+                continue
+            text = _page_text(r.text)
+        except Exception as exc:
+            errors.append(f"Homes sold page error: {type(exc).__name__}: {exc}")
+            continue
+
+        # Split around every occurrence of the house number; inspect bounded
+        # windows so a price/date from another card cannot be attached.
+        for m in re.finditer(rf"\b{re.escape(house)}\b", text, flags=re.I):
+            window = text[max(0, m.start()-180): min(len(text), m.start()+520)]
+            nwin = norm(window)
+            if not any(s and s in nwin for s in street_variants):
+                continue
+
+            um = re.search(
+                rf"{re.escape(house)}\s+(?:Fifth|5th)\s+(?:Ave|Avenue)\s+(?:Unit|Apt)\s+([0-9A-Za-z-]+)",
+                window, flags=re.I
+            )
+            if not um:
+                continue
+            unit = um.group(1)
+            if norm(unit) == target_unit:
+                continue
+
+            dm = re.search(
+                r"\bSold\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2}),\s+(\d{4})",
+                window, flags=re.I
+            )
+            if not dm:
+                continue
+            sold_date = _parse_sale_date(f"{dm.group(1)} {dm.group(2)}, {dm.group(3)}")
+            if not sold_date:
+                continue
+
+            # Price must be in this card/window. Choose the nearest plausible
+            # dollar amount before the SOLD phrase when possible.
+            prefix = window[:dm.start()]
+            prices = re.findall(r"\$([\d,]{4,})", prefix)
+            if not prices:
+                prices = re.findall(r"\$([\d,]{4,})", window)
+            if not prices:
+                continue
+            sold_price = _num(prices[-1])
+            if not sold_price or sold_price < 10000:
+                continue
+
+            key=(norm(unit),sold_date,int(round(sold_price)))
+            if key in seen:
+                continue
+
+            beds=baths=sqft=None
+            bm=re.search(r"(\d+(?:\.\d+)?)\s+Beds?\b",window,re.I)
+            if bm: beds=_num(bm.group(1))
+            bam=re.search(r"(\d+(?:\.\d+)?)\s+Baths?\b",window,re.I)
+            if bam: baths=_num(bam.group(1))
+            sm=re.search(r"([\d,]{3,6})\s+Sq\s*Ft\b",window,re.I)
+            if sm:
+                v=_num(sm.group(1))
+                if v and 300 <= v <= 10000: sqft=v
+
+            score=100.0
+            if subject.get("beds") and beds == subject.get("beds"): score += 20
+            if subject.get("baths") and baths == subject.get("baths"): score += 15
+
+            comps.append({
+                "unit":unit,
+                "address":f"{house} {street} Unit {unit}, {target.get('city')}, {target.get('state')} {zipcode}",
+                "sold_price":sold_price,
+                "sold_date":sold_date,
+                "beds":beds,"baths":baths,"sqft":sqft,
+                "comp_score":score,
+                "source":"Homes.com public sold index",
+                "source_url":page_url,
+                "raw_status":"Sold",
+                "raw_sale_type":"public_sold_index",
+                "feed_classification":"verified_closed_sale",
+                "verification":"unit_level_closed_sale_verified",
+                "verification_method":"same_card_exact_building_unit_sold_date_price",
+            })
+            seen.add(key)
+
+    comps.sort(key=lambda x:(x.get("sold_date") or "",x.get("comp_score") or 0),reverse=True)
+    return comps, errors
+
+
 def search_engine_same_building_sold_comps(target, subject, max_units=12):
     """
     Best-effort second-source discovery using public search-result HTML.
@@ -953,8 +1070,15 @@ def build_result(address, city, state, zipcode):
                 # V2.1 fallback: if the strict Redfin feed cannot supply enough
                 # verified same-building sales, discover and verify public
                 # unit property-history pages. No comp is hardcoded.
+                homes_comps = []
+                homes_errors = []
                 secondary_comps = []
                 secondary_errors = []
+
+                if len(sold_comps) < 3:
+                    homes_comps, homes_errors = homes_sold_index_comps(target, subject)
+                    sold_comps = merge_verified_comps(sold_comps, homes_comps)
+
                 if len(sold_comps) < 3:
                     secondary_comps, secondary_errors = search_engine_same_building_sold_comps(
                         target, subject
@@ -983,6 +1107,9 @@ def build_result(address, city, state, zipcode):
                     "rows_scanned": source_rows,
                     "headers": source_headers,
                     "errors": source_errors,
+                    "homes_adapter": "Homes.com ZIP sold index",
+                    "homes_verified_rows": len(homes_comps),
+                    "homes_errors": homes_errors,
                     "secondary_adapter": "public_property_page_search",
                     "secondary_verified_rows": len(secondary_comps),
                     "secondary_errors": secondary_errors,
@@ -1085,7 +1212,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - MULTI-SOURCE SOLD VERIFICATION")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - HOMES SOLD INDEX ADAPTER")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -1114,6 +1241,9 @@ def print_summary(result):
         print(f"Verified closed comps: {result.get('verified_closed_comps_count', 0)}")
         source = result.get("sold_comps_source") or {}
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
+        print(f"Homes sold-index verified rows: {source.get('homes_verified_rows', 0)}")
+        for err in source.get("homes_errors", []):
+            print(f"  Homes source warning: {err}")
         print(f"Secondary verified rows: {source.get('secondary_verified_rows', 0)}")
         for err in source.get("secondary_errors", []):
             print(f"  Secondary source warning: {err}")
