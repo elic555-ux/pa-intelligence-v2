@@ -14,7 +14,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.5"
+VERSION = "2.5.1"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -1780,6 +1780,12 @@ def main():
 
     try:
         result = build_result(args.address, args.city, args.state, args.zipcode)
+
+        # V2.5.1 safety fix:
+        # Some safe building-reference branches return early from build_result().
+        # Ensure the RentCast layer is attached exactly once before the result is saved.
+        if "rentcast" not in result:
+            result = attach_rentcast_to_result(result)
     except requests.RequestException as exc:
         print(f"❌ שגיאת תקשורת מול WPRDC: {exc}")
         sys.exit(2)
@@ -1797,6 +1803,24 @@ def main():
     temp.replace(output_file)
 
     print_summary(result)
+
+    rc = result.get("rentcast") or {}
+    print("\n--- RENTCAST V2.5.1 ---")
+    print(f"RentCast status: {rc.get('status', 'not_attached')}")
+    print(f"RentCast API calls this run: {rc.get('api_calls', 0)}")
+    print(f"RentCast raw comps: {rc.get('raw_comp_count', 0)}")
+    print(f"RentCast verified unit comps: {len(rc.get('verified_comps') or [])}")
+    print(f"RentCast cache: {rc.get('cache_path', '[none]')}")
+    diag = rc.get("diagnostic") or {}
+    if diag.get("http_status") is not None:
+        print(f"RentCast HTTP status: {diag.get('http_status')}")
+    if diag.get("message"):
+        print(f"RentCast diagnostic: {diag.get('message')}")
+    avm = rc.get("provider_estimate") or {}
+    if avm.get("value") is not None:
+        print(f"RentCast provider AVM estimate: ${avm.get('value'):,.0f} (ESTIMATE, not a closed sale)")
+    print("--- END RENTCAST ---")
+
     print(f"\n📄 JSON נשמר: {output_file}")
 
     # A verified unit parcel OR a safe building-level reference is success.
