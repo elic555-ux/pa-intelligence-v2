@@ -10,6 +10,9 @@ jobs:
   test-comps:
     runs-on: ubuntu-latest
 
+    env:
+      RENTCAST_API_KEY: ${{ secrets.RENTCAST_API_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,6 +27,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
+      - name: Verify RentCast secret is available
+        run: |
+          if [ -z "$RENTCAST_API_KEY" ]; then
+            echo "ERROR: RENTCAST_API_KEY is missing."
+            exit 1
+          fi
+          echo "RentCast secret is available."
+
       - name: Run comps engine
         run: |
           python comps_engine.py
@@ -33,7 +44,7 @@ jobs:
         run: |
           echo "=== COMPS_REPORTS ==="
           if [ -d "COMPS_REPORTS" ]; then
-            find COMPS_REPORTS -maxdepth 1 -type f -print
+            find COMPS_REPORTS -maxdepth 2 -type f -print
             for file in COMPS_REPORTS/*.json; do
               if [ -f "$file" ]; then
                 echo "=== $file ==="
@@ -44,19 +55,19 @@ jobs:
             echo "COMPS_REPORTS folder was not created."
           fi
 
-      - name: Commit generated report
+      - name: Commit generated report and RentCast cache
         if: success()
         run: |
-          if [ -d "COMPS_REPORTS" ] && [ -n "$(find COMPS_REPORTS -maxdepth 1 -type f -name '*.json' -print -quit)" ]; then
+          if [ -d "COMPS_REPORTS" ] && [ -n "$(find COMPS_REPORTS -type f -name '*.json' -print -quit)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add COMPS_REPORTS/*.json
+            git add COMPS_REPORTS
             if git diff --cached --quiet; then
-              echo "No report changes to commit."
+              echo "No report or cache changes to commit."
             else
-              git commit -m "Test Allegheny County comps engine"
+              git commit -m "Test comps engine with RentCast"
               git push
             fi
           else
-            echo "No JSON report found to commit."
+            echo "No JSON report or cache found to commit."
           fi
