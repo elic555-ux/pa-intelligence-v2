@@ -12,7 +12,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.8.1"
+VERSION = "1.9"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -25,7 +25,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.8.1"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.9"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -420,7 +420,7 @@ REDFIN_USER_AGENT = (
 )
 
 
-def redfin_city_sold_rows(max_pages=2, page_size=350):
+def redfin_city_sold_rows(max_pages=8, page_size=350):
     """
     Best-effort Redfin downloadable sold-search CSV adapter.
     This is intentionally non-fatal because it is not a stable public API.
@@ -433,7 +433,7 @@ def redfin_city_sold_rows(max_pages=2, page_size=350):
             "al": 1, "market": "pittsburgh", "num_homes": page_size,
             "ord": "redfin-recommended-asc", "page_number": page,
             "start": (page - 1) * page_size,
-            "region_id": 15213, "region_type": 2,
+            "region_id": 15702, "region_type": 6,
             "sf": "1,2,3,5,6,7", "status": 9,
             "uipt": "1,2,3,4,5,6,7,8", "v": 8,
             "sold_within_days": 730,
@@ -563,6 +563,10 @@ def discover_same_building_sold_comps(target, subject):
             "source_url": source_url or None,
             "raw_status": raw_status or None,
             "raw_sale_type": raw_sale_type or None,
+            "feed_classification": (
+                "verified_closed_sale"
+                if sold_date else "same_building_row_not_verified_as_sale"
+            ),
             "verification": (
                 "unit_level_closed_sale_verified"
                 if sold_date else "unit_level_sale_price_date_unverified"
@@ -579,84 +583,6 @@ def discover_same_building_sold_comps(target, subject):
         reverse=True,
     )
     return comps, errors, len(rows), headers
-def _page_text(html):
-    text = re.sub(r"(?is)<script.*?</script>", " ", html or "")
-    text = re.sub(r"(?is)<style.*?</style>", " ", text)
-    text = re.sub(r"(?s)<[^>]+>", " ", text)
-    text = unescape(text)
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def verify_redfin_closed_sale(comp):
-    """
-    Secondary verification against the individual Redfin property page.
-    A CSV price is NOT accepted as a sold price unless the property page
-    contains a SOLD event with the same price and an identifiable date.
-    """
-    url = clean(comp.get("source_url"))
-    price = comp.get("sold_price")
-    if not url or price is None:
-        return comp, "missing_property_url_or_price"
-
-    try:
-        r = requests.get(
-            url,
-            headers={"User-Agent": REDFIN_USER_AGENT, "Accept": "text/html,*/*"},
-            timeout=25,
-        )
-        r.raise_for_status()
-        text = _page_text(r.text)
-    except Exception as exc:
-        return comp, f"property_page_error: {type(exc).__name__}: {exc}"
-
-    # Require the page itself to identify the property as sold.
-    if not re.search(r"\bSOLD\b", text, flags=re.I):
-        return comp, "no_sold_event_on_property_page"
-
-    price_int = int(round(float(price)))
-    price_patterns = {
-        f"${price_int:,}",
-        f"${price_int}",
-    }
-    if not any(p in text for p in price_patterns):
-        return comp, "csv_price_not_confirmed_on_property_page"
-
-    # Prefer explicit sale-history phrasing, then SOLD header phrasing.
-    date_patterns = [
-        r"(?:Sold|SOLD)\s+(?:on\s+)?([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
-        r"(?:Sold|SOLD)\s+(?:on\s+)?(\d{1,2}/\d{1,2}/\d{2,4})",
-        r"(\d{1,2}/\d{1,2}/\d{2,4})\s+(?:Sold|SOLD)",
-    ]
-    verified_date = None
-    for pat in date_patterns:
-        m = re.search(pat, text)
-        if m:
-            verified_date = _parse_sale_date(m.group(1))
-            if verified_date:
-                break
-
-    if not verified_date:
-        return comp, "sold_event_found_but_date_not_parsed"
-
-    out = dict(comp)
-    out["sold_date"] = verified_date
-    out["verification"] = "unit_level_closed_sale_verified"
-    out["verification_source"] = "Redfin individual property page"
-    out["verification_url"] = url
-    return out, None
-
-
-def verify_candidate_comps(comps):
-    verified = []
-    warnings = []
-    for comp in comps:
-        checked, warning = verify_redfin_closed_sale(comp)
-        verified.append(checked)
-        if warning:
-            warnings.append(f"Unit {comp.get('unit')}: {warning}")
-    return verified, warnings
-
-
 def conservative_arv_from_comps(comps, subject):
     verified = [
         c for c in comps
@@ -862,7 +788,7 @@ def build_result(address, city, state, zipcode):
                     "rows_scanned": source_rows,
                     "headers": source_headers,
                     "errors": source_errors,
-                    "search_scope": "ZIP 15213 recently-sold filter",
+                    "search_scope": "Pittsburgh city recently-sold feed; exact same-building filter applied locally",
                     "sold_within_days": 730,
                     "verification_warnings": verification_warnings,
                     "stability": "best_effort_undocumented_endpoint",
@@ -871,7 +797,7 @@ def build_result(address, city, state, zipcode):
                     "same_building_unit_level_closed_sale",
                     "verifiable_sale_price",
                     "unit_number",
-                    "sale_date_preferred",
+                    "sale_date_required_for_arv",
                     "beds_baths_sqft_when_available",
                 ]
                 result["comp_search_plan"] = {
@@ -961,7 +887,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - SOLD CSV VALIDATION")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - VERIFIED SOLD CSV COMPS")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -995,9 +921,14 @@ def print_summary(result):
             print(f"  Source warning: {err}")
         for warning in source.get("verification_warnings", []):
             print(f"  Verification warning: {warning}")
-        for comp in result.get("sold_comps", [])[:10]:
+        for comp in result.get("sold_comps", [])[:20]:
+            label = (
+                "VERIFIED COMP"
+                if comp.get("verification") == "unit_level_closed_sale_verified"
+                else "UNVERIFIED ROW"
+            )
             print(
-                f"  COMP Unit {comp.get('unit')} | "
+                f"  {label} Unit {comp.get('unit')} | "
                 f"${comp.get('sold_price'):,.0f} | {comp.get('sold_date') or 'date unavailable'} | "
                 f"{comp.get('beds')} bd / {comp.get('baths')} ba | "
                 f"{comp.get('sqft') or 'sqft unavailable'} sqft | "
