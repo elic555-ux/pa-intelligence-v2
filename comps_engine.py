@@ -14,7 +14,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.4"
+VERSION = "2.5"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -27,7 +27,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.4"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.5"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -1252,6 +1252,129 @@ def compact_sale(rec):
     return {k: rec.get(k) for k in preferred if k in rec}
 
 
+
+# ---------------------------------------------------------------------------
+# RentCast V2.5 - official API adapter (cache-first; max 1 call per run)
+# ---------------------------------------------------------------------------
+RENTCAST_BASE = "https://api.rentcast.io/v1"
+RENTCAST_CACHE_DIR = OUTPUT_DIR / "rentcast_cache"
+RENTCAST_MAX_CALLS_PER_RUN = 1
+
+def _rentcast_full_address(target):
+    a = f"{clean(target.get('house_number'))} {clean(target.get('street'))}"
+    if clean(target.get("unit")):
+        a += f" #{clean(target.get('unit'))}"
+    return f"{a}, {clean(target.get('city'))}, {clean(target.get('state'))}, {clean(target.get('zip'))}"
+
+def _rentcast_cache_path(target):
+    key = re.sub(r"[^a-z0-9_]+", "", norm(_rentcast_full_address(target)).lower().replace(" ","_"))[:140]
+    return RENTCAST_CACHE_DIR / f"{key}_value.json"
+
+def _rentcast_read_cache(target):
+    p=_rentcast_cache_path(target)
+    if not p.exists(): return None,p
+    try:
+        x=json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(x,dict) and x.get("response"): return x,p
+    except Exception: pass
+    return None,p
+
+def _rentcast_write_cache(target,response):
+    RENTCAST_CACHE_DIR.mkdir(parents=True,exist_ok=True)
+    p=_rentcast_cache_path(target)
+    tmp=p.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"cached_at":utc_now(),"endpoint":"/avm/value","address":_rentcast_full_address(target),"response":response},ensure_ascii=False,indent=2),encoding="utf-8")
+    tmp.replace(p)
+    return p
+
+def _rentcast_api_get(path,params):
+    key=clean(os.getenv("RENTCAST_API_KEY"))
+    if not key:
+        return None,{"status":"api_key_missing","http_status":None,"message":"RENTCAST_API_KEY is not available."}
+    try:
+        r=requests.get(RENTCAST_BASE+path,params=params,headers={"Accept":"application/json","X-Api-Key":key,"User-Agent":HEADERS["User-Agent"]},timeout=TIMEOUT)
+        if r.status_code>=400:
+            return None,{"status":"authentication_failed" if r.status_code==401 else "http_error","http_status":r.status_code,"message":clean(r.text)[:500]}
+        return r.json(),{"status":"success","http_status":r.status_code,"message":None}
+    except Exception as exc:
+        return None,{"status":"request_error","http_status":None,"message":f"{type(exc).__name__}: {exc}"}
+
+def _rentcast_comp_address(c):
+    if clean(c.get("formattedAddress")): return clean(c.get("formattedAddress"))
+    return ", ".join(x for x in [clean(c.get("addressLine1") or c.get("address")),clean(c.get("city")),clean(c.get("state")),clean(c.get("zipCode") or c.get("zip"))] if x)
+
+def _rentcast_iso_date(v):
+    v=clean(v)
+    if not v: return None
+    p=_parse_sale_date(v[:10])
+    if p: return p
+    try: return datetime.fromisoformat(v.replace("Z","+00:00")).date().isoformat()
+    except Exception: return None
+
+def _rentcast_closed_sale(c):
+    sold_date=None
+    for k in ("lastSaleDate","soldDate","saleDate"):
+        sold_date=_rentcast_iso_date(c.get(k))
+        if sold_date: break
+    sold_price=None
+    for k in ("lastSalePrice","soldPrice","salePrice"):
+        v=_num(c.get(k))
+        if v and v>=10000: sold_price=v; break
+    status=norm(c.get("status"))
+    return bool(sold_date and sold_price and ("SOLD" in status or sold_price)),sold_date,sold_price
+
+def rentcast_value_estimate(target,subject):
+    cached,cache_path=_rentcast_read_cache(target)
+    if cached:
+        payload=cached["response"]; mode="cache"; calls=0
+        diag={"status":"cache_hit","http_status":None,"message":None}
+    else:
+        params={"address":_rentcast_full_address(target),"maxRadius":5,"daysOld":730,"compCount":15,"lookupSubjectAttributes":"true"}
+        if subject.get("beds") is not None: params["bedrooms"]=subject["beds"]
+        if subject.get("baths") is not None: params["bathrooms"]=subject["baths"]
+        if subject.get("sqft") is not None: params["squareFootage"]=subject["sqft"]
+        payload,diag=_rentcast_api_get("/avm/value",params)
+        calls=1 if diag.get("http_status") is not None else 0
+        mode="api"
+        if payload is None:
+            return {"status":diag["status"],"api_calls":calls,"cache_path":str(cache_path),"provider_estimate":None,"verified_comps":[],"raw_comp_count":0,"diagnostic":diag}
+        _rentcast_write_cache(target,payload)
+
+    estimate={"value":_num(payload.get("price")),"range_low":_num(payload.get("priceRangeLow")),"range_high":_num(payload.get("priceRangeHigh")),"status":"provider_avm_estimate","provider":"RentCast","source_mode":mode,"not_a_closed_sale":True}
+    verified=[]
+    target_unit=norm(target.get("unit"))
+    for c in payload.get("comparables") or []:
+        if not isinstance(c,dict): continue
+        addr=_rentcast_comp_address(c)
+        if not addr or not same_building(addr,target): continue
+        unit=extract_unit(addr)
+        if not unit or norm(unit)==target_unit: continue
+        ok,sd,sp=_rentcast_closed_sale(c)
+        if not ok: continue
+        sqft=_plausible_sqft(c.get("squareFootage"))
+        verified.append({"unit":unit,"address":addr,"sold_price":sp,"sold_date":sd,"beds":_num(c.get("bedrooms")),"baths":_num(c.get("bathrooms")),"sqft":sqft,"price_per_sqft":round(sp/sqft,2) if sqft else None,"comp_score":round(float(c.get("correlation") or 0)*100,1),"match_reasons":["same_building","different_unit","rentcast_closed_sale_evidence"],"source":"RentCast API","source_url":None,"raw_status":c.get("status"),"raw_sale_type":c.get("listingType"),"feed_classification":"verified_closed_sale","verification":"unit_level_closed_sale_verified","verification_method":"rentcast_explicit_sale_date_and_sale_price"})
+    return {"status":"success","api_calls":calls,"cache_path":str(cache_path),"provider_estimate":estimate,"subject_property":payload.get("subjectProperty"),"verified_comps":merge_verified_comps(verified,[]),"raw_comp_count":len(payload.get("comparables") or []),"diagnostic":diag}
+
+def attach_rentcast_to_result(result):
+    target=result.get("parsed_input") or {}
+    if not target:
+        result["rentcast"]={"status":"skipped_no_target","api_calls":0}; return result
+    subject={"beds":_num(os.getenv("TARGET_BEDS","2")),"baths":_num(os.getenv("TARGET_BATHS","1")),"sqft":_num(os.getenv("TARGET_SQFT"))}
+    rc=rentcast_value_estimate(target,subject)
+    result["rentcast"]=rc
+    if rc.get("provider_estimate"): result["rentcast_avm"]=rc["provider_estimate"]
+    merged=merge_verified_comps(result.get("comps") or [],rc.get("verified_comps") or [])
+    if merged:
+        result["comps"]=merged
+        result["comps_status"]="verified_closed_sales_available"
+        arv,method,confidence=conservative_arv_from_comps(merged,subject)
+        if arv is not None:
+            result["arv"]=arv; result["arv_status"]="calculated_from_verified_closed_sales"; result["arv_method"]=method; result["arv_confidence"]=confidence
+    result["version"]=VERSION
+    result["rentcast_safety"]={"cache_first":True,"max_api_calls_per_run":1,"provider_avm_is_estimate":True,"listing_price_not_treated_as_closed_sale":True}
+    return result
+
+
 def build_result(address, city, state, zipcode):
     parsed = parse_address(address)
     target = {
@@ -1518,6 +1641,7 @@ def build_result(address, city, state, zipcode):
     result["assessment"] = compact_assessment(rec)
     result["sales_history"] = [compact_sale(x) for x in sales]
     result["sales_history_count"] = len(sales)
+    result = attach_rentcast_to_result(result)
     return result
 
 
