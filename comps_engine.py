@@ -5,6 +5,7 @@ import io
 import os
 from datetime import datetime, date
 from html import unescape
+from urllib.parse import quote_plus
 import re
 import sys
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.0"
+VERSION = "2.1"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -25,7 +26,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.0"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.1"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -591,6 +592,182 @@ def discover_same_building_sold_comps(target, subject):
         reverse=True,
     )
     return comps, errors, len(rows), headers
+def _page_text(html):
+    text = re.sub(r"(?is)<script.*?</script>", " ", html or "")
+    text = re.sub(r"(?is)<style.*?</style>", " ", text)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+
+def search_engine_same_building_sold_comps(target, subject, max_units=12):
+    """
+    Best-effort second-source discovery using public search-result HTML.
+    This does NOT hardcode any comp. It searches the exact building address,
+    extracts candidate property URLs, fetches those public pages, and accepts
+    only pages that independently contain the same building, a unit, a SOLD
+    event, a sale date and a sale price.
+
+    Failure is safe: returns no comps and ARV remains unavailable.
+    """
+    base = clean(target.get("street"))
+    city = clean(target.get("city"))
+    state = clean(target.get("state"))
+    zipcode = clean(target.get("zip"))
+    query = f'"{base}" "{city}" {state} {zipcode} sold unit'
+    url = "https://www.google.com/search?q=" + quote_plus(query) + "&num=20"
+
+    headers = {
+        "User-Agent": REDFIN_USER_AGENT,
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    errors = []
+    try:
+        r = requests.get(url, headers=headers, timeout=25)
+        r.raise_for_status()
+        html = r.text
+    except Exception as exc:
+        return [], [f"search_error: {type(exc).__name__}: {exc}"]
+
+    # Extract only known real-estate property-page destinations.
+    hrefs = re.findall(r'href=["\'](?:/url\?q=)?(https?://[^"&\']+)', html, flags=re.I)
+    allowed = ("realtor.com", "homes.com", "compass.com", "redfin.com", "coldwellbankerhomes.com")
+    urls = []
+    for u in hrefs:
+        u = unescape(u)
+        if not any(d in u.lower() for d in allowed):
+            continue
+        if u not in urls:
+            urls.append(u)
+
+    comps = []
+    seen_units = set()
+    for u in urls[:40]:
+        try:
+            rr = requests.get(u, headers=headers, timeout=20, allow_redirects=True)
+            if rr.status_code >= 400:
+                continue
+            text = _page_text(rr.text)
+        except Exception:
+            continue
+
+        # Require exact building identity in page text.
+        ntext = norm(text)
+        if norm(base) not in ntext and norm(base.replace("FIFTH", "5TH")) not in ntext:
+            continue
+
+        # Unit extraction from URL/title/text.
+        unit = None
+        for pat in (
+            r"(?:unit|apt)[-_ /#]*(\d{1,4}[A-Za-z]?)",
+            r"#\s*(\d{1,4}[A-Za-z]?)",
+        ):
+            m = re.search(pat, u + " " + text[:1200], flags=re.I)
+            if m:
+                unit = m.group(1)
+                break
+        if not unit or norm(unit) == norm(target.get("unit")) or norm(unit) in seen_units:
+            continue
+
+        # Require explicit SOLD language.
+        if not re.search(r"\b(?:sold|last sold|sold for|date sold)\b", text, flags=re.I):
+            continue
+
+        # Parse a date close to sold language.
+        sold_date = None
+        for pat in (
+            r"(?:Sold|Date Sold|Last sold)(?:\s*(?:on|:|-))?\s*([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
+            r"(?:Sold|Date Sold|Last sold)(?:\s*(?:on|:|-))?\s*(\d{1,2}/\d{1,2}/\d{2,4})",
+            r"(\d{1,2}/\d{1,2}/\d{2,4})\s+(?:Sold|SOLD)",
+        ):
+            m = re.search(pat, text)
+            if m:
+                sold_date = _parse_sale_date(m.group(1))
+                if sold_date:
+                    break
+        if not sold_date:
+            continue
+
+        # Parse price near sold language first.
+        sold_price = None
+        for pat in (
+            r"(?:Sold for|Last sold for|Last Sold Price|Sold)\s*\$([\d,]{4,})",
+            r"\$([\d,]{4,})\s*(?:Last Sold Price|Sold)",
+        ):
+            m = re.search(pat, text, flags=re.I)
+            if m:
+                sold_price = _num(m.group(1))
+                if sold_price:
+                    break
+        if not sold_price:
+            continue
+
+        beds = None
+        baths = None
+        sqft = None
+        m = re.search(r"(\d+(?:\.\d+)?)\s*(?:bed|beds|bd)\b", text, flags=re.I)
+        if m: beds = _num(m.group(1))
+        m = re.search(r"(\d+(?:\.\d+)?)\s*(?:bath|baths|ba)\b", text, flags=re.I)
+        if m: baths = _num(m.group(1))
+        m = re.search(r"([\d,]{3,6})\s*(?:sq\.?\s*ft|sqft|square feet)", text, flags=re.I)
+        if m:
+            candidate_sqft = _num(m.group(1))
+            if candidate_sqft and 300 <= candidate_sqft <= 10000:
+                sqft = candidate_sqft
+
+        score = 100.0
+        if subject.get("beds") and beds == subject.get("beds"): score += 20
+        if subject.get("baths") and baths == subject.get("baths"): score += 15
+
+        comps.append({
+            "unit": unit,
+            "address": f"{base} Unit {unit}, {city}, {state} {zipcode}",
+            "sold_price": sold_price,
+            "sold_date": sold_date,
+            "beds": beds,
+            "baths": baths,
+            "sqft": sqft,
+            "comp_score": score,
+            "source": "public property page",
+            "source_url": rr.url,
+            "raw_status": "Sold",
+            "raw_sale_type": "public_property_history",
+            "feed_classification": "verified_closed_sale",
+            "verification": "unit_level_closed_sale_verified",
+            "verification_method": "independent_public_property_page",
+        })
+        seen_units.add(norm(unit))
+        if len(comps) >= max_units:
+            break
+
+    comps.sort(key=lambda x: (x.get("sold_date") or "", x.get("comp_score") or 0), reverse=True)
+    return comps, errors
+
+
+def merge_verified_comps(primary, secondary):
+    """Deduplicate by unit + sold date + price, preferring richer records."""
+    merged = {}
+    for comp in list(primary or []) + list(secondary or []):
+        if comp.get("verification") != "unit_level_closed_sale_verified":
+            continue
+        key = (
+            norm(comp.get("unit")),
+            comp.get("sold_date"),
+            int(round(comp.get("sold_price") or 0)),
+        )
+        old = merged.get(key)
+        richness = sum(comp.get(k) is not None for k in ("beds", "baths", "sqft", "source_url"))
+        old_richness = sum(old.get(k) is not None for k in ("beds", "baths", "sqft", "source_url")) if old else -1
+        if old is None or richness > old_richness:
+            merged[key] = comp
+    return sorted(
+        merged.values(),
+        key=lambda x: (x.get("sold_date") or "", x.get("comp_score") or 0),
+        reverse=True,
+    )
+
+
 def conservative_arv_from_comps(comps, subject):
     verified = [
         c for c in comps
@@ -771,9 +948,19 @@ def build_result(address, city, state, zipcode):
                 sold_comps, source_errors, source_rows, source_headers = discover_same_building_sold_comps(
                     target, subject
                 )
-                # Redfin individual property pages return HTTP 405 from GitHub
-                # Actions, so V1.8 validates the sold-search CSV itself instead.
                 verification_warnings = []
+
+                # V2.1 fallback: if the strict Redfin feed cannot supply enough
+                # verified same-building sales, discover and verify public
+                # unit property-history pages. No comp is hardcoded.
+                secondary_comps = []
+                secondary_errors = []
+                if len(sold_comps) < 3:
+                    secondary_comps, secondary_errors = search_engine_same_building_sold_comps(
+                        target, subject
+                    )
+                    sold_comps = merge_verified_comps(sold_comps, secondary_comps)
+
                 result["subject_for_comp_matching"] = subject
                 result["sold_comps"] = sold_comps
                 result["sold_comps_count"] = len(sold_comps)
@@ -796,7 +983,10 @@ def build_result(address, city, state, zipcode):
                     "rows_scanned": source_rows,
                     "headers": source_headers,
                     "errors": source_errors,
-                    "search_scope": "Pittsburgh city strict recently-sold feed; Status=Sold + SOLD DATE required; exact same-building filter applied locally",
+                    "secondary_adapter": "public_property_page_search",
+                    "secondary_verified_rows": len(secondary_comps),
+                    "secondary_errors": secondary_errors,
+                    "search_scope": "Pittsburgh city strict recently-sold feed + public property-page fallback; exact same-building filter",
                     "sold_within_days": 365,
                     "verification_warnings": verification_warnings,
                     "stability": "best_effort_undocumented_endpoint",
@@ -895,7 +1085,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - STRICT SOLD FEED")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - MULTI-SOURCE SOLD VERIFICATION")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -924,6 +1114,9 @@ def print_summary(result):
         print(f"Verified closed comps: {result.get('verified_closed_comps_count', 0)}")
         source = result.get("sold_comps_source") or {}
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
+        print(f"Secondary verified rows: {source.get('secondary_verified_rows', 0)}")
+        for err in source.get("secondary_errors", []):
+            print(f"  Secondary source warning: {err}")
         print("Strict sold gate: Status=Sold AND SOLD DATE required")
         print(f"CSV headers: {source.get('headers', [])}")
         for err in source.get("errors", []):
