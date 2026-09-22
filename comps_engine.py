@@ -6,6 +6,7 @@ import os
 from datetime import datetime, date
 from html import unescape
 from urllib.parse import quote_plus
+import xml.etree.ElementTree as ET
 import re
 import sys
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.2"
+VERSION = "2.3"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -26,7 +27,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.2"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.3"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -602,6 +603,156 @@ def _page_text(html):
 
 
 
+
+def bing_rss_verified_comps(target, subject, max_results=30):
+    """
+    Bing RSS is used only for URL discovery. A search snippet is NEVER treated
+    as a verified sale. Each discovered property page is fetched separately
+    and must itself contain: exact building + different unit + Sold event +
+    sold date + sold price. This avoids relying on blocked ZIP index pages.
+    """
+    house = clean(target.get("house_number"))
+    street = clean(target.get("street"))
+    city = clean(target.get("city"))
+    state = clean(target.get("state"))
+    zipcode = clean(target.get("zip"))
+    target_unit = norm(target.get("unit"))
+    query = f'"{house} {street}" "{city}" "{zipcode}" sold'
+    rss_url = "https://www.bing.com/search?format=rss&q=" + quote_plus(query)
+
+    headers = {
+        "User-Agent": REDFIN_USER_AGENT,
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    errors, discovered = [], []
+    try:
+        r = requests.get(rss_url, headers=headers, timeout=25)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        for item in root.findall(".//item"):
+            link = clean(item.findtext("link"))
+            if link and link not in discovered:
+                discovered.append(link)
+    except Exception as exc:
+        return [], [f"Bing RSS discovery error: {type(exc).__name__}: {exc}"], 0
+
+    allowed = (
+        "realtor.com", "compass.com", "homes.com",
+        "coldwellbankerhomes.com", "redfin.com"
+    )
+    discovered = [u for u in discovered if any(d in u.lower() for d in allowed)]
+
+    comps, seen = [], set()
+    street_norms = {
+        norm(street),
+        norm(street).replace("FIFTH", "5TH"),
+        norm(street).replace("5TH", "FIFTH"),
+    }
+
+    for u in discovered[:max_results]:
+        try:
+            rr = requests.get(u, headers=headers, timeout=20, allow_redirects=True)
+            if rr.status_code >= 400:
+                errors.append(f"Property page HTTP {rr.status_code}: {u}")
+                continue
+            text = _page_text(rr.text)
+        except Exception as exc:
+            errors.append(f"Property page error {type(exc).__name__}: {u}")
+            continue
+
+        ntext = norm(text)
+        if house not in ntext or not any(x and x in ntext for x in street_norms):
+            continue
+
+        # Unit can be expressed as Unit 326, Apt 326 or #326.
+        unit = None
+        for pat in (
+            r"(?:Unit|Apt)\s*#?\s*([0-9A-Za-z-]{1,8})",
+            r"#\s*([0-9A-Za-z-]{1,8})",
+        ):
+            m = re.search(pat, text[:5000], flags=re.I)
+            if m:
+                unit = m.group(1)
+                break
+        if not unit or norm(unit) == target_unit:
+            continue
+
+        # Search compact local windows around explicit SOLD occurrences.
+        sale = None
+        for sm in re.finditer(r"\bSold\b", text, flags=re.I):
+            window = text[max(0, sm.start()-220): min(len(text), sm.start()+420)]
+
+            date = None
+            for pat in (
+                r"(?:Sold(?:\s+on)?|Date Sold)\s*[:\-]?\s*"
+                r"([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
+                r"(\d{1,2}/\d{1,2}/\d{2,4})\s*\|?\s*Sold",
+                r"Sold\s*(\d{1,2}/\d{1,2}/\d{2,4})",
+            ):
+                dm = re.search(pat, window, flags=re.I)
+                if dm:
+                    date = _parse_sale_date(dm.group(1))
+                    if date:
+                        break
+
+            price = None
+            for pat in (
+                r"Sold(?:\s+for)?\s*[:\-]?\s*\$([\d,]{4,})",
+                r"(?:Last Sold Price|Last sale price)\s*\$([\d,]{4,})",
+                r"\$([\d,]{4,})[^$]{0,100}\bSold\b",
+                r"\bSold\b[^$]{0,100}\$([\d,]{4,})",
+            ):
+                pm = re.search(pat, window, flags=re.I)
+                if pm:
+                    price = _num(pm.group(1))
+                    if price and price >= 10000:
+                        break
+            if date and price:
+                sale=(date,price)
+                break
+
+        if not sale:
+            continue
+        sold_date, sold_price = sale
+        key=(norm(unit),sold_date,int(round(sold_price)))
+        if key in seen:
+            continue
+
+        beds=baths=sqft=None
+        bm=re.search(r"(\d+(?:\.\d+)?)\s*(?:Beds?|bd)\b",text[:8000],re.I)
+        if bm: beds=_num(bm.group(1))
+        bam=re.search(r"(\d+(?:\.\d+)?)\s*(?:Baths?|ba)\b",text[:8000],re.I)
+        if bam: baths=_num(bam.group(1))
+        sqm=re.search(r"([\d,]{3,6})\s*(?:Sq\.?\s*Ft|sqft|square feet)",text[:8000],re.I)
+        if sqm:
+            sv=_num(sqm.group(1))
+            if sv and 300 <= sv <= 10000: sqft=sv
+
+        score=100.0
+        if subject.get("beds") and beds == subject.get("beds"): score += 20
+        if subject.get("baths") and baths == subject.get("baths"): score += 15
+
+        comps.append({
+            "unit":unit,
+            "address":f"{house} {street} Unit {unit}, {city}, {state} {zipcode}",
+            "sold_price":sold_price,
+            "sold_date":sold_date,
+            "beds":beds,"baths":baths,"sqft":sqft,
+            "comp_score":score,
+            "source":"independent public property page",
+            "source_url":rr.url,
+            "raw_status":"Sold",
+            "raw_sale_type":"public_property_history",
+            "feed_classification":"verified_closed_sale",
+            "verification":"unit_level_closed_sale_verified",
+            "verification_method":"bing_url_discovery_then_direct_page_verification",
+        })
+        seen.add(key)
+
+    comps.sort(key=lambda x:(x.get("sold_date") or "",x.get("comp_score") or 0),reverse=True)
+    return comps, errors, len(discovered)
+
+
 def homes_sold_index_comps(target, subject, max_pages=12):
     """
     Discover same-building closed sales from Homes.com's public ZIP sold index.
@@ -1070,15 +1221,20 @@ def build_result(address, city, state, zipcode):
                 # V2.1 fallback: if the strict Redfin feed cannot supply enough
                 # verified same-building sales, discover and verify public
                 # unit property-history pages. No comp is hardcoded.
-                homes_comps = []
-                homes_errors = []
+                bing_comps = []
+                bing_errors = []
+                bing_urls_discovered = 0
                 secondary_comps = []
                 secondary_errors = []
 
                 if len(sold_comps) < 3:
-                    homes_comps, homes_errors = homes_sold_index_comps(target, subject)
-                    sold_comps = merge_verified_comps(sold_comps, homes_comps)
+                    bing_comps, bing_errors, bing_urls_discovered = bing_rss_verified_comps(
+                        target, subject
+                    )
+                    sold_comps = merge_verified_comps(sold_comps, bing_comps)
 
+                # Final best-effort fallback. Still requires direct property-page
+                # verification and therefore cannot manufacture a comp.
                 if len(sold_comps) < 3:
                     secondary_comps, secondary_errors = search_engine_same_building_sold_comps(
                         target, subject
@@ -1107,13 +1263,14 @@ def build_result(address, city, state, zipcode):
                     "rows_scanned": source_rows,
                     "headers": source_headers,
                     "errors": source_errors,
-                    "homes_adapter": "Homes.com ZIP sold index",
-                    "homes_verified_rows": len(homes_comps),
-                    "homes_errors": homes_errors,
+                    "bing_adapter": "Bing RSS URL discovery + direct property-page verification",
+                    "bing_urls_discovered": bing_urls_discovered,
+                    "bing_verified_rows": len(bing_comps),
+                    "bing_errors": bing_errors,
                     "secondary_adapter": "public_property_page_search",
                     "secondary_verified_rows": len(secondary_comps),
                     "secondary_errors": secondary_errors,
-                    "search_scope": "Pittsburgh city strict recently-sold feed + public property-page fallback; exact same-building filter",
+                    "search_scope": "Strict Redfin sold feed + Bing RSS URL discovery + direct public property-page verification; exact same-building filter",
                     "sold_within_days": 365,
                     "verification_warnings": verification_warnings,
                     "stability": "best_effort_undocumented_endpoint",
@@ -1212,7 +1369,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - HOMES SOLD INDEX ADAPTER")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - SEARCH DISCOVERY + PAGE VERIFICATION")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -1241,9 +1398,10 @@ def print_summary(result):
         print(f"Verified closed comps: {result.get('verified_closed_comps_count', 0)}")
         source = result.get("sold_comps_source") or {}
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
-        print(f"Homes sold-index verified rows: {source.get('homes_verified_rows', 0)}")
-        for err in source.get("homes_errors", []):
-            print(f"  Homes source warning: {err}")
+        print(f"Bing property URLs discovered: {source.get('bing_urls_discovered', 0)}")
+        print(f"Bing/direct-page verified rows: {source.get('bing_verified_rows', 0)}")
+        for err in source.get("bing_errors", []):
+            print(f"  Bing/direct-page warning: {err}")
         print(f"Secondary verified rows: {source.get('secondary_verified_rows', 0)}")
         for err in source.get("secondary_errors", []):
             print(f"  Secondary source warning: {err}")
