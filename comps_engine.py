@@ -14,7 +14,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.3"
+VERSION = "2.4"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -27,7 +27,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.3"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.4"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -602,6 +602,153 @@ def _page_text(html):
 
 
 
+
+
+
+def realtor_sold_index_comps(target, subject):
+    """
+    Best-effort Realtor.com recently-sold index adapter.
+    Unlike the blocked Homes.com pagination, this requests a public sold-results
+    page and extracts only same-building cards. No hardcoded comp values.
+    A row is accepted only when the card itself contains Sold + price + unit.
+    If a sold date is absent from the index card, the property detail URL is
+    fetched and must provide the date before the comp becomes verified.
+    """
+    house = clean(target.get("house_number"))
+    street = clean(target.get("street"))
+    city = clean(target.get("city"))
+    state = clean(target.get("state"))
+    zipcode = clean(target.get("zip"))
+    target_unit = norm(target.get("unit"))
+    headers = {
+        "User-Agent": REDFIN_USER_AGENT,
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    errors, comps, seen = [], [], set()
+
+    urls = [
+        f"https://www.realtor.com/realestateandhomes-search/{city}_{state}/show-recently-sold",
+        f"https://www.realtor.com/realestateandhomes-search/{zipcode}/show-recently-sold",
+    ]
+    street_norms = {
+        norm(street),
+        norm(street).replace("FIFTH", "5TH"),
+        norm(street).replace("5TH", "FIFTH"),
+    }
+
+    for index_url in urls:
+        try:
+            r = requests.get(index_url, headers=headers, timeout=25)
+            if r.status_code >= 400:
+                errors.append(f"Realtor sold index HTTP {r.status_code}: {index_url}")
+                continue
+            raw_html = r.text
+            text = _page_text(raw_html)
+        except Exception as exc:
+            errors.append(f"Realtor sold index error: {type(exc).__name__}: {exc}")
+            continue
+
+        # Find local windows around exact building occurrences.
+        for m in re.finditer(rf"\b{re.escape(house)}\b", text, flags=re.I):
+            window = text[max(0,m.start()-220):min(len(text),m.start()+650)]
+            nwin=norm(window)
+            if not any(v and v in nwin for v in street_norms):
+                continue
+            if not re.search(r"\bSold\b",window,re.I):
+                continue
+
+            um=re.search(r"(?:Unit|Apt)\s*#?\s*([0-9A-Za-z-]{1,8})",window,re.I)
+            if not um:
+                continue
+            unit=um.group(1)
+            if norm(unit)==target_unit:
+                continue
+
+            prices=[_num(x) for x in re.findall(r"\$([\d,]{4,})",window)]
+            prices=[x for x in prices if x and x>=10000]
+            if not prices:
+                continue
+            sold_price=prices[0]
+
+            sold_date=None
+            for pat in (
+                r"Sold\s*[-–]?\s*([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
+                r"([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})[^.]{0,50}\bSold\b",
+            ):
+                dm=re.search(pat,window,re.I)
+                if dm:
+                    sold_date=_parse_sale_date(dm.group(1))
+                    if sold_date: break
+
+            # Extract likely property-detail link containing this unit.
+            detail_url=None
+            unit_pat=re.escape(str(unit))
+            hrefs=re.findall(r'href=["\']([^"\']+)["\']',raw_html,re.I)
+            for href in hrefs:
+                hnorm=norm(href)
+                if house in hnorm and unit_pat and re.search(rf"(?:APT|UNIT)\s*{unit_pat}\b",hnorm,re.I):
+                    if href.startswith("/"):
+                        href="https://www.realtor.com"+href
+                    if href.startswith("http"):
+                        detail_url=href
+                        break
+
+            # Index cards often omit date. Verify detail page before acceptance.
+            beds=baths=sqft=None
+            if not sold_date and detail_url:
+                try:
+                    dr=requests.get(detail_url,headers=headers,timeout=20,allow_redirects=True)
+                    if dr.status_code < 400:
+                        dtext=_page_text(dr.text)
+                        for pat in (
+                            r"Sold\s*[-–]?\s*([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
+                            r"([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})[^.]{0,80}\bSold\b",
+                            r"Last sold in\s+\d{4}.*?([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
+                        ):
+                            dm=re.search(pat,dtext,re.I|re.S)
+                            if dm:
+                                sold_date=_parse_sale_date(dm.group(1))
+                                if sold_date: break
+                        # Require page to corroborate price.
+                        if f"{int(sold_price):,}" not in dtext and str(int(sold_price)) not in dtext:
+                            sold_date=None
+                        bm=re.search(r"(\d+(?:\.\d+)?)\s*(?:bed|beds|bd)\b",dtext[:10000],re.I)
+                        if bm: beds=_num(bm.group(1))
+                        bam=re.search(r"(\d+(?:\.\d+)?)\s*(?:bath|baths|ba)\b",dtext[:10000],re.I)
+                        if bam: baths=_num(bam.group(1))
+                        sm=re.search(r"([\d,]{3,6})\s*(?:sqft|square feet|sq\.?\s*ft)",dtext[:10000],re.I)
+                        if sm:
+                            sv=_num(sm.group(1))
+                            if sv and 300<=sv<=10000: sqft=sv
+                except Exception as exc:
+                    errors.append(f"Realtor detail error unit {unit}: {type(exc).__name__}: {exc}")
+
+            if not sold_date:
+                continue
+
+            key=(norm(unit),sold_date,int(round(sold_price)))
+            if key in seen:
+                continue
+            score=100.0
+            if subject.get("beds") and beds==subject.get("beds"): score+=20
+            if subject.get("baths") and baths==subject.get("baths"): score+=15
+            comps.append({
+                "unit":unit,
+                "address":f"{house} {street} Unit {unit}, {city}, {state} {zipcode}",
+                "sold_price":sold_price,"sold_date":sold_date,
+                "beds":beds,"baths":baths,"sqft":sqft,
+                "comp_score":score,
+                "source":"Realtor.com recently sold + property history",
+                "source_url":detail_url or index_url,
+                "raw_status":"Sold","raw_sale_type":"public_sold_index",
+                "feed_classification":"verified_closed_sale",
+                "verification":"unit_level_closed_sale_verified",
+                "verification_method":"realtor_sold_card_plus_date_verification",
+            })
+            seen.add(key)
+
+    comps.sort(key=lambda x:(x.get("sold_date") or "",x.get("comp_score") or 0),reverse=True)
+    return comps, errors
 
 
 def bing_rss_verified_comps(target, subject, max_results=30):
@@ -1221,11 +1368,19 @@ def build_result(address, city, state, zipcode):
                 # V2.1 fallback: if the strict Redfin feed cannot supply enough
                 # verified same-building sales, discover and verify public
                 # unit property-history pages. No comp is hardcoded.
+                realtor_comps = []
+                realtor_errors = []
                 bing_comps = []
                 bing_errors = []
                 bing_urls_discovered = 0
                 secondary_comps = []
                 secondary_errors = []
+
+                if len(sold_comps) < 3:
+                    realtor_comps, realtor_errors = realtor_sold_index_comps(
+                        target, subject
+                    )
+                    sold_comps = merge_verified_comps(sold_comps, realtor_comps)
 
                 if len(sold_comps) < 3:
                     bing_comps, bing_errors, bing_urls_discovered = bing_rss_verified_comps(
@@ -1263,6 +1418,9 @@ def build_result(address, city, state, zipcode):
                     "rows_scanned": source_rows,
                     "headers": source_headers,
                     "errors": source_errors,
+                    "realtor_adapter": "Realtor.com recently-sold index + property-history verification",
+                    "realtor_verified_rows": len(realtor_comps),
+                    "realtor_errors": realtor_errors,
                     "bing_adapter": "Bing RSS URL discovery + direct property-page verification",
                     "bing_urls_discovered": bing_urls_discovered,
                     "bing_verified_rows": len(bing_comps),
@@ -1270,7 +1428,7 @@ def build_result(address, city, state, zipcode):
                     "secondary_adapter": "public_property_page_search",
                     "secondary_verified_rows": len(secondary_comps),
                     "secondary_errors": secondary_errors,
-                    "search_scope": "Strict Redfin sold feed + Bing RSS URL discovery + direct public property-page verification; exact same-building filter",
+                    "search_scope": "Strict Redfin sold feed + Realtor recently-sold/property-history + Bing discovery; exact same-building filter",
                     "sold_within_days": 365,
                     "verification_warnings": verification_warnings,
                     "stability": "best_effort_undocumented_endpoint",
@@ -1369,7 +1527,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - SEARCH DISCOVERY + PAGE VERIFICATION")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - REALTOR SOLD INDEX ADAPTER")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -1398,6 +1556,9 @@ def print_summary(result):
         print(f"Verified closed comps: {result.get('verified_closed_comps_count', 0)}")
         source = result.get("sold_comps_source") or {}
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
+        print(f"Realtor verified rows: {source.get('realtor_verified_rows', 0)}")
+        for err in source.get("realtor_errors", []):
+            print(f"  Realtor source warning: {err}")
         print(f"Bing property URLs discovered: {source.get('bing_urls_discovered', 0)}")
         print(f"Bing/direct-page verified rows: {source.get('bing_verified_rows', 0)}")
         for err in source.get("bing_errors", []):
