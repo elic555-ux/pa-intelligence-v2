@@ -12,7 +12,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "1.9"
+VERSION = "2.0"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -25,7 +25,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/1.9"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.0"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -430,13 +430,21 @@ def redfin_city_sold_rows(max_pages=8, page_size=350):
 
     for page in range(1, max_pages + 1):
         params = {
-            "al": 1, "market": "pittsburgh", "num_homes": page_size,
-            "ord": "redfin-recommended-asc", "page_number": page,
+            "al": 1,
+            "v": 8,
+            "market": "pittsburgh",
+            "mpt": 13,
+            "include_nearby_homes": "true",
+            "num_homes": page_size,
+            "ord": "redfin-recommended-asc",
+            "page_number": page,
             "start": (page - 1) * page_size,
-            "region_id": 15702, "region_type": 6,
-            "sf": "1,2,3,5,6,7", "status": 9,
-            "uipt": "1,2,3,4,5,6,7,8", "v": 8,
-            "sold_within_days": 730,
+            "region_id": 15702,
+            "region_type": 6,
+            "sf": "1,2,3,5,6,7",
+            "status": 9,
+            "uipt": "1,2,3,4,5,6,7,8",
+            "sold_within_days": 365,
         }
         try:
             r = requests.get(
@@ -514,6 +522,12 @@ def discover_same_building_sold_comps(target, subject):
             "DATE SOLD", "CLOSE DATE", "CLOSED DATE"
         )
         sold_date = _parse_sale_date(sold_date_raw)
+
+        # Strict closed-sale gate. The previous run proved that this endpoint
+        # can return Active / MLS Listing rows. Never allow those into comps.
+        if norm(raw_status) != "sold" or not sold_date:
+            continue
+
         source_url = clean(_csv_value(
             row,
             "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
@@ -563,14 +577,8 @@ def discover_same_building_sold_comps(target, subject):
             "source_url": source_url or None,
             "raw_status": raw_status or None,
             "raw_sale_type": raw_sale_type or None,
-            "feed_classification": (
-                "verified_closed_sale"
-                if sold_date else "same_building_row_not_verified_as_sale"
-            ),
-            "verification": (
-                "unit_level_closed_sale_verified"
-                if sold_date else "unit_level_sale_price_date_unverified"
-            ),
+            "feed_classification": "verified_closed_sale",
+            "verification": "unit_level_closed_sale_verified",
         })
 
     unique = {}
@@ -788,8 +796,8 @@ def build_result(address, city, state, zipcode):
                     "rows_scanned": source_rows,
                     "headers": source_headers,
                     "errors": source_errors,
-                    "search_scope": "Pittsburgh city recently-sold feed; exact same-building filter applied locally",
-                    "sold_within_days": 730,
+                    "search_scope": "Pittsburgh city strict recently-sold feed; Status=Sold + SOLD DATE required; exact same-building filter applied locally",
+                    "sold_within_days": 365,
                     "verification_warnings": verification_warnings,
                     "stability": "best_effort_undocumented_endpoint",
                 }
@@ -887,7 +895,7 @@ def safe_filename(address):
 
 def print_summary(result):
     print("\n" + "=" * 76)
-    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - VERIFIED SOLD CSV COMPS")
+    print(f"ALLEGHENY COUNTY COMPS ENGINE V{VERSION} - PHASE 2 - STRICT SOLD FEED")
     print("=" * 76)
     i = result["input"]
     print(f"Input: {i['address']}, {i['city']}, {i['state']} {i['zip']}")
@@ -916,6 +924,7 @@ def print_summary(result):
         print(f"Verified closed comps: {result.get('verified_closed_comps_count', 0)}")
         source = result.get("sold_comps_source") or {}
         print(f"Source rows scanned: {source.get('rows_scanned', 0)}")
+        print("Strict sold gate: Status=Sold AND SOLD DATE required")
         print(f"CSV headers: {source.get('headers', [])}")
         for err in source.get("errors", []):
             print(f"  Source warning: {err}")
