@@ -1,8 +1,8 @@
 {
   "engine": "Allegheny County Comps Engine",
-  "version": "2.5.1",
+  "version": "2.6",
   "phase": "property_resolution_building_reference_and_sales_history",
-  "generated_at": "2026-09-22T15:17:59+00:00",
+  "generated_at": "2026-09-23T17:12:11+00:00",
   "input": {
     "address": "4601 Fifth Ave #621",
     "city": "Pittsburgh",
@@ -161,7 +161,7 @@
   "sold_comps_status": "no_matching_unit_sales_found",
   "sold_comps_source": {
     "name": "Redfin downloadable sold-search CSV",
-    "rows_scanned": 2111,
+    "rows_scanned": 2137,
     "headers": [
       "SALE TYPE",
       "SOLD DATE",
@@ -243,38 +243,93 @@
   "rentcast": {
     "status": "success",
     "api_calls": 1,
-    "cache_path": "COMPS_REPORTS/rentcast_cache/4601_fifth_ave_621_pittsburgh_pa_15213_value.json",
-    "provider_estimate": {
-      "value": 124000.0,
-      "range_low": 94000.0,
-      "range_high": 154000.0,
-      "status": "provider_avm_estimate",
-      "provider": "RentCast",
-      "source_mode": "api",
-      "not_a_closed_sale": true
-    },
-    "subject_property": {
-      "id": "4601-5th-Ave,-Apt-621,-Pittsburgh,-PA-15213",
-      "formattedAddress": "4601 5th Ave, Apt 621, Pittsburgh, PA 15213",
-      "addressLine1": "4601 5th Ave",
-      "addressLine2": "Apt 621",
-      "city": "Pittsburgh",
-      "state": "PA",
-      "stateFips": "42",
-      "zipCode": "15213",
-      "county": "Allegheny",
-      "countyFips": "003",
-      "latitude": 40.447362,
-      "longitude": -79.948702,
-      "bedrooms": 2,
-      "bathrooms": 1
-    },
-    "verified_comps": [],
-    "raw_comp_count": 15,
-    "diagnostic": {
+    "value": {
       "status": "success",
-      "http_status": 200,
-      "message": null
+      "api_calls": 0,
+      "cache_path": "COMPS_REPORTS/rentcast_cache/4601_fifth_ave_621_pittsburgh_pa_15213_value.json",
+      "provider_estimate": {
+        "value": 124000.0,
+        "range_low": 94000.0,
+        "range_high": 154000.0,
+        "status": "provider_avm_estimate",
+        "provider": "RentCast",
+        "source_mode": "cache",
+        "not_a_closed_sale": true
+      },
+      "subject_property": {
+        "id": "4601-5th-Ave,-Apt-621,-Pittsburgh,-PA-15213",
+        "formattedAddress": "4601 5th Ave, Apt 621, Pittsburgh, PA 15213",
+        "addressLine1": "4601 5th Ave",
+        "addressLine2": "Apt 621",
+        "city": "Pittsburgh",
+        "state": "PA",
+        "stateFips": "42",
+        "zipCode": "15213",
+        "county": "Allegheny",
+        "countyFips": "003",
+        "latitude": 40.447362,
+        "longitude": -79.948702,
+        "bedrooms": 2,
+        "bathrooms": 1
+      },
+      "raw_comp_count": 15,
+      "diagnostic": {
+        "status": "cache_hit",
+        "http_status": null,
+        "message": null,
+        "counted_successful_call": false,
+        "usage": {
+          "used": 1,
+          "limit": 50,
+          "remaining": 49,
+          "reserve": 5,
+          "warning_at": 36,
+          "auto_stop_at": 45,
+          "level": "ok",
+          "cycle_start": "2026-09-22",
+          "next_reset": "2026-10-22",
+          "last_successful_call_at": null
+        }
+      }
+    },
+    "sold_properties": {
+      "status": "success",
+      "source_mode": "api",
+      "api_calls": 1,
+      "cache_path": "COMPS_REPORTS/rentcast_cache/4601_fifth_ave_pittsburgh_pa_15213_sold_730d.json",
+      "raw_record_count": 44,
+      "same_building_records": 0,
+      "verified_comps": [],
+      "diagnostic": {
+        "status": "success",
+        "http_status": 200,
+        "message": null,
+        "counted_successful_call": true,
+        "usage": {
+          "used": 2,
+          "limit": 50,
+          "remaining": 48,
+          "reserve": 5,
+          "warning_at": 36,
+          "auto_stop_at": 45,
+          "level": "ok",
+          "cycle_start": "2026-09-22",
+          "next_reset": "2026-10-22",
+          "last_successful_call_at": "2026-09-23T17:12:17+00:00"
+        }
+      }
+    },
+    "usage": {
+      "used": 2,
+      "limit": 50,
+      "remaining": 48,
+      "reserve": 5,
+      "warning_at": 36,
+      "auto_stop_at": 45,
+      "level": "ok",
+      "cycle_start": "2026-09-22",
+      "next_reset": "2026-10-22",
+      "last_successful_call_at": "2026-09-23T17:12:17+00:00"
     }
   },
   "rentcast_avm": {
@@ -283,13 +338,19 @@
     "range_high": 154000.0,
     "status": "provider_avm_estimate",
     "provider": "RentCast",
-    "source_mode": "api",
+    "source_mode": "cache",
     "not_a_closed_sale": true
   },
   "rentcast_safety": {
+    "strategy": "FREE -> CACHE -> API -> AI",
     "cache_first": true,
     "max_api_calls_per_run": 1,
+    "monthly_plan_limit": 50,
+    "warning_at": 36,
+    "automatic_stop_at": 45,
+    "reserve_requests": 5,
     "provider_avm_is_estimate": true,
-    "listing_price_not_treated_as_closed_sale": true
+    "listing_price_not_treated_as_closed_sale": true,
+    "sold_comp_requires_explicit_sale_date_and_price": true
   }
 }
