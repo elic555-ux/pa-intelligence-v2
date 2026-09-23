@@ -16,6 +16,54 @@ PROPERTIES_FILE = "properties.json"
 CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 OFF_MARKET_MISS_THRESHOLD = 2
+ORCHESTRATOR_VERSION = "2.1-integration"
+
+PROPERTY_TYPE_ALIASES = {
+    "single family": "Single Family",
+    "single-family": "Single Family",
+    "single family residential": "Single Family",
+    "house": "Single Family",
+    "townhouse": "Townhouse",
+    "townhome": "Townhouse",
+    "condo": "Condo",
+    "condo/coop": "Condo",
+    "condo/co-op": "Condo",
+    "co-op": "Condo",
+    "coop": "Condo",
+    "multi-family": "Multi-Family",
+    "multifamily": "Multi-Family",
+    "multi-family (5+ unit)": "Multi-Family",
+    "duplex": "Duplex / Triplex",
+    "triplex": "Duplex / Triplex",
+    "multi-family (2-4 unit)": "Duplex / Triplex",
+    "land": "Land / Lot",
+    "vacant land": "Land / Lot",
+    "commercial": "Commercial",
+}
+
+def normalize_property_type(raw_value):
+    """Normalize source property types to the exact values used by the UI."""
+    raw = str(raw_value or "").strip()
+    if not raw:
+        return None
+    key = re.sub(r"\s+", " ", raw.lower()).strip()
+    if key in PROPERTY_TYPE_ALIASES:
+        return PROPERTY_TYPE_ALIASES[key]
+    if "single" in key and "family" in key:
+        return "Single Family"
+    if "town" in key and ("house" in key or "home" in key):
+        return "Townhouse"
+    if "condo" in key or "co-op" in key or "coop" in key:
+        return "Condo"
+    if "duplex" in key or "triplex" in key or "2-4" in key:
+        return "Duplex / Triplex"
+    if "multi" in key and "family" in key:
+        return "Multi-Family"
+    if "land" in key or "lot" in key:
+        return "Land / Lot"
+    if "commercial" in key:
+        return "Commercial"
+    return None
 
 
 USER_AGENTS = [
@@ -189,24 +237,27 @@ def classify_strategy(deal_type, price, beds, summary=""):
     is_distressed = any(kw in text for kw in DISTRESS_KEYWORDS) or any(
         k in dt for k in ["sheriff", "tax", "probate", "foreclosure", "reo"]
     )
-    beds_num = safe_number(beds, 3, int)
-    base_rent = 950 + (beds_num * 250)
-    projected_rent = max(900, int(base_rent + (safe_number(price, 0, float) * 0.002)))
-    annual_rent = projected_rent * 12
-    gross_yield = round((annual_rent / max(safe_number(price, 1, float), 1)) * 100, 1)
+    beds_num = safe_number(beds, None, int)
+    projected_rent = None
+    gross_yield = None
+    if beds_num is not None and price:
+        base_rent = 950 + (beds_num * 250)
+        projected_rent = max(900, int(base_rent + (safe_number(price, 0, float) * 0.002)))
+        annual_rent = projected_rent * 12
+        gross_yield = round((annual_rent / max(safe_number(price, 1, float), 1)) * 100, 1)
 
     if not is_distressed and safe_number(price, 0, float) >= 60000:
         return {
             "strategy": "turnkey",
             "strategy_label": "🔑 Turnkey (מניב מיידי)",
-            "projected_rent": f"${projected_rent:,} / חודש",
-            "gross_yield": f"{gross_yield}% תשואה",
+            "projected_rent": f"${projected_rent:,} / חודש" if projected_rent is not None else "לא זמין",
+            "gross_yield": f"{gross_yield}% תשואה" if gross_yield is not None else "לא זמין",
         }
     return {
         "strategy": "value_add",
         "strategy_label": "🔨 Value-Add (השבחה ומצוקה)",
-        "projected_rent": f"${projected_rent:,} / חודש",
-        "gross_yield": f"{gross_yield}% תשואה (לאחר שיפוץ)",
+        "projected_rent": f"${projected_rent:,} / חודש" if projected_rent is not None else "לא זמין",
+        "gross_yield": f"{gross_yield}% תשואה (לאחר שיפוץ)" if gross_yield is not None else "לא זמין",
     }
 
 
@@ -260,9 +311,11 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
 
             listed_dt = now_est() - timedelta(days=dom)
             listed_date_str = listed_dt.strftime("%d/%m/%Y")
-            beds = safe_number(row.get("BEDS"), 3, int)
-            baths = safe_number(row.get("BATHS"), 1.5, float)
-            sqft = safe_number(row.get("SQUARE FEET"), 1350, int)
+            beds = safe_number(row.get("BEDS"), None, int)
+            baths = safe_number(row.get("BATHS"), None, float)
+            sqft = safe_number(row.get("SQUARE FEET"), None, int)
+            raw_property_type = row.get("PROPERTY TYPE") or ""
+            property_type = normalize_property_type(raw_property_type)
             row_city = row.get("CITY") or clean_city
             zip_code = row.get("ZIP OR POSTAL CODE") or ""
             home_url = row.get(
@@ -285,6 +338,9 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 "source": "Redfin",
                 "source_type": "mls",
                 "data_status": "live",
+                "type": property_type,
+                "property_type": property_type,
+                "source_property_type": raw_property_type or None,
                 "strategy": strategy_data["strategy"],
                 "strategy_label": strategy_data["strategy_label"],
                 "gross_yield": strategy_data["gross_yield"],
@@ -326,6 +382,7 @@ def comparable_changed(old, new):
     tracked_fields = [
         "price", "deal_type", "beds", "baths", "sqft", "year_built",
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
+        "type", "property_type", "source_property_type",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
 
@@ -451,6 +508,7 @@ def run_orchestrator():
         "scan_id": scan_id,
         "started_at": scan_started.isoformat(timespec="seconds"),
         "trigger": "manual" if is_manual_trigger else "scheduled",
+        "orchestrator_version": ORCHESTRATOR_VERSION,
         "status": "started",
         "active_sectors": [],
         "cities": [],
@@ -515,13 +573,21 @@ def run_orchestrator():
     max_sqft = safe_number(server_config.get("maxSqft"), 99999, int)
     min_beds = safe_number(server_config.get("minBeds"), 0, int)
     max_beds = safe_number(server_config.get("maxBeds"), 99, int)
+    selected_property_types = [
+        normalize_property_type(v) or str(v).strip()
+        for v in (server_config.get("propertyTypes") or [])
+        if str(v).strip()
+    ]
+    selected_property_types = list(dict.fromkeys(selected_property_types))
     cities_list = server_config.get("cities") or ["Pittsburgh"]
 
     log_entry["active_sectors"] = active_sectors_now
     log_entry["cities"] = cities_list
+    log_entry["property_types"] = selected_property_types
 
     print(f"🎯 אזורי יעד: {cities_list}")
     print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds}")
+    print(f"🏠 סוגי נכסים: {selected_property_types or ['הכל']}")
     print(f"📋 סקטורים פעילים: {active_sectors_now}")
 
     live_results = []
@@ -534,15 +600,24 @@ def run_orchestrator():
 
     final_filtered = []
     for prop in combined:
-        p_price = safe_number(prop.get("price"), 0, float)
-        p_sqft = safe_number(prop.get("sqft"), 0, int)
-        p_beds = safe_number(prop.get("beds"), 0, int)
-        if not (min_price <= p_price <= max_price):
+        p_price = safe_number(prop.get("price"), None, float)
+        p_sqft = safe_number(prop.get("sqft"), None, int)
+        p_beds = safe_number(prop.get("beds"), None, int)
+        p_type = prop.get("property_type") or prop.get("type")
+
+        if p_price is None or not (min_price <= p_price <= max_price):
             continue
-        if not (min_sqft <= p_sqft <= max_sqft):
+        if min_sqft > 0 and (p_sqft is None or p_sqft < min_sqft):
             continue
-        if not (min_beds <= p_beds <= max_beds):
+        if max_sqft < 99999 and (p_sqft is None or p_sqft > max_sqft):
             continue
+        if min_beds > 0 and (p_beds is None or p_beds < min_beds):
+            continue
+        if max_beds < 99 and (p_beds is None or p_beds > max_beds):
+            continue
+        if selected_property_types and p_type not in selected_property_types:
+            continue
+
         final_filtered.append(prop)
 
     log_entry["after_filters"] = len(final_filtered)
