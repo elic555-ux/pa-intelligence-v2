@@ -2,14 +2,56 @@ import json
 import requests
 import time
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 PROPERTIES_FILE = 'properties.json'
-ANALYZER_VERSION = '2.0'
+GEOCODE_CACHE_FILE = 'geocode_cache.json'
+GEOCODE_RETRY_DAYS = 30
+ANALYZER_VERSION = '2.1'
 
 
 def utc_now_iso():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def normalize_geocode_key(address, city, state="PA"):
+    parts = [str(address or "").strip().lower(), str(city or "").strip().lower(), str(state or "").strip().lower()]
+    return " | ".join(" ".join(p.split()) for p in parts)
+
+
+def load_geocode_cache():
+    if not os.path.exists(GEOCODE_CACHE_FILE):
+        return {}
+    try:
+        with open(GEOCODE_CACHE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        print(f"⚠️ לא ניתן לקרוא Geocode Cache: {e}")
+        return {}
+
+
+def save_geocode_cache(cache):
+    temp_file = GEOCODE_CACHE_FILE + '.tmp'
+    with open(temp_file, 'w', encoding='utf-8') as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+    os.replace(temp_file, GEOCODE_CACHE_FILE)
+
+
+def parse_iso(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    except (TypeError, ValueError):
+        return None
+
+
+def failed_geocode_is_fresh(entry):
+    if not isinstance(entry, dict) or entry.get('status') != 'unavailable':
+        return False
+    attempted = parse_iso(entry.get('attempted_at'))
+    return bool(attempted and datetime.now(timezone.utc) - attempted < timedelta(days=GEOCODE_RETRY_DAYS))
 
 
 def get_coordinates(address, city, state="PA"):
@@ -223,32 +265,82 @@ def run_analyzer():
     updated_properties = []
     analyzed_count = 0
     geocoded_count = 0
+    geocode_cache_hits = 0
+    geocode_skipped_failed = 0
+    geocode_requests = 0
+    cache = load_geocode_cache()
+    cache_changed = False
 
     for prop in properties:
         if not isinstance(prop, dict):
             updated_properties.append(prop)
             continue
 
-        # לא פונים ל-Nominatim אם כבר קיימות קואורדינטות תקינות.
+        # Geocoding V2.1:
+        # 1) existing coordinates -> no request
+        # 2) persistent cache hit -> no request
+        # 3) recent failed lookup -> no repeated request for 30 days
+        # 4) legacy "unavailable" -> migrate to cache without retrying immediately
         lat = positive_number(prop.get('lat'))
         try:
             lng = float(prop.get('lng')) if prop.get('lng') is not None else None
         except (TypeError, ValueError):
             lng = None
 
-        if lat is None or lng is None:
-            if prop.get('address') and prop.get('city'):
-                print(f"📍 מאתר קואורדינטות: {prop.get('address', 'Unknown')}...")
-                new_lat, new_lng = get_coordinates(prop.get('address'), prop.get('city'))
+        address = prop.get('address')
+        city = prop.get('city')
+        if (lat is None or lng is None) and address and city:
+            key = normalize_geocode_key(address, city)
+            cached = cache.get(key)
+
+            if isinstance(cached, dict) and positive_number(cached.get('lat')) is not None and cached.get('lng') is not None:
+                prop['lat'] = float(cached['lat'])
+                prop['lng'] = float(cached['lng'])
+                prop['geocode_status'] = 'verified_external_service'
+                prop['geocode_source'] = cached.get('source') or 'OpenStreetMap Nominatim'
+                prop['geocode_updated_at'] = cached.get('attempted_at') or utc_now_iso()
+                geocode_cache_hits += 1
+
+            elif failed_geocode_is_fresh(cached):
+                prop['geocode_status'] = 'unavailable'
+                prop['geocode_last_attempt_at'] = cached.get('attempted_at')
+                geocode_skipped_failed += 1
+
+            elif prop.get('geocode_status') == 'unavailable' and not prop.get('geocode_last_attempt_at'):
+                # Migration of failures from Analyzer V2.0: do not hammer Nominatim again now.
+                attempted_at = utc_now_iso()
+                prop['geocode_last_attempt_at'] = attempted_at
+                cache[key] = {'status': 'unavailable', 'attempted_at': attempted_at}
+                cache_changed = True
+                geocode_skipped_failed += 1
+
+            else:
+                print(f"📍 מאתר קואורדינטות: {address}...")
+                geocode_requests += 1
+                new_lat, new_lng = get_coordinates(address, city)
+                attempted_at = utc_now_iso()
+
                 if new_lat is not None and new_lng is not None:
                     prop['lat'] = new_lat
                     prop['lng'] = new_lng
                     prop['geocode_status'] = 'verified_external_service'
                     prop['geocode_source'] = 'OpenStreetMap Nominatim'
-                    prop['geocode_updated_at'] = utc_now_iso()
+                    prop['geocode_updated_at'] = attempted_at
+                    prop['geocode_last_attempt_at'] = attempted_at
+                    cache[key] = {
+                        'status': 'verified',
+                        'lat': new_lat,
+                        'lng': new_lng,
+                        'source': 'OpenStreetMap Nominatim',
+                        'attempted_at': attempted_at,
+                    }
                     geocoded_count += 1
                 else:
                     prop['geocode_status'] = 'unavailable'
+                    prop['geocode_last_attempt_at'] = attempted_at
+                    cache[key] = {'status': 'unavailable', 'attempted_at': attempted_at}
+
+                cache_changed = True
                 time.sleep(1.1)
 
         if needs_analysis(prop):
@@ -257,6 +349,9 @@ def run_analyzer():
             analyzed_count += 1
 
         updated_properties.append(prop)
+
+    if cache_changed:
+        save_geocode_cache(cache)
 
     temp_file = PROPERTIES_FILE + '.tmp'
     with open(temp_file, 'w', encoding='utf-8') as f:
@@ -267,6 +362,11 @@ def run_analyzer():
         f"✅ Analyzer V{ANALYZER_VERSION} סיים: "
         f"{analyzed_count} נכסים נותחו/עודכנו, "
         f"{geocoded_count} נכסים קיבלו קואורדינטות."
+    )
+    print(
+        f"🗺️ Geocode QA — בקשות חיצוניות: {geocode_requests} | "
+        f"Cache hits: {geocode_cache_hits} | "
+        f"דילוג על כשלונות טריים: {geocode_skipped_failed}"
     )
     print("ℹ️ ARV, Rent, Rehab ו-Neighborhood Class עדיין אומדנים זמניים ולא נתונים מאומתים.")
 
