@@ -14,7 +14,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.5.1"
+VERSION = "2.6"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -1254,126 +1254,551 @@ def compact_sale(rec):
 
 
 # ---------------------------------------------------------------------------
-# RentCast V2.5 - official API adapter (cache-first; max 1 call per run)
+# RentCast V2.6 - FREE -> CACHE -> API, sold-property records + usage guard
 # ---------------------------------------------------------------------------
 RENTCAST_BASE = "https://api.rentcast.io/v1"
 RENTCAST_CACHE_DIR = OUTPUT_DIR / "rentcast_cache"
-RENTCAST_MAX_CALLS_PER_RUN = 1
+RENTCAST_USAGE_FILE = OUTPUT_DIR / "rentcast_usage.json"
 
-def _rentcast_full_address(target):
+# Developer plan safety policy for this private system.
+RENTCAST_MONTHLY_LIMIT = 50
+RENTCAST_AUTO_STOP_AT = 45       # keep 5 requests in reserve
+RENTCAST_WARNING_AT = 36
+RENTCAST_BILLING_DAY = 22        # current subscription billing/reset day
+RENTCAST_MAX_CALLS_PER_RUN = 1   # hard local rule for this engine
+
+def _rentcast_full_address(target, include_unit=True):
     a = f"{clean(target.get('house_number'))} {clean(target.get('street'))}"
-    if clean(target.get("unit")):
+    if include_unit and clean(target.get("unit")):
         a += f" #{clean(target.get('unit'))}"
     return f"{a}, {clean(target.get('city'))}, {clean(target.get('state'))}, {clean(target.get('zip'))}"
 
-def _rentcast_cache_path(target):
-    key = re.sub(r"[^a-z0-9_]+", "", norm(_rentcast_full_address(target)).lower().replace(" ","_"))[:140]
-    return RENTCAST_CACHE_DIR / f"{key}_value.json"
+def _rentcast_key(value):
+    return re.sub(r"[^a-z0-9_]+", "", norm(value).lower().replace(" ", "_"))[:160]
 
-def _rentcast_read_cache(target):
-    p=_rentcast_cache_path(target)
-    if not p.exists(): return None,p
+def _rentcast_value_cache_path(target):
+    return RENTCAST_CACHE_DIR / f"{_rentcast_key(_rentcast_full_address(target))}_value.json"
+
+def _rentcast_sold_cache_path(target, days=730):
+    # Building/area cache intentionally omits the unit so other units in the same
+    # building can reuse the same paid response.
+    base = _rentcast_full_address(target, include_unit=False)
+    return RENTCAST_CACHE_DIR / f"{_rentcast_key(base)}_sold_{int(days)}d.json"
+
+def _rentcast_read_json(path):
+    if not path.exists():
+        return None
     try:
-        x=json.loads(p.read_text(encoding="utf-8"))
-        if isinstance(x,dict) and x.get("response"): return x,p
-    except Exception: pass
-    return None,p
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
 
-def _rentcast_write_cache(target,response):
-    RENTCAST_CACHE_DIR.mkdir(parents=True,exist_ok=True)
-    p=_rentcast_cache_path(target)
-    tmp=p.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"cached_at":utc_now(),"endpoint":"/avm/value","address":_rentcast_full_address(target),"response":response},ensure_ascii=False,indent=2),encoding="utf-8")
-    tmp.replace(p)
-    return p
+def _rentcast_write_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
-def _rentcast_api_get(path,params):
-    key=clean(os.getenv("RENTCAST_API_KEY"))
+def _rentcast_next_reset(now=None):
+    now = now or datetime.now(timezone.utc)
+    y, m = now.year, now.month
+    if now.day >= RENTCAST_BILLING_DAY:
+        if m == 12:
+            y, m = y + 1, 1
+        else:
+            m += 1
+    return date(y, m, RENTCAST_BILLING_DAY).isoformat()
+
+def _rentcast_cycle_start(now=None):
+    now = now or datetime.now(timezone.utc)
+    y, m = now.year, now.month
+    if now.day < RENTCAST_BILLING_DAY:
+        if m == 1:
+            y, m = y - 1, 12
+        else:
+            m -= 1
+    return date(y, m, RENTCAST_BILLING_DAY).isoformat()
+
+def _rentcast_infer_existing_calls():
+    # We already have one successful AVM cache from the first live integration.
+    # More generally, count distinct successful cached endpoint responses as the
+    # safest local baseline if the usage ledger does not exist yet.
+    if not RENTCAST_CACHE_DIR.exists():
+        return 0
+    calls = 0
+    for p in RENTCAST_CACHE_DIR.glob("*.json"):
+        data = _rentcast_read_json(p)
+        if data and data.get("response") is not None and data.get("endpoint"):
+            calls += 1
+    return calls
+
+def _rentcast_load_usage():
+    now = datetime.now(timezone.utc)
+    cycle_start = _rentcast_cycle_start(now)
+    next_reset = _rentcast_next_reset(now)
+    data = _rentcast_read_json(RENTCAST_USAGE_FILE) or {}
+
+    # New billing cycle: reset our local counter automatically.
+    if data.get("cycle_start") != cycle_start:
+        data = {
+            "provider": "RentCast",
+            "plan_limit": RENTCAST_MONTHLY_LIMIT,
+            "auto_stop_at": RENTCAST_AUTO_STOP_AT,
+            "warning_at": RENTCAST_WARNING_AT,
+            "billing_day": RENTCAST_BILLING_DAY,
+            "cycle_start": cycle_start,
+            "next_reset": next_reset,
+            "successful_api_calls": _rentcast_infer_existing_calls(),
+            "last_successful_call_at": None,
+            "updated_at": utc_now(),
+        }
+        _rentcast_write_json(RENTCAST_USAGE_FILE, data)
+    else:
+        data["next_reset"] = next_reset
+        data["plan_limit"] = RENTCAST_MONTHLY_LIMIT
+        data["auto_stop_at"] = RENTCAST_AUTO_STOP_AT
+        data["warning_at"] = RENTCAST_WARNING_AT
+    return data
+
+def _rentcast_usage_public(data):
+    used = int(data.get("successful_api_calls") or 0)
+    remaining = max(0, RENTCAST_MONTHLY_LIMIT - used)
+    if used >= RENTCAST_AUTO_STOP_AT:
+        level = "blocked"
+    elif used >= RENTCAST_WARNING_AT:
+        level = "warning"
+    else:
+        level = "ok"
+    return {
+        "used": used,
+        "limit": RENTCAST_MONTHLY_LIMIT,
+        "remaining": remaining,
+        "reserve": max(0, RENTCAST_MONTHLY_LIMIT - RENTCAST_AUTO_STOP_AT),
+        "warning_at": RENTCAST_WARNING_AT,
+        "auto_stop_at": RENTCAST_AUTO_STOP_AT,
+        "level": level,
+        "cycle_start": data.get("cycle_start"),
+        "next_reset": data.get("next_reset"),
+        "last_successful_call_at": data.get("last_successful_call_at"),
+    }
+
+def _rentcast_can_call():
+    usage = _rentcast_load_usage()
+    used = int(usage.get("successful_api_calls") or 0)
+    return used < RENTCAST_AUTO_STOP_AT, usage
+
+def _rentcast_record_success(usage):
+    usage["successful_api_calls"] = int(usage.get("successful_api_calls") or 0) + 1
+    usage["last_successful_call_at"] = utc_now()
+    usage["updated_at"] = utc_now()
+    _rentcast_write_json(RENTCAST_USAGE_FILE, usage)
+    return usage
+
+def _rentcast_api_get(path, params):
+    allowed, usage = _rentcast_can_call()
+    if not allowed:
+        return None, {
+            "status": "usage_guard_blocked",
+            "http_status": None,
+            "message": f"Local safety guard blocked RentCast at {usage.get('successful_api_calls', 0)}/{RENTCAST_MONTHLY_LIMIT}.",
+            "counted_successful_call": False,
+            "usage": _rentcast_usage_public(usage),
+        }
+
+    key = clean(os.getenv("RENTCAST_API_KEY"))
     if not key:
-        return None,{"status":"api_key_missing","http_status":None,"message":"RENTCAST_API_KEY is not available."}
+        return None, {
+            "status": "api_key_missing",
+            "http_status": None,
+            "message": "RENTCAST_API_KEY is not available.",
+            "counted_successful_call": False,
+            "usage": _rentcast_usage_public(usage),
+        }
+
     try:
-        r=requests.get(RENTCAST_BASE+path,params=params,headers={"Accept":"application/json","X-Api-Key":key,"User-Agent":HEADERS["User-Agent"]},timeout=TIMEOUT)
-        if r.status_code>=400:
-            return None,{"status":"authentication_failed" if r.status_code==401 else "http_error","http_status":r.status_code,"message":clean(r.text)[:500]}
-        return r.json(),{"status":"success","http_status":r.status_code,"message":None}
+        r = requests.get(
+            RENTCAST_BASE + path,
+            params=params,
+            headers={
+                "Accept": "application/json",
+                "X-Api-Key": key,
+                "User-Agent": HEADERS["User-Agent"],
+            },
+            timeout=TIMEOUT,
+        )
+        if r.status_code >= 400:
+            return None, {
+                "status": "authentication_failed" if r.status_code == 401 else "http_error",
+                "http_status": r.status_code,
+                "message": clean(r.text)[:500],
+                "counted_successful_call": False,
+                "usage": _rentcast_usage_public(usage),
+            }
+
+        payload = r.json()
+        # RentCast bills successful HTTP 200 responses. Count only those.
+        if r.status_code == 200:
+            usage = _rentcast_record_success(usage)
+
+        return payload, {
+            "status": "success",
+            "http_status": r.status_code,
+            "message": None,
+            "counted_successful_call": r.status_code == 200,
+            "usage": _rentcast_usage_public(usage),
+        }
     except Exception as exc:
-        return None,{"status":"request_error","http_status":None,"message":f"{type(exc).__name__}: {exc}"}
+        return None, {
+            "status": "request_error",
+            "http_status": None,
+            "message": f"{type(exc).__name__}: {exc}",
+            "counted_successful_call": False,
+            "usage": _rentcast_usage_public(usage),
+        }
 
 def _rentcast_comp_address(c):
-    if clean(c.get("formattedAddress")): return clean(c.get("formattedAddress"))
-    return ", ".join(x for x in [clean(c.get("addressLine1") or c.get("address")),clean(c.get("city")),clean(c.get("state")),clean(c.get("zipCode") or c.get("zip"))] if x)
+    if clean(c.get("formattedAddress")):
+        return clean(c.get("formattedAddress"))
+    return ", ".join(
+        x for x in [
+            clean(c.get("addressLine1") or c.get("address")),
+            clean(c.get("city")),
+            clean(c.get("state")),
+            clean(c.get("zipCode") or c.get("zip")),
+        ] if x
+    )
 
 def _rentcast_iso_date(v):
-    v=clean(v)
-    if not v: return None
-    p=_parse_sale_date(v[:10])
-    if p: return p
-    try: return datetime.fromisoformat(v.replace("Z","+00:00")).date().isoformat()
-    except Exception: return None
+    v = clean(v)
+    if not v:
+        return None
+    p = _parse_sale_date(v[:10])
+    if p:
+        return p
+    try:
+        return datetime.fromisoformat(v.replace("Z", "+00:00")).date().isoformat()
+    except Exception:
+        return None
 
-def _rentcast_closed_sale(c):
-    sold_date=None
-    for k in ("lastSaleDate","soldDate","saleDate"):
-        sold_date=_rentcast_iso_date(c.get(k))
-        if sold_date: break
-    sold_price=None
-    for k in ("lastSalePrice","soldPrice","salePrice"):
-        v=_num(c.get(k))
-        if v and v>=10000: sold_price=v; break
-    status=norm(c.get("status"))
-    return bool(sold_date and sold_price and ("SOLD" in status or sold_price)),sold_date,sold_price
+def _rentcast_sale_evidence(record):
+    # Property records can expose a direct last-sale pair and/or transaction
+    # history. Accept only explicit sale date + sale price evidence.
+    candidates = []
 
-def rentcast_value_estimate(target,subject):
-    cached,cache_path=_rentcast_read_cache(target)
-    if cached:
-        payload=cached["response"]; mode="cache"; calls=0
-        diag={"status":"cache_hit","http_status":None,"message":None}
+    direct_date = None
+    for k in ("lastSaleDate", "soldDate", "saleDate"):
+        direct_date = _rentcast_iso_date(record.get(k))
+        if direct_date:
+            break
+    direct_price = None
+    for k in ("lastSalePrice", "soldPrice", "salePrice"):
+        v = _num(record.get(k))
+        if v and v >= 10000:
+            direct_price = v
+            break
+    if direct_date and direct_price:
+        candidates.append((direct_date, direct_price, "rentcast_last_sale_fields"))
+
+    history = record.get("history")
+    events = []
+    if isinstance(history, dict):
+        for hist_date, event in history.items():
+            if isinstance(event, dict):
+                e = dict(event)
+                e.setdefault("_history_date", hist_date)
+                events.append(e)
+            elif isinstance(event, list):
+                for item in event:
+                    if isinstance(item, dict):
+                        e = dict(item)
+                        e.setdefault("_history_date", hist_date)
+                        events.append(e)
+    elif isinstance(history, list):
+        events = [x for x in history if isinstance(x, dict)]
+
+    for event in events:
+        event_type = norm(event.get("event") or event.get("eventType") or event.get("type"))
+        if "SALE" not in event_type:
+            continue
+        sd = _rentcast_iso_date(
+            event.get("date") or event.get("eventDate") or event.get("saleDate") or event.get("_history_date")
+        )
+        sp = _num(event.get("price") or event.get("salePrice") or event.get("amount"))
+        if sd and sp and sp >= 10000:
+            candidates.append((sd, sp, "rentcast_history_sale_event"))
+
+    if not candidates:
+        return False, None, None, None
+
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    sd, sp, method = candidates[0]
+    return True, sd, sp, method
+
+def rentcast_value_estimate(target, subject):
+    cache_path = _rentcast_value_cache_path(target)
+    cached = _rentcast_read_json(cache_path)
+    if cached and cached.get("response") is not None:
+        payload = cached["response"]
+        mode = "cache"
+        calls = 0
+        diag = {
+            "status": "cache_hit",
+            "http_status": None,
+            "message": None,
+            "counted_successful_call": False,
+            "usage": _rentcast_usage_public(_rentcast_load_usage()),
+        }
     else:
-        params={"address":_rentcast_full_address(target),"maxRadius":5,"daysOld":730,"compCount":15,"lookupSubjectAttributes":"true"}
-        if subject.get("beds") is not None: params["bedrooms"]=subject["beds"]
-        if subject.get("baths") is not None: params["bathrooms"]=subject["baths"]
-        if subject.get("sqft") is not None: params["squareFootage"]=subject["sqft"]
-        payload,diag=_rentcast_api_get("/avm/value",params)
-        calls=1 if diag.get("http_status") is not None else 0
-        mode="api"
-        if payload is None:
-            return {"status":diag["status"],"api_calls":calls,"cache_path":str(cache_path),"provider_estimate":None,"verified_comps":[],"raw_comp_count":0,"diagnostic":diag}
-        _rentcast_write_cache(target,payload)
+        params = {
+            "address": _rentcast_full_address(target),
+            "maxRadius": 5,
+            "daysOld": 730,
+            "compCount": 15,
+            "lookupSubjectAttributes": "true",
+        }
+        if subject.get("beds") is not None:
+            params["bedrooms"] = subject["beds"]
+        if subject.get("baths") is not None:
+            params["bathrooms"] = subject["baths"]
+        if subject.get("sqft") is not None:
+            params["squareFootage"] = subject["sqft"]
 
-    estimate={"value":_num(payload.get("price")),"range_low":_num(payload.get("priceRangeLow")),"range_high":_num(payload.get("priceRangeHigh")),"status":"provider_avm_estimate","provider":"RentCast","source_mode":mode,"not_a_closed_sale":True}
-    verified=[]
-    target_unit=norm(target.get("unit"))
-    for c in payload.get("comparables") or []:
-        if not isinstance(c,dict): continue
-        addr=_rentcast_comp_address(c)
-        if not addr or not same_building(addr,target): continue
-        unit=extract_unit(addr)
-        if not unit or norm(unit)==target_unit: continue
-        ok,sd,sp=_rentcast_closed_sale(c)
-        if not ok: continue
-        sqft=_plausible_sqft(c.get("squareFootage"))
-        verified.append({"unit":unit,"address":addr,"sold_price":sp,"sold_date":sd,"beds":_num(c.get("bedrooms")),"baths":_num(c.get("bathrooms")),"sqft":sqft,"price_per_sqft":round(sp/sqft,2) if sqft else None,"comp_score":round(float(c.get("correlation") or 0)*100,1),"match_reasons":["same_building","different_unit","rentcast_closed_sale_evidence"],"source":"RentCast API","source_url":None,"raw_status":c.get("status"),"raw_sale_type":c.get("listingType"),"feed_classification":"verified_closed_sale","verification":"unit_level_closed_sale_verified","verification_method":"rentcast_explicit_sale_date_and_sale_price"})
-    return {"status":"success","api_calls":calls,"cache_path":str(cache_path),"provider_estimate":estimate,"subject_property":payload.get("subjectProperty"),"verified_comps":merge_verified_comps(verified,[]),"raw_comp_count":len(payload.get("comparables") or []),"diagnostic":diag}
+        payload, diag = _rentcast_api_get("/avm/value", params)
+        calls = 1 if diag.get("counted_successful_call") else 0
+        mode = "api"
+        if payload is None:
+            return {
+                "status": diag["status"],
+                "api_calls": calls,
+                "cache_path": str(cache_path),
+                "provider_estimate": None,
+                "raw_comp_count": 0,
+                "diagnostic": diag,
+            }
+        _rentcast_write_json(cache_path, {
+            "cached_at": utc_now(),
+            "endpoint": "/avm/value",
+            "address": _rentcast_full_address(target),
+            "response": payload,
+        })
+
+    estimate = {
+        "value": _num(payload.get("price")),
+        "range_low": _num(payload.get("priceRangeLow")),
+        "range_high": _num(payload.get("priceRangeHigh")),
+        "status": "provider_avm_estimate",
+        "provider": "RentCast",
+        "source_mode": mode,
+        "not_a_closed_sale": True,
+    }
+    return {
+        "status": "success",
+        "api_calls": calls,
+        "cache_path": str(cache_path),
+        "provider_estimate": estimate,
+        "subject_property": payload.get("subjectProperty"),
+        "raw_comp_count": len(payload.get("comparables") or []),
+        "diagnostic": diag,
+    }
+
+def rentcast_sold_properties(target, subject, days=730):
+    cache_path = _rentcast_sold_cache_path(target, days)
+    cached = _rentcast_read_json(cache_path)
+
+    if cached and cached.get("response") is not None:
+        payload = cached["response"]
+        mode = "cache"
+        calls = 0
+        diag = {
+            "status": "cache_hit",
+            "http_status": None,
+            "message": None,
+            "counted_successful_call": False,
+            "usage": _rentcast_usage_public(_rentcast_load_usage()),
+        }
+    else:
+        # One broad paid request, then Python performs the strict same-building
+        # filtering locally. This maximizes useful data per RentCast request.
+        params = {
+            "address": _rentcast_full_address(target, include_unit=False),
+            "radius": 0.25,
+            "saleDateRange": int(days),
+            "propertyType": "Condo",
+            "limit": 500,
+        }
+        if subject.get("beds") is not None:
+            beds = int(round(float(subject["beds"])))
+            params["bedrooms"] = f"{max(0, beds - 1)}:{beds + 1}"
+
+        payload, diag = _rentcast_api_get("/properties", params)
+        calls = 1 if diag.get("counted_successful_call") else 0
+        mode = "api"
+        if payload is None:
+            return {
+                "status": diag["status"],
+                "api_calls": calls,
+                "cache_path": str(cache_path),
+                "raw_record_count": 0,
+                "same_building_records": 0,
+                "verified_comps": [],
+                "diagnostic": diag,
+            }
+
+        _rentcast_write_json(cache_path, {
+            "cached_at": utc_now(),
+            "endpoint": "/properties",
+            "query_scope": {
+                "center_address": _rentcast_full_address(target, include_unit=False),
+                "radius_miles": 0.25,
+                "sale_date_range_days": int(days),
+                "property_type": "Condo",
+                "limit": 500,
+            },
+            "response": payload,
+        })
+
+    records = payload if isinstance(payload, list) else []
+    verified = []
+    same_building_count = 0
+    target_unit = norm(target.get("unit"))
+
+    for rec in records:
+        if not isinstance(rec, dict):
+            continue
+        addr = _rentcast_comp_address(rec)
+        if not addr or not same_building(addr, target):
+            continue
+        same_building_count += 1
+
+        unit = extract_unit(addr)
+        if not unit or norm(unit) == target_unit:
+            continue
+
+        ok, sold_date, sold_price, evidence_method = _rentcast_sale_evidence(rec)
+        if not ok:
+            continue
+
+        sqft = _plausible_sqft(rec.get("squareFootage"))
+        verified.append({
+            "unit": unit,
+            "address": addr,
+            "sold_price": sold_price,
+            "sold_date": sold_date,
+            "beds": _num(rec.get("bedrooms")),
+            "baths": _num(rec.get("bathrooms")),
+            "sqft": sqft,
+            "price_per_sqft": round(sold_price / sqft, 2) if sqft else None,
+            "comp_score": None,
+            "match_reasons": [
+                "same_building",
+                "different_unit",
+                "rentcast_property_record_sale_evidence",
+            ],
+            "source": "RentCast Property Records API",
+            "source_url": None,
+            "raw_status": rec.get("status"),
+            "raw_sale_type": None,
+            "feed_classification": "verified_closed_sale",
+            "verification": "unit_level_closed_sale_verified",
+            "verification_method": evidence_method,
+            "rentcast_property_id": rec.get("id"),
+        })
+
+    verified = merge_verified_comps(verified, [])
+    return {
+        "status": "success",
+        "source_mode": mode,
+        "api_calls": calls,
+        "cache_path": str(cache_path),
+        "raw_record_count": len(records),
+        "same_building_records": same_building_count,
+        "verified_comps": verified,
+        "diagnostic": diag,
+    }
 
 def attach_rentcast_to_result(result):
-    target=result.get("parsed_input") or {}
+    target = result.get("parsed_input") or {}
     if not target:
-        result["rentcast"]={"status":"skipped_no_target","api_calls":0}; return result
-    subject={"beds":_num(os.getenv("TARGET_BEDS","2")),"baths":_num(os.getenv("TARGET_BATHS","1")),"sqft":_num(os.getenv("TARGET_SQFT"))}
-    rc=rentcast_value_estimate(target,subject)
-    result["rentcast"]=rc
-    if rc.get("provider_estimate"): result["rentcast_avm"]=rc["provider_estimate"]
-    merged=merge_verified_comps(result.get("comps") or [],rc.get("verified_comps") or [])
-    if merged:
-        result["comps"]=merged
-        result["comps_status"]="verified_closed_sales_available"
-        arv,method,confidence=conservative_arv_from_comps(merged,subject)
-        if arv is not None:
-            result["arv"]=arv; result["arv_status"]="calculated_from_verified_closed_sales"; result["arv_method"]=method; result["arv_confidence"]=confidence
-    result["version"]=VERSION
-    result["rentcast_safety"]={"cache_first":True,"max_api_calls_per_run":1,"provider_avm_is_estimate":True,"listing_price_not_treated_as_closed_sale":True}
-    return result
+        result["rentcast"] = {"status": "skipped_no_target", "api_calls": 0}
+        return result
 
+    # For this diagnostic property we know 2bd/1ba from the subject record.
+    # Environment variables can override these later when the engine is called
+    # from the main application with real subject attributes.
+    subject = {
+        "beds": _num(os.getenv("TARGET_BEDS", "2")),
+        "baths": _num(os.getenv("TARGET_BATHS", "1")),
+        "sqft": _num(os.getenv("TARGET_SQFT")),
+    }
+
+    # Existing AVM cache is reused at zero cost. If absent, V2.6 prioritizes the
+    # sold-property request and does not automatically spend a second call.
+    value_cache = _rentcast_read_json(_rentcast_value_cache_path(target))
+    if value_cache and value_cache.get("response") is not None:
+        rc_value = rentcast_value_estimate(target, subject)
+    else:
+        rc_value = {
+            "status": "skipped_to_preserve_single_call_budget",
+            "api_calls": 0,
+            "cache_path": str(_rentcast_value_cache_path(target)),
+            "provider_estimate": None,
+            "raw_comp_count": 0,
+            "diagnostic": {
+                "status": "skipped",
+                "http_status": None,
+                "message": "V2.6 prioritizes /properties sold records over a new AVM request.",
+                "usage": _rentcast_usage_public(_rentcast_load_usage()),
+            },
+        }
+
+    rc_sold = rentcast_sold_properties(target, subject, days=730)
+
+    total_calls = int(rc_value.get("api_calls") or 0) + int(rc_sold.get("api_calls") or 0)
+    usage = _rentcast_usage_public(_rentcast_load_usage())
+
+    result["rentcast"] = {
+        "status": "success" if rc_sold.get("status") == "success" else rc_sold.get("status"),
+        "api_calls": total_calls,
+        "value": rc_value,
+        "sold_properties": rc_sold,
+        "usage": usage,
+    }
+
+    if rc_value.get("provider_estimate"):
+        result["rentcast_avm"] = rc_value["provider_estimate"]
+
+    verified = rc_sold.get("verified_comps") or []
+    merged = merge_verified_comps(result.get("comps") or [], verified)
+
+    if merged:
+        result["comps"] = merged
+        result["sold_comps_count"] = len(merged)
+        result["verified_closed_comps_count"] = len(merged)
+        result["comps_status"] = "verified_closed_sales_available"
+        result["sold_comps_status"] = "verified_closed_sales_available"
+
+        arv, method, confidence = conservative_arv_from_comps(merged, subject)
+        if arv is not None:
+            result["arv"] = arv
+            result["arv_status"] = "calculated_from_verified_closed_sales"
+            result["arv_method"] = method
+            result["arv_confidence"] = confidence
+
+    result["version"] = VERSION
+    result["rentcast_safety"] = {
+        "strategy": "FREE -> CACHE -> API -> AI",
+        "cache_first": True,
+        "max_api_calls_per_run": RENTCAST_MAX_CALLS_PER_RUN,
+        "monthly_plan_limit": RENTCAST_MONTHLY_LIMIT,
+        "warning_at": RENTCAST_WARNING_AT,
+        "automatic_stop_at": RENTCAST_AUTO_STOP_AT,
+        "reserve_requests": RENTCAST_MONTHLY_LIMIT - RENTCAST_AUTO_STOP_AT,
+        "provider_avm_is_estimate": True,
+        "listing_price_not_treated_as_closed_sale": True,
+        "sold_comp_requires_explicit_sale_date_and_price": True,
+    }
+    return result
 
 def build_result(address, city, state, zipcode):
     parsed = parse_address(address)
@@ -1781,7 +2206,7 @@ def main():
     try:
         result = build_result(args.address, args.city, args.state, args.zipcode)
 
-        # V2.5.1 safety fix:
+        # V2.6 safety fix:
         # Some safe building-reference branches return early from build_result().
         # Ensure the RentCast layer is attached exactly once before the result is saved.
         if "rentcast" not in result:
@@ -1805,20 +2230,37 @@ def main():
     print_summary(result)
 
     rc = result.get("rentcast") or {}
-    print("\n--- RENTCAST V2.5.1 ---")
+    print("\n--- RENTCAST V2.6 ---")
     print(f"RentCast status: {rc.get('status', 'not_attached')}")
     print(f"RentCast API calls this run: {rc.get('api_calls', 0)}")
-    print(f"RentCast raw comps: {rc.get('raw_comp_count', 0)}")
-    print(f"RentCast verified unit comps: {len(rc.get('verified_comps') or [])}")
-    print(f"RentCast cache: {rc.get('cache_path', '[none]')}")
-    diag = rc.get("diagnostic") or {}
-    if diag.get("http_status") is not None:
-        print(f"RentCast HTTP status: {diag.get('http_status')}")
-    if diag.get("message"):
-        print(f"RentCast diagnostic: {diag.get('message')}")
-    avm = rc.get("provider_estimate") or {}
+
+    usage = rc.get("usage") or {}
+    print(
+        f"RentCast usage: {usage.get('used', 0)}/{usage.get('limit', RENTCAST_MONTHLY_LIMIT)} "
+        f"| remaining: {usage.get('remaining', RENTCAST_MONTHLY_LIMIT)} "
+        f"| reset: {usage.get('next_reset', '[unknown]')} "
+        f"| level: {usage.get('level', 'unknown')}"
+    )
+
+    sold = rc.get("sold_properties") or {}
+    print(f"RentCast sold source mode: {sold.get('source_mode', '[none]')}")
+    print(f"RentCast sold raw records: {sold.get('raw_record_count', 0)}")
+    print(f"RentCast same-building records: {sold.get('same_building_records', 0)}")
+    print(f"RentCast verified unit sold comps: {len(sold.get('verified_comps') or [])}")
+    print(f"RentCast sold cache: {sold.get('cache_path', '[none]')}")
+    sdiag = sold.get("diagnostic") or {}
+    if sdiag.get("http_status") is not None:
+        print(f"RentCast sold HTTP status: {sdiag.get('http_status')}")
+    if sdiag.get("message"):
+        print(f"RentCast sold diagnostic: {sdiag.get('message')}")
+
+    value = rc.get("value") or {}
+    avm = value.get("provider_estimate") or {}
     if avm.get("value") is not None:
-        print(f"RentCast provider AVM estimate: ${avm.get('value'):,.0f} (ESTIMATE, not a closed sale)")
+        print(
+            f"RentCast provider AVM estimate: ${avm.get('value'):,.0f} "
+            "(ESTIMATE, reused from cache when available)"
+        )
     print("--- END RENTCAST ---")
 
     print(f"\n📄 JSON נשמר: {output_file}")
