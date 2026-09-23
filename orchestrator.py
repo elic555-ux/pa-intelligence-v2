@@ -16,7 +16,7 @@ PROPERTIES_FILE = "properties.json"
 CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.1-integration"
+ORCHESTRATOR_VERSION = "2.2-mls-qa"
 
 PROPERTY_TYPE_ALIASES = {
     "single family": "Single Family",
@@ -316,6 +316,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
             sqft = safe_number(row.get("SQUARE FEET"), None, int)
             raw_property_type = row.get("PROPERTY TYPE") or ""
             property_type = normalize_property_type(raw_property_type)
+            source_location = (row.get("LOCATION") or "").strip() or None
             row_city = row.get("CITY") or clean_city
             zip_code = row.get("ZIP OR POSTAL CODE") or ""
             home_url = row.get(
@@ -341,6 +342,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 "type": property_type,
                 "property_type": property_type,
                 "source_property_type": raw_property_type or None,
+                "source_location": source_location,
                 "strategy": strategy_data["strategy"],
                 "strategy_label": strategy_data["strategy_label"],
                 "gross_yield": strategy_data["gross_yield"],
@@ -382,7 +384,7 @@ def comparable_changed(old, new):
     tracked_fields = [
         "price", "deal_type", "beds", "baths", "sqft", "year_built",
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
-        "type", "property_type", "source_property_type",
+        "type", "property_type", "source_property_type", "source_location",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
 
@@ -573,6 +575,7 @@ def run_orchestrator():
     max_sqft = safe_number(server_config.get("maxSqft"), 99999, int)
     min_beds = safe_number(server_config.get("minBeds"), 0, int)
     max_beds = safe_number(server_config.get("maxBeds"), 99, int)
+    min_baths = safe_number(server_config.get("minBaths"), 0, float)
     selected_property_types = [
         normalize_property_type(v) or str(v).strip()
         for v in (server_config.get("propertyTypes") or [])
@@ -584,9 +587,10 @@ def run_orchestrator():
     log_entry["active_sectors"] = active_sectors_now
     log_entry["cities"] = cities_list
     log_entry["property_types"] = selected_property_types
+    log_entry["min_baths"] = min_baths
 
     print(f"🎯 אזורי יעד: {cities_list}")
-    print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds}")
+    print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds} | Baths min: {min_baths:g}")
     print(f"🏠 סוגי נכסים: {selected_property_types or ['הכל']}")
     print(f"📋 סקטורים פעילים: {active_sectors_now}")
 
@@ -599,28 +603,55 @@ def run_orchestrator():
     log_entry["source_results"] = len(combined)
 
     final_filtered = []
+    filter_rejections = {
+        "price": 0, "sqft": 0, "beds": 0, "baths": 0,
+        "property_type": 0, "property_type_unknown": 0,
+    }
+    source_type_counts = {}
+
     for prop in combined:
         p_price = safe_number(prop.get("price"), None, float)
         p_sqft = safe_number(prop.get("sqft"), None, int)
         p_beds = safe_number(prop.get("beds"), None, int)
+        p_baths = safe_number(prop.get("baths"), None, float)
         p_type = prop.get("property_type") or prop.get("type")
 
+        raw_type = str(prop.get("source_property_type") or "UNKNOWN").strip() or "UNKNOWN"
+        source_type_counts[raw_type] = source_type_counts.get(raw_type, 0) + 1
+
         if p_price is None or not (min_price <= p_price <= max_price):
+            filter_rejections["price"] += 1
             continue
         if min_sqft > 0 and (p_sqft is None or p_sqft < min_sqft):
+            filter_rejections["sqft"] += 1
             continue
         if max_sqft < 99999 and (p_sqft is None or p_sqft > max_sqft):
+            filter_rejections["sqft"] += 1
             continue
         if min_beds > 0 and (p_beds is None or p_beds < min_beds):
+            filter_rejections["beds"] += 1
             continue
         if max_beds < 99 and (p_beds is None or p_beds > max_beds):
+            filter_rejections["beds"] += 1
             continue
-        if selected_property_types and p_type not in selected_property_types:
+        if min_baths > 0 and (p_baths is None or p_baths < min_baths):
+            filter_rejections["baths"] += 1
             continue
+        if selected_property_types:
+            if not p_type:
+                filter_rejections["property_type_unknown"] += 1
+                continue
+            if p_type not in selected_property_types:
+                filter_rejections["property_type"] += 1
+                continue
 
         final_filtered.append(prop)
 
     log_entry["after_filters"] = len(final_filtered)
+    log_entry["filter_rejections"] = filter_rejections
+    log_entry["source_property_type_counts"] = source_type_counts
+    print(f"🧪 MLS QA — דחיות לפי מסנן: {filter_rejections}")
+    print(f"🏷️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
 
     existing_props_dict = load_existing_properties()
