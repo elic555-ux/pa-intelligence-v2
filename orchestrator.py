@@ -16,7 +16,7 @@ PROPERTIES_FILE = "properties.json"
 CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.3-market-state"
+ORCHESTRATOR_VERSION = "2.4-geography-qa"
 
 PROPERTY_TYPE_ALIASES = {
     "single family": "Single Family",
@@ -343,6 +343,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 "property_type": property_type,
                 "source_property_type": raw_property_type or None,
                 "source_location": source_location,
+                "source_scan_area": clean_city,
                 "strategy": strategy_data["strategy"],
                 "strategy_label": strategy_data["strategy_label"],
                 "gross_yield": strategy_data["gross_yield"],
@@ -384,7 +385,7 @@ def comparable_changed(old, new):
     tracked_fields = [
         "price", "deal_type", "beds", "baths", "sqft", "year_built",
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
-        "type", "property_type", "source_property_type", "source_location",
+        "type", "property_type", "source_property_type", "source_location", "source_scan_area",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
 
@@ -583,22 +584,64 @@ def run_orchestrator():
     ]
     selected_property_types = list(dict.fromkeys(selected_property_types))
     cities_list = server_config.get("cities") or ["Pittsburgh"]
+    selected_neighborhoods = [
+        str(v).strip()
+        for v in (server_config.get("neighborhoods") or [])
+        if str(v).strip()
+    ]
+    selected_neighborhoods = list(dict.fromkeys(selected_neighborhoods))
 
     log_entry["active_sectors"] = active_sectors_now
     log_entry["cities"] = cities_list
     log_entry["property_types"] = selected_property_types
     log_entry["min_baths"] = min_baths
     log_entry["market_state_basis"] = "raw_live_mls_before_user_filters"
+    log_entry["selected_neighborhoods"] = selected_neighborhoods
+    log_entry["neighborhood_filter_status"] = "audit_only_not_enforced"
 
     print(f"🎯 אזורי יעד: {cities_list}")
     print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds} | Baths min: {min_baths:g}")
     print(f"🏠 סוגי נכסים: {selected_property_types or ['הכל']}")
+    print(f"🗺️ שכונות שנבחרו בממשק: {len(selected_neighborhoods)} (מצב QA בלבד — עדיין לא מסנן)")
     print(f"📋 סקטורים פעילים: {active_sectors_now}")
 
     live_results = []
     if "mls" in active_sectors_now:
         for city in cities_list:
             live_results.extend(fetch_live_mls_for_city(city, min_price, max_price))
+
+    # Geography QA: prove what each configured Redfin region actually returned.
+    geography_qa = {}
+    for area in cities_list:
+        area_rows = [p for p in live_results if p.get("source_scan_area") == area]
+        target = REGION_MAP.get(area) or {}
+        actual_cities = {}
+        source_locations = {}
+        city_mismatch_count = 0
+
+        for p in area_rows:
+            actual_city = str(p.get("city") or "UNKNOWN").strip() or "UNKNOWN"
+            actual_cities[actual_city] = actual_cities.get(actual_city, 0) + 1
+            loc = str(p.get("source_location") or "UNKNOWN").strip() or "UNKNOWN"
+            source_locations[loc] = source_locations.get(loc, 0) + 1
+
+            # region_type 6 is a city query; type 5 (Allegheny) is intentionally broader.
+            if str(target.get("region_type")) == "6" and actual_city.lower() != area.lower():
+                city_mismatch_count += 1
+
+        geography_qa[area] = {
+            "region_type": target.get("region_type"),
+            "rows": len(area_rows),
+            "city_mismatch_count": city_mismatch_count,
+            "actual_cities": actual_cities,
+            "source_locations": source_locations,
+        }
+        print(
+            f"🌎 GEO QA — {area}: {len(area_rows)} rows | "
+            f"city mismatches: {city_mismatch_count} | actual cities: {actual_cities}"
+        )
+
+    log_entry["geography_qa"] = geography_qa
 
     combined = live_results + get_placeholder_sector_results(active_sectors_now)
     log_entry["source_results"] = len(combined)
@@ -661,6 +704,13 @@ def run_orchestrator():
     log_entry["after_filters"] = len(final_filtered)
     log_entry["filter_rejections"] = filter_rejections
     log_entry["source_property_type_counts"] = source_type_counts
+    location_counts = {}
+    for prop in live_results:
+        loc = str(prop.get("source_location") or "UNKNOWN").strip() or "UNKNOWN"
+        location_counts[loc] = location_counts.get(loc, 0) + 1
+    top_locations = sorted(location_counts.items(), key=lambda x: (-x[1], x[0]))[:25]
+    log_entry["redfin_location_top25"] = dict(top_locations)
+    print(f"📍 GEO QA — ערכי LOCATION מובילים מ-Redfin: {dict(top_locations)}")
     print(f"👁️ MLS MARKET STATE — נצפו במקור LIVE לפני מסננים: {len(raw_mls_seen_keys)}")
     print(f"🧪 MLS QA — דחיות לפי מסנן: {filter_rejections}")
     print(f"🏷️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
