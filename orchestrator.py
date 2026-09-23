@@ -16,7 +16,7 @@ PROPERTIES_FILE = "properties.json"
 CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.2-mls-qa"
+ORCHESTRATOR_VERSION = "2.3-market-state"
 
 PROPERTY_TYPE_ALIASES = {
     "single family": "Single Family",
@@ -455,9 +455,9 @@ def merge_property(existing, incoming, scan_id):
     return merged, "updated" if changed else "unchanged"
 
 
-def mark_missing_mls_candidates(existing_props, seen_keys, scanned_cities, scan_id):
+def mark_missing_mls_candidates(existing_props, raw_source_seen_keys, scanned_cities, scan_id):
     """
-    Mark previously scanner-managed MLS properties that disappear from a live scan
+    Mark previously scanner-managed MLS properties that disappear from the raw live source feed
     as OFF-MARKET CANDIDATES after repeated misses. This is deliberately not called
     verified off-market: disappearance can also be caused by upstream API limits or
     listing/feed changes.
@@ -467,7 +467,7 @@ def mark_missing_mls_candidates(existing_props, seen_keys, scanned_cities, scan_
     candidates = 0
 
     for key, prop in existing_props.items():
-        if key in seen_keys:
+        if key in raw_source_seen_keys:
             continue
         if prop.get("source_type") != "mls" or prop.get("data_status") != "live":
             continue
@@ -588,6 +588,7 @@ def run_orchestrator():
     log_entry["cities"] = cities_list
     log_entry["property_types"] = selected_property_types
     log_entry["min_baths"] = min_baths
+    log_entry["market_state_basis"] = "raw_live_mls_before_user_filters"
 
     print(f"🎯 אזורי יעד: {cities_list}")
     print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds} | Baths min: {min_baths:g}")
@@ -601,6 +602,16 @@ def run_orchestrator():
 
     combined = live_results + get_placeholder_sector_results(active_sectors_now)
     log_entry["source_results"] = len(combined)
+
+    # Market presence must be based on the raw LIVE MLS response, before the
+    # user's investment filters. A filter change must never create fake
+    # Off-Market candidates.
+    raw_mls_seen_keys = {
+        property_key(prop)
+        for prop in live_results
+        if property_key(prop)
+    }
+    log_entry["raw_mls_seen"] = len(raw_mls_seen_keys)
 
     final_filtered = []
     filter_rejections = {
@@ -650,6 +661,7 @@ def run_orchestrator():
     log_entry["after_filters"] = len(final_filtered)
     log_entry["filter_rejections"] = filter_rejections
     log_entry["source_property_type_counts"] = source_type_counts
+    print(f"👁️ MLS MARKET STATE — נצפו במקור LIVE לפני מסננים: {len(raw_mls_seen_keys)}")
     print(f"🧪 MLS QA — דחיות לפי מסנן: {filter_rejections}")
     print(f"🏷️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
@@ -670,7 +682,7 @@ def run_orchestrator():
 
     if "mls" in active_sectors_now:
         log_entry["off_market_candidates"] = mark_missing_mls_candidates(
-            existing_props_dict, seen_keys, cities_list, scan_id
+            existing_props_dict, raw_mls_seen_keys, cities_list, scan_id
         )
 
     final_merged_list = list(existing_props_dict.values())
