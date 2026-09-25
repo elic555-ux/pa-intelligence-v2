@@ -44,6 +44,9 @@ jobs:
 
           # מאגר הנכסים + היסטוריית הסריקות הם State קבוע של הסורק.
           git add properties.json scan_log.json
+          if [ -f geo_catalog.json ]; then
+            git add geo_catalog.json
+          fi
 
           # ה-Analyzer יוצר את הקובץ רק כאשר יש מידע חדש לשמור.
           # אם הוא קיים, שומרים אותו כדי למנוע Geocoding חוזר בהרצה הבאה.
