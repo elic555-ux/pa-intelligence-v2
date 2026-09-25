@@ -17,7 +17,7 @@ CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.4-geography-qa"
+ORCHESTRATOR_VERSION = "2.5-geography-filter"
 
 PROPERTY_TYPE_ALIASES = {
     "single family": "Single Family",
@@ -219,6 +219,34 @@ def load_existing_properties():
         if key:
             prop_dict[key] = item
     return prop_dict
+
+
+def geography_rejection(prop, geo_areas):
+    """Return a rejection reason for a LIVE MLS row, or None.
+
+    Selections are scoped to the Redfin query that supplied the row. A county
+    row also honors a selected city's narrower location choices so the broad
+    county request cannot reintroduce a city row excluded by that choice.
+    """
+    if not isinstance(geo_areas, dict):
+        return None  # Old scan_config.json remains backward compatible.
+    area = str(prop.get("source_scan_area") or "").strip()
+    city = str(prop.get("city") or "").strip()
+    target = REGION_MAP.get(area) or {}
+    if str(target.get("region_type")) == "6" and city.casefold() != area.casefold():
+        return "city_mismatch"
+    location = " ".join(str(prop.get("source_location") or "").split()).casefold()
+    scopes = [geo_areas.get(area)]
+    if str(target.get("region_type")) == "5" and city != area:
+        scopes.append(geo_areas.get(city))
+    for scope in scopes:
+        if not isinstance(scope, dict) or scope.get("allLocations") is not False:
+            continue
+        allowed = {" ".join(str(x).split()).casefold()
+                   for x in (scope.get("locations") or []) if isinstance(x, str)}
+        if not location or location not in allowed:
+            return "location"
+    return None
 
 
 def append_scan_log(entry):
@@ -584,7 +612,8 @@ def run_orchestrator():
         if str(v).strip()
     ]
     selected_property_types = list(dict.fromkeys(selected_property_types))
-    cities_list = server_config.get("cities") or ["Pittsburgh"]
+    configured_cities = server_config.get("cities")
+    cities_list = configured_cities if isinstance(configured_cities, list) else ["Pittsburgh"]
     selected_neighborhoods = [
         str(v).strip()
         for v in (server_config.get("neighborhoods") or [])
@@ -598,12 +627,20 @@ def run_orchestrator():
     log_entry["min_baths"] = min_baths
     log_entry["market_state_basis"] = "raw_live_mls_before_user_filters"
     log_entry["selected_neighborhoods"] = selected_neighborhoods
-    log_entry["neighborhood_filter_status"] = "audit_only_not_enforced"
+    selected_geo_areas = server_config.get("geoAreas")
+    if isinstance(selected_geo_areas, dict):
+        selected_geo_areas = {area: spec for area, spec in selected_geo_areas.items()
+                              if area in cities_list and isinstance(spec, dict)}
+        log_entry["neighborhood_filter_status"] = "enforced_per_scan_area"
+    else:
+        selected_geo_areas = None
+        log_entry["neighborhood_filter_status"] = "audit_only_legacy_config"
 
     print(f"🎯 אזורי יעד: {cities_list}")
     print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds} | Baths min: {min_baths:g}")
     print(f"🏠 סוגי נכסים: {selected_property_types or ['הכל']}")
-    print(f"🗺️ שכונות שנבחרו בממשק: {len(selected_neighborhoods)} (מצב QA בלבד — עדיין לא מסנן)")
+    print(f"🗺️ שכונות שנבחרו בממשק: {len(selected_neighborhoods)} | "
+          f"סינון: {log_entry['neighborhood_filter_status']}")
     print(f"📋 סקטורים פעילים: {active_sectors_now}")
 
     live_results = []
@@ -689,6 +726,7 @@ def run_orchestrator():
     filter_rejections = {
         "price": 0, "sqft": 0, "beds": 0, "baths": 0,
         "property_type": 0, "property_type_unknown": 0,
+        "city_mismatch": 0, "location": 0,
     }
     source_type_counts = {}
 
@@ -701,6 +739,12 @@ def run_orchestrator():
 
         raw_type = str(prop.get("source_property_type") or "UNKNOWN").strip() or "UNKNOWN"
         source_type_counts[raw_type] = source_type_counts.get(raw_type, 0) + 1
+
+        if prop.get("source_type") == "mls" and selected_geo_areas is not None:
+            reason = geography_rejection(prop, selected_geo_areas)
+            if reason:
+                filter_rejections[reason] += 1
+                continue
 
         if p_price is None or not (min_price <= p_price <= max_price):
             filter_rejections["price"] += 1
