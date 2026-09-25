@@ -839,6 +839,18 @@
                 }
 
                 const rawList = await res.json();
+                try {
+                    const sheriffResponse = await fetch('sheriff_listings.json?t=' + Date.now());
+                    if (sheriffResponse.ok) {
+                        const sheriffRows = await sheriffResponse.json();
+                        if (Array.isArray(sheriffRows)) {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            rawList.push(...sheriffRows.filter(p => p.sheriff_status === 'Active' &&
+                                p.sale_date && new Date(p.sale_date + 'T12:00:00') >= today));
+                        }
+                    }
+                } catch (error) { console.warn('Sheriff list unavailable', error); }
                 const seenKeys = new Set(); 
                 let activeProps = [];
                 let archiveChanged = false;
@@ -847,7 +859,8 @@
                 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
                 rawList.forEach(p => {
-                    const normKey = p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id);
+                    const normKey = (p.source_type === 'sheriff' ? 'sheriff:' + p.docket_id :
+                        p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id));
                     if (!seenKeys.has(normKey)) { 
                         seenKeys.add(normKey); 
                         if (!p.listed_date) p.listed_date = '05/09/2026'; 
@@ -1193,7 +1206,7 @@
                             ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
                         </td>
-                        <td class="p-3 font-mono font-black text-emerald-400 text-sm">$${(p.price||0).toLocaleString()}</td>
+                        <td class="p-3 font-mono font-black text-emerald-400 text-sm">${p.price ? '$' + Number(p.price).toLocaleString() : 'לא פורסם'}</td>
                         <td class="p-3 font-bold text-gray-300">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
                         <td class="p-3"><div class="text-emerald-300 font-mono">💰 ${p.projected_rent||'-'}</div><div class="text-amber-300 text-[11px]">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'-')}</div></td>
                         <td class="p-3 font-mono text-amber-300">📅 ${p.listed_date||'-'}</td>
@@ -1220,7 +1233,7 @@
                             <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
                             
                             <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
-                            <div class="text-2xl font-black text-emerald-400 font-mono mb-2">$${(p.price||0).toLocaleString()}</div>
+                            <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${p.price ? '$' + Number(p.price).toLocaleString() : 'מחיר לא פורסם'}</div>
                             
                             <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
                             <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'-'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'-')}</strong></span></div>
