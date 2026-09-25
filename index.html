@@ -115,22 +115,22 @@
         <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3.5 shadow-lg">
             <div><label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label><select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none"><option value="all">הכל</option><option value="turnkey">🔑 מניב מיידי</option><option value="value_add">🔨 השבחה</option></select></div>
             
-            <!-- V8.4: פילטר מרובה ערים חכם -->
+            <!-- מסנן גאוגרפי ללוח הנכסים הקיימים בלבד -->
             <div class="relative" id="city-filter-wrapper">
-                <label class="block text-xs font-bold text-gray-300 mb-1.5">עיר / אזור סריקה</label>
-                <div class="w-full bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-between px-2.5 py-2 cursor-pointer" onclick="toggleCityDropdown(event)">
+                <label class="block text-xs font-bold text-gray-300 mb-1.5">מחוז / עיר / אזור מקור</label>
+                <button type="button" class="w-full bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-between px-2.5 py-2 text-right" onclick="toggleCityDropdown(event)">
                     <span id="city-dropdown-text" class="text-xs text-white font-bold truncate pr-1">כל האזורים</span>
                     <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
-                </div>
-                <!-- Dropdown Menu -->
-                <div id="city-dropdown-list" class="hidden absolute top-full mt-1 left-0 right-0 md:w-64 w-full bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto custom-scrollbar">
-                    <div class="sticky top-0 bg-gray-900 border-b border-gray-800 p-2.5 flex justify-between items-center z-10">
-                        <button onclick="setAllCityFilters(true, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">סמן הכל</button>
-                        <button onclick="setAllCityFilters(false, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">נקה הכל</button>
+                </button>
+                <div id="city-dropdown-list" class="hidden absolute top-full mt-1 right-0 md:w-[400px] w-[min(90vw,400px)] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-[420px] overflow-y-auto custom-scrollbar">
+                    <div class="sticky top-0 bg-gray-900 border-b border-gray-800 p-2.5 z-10 space-y-2">
+                        <input id="main-geo-search" type="search" placeholder="חפש מחוז, עיר או אזור..." oninput="populateCityDropdown()" onclick="event.stopPropagation()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500">
+                        <div class="flex justify-between items-center">
+                            <button type="button" onclick="setAllCityFilters(true, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">הצג את כל הנכסים</button>
+                            <button type="button" onclick="setAllCityFilters(false, event)" class="text-[11px] font-bold text-gray-400 hover:text-white">בחר אזורים מאפס</button>
+                        </div>
                     </div>
-                    <div id="city-checkbox-container" class="p-2 space-y-1 flex flex-col text-xs text-gray-200">
-                        <!-- Populated via JS -->
-                    </div>
+                    <div id="city-checkbox-container" class="p-2 space-y-1 text-xs text-gray-200"></div>
                 </div>
             </div>
 
@@ -406,7 +406,7 @@
                 </div>
             </div>
             <div class="border-t border-gray-800 pt-3 space-y-2">
-                <span class="text-xs font-bold text-emerald-400">אזורים נוספים שהתגלו בסריקות (LOCATION מהמקור):</span>
+                <span class="text-xs font-bold text-emerald-400">שכונות ואזורים לפי עיר (שמות מהרשימה ומהמקור):</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
                 <div id="setting-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button onclick="saveScanSettingsToServer()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-2"><i data-lucide="upload-cloud" class="w-4 h-4"></i> שדר לשרת ושמור</button></div>
@@ -527,7 +527,7 @@
                 </div>
             </div>
             <div class="border-t border-gray-800 pt-3 space-y-2">
-                <span class="text-xs font-bold text-emerald-400">אזורים נוספים שהתגלו בסריקות (LOCATION מהמקור):</span>
+                <span class="text-xs font-bold text-emerald-400">שכונות ואזורים לפי עיר (שמות מהרשימה ומהמקור):</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
                 <div id="ondemand-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5"><i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת</button></div>
@@ -552,7 +552,7 @@
         let scanStartTime = null;
 
         // V8.4: משתנים לסינון ערים רב-ברירה
-        let selectedCitiesFilter = new Set();
+        let selectedCitiesFilter = null; // null means no geographic filter
         let allAvailableCities = [];
 
         function handlePriceInput(input) { let raw = String(input.value||'').replace(/\D/g, ''); input.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : ''; }
@@ -803,7 +803,7 @@
             }
             if (userWatchlist.has(idStr)) { userWatchlist.delete(idStr); saveWatchlistToStorage(); }
             alert(`הנכס "${currentSelectedProperty.address}" הועבר בהצלחה לחדר העסקאות!`);
-            closePropertyModal(); renderCards(); updateCounts(); updateWatchlistCountDisplay();
+            closePropertyModal(); populateCityDropdown(); renderCards(); updateCounts(); updateWatchlistCountDisplay();
         }
 
         function toggleWatchlist(propId, event) {
@@ -919,26 +919,42 @@
             container.replaceChildren();
             const saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
             const oldSelections = new Set(saved.neighborhoods || []);
-            const known = new Set(Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
-                .map(input => `${input.dataset.city}|${input.value.toLowerCase()}`));
-            let total = 0;
-            for (const [area, values] of Object.entries(areas).sort((a,b) => a[0].localeCompare(b[0]))) {
+            const staticInputs = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
+                .filter(input => !input.closest(`#${prefix}-dynamic-neighborhoods`));
+            const staticGrid = staticInputs[0]?.closest('.grid');
+            if (staticGrid) staticGrid.classList.add('hidden');
+            const byArea = {};
+            for (const input of staticInputs) (byArea[input.dataset.city] ||= []).push(input);
+            const names = new Set([...Object.keys(areas), ...Object.keys(byArea)]);
+            for (const area of Array.from(names).sort((a,b) => a.localeCompare(b))) {
                 const countyArea = area === 'Allegheny';
                 const parent = document.querySelector(countyArea
                     ? `.${prefix}-county-box[value="Allegheny"]`
                     : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
-                if (!parent) continue; // Show only regions the current scanner can target.
-                const locations = Array.from(values).filter(v => !known.has(`${area}|${v.toLowerCase()}`))
-                    .sort((a,b) => a.localeCompare(b));
-                if (!locations.length) continue;
+                if (!parent) continue;
+                const fromSource = Array.from(areas[area] || []).sort((a,b) => a.localeCompare(b));
+                const sourceNames = new Set(fromSource.map(v => v.toLowerCase()));
+                const oldInputs = byArea[area] || [];
+                const known = new Set(oldInputs.map(input => input.value.toLowerCase()));
+                const newLocations = fromSource.filter(v => !known.has(v.toLowerCase()));
+                if (!oldInputs.length && !newLocations.length) continue;
                 const group = document.createElement('details');
                 group.className = 'bg-gray-950 border border-gray-800 rounded-xl px-3 py-2';
                 const summary = document.createElement('summary');
                 summary.className = 'cursor-pointer text-emerald-300 font-bold';
-                summary.textContent = `${countyArea ? 'מחוז ' : 'עיר '}${area} — ${locations.length} אזורים נוספים`;
+                summary.textContent = `${countyArea ? 'מחוז ' : 'עיר '}${area} — ${oldInputs.length + newLocations.length} שכונות / אזורי מקור`;
                 const grid = document.createElement('div');
-                grid.className = 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 mt-2';
-                for (const location of locations) {
+                grid.className = 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 mt-2 text-[11px]';
+                for (const input of oldInputs) {
+                    const label = input.closest('label');
+                    if (!label) continue;
+                    if (!sourceNames.has(input.value.toLowerCase())) {
+                        label.title = 'שם מהרשימה הישנה; טרם נמצא בשם זהה בנתוני המקור';
+                        label.classList.add('border-amber-700/50');
+                    }
+                    grid.append(label);
+                }
+                for (const location of newLocations) {
                     const label = document.createElement('label');
                     label.dir = 'ltr';
                     label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
@@ -952,74 +968,128 @@
                     input.addEventListener('change', prefix === 'setting' ? saveSettingsStateLocally : saveOnDemandStateLocally);
                     const name = document.createElement('span'); name.textContent = location;
                     label.append(input, name); grid.append(label);
-                    total++;
                 }
                 group.append(summary, grid); container.append(group);
             }
-            if (!total) container.textContent = 'אין כרגע אזורים נוספים שנצפו במקור עבור הערים שנבחרו.';
+            if (!container.children.length) container.textContent = 'אין עדיין אזורים זמינים עבור הערים האלה.';
         }
 
-        // V8.4: פונקציות לתפריט הערים החכם
+        // סינון לוח קיים לפי מחוז, עיר וערך LOCATION מהנכסים השמורים.
+        const MAIN_COUNTY_BY_CITY = {
+            Pittsburgh: 'Allegheny', Philadelphia: 'Philadelphia', Allentown: 'Lehigh',
+            Reading: 'Berks', Erie: 'Erie', Scranton: 'Lackawanna', Lancaster: 'Lancaster'
+        };
+        function mainGeoParts(p) {
+            const city = String(p.city || 'עיר לא ידועה').trim();
+            const scanArea = String(p.source_scan_area || '').trim();
+            const county = String(p.county || '').trim()
+                || (scanArea === 'Allegheny' ? 'Allegheny' : MAIN_COUNTY_BY_CITY[city])
+                || 'מחוז לא מזוהה';
+            return [county, city, String(p.source_location || '').trim()];
+        }
+        function mainGeoKey(p) { return JSON.stringify(mainGeoParts(p)); }
         function toggleCityDropdown(e) {
             e.stopPropagation();
             document.getElementById('city-dropdown-list').classList.toggle('hidden');
         }
-
+        function mainGeoToggle(keys, checked) {
+            if (selectedCitiesFilter === null) selectedCitiesFilter = new Set(allAvailableCities);
+            keys.forEach(key => checked ? selectedCitiesFilter.add(key) : selectedCitiesFilter.delete(key));
+            if (selectedCitiesFilter.size === allAvailableCities.length) selectedCitiesFilter = null;
+            populateCityDropdown();
+            renderCards();
+        }
+        function mainGeoRow(labelText, count, keys, depth = 0) {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-2 cursor-pointer hover:bg-gray-800 px-2 py-1 rounded-lg';
+            label.style.paddingRight = `${8 + depth * 14}px`;
+            label.addEventListener('click', e => e.stopPropagation());
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 'accent-blue-500 w-3.5 h-3.5';
+            const picked = keys.filter(key => selectedCitiesFilter === null || selectedCitiesFilter.has(key)).length;
+            cb.checked = picked === keys.length && keys.length > 0;
+            cb.indeterminate = picked > 0 && picked < keys.length;
+            cb.addEventListener('change', () => mainGeoToggle(keys, cb.checked));
+            const name = document.createElement('span'); name.textContent = labelText;
+            name.className = 'flex-1 truncate'; name.dir = 'ltr';
+            const badge = document.createElement('span'); badge.textContent = count;
+            badge.className = 'text-blue-300 font-mono';
+            label.append(cb, name, badge);
+            return label;
+        }
         function populateCityDropdown() {
             const container = document.getElementById('city-checkbox-container');
-            allAvailableCities = [...new Set(rawProperties.filter(p => !p.is_archived).map(p => `${p.city} (${p.county})`))].sort();
-            
-            // בטעינה ראשונה, אם הרשימה ריקה - נסמן את הכל כברירת מחדל כדי שהלוח יהיה מלא
-            if(selectedCitiesFilter.size === 0 && container.innerHTML.trim() === "") {
-                allAvailableCities.forEach(c => selectedCitiesFilter.add(c));
+            const query = (document.getElementById('main-geo-search')?.value || '').trim().toLowerCase();
+            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
+            const tree = new Map(), keys = new Set();
+            for (const p of rawProperties) {
+                if (p.is_archived || pipelineIds.has(String(p.id))) continue;
+                const [county, city, location] = mainGeoParts(p);
+                const key = mainGeoKey(p); keys.add(key);
+                if (!tree.has(county)) tree.set(county, {count: 0, cities: new Map(), keys: new Set()});
+                const countyNode = tree.get(county); countyNode.count++; countyNode.keys.add(key);
+                if (!countyNode.cities.has(city)) countyNode.cities.set(city, {count: 0, locations: new Map(), keys: new Set()});
+                const cityNode = countyNode.cities.get(city); cityNode.count++; cityNode.keys.add(key);
+                const loc = location || 'ללא אזור מקור';
+                if (!cityNode.locations.has(loc)) cityNode.locations.set(loc, {count: 0, keys: new Set()});
+                cityNode.locations.get(loc).count++;
+                cityNode.locations.get(loc).keys.add(key);
             }
-
-            container.innerHTML = '';
-            allAvailableCities.forEach(c => {
-                const isChecked = selectedCitiesFilter.has(c) ? 'checked' : '';
-                container.innerHTML += `
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-800 p-1.5 rounded-lg transition border border-transparent hover:border-gray-700" onclick="event.stopPropagation()">
-                        <input type="checkbox" value="${c}" ${isChecked} onchange="updateCityFilter(this)" class="accent-blue-500 w-3.5 h-3.5 rounded bg-gray-900 border-gray-700">
-                        <span class="truncate" dir="ltr">${c}</span>
-                    </label>
-                `;
-            });
+            allAvailableCities = Array.from(keys);
+            if (selectedCitiesFilter !== null) {
+                selectedCitiesFilter = new Set([...selectedCitiesFilter].filter(key => keys.has(key)));
+                if (selectedCitiesFilter.size === keys.size && keys.size) selectedCitiesFilter = null;
+            }
+            container.replaceChildren();
+            const sorted = entries => [...entries].sort((a,b) => b[1].count - a[1].count || a[0].localeCompare(b[0]));
+            let shown = 0;
+            for (const [county, countyNode] of sorted(tree)) {
+                const countyMatch = county.toLowerCase().includes(query);
+                const countyDetails = document.createElement('details');
+                countyDetails.className = 'border border-gray-800 rounded-lg bg-gray-950';
+                countyDetails.open = Boolean(query);
+                const countySummary = document.createElement('summary');
+                countySummary.className = 'cursor-pointer list-none';
+                countySummary.append(mainGeoRow(county, countyNode.count, [...countyNode.keys]));
+                let visibleCities = 0;
+                for (const [city, cityNode] of sorted(countyNode.cities)) {
+                    const cityMatch = countyMatch || city.toLowerCase().includes(query);
+                    const cityDetails = document.createElement('details');
+                    cityDetails.className = 'border-t border-gray-800';
+                    cityDetails.open = Boolean(query);
+                    const citySummary = document.createElement('summary');
+                    citySummary.className = 'cursor-pointer list-none';
+                    citySummary.append(mainGeoRow(city, cityNode.count, [...cityNode.keys], 1));
+                    let visibleLocations = 0;
+                    for (const [location, locNode] of sorted(cityNode.locations)) {
+                        if (!cityMatch && !location.toLowerCase().includes(query)) continue;
+                        cityDetails.append(mainGeoRow(location, locNode.count, [...locNode.keys], 2));
+                        visibleLocations++;
+                    }
+                    if (!visibleLocations && !cityMatch) continue;
+                    cityDetails.prepend(citySummary); countyDetails.append(cityDetails); visibleCities++;
+                }
+                if (!visibleCities && !countyMatch) continue;
+                countyDetails.prepend(countySummary); container.append(countyDetails); shown++;
+            }
+            if (!shown) {
+                const empty = document.createElement('p');
+                empty.className = 'text-gray-400 p-3 text-center';
+                empty.textContent = query ? 'לא נמצאו אזורים תואמים לחיפוש.' : 'אין נכסים זמינים לסינון.';
+                container.append(empty);
+            }
             updateCityDropdownLabel();
         }
-
-        function updateCityFilter(checkbox) {
-            if (checkbox.checked) {
-                selectedCitiesFilter.add(checkbox.value);
-            } else {
-                selectedCitiesFilter.delete(checkbox.value);
-            }
-            updateCityDropdownLabel();
-            applyFilters();
-        }
-
         function setAllCityFilters(state, e) {
-            if(e) e.stopPropagation();
-            const checkboxes = document.querySelectorAll('#city-checkbox-container input[type="checkbox"]');
-            checkboxes.forEach(cb => {
-                cb.checked = state;
-                if (state) selectedCitiesFilter.add(cb.value);
-                else selectedCitiesFilter.clear();
-            });
-            updateCityDropdownLabel();
-            applyFilters();
+            if (e) e.stopPropagation();
+            selectedCitiesFilter = state ? null : new Set();
+            populateCityDropdown(); renderCards();
         }
-
         function updateCityDropdownLabel() {
             const label = document.getElementById('city-dropdown-text');
-            if (selectedCitiesFilter.size === allAvailableCities.length && allAvailableCities.length > 0) {
-                label.textContent = "כל האזורים";
-            } else if (selectedCitiesFilter.size === 0) {
-                label.textContent = "0 אזורים";
-            } else if (selectedCitiesFilter.size === 1) {
-                label.textContent = Array.from(selectedCitiesFilter)[0].split(' ')[0]; // רק שם העיר
-            } else {
-                label.textContent = `${selectedCitiesFilter.size} אזורים נבחרו`;
-            }
+            if (selectedCitiesFilter === null) label.textContent = 'כל האזורים';
+            else if (!selectedCitiesFilter.size) label.textContent = 'בחר אזור להצגת נכסים';
+            else label.textContent = `${selectedCitiesFilter.size} אזורים נבחרו`;
         }
 
         // V8.6: Off Market status helper.
@@ -1090,10 +1160,8 @@
                 if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
                 if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
                 
-                // סינון אזורים חכם V8.4
-                const propCityStr = `${p.city} (${p.county})`;
-                if (selectedCitiesFilter.size > 0 && !selectedCitiesFilter.has(propCityStr)) return false;
-                if (selectedCitiesFilter.size === 0) return false; // אם כלום לא מסומן, מציג מסך ריק (נקי)
+                // המסנן הראשי חל על המאגר המוצג, ללא הפעלת סריקה נוספת.
+                if (selectedCitiesFilter !== null && !selectedCitiesFilter.has(mainGeoKey(p))) return false;
 
                 // סינון AI מתחת ל-MAO
                 if (onlyGoodDeals) {
@@ -1107,7 +1175,7 @@
             else if (sortBy === 'date_desc') filtered.sort((a,b) => parseDate(b.listed_date) - parseDate(a.listed_date));
             else if (sortBy === 'price_asc') filtered.sort((a,b) => (a.price||0) - (b.price||0));
 
-            if (!filtered.length) { container.innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
+            if (!filtered.length) { container.innerHTML = selectedCitiesFilter !== null && !selectedCitiesFilter.size ? '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">בחר מחוז, עיר או אזור מהרשימה, או לחץ ״הצג את כל הנכסים״.</div>' : '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
 
             if (currentViewMode === 'table') {
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="w-full text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3">מיקום</th><th class="p-3">מחיר</th><th class="p-3">מאפיינים</th><th class="p-3">תשואה/שיפוץ</th><th class="p-3">תאריך</th><th class="p-3 text-center">ציון</th><th class="p-3 text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
