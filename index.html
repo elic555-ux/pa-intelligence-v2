@@ -337,13 +337,29 @@
             </div>
             <div class="space-y-1.5 border-t border-gray-800 pt-3">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
+                    <span class="text-xs font-bold text-amber-400">1. מחוז (County):</span>
+                    <span class="text-[10px] text-gray-500">החלוקה הגאוגרפית הראשית</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('setting','Allegheny',this.checked)"><span>Allegheny</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Philadelphia"><span>Philadelphia</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lehigh"><span>Lehigh</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Berks"><span>Berks</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Erie"><span>Erie</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lackawanna"><span>Lackawanna</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Northampton"><span>Northampton</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lancaster"><span>Lancaster</span></label>
+                </div>
+            </div>
+            <div class="space-y-1.5 pt-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-blue-400">2. עיר / יישוב (Municipality):</span>
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Philadelphia" onchange="handleSettingCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Pittsburgh" onchange="handleSettingCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Allegheny" onchange="handleSettingCityCheckboxChange('Allegheny', this.checked)"><span>Allegheny Co.</span></label>
+                    <input type="checkbox" checked class="setting-city-box hidden" value="Allegheny" data-legacy-county="Allegheny">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Allentown" onchange="handleSettingCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Reading" onchange="handleSettingCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Erie" onchange="handleSettingCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
@@ -354,7 +370,7 @@
             </div>
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
+                    <span class="text-xs font-bold text-emerald-400">3. שכונה / אזור (Neighborhood):</span>
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
@@ -438,13 +454,29 @@
             </div>
             <div class="space-y-1.5 mt-3">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">1. בחירת ערים ומחוזות (Hubs):</span>
+                    <span class="text-xs font-bold text-amber-400">1. מחוז (County):</span>
+                    <span class="text-[10px] text-gray-500">החלוקה הגאוגרפית הראשית</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('ondemand','Allegheny',this.checked)"><span>Allegheny</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Philadelphia"><span>Philadelphia</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lehigh"><span>Lehigh</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Berks"><span>Berks</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Erie"><span>Erie</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lackawanna"><span>Lackawanna</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Northampton"><span>Northampton</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lancaster"><span>Lancaster</span></label>
+                </div>
+            </div>
+            <div class="space-y-1.5 pt-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-blue-400">2. עיר / יישוב (Municipality):</span>
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia" onchange="handleCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh" onchange="handleCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allegheny" onchange="handleCityCheckboxChange('Allegheny', this.checked)"><span>Allegheny Co.</span></label>
+                    <input type="checkbox" checked class="ondemand-city-box hidden" value="Allegheny" data-legacy-county="Allegheny">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown" onchange="handleCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading" onchange="handleCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie" onchange="handleCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
@@ -455,7 +487,7 @@
             </div>
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-emerald-400">2. סינון שכונות ואזורים (25 אזורים מקושרים):</span>
+                    <span class="text-xs font-bold text-emerald-400">3. שכונה / אזור (Neighborhood):</span>
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
@@ -597,6 +629,14 @@
             loadProperties();
         }
 
+        function handleCountyScopeChange(prefix, county, checked) {
+            // Compatibility bridge: Allegheny was historically stored in the cities array.
+            // Keep the backend behavior unchanged until the geography engine is upgraded.
+            const legacy = document.querySelector(`.${prefix}-city-box[data-legacy-county="${county}"]`);
+            if (legacy) legacy.checked = checked;
+            if (prefix === 'setting') saveSettingsStateLocally(); else saveOnDemandStateLocally();
+        }
+
         function buildServerConfig(isManual = false) {
             const prefix = isManual ? 'ondemand' : 'setting';
             return {
@@ -609,6 +649,7 @@
                 minBaths: document.getElementById(`${prefix}-min-baths`).value,
                 sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value),
                 propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
+                counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
                 neighborhoods: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`)).map(cb => cb.value),
                 
@@ -645,6 +686,7 @@
                     
                     if(st.sectors) document.querySelectorAll('.setting-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
                     if(st.propertyTypes) document.querySelectorAll('.setting-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
+                    if(st.counties) document.querySelectorAll('.setting-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
                     if(st.cities) document.querySelectorAll('.setting-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
                     if(st.neighborhoods) document.querySelectorAll('.setting-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
                 }
@@ -670,6 +712,7 @@
                     
                     if(st.sectors) document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
                     if(st.propertyTypes) document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
+                    if(st.counties) document.querySelectorAll('.ondemand-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
                     if(st.cities) document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
                     if(st.neighborhoods) document.querySelectorAll('.ondemand-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
                 }
