@@ -5,6 +5,10 @@ import re
 import csv
 import io
 import random
+import subprocess
+import tempfile
+from html.parser import HTMLParser
+from urllib.parse import urljoin
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -16,8 +20,83 @@ PROPERTIES_FILE = "properties.json"
 CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
+SHERIFF_FILE = "sheriff_listings.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.5.1-verified-city-ids"
+ORCHESTRATOR_VERSION = "2.6-allegheny-sheriff-list"
+
+SHERIFF_PAGE = "https://sheriffalleghenycounty.com/sheriffs-sales/"
+
+
+class SheriffPDFLinks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            href = dict(attrs).get("href", "")
+            if re.search(r"sale[-_ ]list.*\.pdf(?:\?|$)", href, re.I):
+                self.links.append(urljoin(SHERIFF_PAGE, href))
+
+
+def fetch_allegheny_sheriff_listings():
+    """Read only active, future lots in the sheriff's current published sale list."""
+    page = requests.get(SHERIFF_PAGE, timeout=20)
+    page.raise_for_status()
+    parser = SheriffPDFLinks()
+    parser.feed(page.text)
+    if not parser.links:
+        raise ValueError("no sale-list PDF linked from official sheriff page")
+    # The page labels the current PDF 'Sale Listings'; links for past years are
+    # sometimes also present. Validate the sale date after downloading.
+    pdf_url = parser.links[0]
+    response = requests.get(pdf_url, timeout=45)
+    response.raise_for_status()
+    if not response.content.startswith(b"%PDF") or len(response.content) > 20_000_000:
+        raise ValueError("sheriff response is not a valid-sized PDF")
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as source:
+        source.write(response.content)
+        source.flush()
+        extract = subprocess.run(["pdftotext", "-raw", source.name, "-"],
+                                 capture_output=True, text=True, timeout=40, check=True)
+    body = extract.stdout
+    sale_match = re.search(r"Date of Sale:\s*\w+,\s*(\w+ \d{1,2}, \d{4})", body)
+    if not sale_match:
+        raise ValueError("sale date missing from sheriff PDF")
+    sale_day = datetime.strptime(sale_match.group(1), "%B %d, %Y").date()
+    if sale_day < now_est().date() or (sale_day - now_est().date()).days > 75:
+        raise ValueError(f"sale PDF date outside current window: {sale_day}")
+    listings = []
+    seen = set()
+    for block in re.split(r"Status\s+Tracts", body, flags=re.I)[1:]:
+        docket = re.search(r"\b(?:GD|MG|AR)-\d{2}-\d{5,6}\b", block, re.I)
+        address = re.search(r"(?m)^\s*(\d{1,6}\s+[A-Z0-9 .'-]+(?:ST|AVE|RD|DR|BLVD|LN|CT|WAY|PL|PKWY|CIR|TER|PIKE|HWY|TRAIL|STREET|AVENUE|ROAD|DRIVE))\s*\n\s*([A-Z][A-Z .'-]+),?\s+PA\s+(\d{5})\b", block, re.I)
+        if not docket or not address or "Sale Type" not in block:
+            continue
+        tail = block[address.end():address.end()+180]
+        status = re.search(r"(?m)^\s*(Active|Stayed|Postponed[^\n]*|Cancelled|Canceled|Sold)\s*$", tail, re.I)
+        if not status or status.group(1).casefold() != "active":
+            continue
+        key = docket.group(0).upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        street, city, zip_code = (v.strip() for v in address.groups())
+        listings.append({
+            "id": f"PA-SHERIFF-{key}", "docket_id": key,
+            "address": street.title(), "city": city.title(), "zip": zip_code,
+            "county": "Allegheny", "price": None, "sqft": None,
+            "deal_type": "Sheriff Sale", "source_type": "sheriff",
+            "source": "Allegheny County Sheriff's Office", "data_status": "live",
+            "market_status": "scheduled_sheriff_sale", "sheriff_status": "Active",
+            "sale_date": sale_day.isoformat(), "listed_date": now_est().strftime("%d/%m/%Y"),
+            "summary": f"מופיע כפעיל ברשימת מכירות השריף לתאריך {sale_day}. מחיר הנכס ופרטיו אינם מאומתים. בדוק סטטוס לפני פעולה.",
+            "url": pdf_url, "last_source_check": iso_now_est(),
+            "deal_score": 0,
+        })
+    if not listings:
+        raise ValueError("no active sheriff lots parsed; refusing empty overwrite")
+    return listings, pdf_url
 
 PROPERTY_TYPE_ALIASES = {
     "single family": "Single Family",
@@ -644,6 +723,17 @@ def run_orchestrator():
           f"סינון: {log_entry['neighborhood_filter_status']}")
     print(f"📋 סקטורים פעילים: {active_sectors_now}")
 
+    if "sheriff" in active_sectors_now and "Allegheny" in cities_list:
+        try:
+            sheriff_rows, sheriff_pdf = fetch_allegheny_sheriff_listings()
+            atomic_write_json(SHERIFF_FILE, sheriff_rows)
+            log_entry["sheriff_active_lots"] = len(sheriff_rows)
+            log_entry["sheriff_source_url"] = sheriff_pdf
+            print(f"⚖️ שריף Allegheny: {len(sheriff_rows)} רשומות פעילות מתאריך מכירה עתידי; מקור: {sheriff_pdf}")
+        except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
+            log_entry["errors"].append(f"sheriff list unavailable: {exc}")
+            print(f"⚠️ רשימת השריף לא עודכנה: {exc}")
+
     live_results = []
     if "mls" in active_sectors_now:
         for city in cities_list:
@@ -721,7 +811,9 @@ def run_orchestrator():
             log_entry["errors"].append(f"geo catalog write failed: {exc}")
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
 
-    combined = live_results + get_placeholder_sector_results(active_sectors_now)
+    combined = live_results + get_placeholder_sector_results(
+        [s for s in active_sectors_now if s != "sheriff" or "Allegheny" not in cities_list]
+    )
     log_entry["source_results"] = len(combined)
 
     # Market presence must be based on the raw LIVE MLS response, before the
