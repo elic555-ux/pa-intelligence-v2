@@ -26,6 +26,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y poppler-utils
           python -m pip install --upgrade pip
           pip install pytz requests
 
@@ -46,6 +47,9 @@ jobs:
           git add properties.json scan_log.json
           if [ -f geo_catalog.json ]; then
             git add geo_catalog.json
+          fi
+          if [ -f sheriff_listings.json ]; then
+            git add sheriff_listings.json
           fi
 
           # ה-Analyzer יוצר את הקובץ רק כאשר יש מידע חדש לשמור.
