@@ -15,6 +15,7 @@ EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
 CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
+GEO_CATALOG_FILE = "geo_catalog.json"
 OFF_MARKET_MISS_THRESHOLD = 2
 ORCHESTRATOR_VERSION = "2.4-geography-qa"
 
@@ -642,6 +643,34 @@ def run_orchestrator():
         )
 
     log_entry["geography_qa"] = geography_qa
+
+    # Keep the complete set of source LOCATION values seen before investment filters.
+    # This catalog only describes the regions that were actually scanned.
+    catalog = load_json_file(GEO_CATALOG_FILE, {})
+    if not isinstance(catalog, dict):
+        catalog = {}
+    areas = catalog.get("areas")
+    if not isinstance(areas, dict):
+        areas = {}
+    for area in cities_list:
+        rows = [p for p in live_results if p.get("source_scan_area") == area]
+        if not rows:
+            continue  # A failed/empty request must not erase previously discovered locations.
+        locations = {str(p.get("source_location") or "").strip() for p in rows}
+        locations.discard("")
+        old = areas.get(area) or {}
+        previous = old.get("locations") if isinstance(old, dict) else []
+        areas[area] = {
+            "locations": sorted(set(previous or []) | locations, key=str.casefold),
+            "last_seen": iso_now_est(),
+        }
+    if areas:
+        try:
+            atomic_write_json(GEO_CATALOG_FILE, {"version": 1, "areas": areas})
+            print(f"🗺️ קטלוג אזורים עודכן: {sum(len(v['locations']) for v in areas.values())} שמות מהמקור")
+        except OSError as exc:
+            log_entry["errors"].append(f"geo catalog write failed: {exc}")
+            print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
 
     combined = live_results + get_placeholder_sector_results(active_sectors_now)
     log_entry["source_results"] = len(combined)
