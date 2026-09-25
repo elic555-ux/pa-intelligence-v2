@@ -669,6 +669,27 @@
             if (legacy) legacy.checked = Boolean(county && county.checked);
         }
 
+        function buildGeoAreas(prefix) {
+            const scopes = {};
+            document.querySelectorAll(`.${prefix}-city-box:checked`).forEach(city => {
+                const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
+                    .filter(hood => hood.dataset.city === city.value);
+                scopes[city.value] = {
+                    allLocations: locations.length === 0 || locations.every(hood => hood.checked),
+                    locations: [...new Set(locations.filter(hood => hood.checked).map(hood => hood.value))]
+                };
+            });
+            return scopes;
+        }
+
+        function restoreGeoAreas(prefix, saved) {
+            if (!saved || !saved.geoAreas) return;
+            document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
+                const scope = saved.geoAreas[hood.dataset.city];
+                if (scope) hood.checked = Boolean(scope.allLocations || scope.locations?.includes(hood.value));
+            });
+        }
+
         function buildServerConfig(isManual = false) {
             const prefix = isManual ? 'ondemand' : 'setting';
             return {
@@ -684,6 +705,7 @@
                 counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
                 neighborhoods: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`)).map(cb => cb.value),
+                geoAreas: buildGeoAreas(prefix),
                 
                 autoScanEnabled: document.getElementById('autoscan-master-switch') ? document.getElementById('autoscan-master-switch').checked : true,
                 schedules: {
@@ -721,6 +743,7 @@
                     if(st.counties) document.querySelectorAll('.setting-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
                     if(st.cities) document.querySelectorAll('.setting-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
                     if(st.neighborhoods) document.querySelectorAll('.setting-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
+                    restoreGeoAreas('setting', st);
                 }
             } catch(e) {}
         }
@@ -747,6 +770,7 @@
                     if(st.counties) document.querySelectorAll('.ondemand-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
                     if(st.cities) document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
                     if(st.neighborhoods) document.querySelectorAll('.ondemand-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
+                    restoreGeoAreas('ondemand', st);
                 }
             } catch(e) {}
         }
@@ -922,7 +946,9 @@
                     input.type = 'checkbox'; input.value = location;
                     input.className = `${prefix}-hood-box accent-emerald-500`;
                     input.dataset.city = area;
-                    input.checked = parent.checked || oldSelections.has(location);
+                    const scope = saved.geoAreas?.[area];
+                    input.checked = scope ? Boolean(scope.allLocations || scope.locations?.includes(location))
+                        : (parent.checked || oldSelections.has(location));
                     input.addEventListener('change', prefix === 'setting' ? saveSettingsStateLocally : saveOnDemandStateLocally);
                     const name = document.createElement('span'); name.textContent = location;
                     label.append(input, name); grid.append(label);
