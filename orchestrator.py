@@ -17,7 +17,7 @@ CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.5-geography-filter"
+ORCHESTRATOR_VERSION = "2.5.1-verified-city-ids"
 
 PROPERTY_TYPE_ALIASES = {
     "single family": "Single Family",
@@ -86,12 +86,12 @@ REGION_MAP = {
     "Pittsburgh": {"market": "pittsburgh", "region_id": "15702", "region_type": "6"},
     "Allegheny": {"market": "pittsburgh", "region_id": "2362", "region_type": "5"},
     "Philadelphia": {"market": "philadelphia", "region_id": "15502", "region_type": "6"},
-    "Allentown": {"market": "allentown", "region_id": "3144", "region_type": "6"},
-    "Reading": {"market": "reading", "region_id": "17387", "region_type": "6"},
-    "Erie": {"market": "erie", "region_id": "6758", "region_type": "6"},
-    "Scranton": {"market": "scranton", "region_id": "19404", "region_type": "6"},
-    "Bethlehem": {"market": "allentown", "region_id": "3531", "region_type": "6"},
-    "Lancaster": {"market": "lancaster", "region_id": "11902", "region_type": "6"},
+    "Allentown": {"market": "allentown", "region_id": "514", "region_type": "6"},
+    "Reading": {"market": "reading", "region_id": "16305", "region_type": "6"},
+    "Erie": {"market": "erie", "region_id": "6172", "region_type": "6"},
+    "Scranton": {"market": "scranton", "region_id": "17652", "region_type": "6"},
+    "Bethlehem": {"market": "allentown", "region_id": "1616", "region_type": "6"},
+    "Lancaster": {"market": "lancaster", "region_id": "10496", "region_type": "6"},
 }
 
 DISTRESS_KEYWORDS = [
@@ -372,6 +372,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 "property_type": property_type,
                 "source_property_type": raw_property_type or None,
                 "source_location": source_location,
+                "source_state": (row.get("STATE OR PROVINCE") or "").strip(),
                 "source_scan_area": clean_city,
                 "strategy": strategy_data["strategy"],
                 "strategy_label": strategy_data["strategy_label"],
@@ -689,8 +690,18 @@ def run_orchestrator():
     areas = catalog.get("areas")
     if not isinstance(areas, dict):
         areas = {}
+    # Discard catalog entries collected with the old, incorrect city IDs.
+    corrected_cities = {"Allentown", "Reading", "Erie", "Scranton", "Bethlehem", "Lancaster"}
+    for area in corrected_cities:
+        old = areas.get(area)
+        if isinstance(old, dict) and old.get("region_id") != REGION_MAP[area]["region_id"]:
+            del areas[area]
     for area in cities_list:
-        rows = [p for p in live_results if p.get("source_scan_area") == area]
+        target = REGION_MAP.get(area) or {}
+        rows = [p for p in live_results if p.get("source_scan_area") == area
+                and (not p.get("source_state") or p["source_state"].upper() == "PA")
+                and (str(target.get("region_type")) != "6"
+                     or str(p.get("city") or "").strip().casefold() == area.casefold())]
         if not rows:
             continue  # A failed/empty request must not erase previously discovered locations.
         locations = {str(p.get("source_location") or "").strip() for p in rows}
@@ -699,6 +710,7 @@ def run_orchestrator():
         previous = old.get("locations") if isinstance(old, dict) else []
         areas[area] = {
             "locations": sorted(set(previous or []) | locations, key=str.casefold),
+            "region_id": target.get("region_id"),
             "last_seen": iso_now_est(),
         }
     if areas:
