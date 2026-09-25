@@ -5,20 +5,28 @@ on:
   schedule:
     - cron: '0 * * * *' # קם כל שעה עגולה (UTC). הפייתון שלנו יחליט אם לסרוק או לישון.
 
+permissions:
+  contents: write
+
+concurrency:
+  group: pa-scanner-queue
+  cancel-in-progress: false
+
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Install Dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install pytz requests
 
       - name: Run Orchestrator and Analyzer (Brain & Analyst)
@@ -29,9 +37,23 @@ jobs:
           python orchestrator.py
           python analyzer.py
 
-      - name: Commit and Push Updates
+      - name: Commit and Push Scanner State
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add properties.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update properties.json via Orchestrator and Analyzer" && git push)
+
+          # מאגר הנכסים + היסטוריית הסריקות הם State קבוע של הסורק.
+          git add properties.json scan_log.json
+
+          # ה-Analyzer יוצר את הקובץ רק כאשר יש מידע חדש לשמור.
+          # אם הוא קיים, שומרים אותו כדי למנוע Geocoding חוזר בהרצה הבאה.
+          if [ -f geocode_cache.json ]; then
+            git add geocode_cache.json
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No scanner state changes to commit."
+          else
+            git commit -m "Auto-update scanner state via Orchestrator and Analyzer"
+            git push
+          fi
