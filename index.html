@@ -405,6 +405,10 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
                 </div>
             </div>
+            <div class="border-t border-gray-800 pt-3 space-y-2">
+                <span class="text-xs font-bold text-emerald-400">אזורים נוספים שהתגלו בסריקות (LOCATION מהמקור):</span>
+                <div id="setting-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
+            </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button onclick="saveScanSettingsToServer()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-2"><i data-lucide="upload-cloud" class="w-4 h-4"></i> שדר לשרת ושמור</button></div>
         </div>
     </div>
@@ -522,6 +526,10 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
                 </div>
             </div>
+            <div class="border-t border-gray-800 pt-3 space-y-2">
+                <span class="text-xs font-bold text-emerald-400">אזורים נוספים שהתגלו בסריקות (LOCATION מהמקור):</span>
+                <div id="ondemand-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
+            </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5"><i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת</button></div>
         </div>
     </div>
@@ -588,6 +596,7 @@
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
             await loadProperties();
+            await loadGeoCatalog();
         }
 
         // --- מנגנוני ניהול קשב וארכיון ---
@@ -640,6 +649,9 @@
             // Allegheny also has a county-wide source in the existing scan engine.
             const legacy = document.querySelector(`.${prefix}-city-box[data-legacy-county="${county}"]`);
             if (legacy) legacy.checked = checked;
+            document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
+                if (hood.dataset.city === county) hood.checked = checked;
+            });
             if (prefix === 'setting') saveSettingsStateLocally(); else saveOnDemandStateLocally();
         }
 
@@ -851,6 +863,74 @@
                 console.error(err); 
                 document.getElementById('last-scan-time').textContent = "שגיאה";
             }
+        }
+
+        async function loadGeoCatalog() {
+            const areas = {};
+            // Previously retained results let the picker work before the next scan.
+            for (const prop of rawProperties) {
+                const area = String(prop.source_scan_area || prop.city || '').trim();
+                const location = String(prop.source_location || '').trim();
+                if (area && location) (areas[area] ||= new Set()).add(location);
+            }
+            try {
+                const res = await fetch('geo_catalog.json?t=' + Date.now());
+                if (res.ok) {
+                    const catalog = await res.json();
+                    for (const [area, data] of Object.entries(catalog.areas || {})) {
+                        if (!data || !Array.isArray(data.locations)) continue;
+                        for (const location of data.locations) {
+                            if (typeof location === 'string' && location.trim())
+                                (areas[area] ||= new Set()).add(location.trim());
+                        }
+                    }
+                }
+            } catch (err) { console.info('קטלוג אזורים טרם זמין; משתמש בנתוני הנכסים הקיימים.'); }
+            for (const prefix of ['setting', 'ondemand']) renderGeoCatalog(prefix, areas);
+        }
+
+        function renderGeoCatalog(prefix, areas) {
+            const container = document.getElementById(`${prefix}-dynamic-neighborhoods`);
+            if (!container) return;
+            container.replaceChildren();
+            const saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
+            const oldSelections = new Set(saved.neighborhoods || []);
+            const known = new Set(Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
+                .map(input => `${input.dataset.city}|${input.value.toLowerCase()}`));
+            let total = 0;
+            for (const [area, values] of Object.entries(areas).sort((a,b) => a[0].localeCompare(b[0]))) {
+                const countyArea = area === 'Allegheny';
+                const parent = document.querySelector(countyArea
+                    ? `.${prefix}-county-box[value="Allegheny"]`
+                    : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
+                if (!parent) continue; // Show only regions the current scanner can target.
+                const locations = Array.from(values).filter(v => !known.has(`${area}|${v.toLowerCase()}`))
+                    .sort((a,b) => a.localeCompare(b));
+                if (!locations.length) continue;
+                const group = document.createElement('details');
+                group.className = 'bg-gray-950 border border-gray-800 rounded-xl px-3 py-2';
+                const summary = document.createElement('summary');
+                summary.className = 'cursor-pointer text-emerald-300 font-bold';
+                summary.textContent = `${countyArea ? 'מחוז ' : 'עיר '}${area} — ${locations.length} אזורים נוספים`;
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 mt-2';
+                for (const location of locations) {
+                    const label = document.createElement('label');
+                    label.dir = 'ltr';
+                    label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
+                    const input = document.createElement('input');
+                    input.type = 'checkbox'; input.value = location;
+                    input.className = `${prefix}-hood-box accent-emerald-500`;
+                    input.dataset.city = area;
+                    input.checked = parent.checked || oldSelections.has(location);
+                    input.addEventListener('change', prefix === 'setting' ? saveSettingsStateLocally : saveOnDemandStateLocally);
+                    const name = document.createElement('span'); name.textContent = location;
+                    label.append(input, name); grid.append(label);
+                    total++;
+                }
+                group.append(summary, grid); container.append(group);
+            }
+            if (!total) container.textContent = 'אין כרגע אזורים נוספים שנצפו במקור עבור הערים שנבחרו.';
         }
 
         // V8.4: פונקציות לתפריט הערים החכם
