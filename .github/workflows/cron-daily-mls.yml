@@ -1,9 +1,9 @@
-name: "1. Central Intelligence Orchestrator (Hourly)"
+name: "1. Central Scanner — V2.7"
 
 on:
-  workflow_dispatch: # מאפשר שיגור ידני (Mission Control) מתוך האתר
+  workflow_dispatch:
   schedule:
-    - cron: '0 * * * *' # קם כל שעה עגולה (UTC). הפייתון שלנו יחליט אם לסרוק או לישון.
+    - cron: '0 * * * *'
 
 permissions:
   contents: write
@@ -15,52 +15,62 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Checkout Repository
+      - name: Checkout current branch
         uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Install Dependencies
+      - name: Install scanner dependencies
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y poppler-utils
-          python -m pip install --upgrade pip
-          pip install pytz requests
-
-      - name: Run Orchestrator and Analyzer (Brain & Analyst)
-        # אנחנו שולחים לפייתון אינדיקציה איך הוא הופעל (ידנית או אוטומטית)
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils
+          python -m pip install requests pytz
+      - name: Print code identity
+        run: |
+          git log -1 --format='%h %s'
+          sha256sum orchestrator.py
+          python -m py_compile orchestrator.py analyzer.py
+      - name: Run selected scanners
+        id: scanner
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          SHERIFF_PDF_URL: ${{ vars.SHERIFF_PDF_URL }}
+        run: python orchestrator.py
+      - name: Analyze changed MLS properties
+        if: steps.scanner.outputs.analyze == 'true'
+        run: python analyzer.py
+      - name: Save data and source status
+        if: always() && steps.scanner.outcome == 'success'
         run: |
-          python orchestrator.py
-          python analyzer.py
-
-      - name: Commit and Push Scanner State
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          for file in properties.json scan_log.json geo_catalog.json sheriff_listings.json scanner_status.json geocode_cache.json; do
+            if [ -f "$file" ]; then git add "$file"; fi
+          done
+          if ! git diff --cached --quiet; then
+            git commit -m "Update scanner data and source status"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+      - name: Publish scan summary
+        if: always()
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-
-          # מאגר הנכסים + היסטוריית הסריקות הם State קבוע של הסורק.
-          git add properties.json scan_log.json
-          if [ -f geo_catalog.json ]; then
-            git add geo_catalog.json
-          fi
-          if [ -f sheriff_listings.json ]; then
-            git add sheriff_listings.json
-          fi
-
-          # ה-Analyzer יוצר את הקובץ רק כאשר יש מידע חדש לשמור.
-          # אם הוא קיים, שומרים אותו כדי למנוע Geocoding חוזר בהרצה הבאה.
-          if [ -f geocode_cache.json ]; then
-            git add geocode_cache.json
-          fi
-
-          if git diff --cached --quiet; then
-            echo "No scanner state changes to commit."
-          else
-            git commit -m "Auto-update scanner state via Orchestrator and Analyzer"
-            git push
-          fi
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = Path('scanner_status.json')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as out:
+              if not report.exists():
+                  out.write('לא נוצר דוח סריקה. בדוק את שגיאת הריצה.\n')
+              else:
+                  data = json.loads(report.read_text(encoding='utf-8'))
+                  event = data.get('last_event', {})
+                  out.write(f"## מצב הסריקה: {event.get('status', 'unknown')}\n\n")
+                  out.write(f"גרסה: {data.get('version')} | ריצה: {event.get('scan_id')}\n\n")
+                  for item in data.get('sources', {}).values():
+                      out.write(f"- {item.get('label')}: {item.get('status')} | {item.get('rows', 0)} רשומות\n")
+          PY
