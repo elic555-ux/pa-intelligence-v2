@@ -1159,7 +1159,7 @@
             document.getElementById('count-all').textContent = nonArchived.length;
             document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
             document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
-            document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff')).length;
+            document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
             document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
             document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
             document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
@@ -1198,7 +1198,7 @@
                     const dt = (p.deal_type || '').toLowerCase();
                     if (activeCategory === 'mls' && !dt.includes('mls')) return false;
                     if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
-                    if (activeCategory === 'sheriff' && !dt.includes('sheriff')) return false;
+                    if (activeCategory === 'sheriff' && !dt.includes('sheriff') && !(p.source || '').toLowerCase().includes('sheriff') && !(p.source_type || '').toLowerCase().includes('sheriff')) return false;
                     if (activeCategory === 'tax' && !dt.includes('tax')) return false;
                     if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
                     if (activeCategory === 'offmarket' && !isOffMarketProperty(p)) return false;
