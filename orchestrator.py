@@ -7,8 +7,10 @@ import io
 import random
 import subprocess
 import tempfile
+import hashlib
+import html
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -22,9 +24,15 @@ SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.6-allegheny-sheriff-list"
+ORCHESTRATOR_VERSION = "2.7.0-scan-audit-20260926"
+SCANNER_STATUS_FILE = "scanner_status.json"
+SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
+                 "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
 
 SHERIFF_PAGE = "https://sheriffalleghenycounty.com/sheriffs-sales/"
+SHERIFF_LOCAL_PDF = "sources/allegheny_sheriff.pdf"
+# Edition discovered on the official page. It expires; it is not a permanent feed.
+SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/09/October-Sale-List-Updated-9-24.pdf"
 
 
 class SheriffPDFLinks(HTMLParser):
@@ -34,69 +42,135 @@ class SheriffPDFLinks(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         if tag == "a":
-            href = dict(attrs).get("href", "")
-            if re.search(r"sale[-_ ]list.*\.pdf(?:\?|$)", href, re.I):
-                self.links.append(urljoin(SHERIFF_PAGE, href))
+            href = html.unescape(dict(attrs).get("href", ""))
+            url = urljoin(SHERIFF_PAGE, href)
+            if valid_sheriff_pdf_url(url):
+                self.links.append(url)
 
 
-def fetch_allegheny_sheriff_listings():
-    """Read only active, future lots in the sheriff's current published sale list."""
-    page = requests.get(SHERIFF_PAGE, timeout=20)
-    page.raise_for_status()
-    parser = SheriffPDFLinks()
-    parser.feed(page.text)
-    if not parser.links:
-        raise ValueError("no sale-list PDF linked from official sheriff page")
-    # The page labels the current PDF 'Sale Listings'; links for past years are
-    # sometimes also present. Validate the sale date after downloading.
-    pdf_url = parser.links[0]
-    response = requests.get(pdf_url, timeout=45)
-    response.raise_for_status()
-    if not response.content.startswith(b"%PDF") or len(response.content) > 20_000_000:
-        raise ValueError("sheriff response is not a valid-sized PDF")
-    with tempfile.NamedTemporaryFile(suffix=".pdf") as source:
-        source.write(response.content)
-        source.flush()
-        extract = subprocess.run(["pdftotext", "-raw", source.name, "-"],
-                                 capture_output=True, text=True, timeout=40, check=True)
-    body = extract.stdout
+def valid_sheriff_pdf_url(url):
+    parsed = urlparse(str(url))
+    return (parsed.scheme == "https" and
+            parsed.hostname in {"sheriffalleghenycounty.com", "www.sheriffalleghenycounty.com"}
+            and parsed.path.lower().endswith(".pdf"))
+
+
+def parse_sheriff_text(body, source_url, imported=False):
+    """Parse published facts only; debt/bid amounts are never a property price."""
+    body = body.replace('\r', '').replace('\x0c', '\n')
     sale_match = re.search(r"Date of Sale:\s*\w+,\s*(\w+ \d{1,2}, \d{4})", body)
-    if not sale_match:
-        raise ValueError("sale date missing from sheriff PDF")
+    printed = re.findall(r"Printed:\s*(\d{1,2}/\d{1,2}/\d{4})", body)
+    if not sale_match or not printed or not re.search(r"SHERIFF.*SALE.*PROPERTY LISTING", body, re.I):
+        raise ValueError("מבנה PDF לא מוכר: חסרים כותרת, תאריך מכירה או תאריך הפקה")
     sale_day = datetime.strptime(sale_match.group(1), "%B %d, %Y").date()
-    if sale_day < now_est().date() or (sale_day - now_est().date()).days > 75:
-        raise ValueError(f"sale PDF date outside current window: {sale_day}")
-    listings = []
-    seen = set()
-    for block in re.split(r"Status\s+Tracts", body, flags=re.I)[1:]:
-        docket = re.search(r"\b(?:GD|MG|AR)-\d{2}-\d{5,6}\b", block, re.I)
-        address = re.search(r"(?m)^\s*(\d{1,6}\s+[A-Z0-9 .'-]+(?:ST|AVE|RD|DR|BLVD|LN|CT|WAY|PL|PKWY|CIR|TER|PIKE|HWY|TRAIL|STREET|AVENUE|ROAD|DRIVE))\s*\n\s*([A-Z][A-Z .'-]+),?\s+PA\s+(\d{5})\b", block, re.I)
-        if not docket or not address or "Sale Type" not in block:
+    printed_day = max(datetime.strptime(x, "%m/%d/%Y").date() for x in printed)
+    today = now_est().date()
+    if not 0 <= (sale_day - today).days <= 75:
+        raise ValueError(f"תאריך מכירה אינו בטווח עתידי: {sale_day}")
+    if not 0 <= (today - printed_day).days <= 21:
+        raise ValueError(f"המסמך אינו עדכני מספיק: הופק ב-{printed_day}")
+    blocks = re.split(r"Status\s+Tracts", body, flags=re.I)[1:]
+    if not blocks:
+        raise ValueError("לא זוהו בלוקים של נכסים במסמך")
+    rows, seen = [], set()
+    skipped_active = 0
+    recognized = 0
+    for block in blocks:
+        facts = block.split('Comments:')[0]
+        status = re.search(r"(?m)^\s*(Active|Stayed|Postponed[^\n]*|Cancelled|Canceled|Sold|Continued[^\n]*|Withdrawn|Settled)[ \t]*$", facts, re.I)
+        if not status:
             continue
-        tail = block[address.end():address.end()+180]
-        status = re.search(r"(?m)^\s*(Active|Stayed|Postponed[^\n]*|Cancelled|Canceled|Sold)\s*$", tail, re.I)
-        if not status or status.group(1).casefold() != "active":
+        recognized += 1
+        if status.group(1).casefold() != "active":
             continue
-        key = docket.group(0).upper()
+        docket = re.search(r"\b(?:GD|MG|AR)-\d{2}-\d{5,6}\b", facts, re.I)
+        # The address immediately precedes the postal city. No assumptions about
+        # a street suffix or municipality based on a Pittsburgh mailing address.
+        address = re.search(r"(?m)^[ \t]*(\d[\w .,'/#&()-]*\S)[ \t]*\n[ \t]*([A-Z][A-Z .'-]+),[ \t]*PA[ \t]+(\d{5})(?:-\d{4})?\b", facts, re.I)
+        if not docket or not address:
+            skipped_active += 1
+            continue
+        street, city, zip_code = (x.strip() for x in address.groups())
+        key = docket.group().upper() + ':' + normalize_addr_key(street, city, zip_code)
         if key in seen:
             continue
         seen.add(key)
-        street, city, zip_code = (v.strip() for v in address.groups())
-        listings.append({
-            "id": f"PA-SHERIFF-{key}", "docket_id": key,
-            "address": street.title(), "city": city.title(), "zip": zip_code,
-            "county": "Allegheny", "price": None, "sqft": None,
+        sale_type = re.search(r"Sale Type\s*\n([^\n]+)", facts, re.I)
+        type_text = sale_type.group(1).strip() if sale_type else ""
+        rows.append({
+            "id": "PA-SHERIFF-" + hashlib.sha256(key.encode()).hexdigest()[:20],
+            "docket_id": docket.group().upper(), "address": street.title(),
+            "city": city.title(), "county": "Allegheny", "zip": zip_code,
+            "price": None, "sqft": None, "beds": None, "baths": None,
             "deal_type": "Sheriff Sale", "source_type": "sheriff",
-            "source": "Allegheny County Sheriff's Office", "data_status": "live",
+            "source": "Allegheny County Sheriff's Office", "source_sale_type": type_text,
+            "data_status": "imported_official_document" if imported else "live",
             "market_status": "scheduled_sheriff_sale", "sheriff_status": "Active",
-            "sale_date": sale_day.isoformat(), "listed_date": now_est().strftime("%d/%m/%Y"),
-            "summary": f"מופיע כפעיל ברשימת מכירות השריף לתאריך {sale_day}. מחיר הנכס ופרטיו אינם מאומתים. בדוק סטטוס לפני פעולה.",
-            "url": pdf_url, "last_source_check": iso_now_est(),
-            "deal_score": 0,
+            "sale_date": sale_day.isoformat(), "source_published_date": printed_day.isoformat(),
+            "listed_date": printed_day.strftime("%d/%m/%Y"),
+            "summary": f"ברשימת השריף מ-{printed_day}: סטטוס Active למכירה ב-{sale_day}. {type_text}. מחיר, שטח וסוג נכס לא אומתו; יש לבדוק עדכון סטטוס במקור.",
+            "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
+            "filter_status": "investment_fields_unavailable",
         })
-    if not listings:
-        raise ValueError("no active sheriff lots parsed; refusing empty overwrite")
-    return listings, pdf_url
+    if recognized != len(blocks) or (not rows and skipped_active):
+        raise ValueError(f"פענוח חלקי: זוהו {recognized}/{len(blocks)} סטטוסים; {skipped_active} כתובות פעילות לא זוהו")
+    return rows, {"published_date": printed_day.isoformat(), "sale_date": sale_day.isoformat(),
+                  "parsed_blocks": len(blocks), "skipped_active_addresses": skipped_active,
+                  "mode": "imported" if imported else "live"}
+
+
+def extract_sheriff_pdf(content):
+    if not content.startswith(b"%PDF") or len(content) > 20_000_000:
+        raise ValueError("קובץ המקור אינו PDF תקין או גדול מ-20MB")
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as source:
+        source.write(content)
+        source.flush()
+        return subprocess.run(["pdftotext", "-raw", source.name, "-"],
+                              capture_output=True, text=True, timeout=40, check=True).stdout
+
+
+def fetch_allegheny_sheriff_listings():
+    """One bounded public download, with a clearly marked local import option."""
+    if os.path.isfile(SHERIFF_LOCAL_PDF):
+        with open(SHERIFF_LOCAL_PDF, "rb") as f:
+            body = extract_sheriff_pdf(f.read(20_000_001))
+        rows, audit = parse_sheriff_text(body, SHERIFF_LOCAL_PDF, imported=True)
+        return rows, SHERIFF_LOCAL_PDF, audit
+    headers = {"User-Agent": "PA-RealEstate-Intelligence-Hub/2.7", "Accept": "text/html,application/pdf"}
+    links = []
+    try:
+        page = requests.get(SHERIFF_PAGE, headers=headers, timeout=(5, 15))
+        page.raise_for_status()
+        parser = SheriffPDFLinks()
+        parser.feed(page.text)
+        links = [url for url in parser.links if re.search(r"sale[^/]*list", url, re.I)]
+    except requests.RequestException as exc:
+        print(f"ℹ️ דף השריף אינו זמין: {exc}")
+    configured_url = os.environ.get("SHERIFF_PDF_URL", "").strip()
+    if configured_url:
+        if not valid_sheriff_pdf_url(configured_url):
+            raise ValueError("SHERIFF_PDF_URL חייב להיות קישור PDF באתר השריף הרשמי")
+        pdf_url = configured_url
+    elif links:
+        pdf_url = links[0]
+    elif now_est().date().isoformat() <= "2026-10-05":
+        pdf_url = SHERIFF_KNOWN_PDF
+    else:
+        raise ValueError("לא נמצא קישור עדכני; אפשר לצרף PDF רשמי ב-sources/allegheny_sheriff.pdf")
+    print(f"📄 מנסה PDF שריף ישיר: {pdf_url}")
+    response = requests.get(pdf_url, headers=headers, timeout=(5, 30), stream=True)
+    try:
+        response.raise_for_status()
+        content = bytearray()
+        for chunk in response.iter_content(65536):
+            content.extend(chunk)
+            if len(content) > 20_000_000:
+                raise ValueError("PDF גדול מ-20MB")
+    finally:
+        response.close()
+    rows, audit = parse_sheriff_text(extract_sheriff_pdf(bytes(content)), pdf_url)
+    return rows, pdf_url, audit
+
 
 PROPERTY_TYPE_ALIASES = {
     "single family": "Single Family",
@@ -285,10 +359,12 @@ def load_server_config():
 
 
 def load_existing_properties():
-    data = load_json_file(PROPERTIES_FILE, [])
-    if not isinstance(data, list):
-        print("⚠️ properties.json אינו מערך תקין. ממשיך עם מאגר ריק כדי לא לקרוס.")
+    if not os.path.exists(PROPERTIES_FILE):
         return {}
+    with open(PROPERTIES_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, list):
+        raise ValueError("properties.json אינו מערך תקין; שמירת המאגר נעצרה")
 
     prop_dict = {}
     for item in data:
@@ -337,6 +413,17 @@ def append_scan_log(entry):
     # Keep the file small while retaining a useful audit trail.
     log = log[-1000:]
     atomic_write_json(SCAN_LOG_FILE, log)
+    report = load_json_file(SCANNER_STATUS_FILE, {})
+    if not isinstance(report, dict):
+        report = {}
+    sources = report.get("sources", {})
+    if not isinstance(sources, dict):
+        sources = {}
+    sources.update(entry.get("sources", {}))
+    report.update({"version": ORCHESTRATOR_VERSION, "last_event": entry, "sources": sources})
+    if entry.get("status") != "skipped":
+        report["last_scan"] = entry
+    atomic_write_json(SCANNER_STATUS_FILE, report)
 
 
 def classify_strategy(deal_type, price, beds, summary=""):
@@ -369,10 +456,14 @@ def classify_strategy(deal_type, price, beds, summary=""):
     }
 
 
-def fetch_live_mls_for_city(city_name, min_p, max_p):
+def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
+    audit = audit if audit is not None else {}
+    audit.update({"area": city_name, "status": "failed", "rows": 0,
+                  "coverage": "not_proven_complete"})
     clean_city = city_name.strip()
     target = REGION_MAP.get(clean_city)
     if not target:
+        audit["error"] = "unsupported_area"
         print(f"⚠️ האזור '{clean_city}' אינו ממופה ל-Redfin. מדלג כדי לא לסרוק אזור שגוי.")
         return []
 
@@ -399,10 +490,15 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
         print(f"📡 סורק נתונים חיים עבור אזור: {clean_city}...")
         resp = requests.get(url, params=params, headers=headers, timeout=20)
         if resp.status_code != 200 or "ADDRESS" not in resp.text:
+            audit.update({"status": "blocked" if resp.status_code in (401, 403) else "failed",
+                          "error": f"HTTP {resp.status_code} or invalid CSV"})
             print(f"⚠️ לא נמשכו נתוני MLS תקינים עבור {clean_city}. HTTP {resp.status_code}")
             return []
 
         reader = csv.DictReader(io.StringIO(resp.text))
+        if not {"ADDRESS", "PRICE", "CITY"}.issubset(set(reader.fieldnames or [])):
+            audit["error"] = "unexpected CSV schema"
+            return []
         for row in reader:
             addr = row.get("ADDRESS")
             raw_price = row.get("PRICE")
@@ -414,8 +510,6 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 continue
 
             dom = max(0, safe_number(row.get("DAYS ON MARKET"), 0, int))
-            if dom > SECTOR_LOOKBACK_DAYS["mls"]:
-                continue
 
             listed_dt = now_est() - timedelta(days=dom)
             listed_date_str = listed_dt.strftime("%d/%m/%Y")
@@ -470,10 +564,15 @@ def fetch_live_mls_for_city(city_name, min_p, max_p):
                 "market_status": "active",
             })
     except requests.RequestException as exc:
+        audit["error"] = str(exc)
         print(f"⚠️ שגיאת רשת בסריקת {clean_city}: {exc}")
     except Exception as exc:
+        audit["error"] = str(exc)
         print(f"⚠️ שגיאה לא צפויה בסריקת {clean_city}: {exc}")
 
+    if "error" not in audit:
+        audit.update({"status": "success", "rows": len(discovered),
+                      "limit_reached": len(discovered) >= 350})
     return discovered
 
 
@@ -494,7 +593,7 @@ def comparable_changed(old, new):
     tracked_fields = [
         "price", "deal_type", "beds", "baths", "sqft", "year_built",
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
-        "type", "property_type", "source_property_type", "source_location", "source_scan_area",
+        "type", "property_type", "source_property_type", "source_location",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
 
@@ -611,6 +710,9 @@ def run_orchestrator():
     scan_started = now_est()
     scan_id = scan_started.strftime("SCAN-%Y%m%d-%H%M%S")
     print(f"🚀 מתחיל ריצת מנוע סריקה מרכזי... {scan_id}")
+    with open(__file__, "rb") as f:
+        code_hash = hashlib.sha256(f.read()).hexdigest()[:12]
+    print(f"🔧 ENGINE {ORCHESTRATOR_VERSION} | FILE {code_hash} | COMMIT {os.environ.get('GITHUB_SHA', 'local')[:12]}")
 
     github_event = os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch")
     is_manual_trigger = github_event == "workflow_dispatch"
@@ -631,6 +733,9 @@ def run_orchestrator():
         "unchanged": 0,
         "off_market_candidates": 0,
         "errors": [],
+        "code_sha256": code_hash,
+        "github_sha": os.environ.get("GITHUB_SHA", "local"),
+        "request_id": server_config.get("requestId") if server_config and is_manual_trigger else None,
     }
 
     if not server_config:
@@ -639,6 +744,15 @@ def run_orchestrator():
         log_entry["finished_at"] = iso_now_est()
         append_scan_log(log_entry)
         print("⚠️ קובץ תצורה לא נמצא או אינו תקין. מסיים ריצה.")
+        return
+
+    try:
+        existing_props_dict = load_existing_properties()
+    except (OSError, ValueError) as exc:
+        log_entry.update({"status": "failed", "finished_at": iso_now_est()})
+        log_entry["errors"].append(str(exc))
+        append_scan_log(log_entry)
+        print(f"❌ הסריקה נעצרה לשמירת המאגר הקיים: {exc}")
         return
 
     is_auto_scan_enabled = server_config.get("autoScanEnabled", True)
@@ -663,11 +777,22 @@ def run_orchestrator():
         current_hour = now_est().strftime("%H:00")
         current_day = now_est().strftime("%A")
         print(f"⏰ השעה בחוף המזרחי: {current_day}, {current_hour}")
+        previous_report = load_json_file(SCANNER_STATUS_FILE, {})
+        previous_sources = previous_report.get("sources", {}) if isinstance(previous_report, dict) else {}
 
         for sec, sched in schedules.items():
             s_day = sched.get("day", "Everyday")
             s_time = sched.get("time", "08:00")
-            if s_time == current_hour and (s_day == "Everyday" or s_day == current_day):
+            if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", s_time):
+                continue
+            hour, minute = map(int, s_time.split(":"))
+            due = now_est().replace(hour=hour, minute=minute, second=0, microsecond=0)
+            last_checked = (previous_sources.get(sec) or {}).get("checked_at")
+            try:
+                already_attempted = bool(last_checked and datetime.fromisoformat(last_checked) >= due)
+            except (ValueError, TypeError):
+                already_attempted = False
+            if now_est() >= due and not already_attempted and (s_day == "Everyday" or s_day == current_day):
                 active_sectors_now.append(sec)
 
         active_sectors_now = [s for s in active_sectors_now if s in user_selected_sectors]
@@ -686,6 +811,12 @@ def run_orchestrator():
     min_beds = safe_number(server_config.get("minBeds"), 0, int)
     max_beds = safe_number(server_config.get("maxBeds"), 99, int)
     min_baths = safe_number(server_config.get("minBaths"), 0, float)
+    if min_price > max_price or min_sqft > max_sqft or min_beds > max_beds:
+        log_entry.update({"status": "failed", "finished_at": iso_now_est()})
+        log_entry["errors"].append("טווח מסננים לא תקין: מינימום גדול ממקסימום")
+        append_scan_log(log_entry)
+        print("❌ טווח מסננים לא תקין; הסריקה נעצרה")
+        return
     selected_property_types = [
         normalize_property_type(v) or str(v).strip()
         for v in (server_config.get("propertyTypes") or [])
@@ -723,21 +854,52 @@ def run_orchestrator():
           f"סינון: {log_entry['neighborhood_filter_status']}")
     print(f"📋 סקטורים פעילים: {active_sectors_now}")
 
+    sources = {}
+    for sector in active_sectors_now:
+        sources[sector] = {"label": SOURCE_LABELS.get(sector, sector), "checked_at": iso_now_est(),
+                           "status": "pending" if sector in ("mls", "sheriff") else "not_connected",
+                           "rows": 0}
+    log_entry["sources"] = sources
+    # These sectors have no verified adapter yet, regardless of a checkbox.
+    for sector in ("reo", "tax", "06_probate_estates"):
+        sources.setdefault(sector, {"label": SOURCE_LABELS[sector], "status": "not_connected", "rows": 0})
+
     if "sheriff" in active_sectors_now and "Allegheny" in cities_list:
         try:
-            sheriff_rows, sheriff_pdf = fetch_allegheny_sheriff_listings()
+            sheriff_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
             atomic_write_json(SHERIFF_FILE, sheriff_rows)
+            sources["sheriff"].update({"status": "imported" if sheriff_audit["mode"] == "imported" else "success",
+                                        "rows": len(sheriff_rows), "source_url": sheriff_pdf,
+                                        "investment_filters": "unavailable", **sheriff_audit})
+            if sheriff_audit["skipped_active_addresses"]:
+                sources["sheriff"]["status"] = "partial"
             log_entry["sheriff_active_lots"] = len(sheriff_rows)
             log_entry["sheriff_source_url"] = sheriff_pdf
             print(f"⚖️ שריף Allegheny: {len(sheriff_rows)} רשומות פעילות מתאריך מכירה עתידי; מקור: {sheriff_pdf}")
         except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
+            response = getattr(exc, "response", None)
+            blocked = response is not None and response.status_code in (401, 403)
+            sources["sheriff"].update({"status": "blocked" if blocked else "failed", "error": str(exc),
+                                        "cached_results": True})
             log_entry["errors"].append(f"sheriff list unavailable: {exc}")
             print(f"⚠️ רשימת השריף לא עודכנה: {exc}")
+    elif "sheriff" in active_sectors_now:
+        sources["sheriff"].update({"status": "unsupported_area", "error": "כרגע חיבור השריף תומך במחוז Allegheny בלבד"})
 
     live_results = []
     if "mls" in active_sectors_now:
+        mls_audits = []
         for city in cities_list:
-            live_results.extend(fetch_live_mls_for_city(city, min_price, max_price))
+            area_audit = {}
+            live_results.extend(fetch_live_mls_for_city(city, min_price, max_price, area_audit))
+            mls_audits.append(area_audit)
+        good = sum(a.get("status") == "success" for a in mls_audits)
+        sources["mls"].update({"status": "success" if good == len(mls_audits) and good else "partial" if good else "failed",
+                                 "rows": len(live_results), "areas": mls_audits,
+                                 "coverage": "not_proven_complete"})
+        for item in mls_audits:
+            if item.get("error"):
+                log_entry["errors"].append(f"MLS {item['area']}: {item['error']}")
 
     # Geography QA: prove what each configured Redfin region actually returned.
     geography_qa = {}
@@ -878,6 +1040,17 @@ def run_orchestrator():
 
         final_filtered.append(prop)
 
+    # A county feed and its city feed overlap. Merge once per property per run,
+    # preferring the city query when both passed their geography filters.
+    unique_results = {}
+    for prop in final_filtered:
+        key = property_key(prop)
+        old = unique_results.get(key)
+        is_city = REGION_MAP.get(prop.get("source_scan_area"), {}).get("region_type") == "6"
+        if old is None or is_city:
+            unique_results[key] = prop
+    log_entry["duplicates_removed"] = len(final_filtered) - len(unique_results)
+    final_filtered = list(unique_results.values())
     log_entry["after_filters"] = len(final_filtered)
     log_entry["filter_rejections"] = filter_rejections
     log_entry["source_property_type_counts"] = source_type_counts
@@ -893,7 +1066,6 @@ def run_orchestrator():
     print(f"🏷️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
 
-    existing_props_dict = load_existing_properties()
     seen_keys = set()
     for deal in final_filtered:
         key = property_key(deal)
@@ -907,10 +1079,19 @@ def run_orchestrator():
         existing_props_dict[key] = merged
         log_entry[state] += 1
 
-    if "mls" in active_sectors_now:
-        log_entry["off_market_candidates"] = mark_missing_mls_candidates(
-            existing_props_dict, raw_mls_seen_keys, cities_list, scan_id
-        )
+    # Price-scoped/capped Redfin exports are not evidence that a listing went
+    # off market. Only a future explicit listing-status source may do that.
+    log_entry["off_market_detection"] = "disabled_without_verified_listing_status"
+    for key in raw_mls_seen_keys:
+        observed = existing_props_dict.get(key)
+        if observed and observed.get("source_type") == "mls":
+            observed["missing_scan_count"] = 0
+            if observed.get("market_status") == "off_market_candidate":
+                observed["market_status"] = "active"
+                observed["status_history"] = append_status_event(observed.get("status_history"), "active", iso_now_est(), scan_id, "observed in live source before investment filters")
+    log_entry["sources"]["offmarket"] = {
+        "label": "OFF MARKET", "status": "needs_verification", "checked_at": iso_now_est(),
+        "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"}
 
     final_merged_list = list(existing_props_dict.values())
     final_merged_list.sort(
@@ -920,7 +1101,11 @@ def run_orchestrator():
 
     try:
         atomic_write_json(PROPERTIES_FILE, final_merged_list)
-        log_entry["status"] = "success"
+        source_states = [sources[s].get("status") for s in active_sectors_now if s in sources]
+        bad = {"failed", "blocked", "partial", "not_connected", "unsupported_area"}
+        log_entry["status"] = "partial" if any(s in bad for s in source_states) else "success"
+        if source_states and all(s in {"failed", "blocked", "not_connected", "unsupported_area"} for s in source_states):
+            log_entry["status"] = "failed"
     except OSError as exc:
         log_entry["status"] = "failed"
         log_entry["errors"].append(f"properties write failed: {exc}")
@@ -937,7 +1122,19 @@ def run_orchestrator():
         f"סה״כ במאגר: {len(final_merged_list)}"
     )
     print(f"🧾 רישום הסריקה נשמר ב-{SCAN_LOG_FILE}")
+    print(f"📋 סטטוס כולל: {log_entry['status']} | כפילויות הוסרו: {log_entry['duplicates_removed']}")
+    for source in sources.values():
+        print(f"   {source['label']}: {source['status']}")
+    if log_entry["status"] in ("partial", "failed") and os.environ.get("GITHUB_ACTIONS"):
+        print("::warning::One or more selected sources did not complete. See scanner_status.json.")
 
 
 if __name__ == "__main__":
     run_orchestrator()
+    # Analyzer runs only after an MLS scan that actually changed properties.
+    if os.environ.get("GITHUB_OUTPUT"):
+        latest = load_json_file(SCANNER_STATUS_FILE, {}).get("last_event", {})
+        analyze = bool(latest.get("status") in ("success", "partial") and
+                       (latest.get("new", 0) or latest.get("updated", 0)))
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+            output.write(f"analyze={'true' if analyze else 'false'}\n")
