@@ -1,47 +1,187 @@
 import os
+import re
+import sys
 import json
-import random
-import time
+import logging
+from io import BytesIO
+from datetime import datetime
+from typing import List, Dict, Any, Optional
+import requests
+from bs4 import BeautifulSoup
+from pypdf import PdfReader
 
-PGH_ZIPS = ["15210", "15206", "15212", "15224", "15201"]
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [ALLEGHENY-SHERIFF] %(levelname)s: %(message)s")
 
-def run_collector():
-    print("[Agent 04 - Allegheny Sheriff] מתחיל סריקת רישומי שריף במחוז אלגני / פיטסבורג...")
-    allegheny_deals = []
+BASE_PAGE_URL = "https://sheriffalleghenycounty.com/sheriffs-sales/"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
-    for i in range(3):
+def find_latest_pdf_url() -> Optional[str]:
+    """Scrapes the sheriff sales page to find the latest Sale Listings PDF link."""
+    try:
+        logging.info(f"Checking for PDF links at {BASE_PAGE_URL}...")
+        resp = requests.get(BASE_PAGE_URL, headers=HEADERS, timeout=20)
+        if resp.status_code != 200:
+            logging.error(f"Failed to load Sheriff sales page (HTTP {resp.status_code})")
+            return None
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for a_tag in soup.find_all("a", href=True):
+            href = a_tag["href"]
+            text = a_tag.get_text().strip().lower()
+            if "sale" in href.lower() and href.lower().endswith(".pdf"):
+                if "listing" in href.lower() or "listing" in text:
+                    logging.info(f"Found active listings PDF link: {href}")
+                    return href
+            if href.lower().endswith(".pdf") and ("sale" in href.lower() or "october" in href.lower() or "sept" in href.lower()):
+                logging.info(f"Found candidate PDF link: {href}")
+                return href
+
+    except Exception as e:
+        logging.error(f"Error discovering PDF link: {e}")
+    return None
+
+def extract_properties_from_pdf(pdf_stream_or_path) -> List[Dict[str, Any]]:
+    """Parses Teleosoft / CountySuite Sheriff listing PDF format into structured records."""
+    logging.info("Starting PDF text extraction...")
+    reader = PdfReader(pdf_stream_or_path)
+    total_pages = len(reader.pages)
+    logging.info(f"Loaded PDF with {total_pages} pages.")
+
+    full_text = ""
+    for idx, page in enumerate(reader.pages):
+        page_text = page.extract_text() or ""
+        full_text += f"\n--- PAGE {idx+1} ---\n" + page_text
+
+    properties: List[Dict[str, Any]] = []
+    blocks = re.split(r"(?:\n|^)Sale\s*\n", full_text)
+
+    for block in blocks:
+        if "Parcel/Tax ID:" not in block and "Case Number" not in block:
+            continue
+
         try:
-            time.sleep(random.uniform(0.2, 0.5))
-            zip_code = random.choice(PGH_ZIPS)
-            court_gd = f"GD-{random.randint(24, 26)}-{random.randint(1000, 9999)}"
-            
-            deal = {
-                "id": f"PGH-SHERIFF-{random.randint(1000, 9999)}",
-                "address": f"{random.randint(200, 5500)} {random.choice(['Penn Ave', 'Carson St', 'Butler St', 'Fifth Ave'])}",
-                "city": "Pittsburgh",
-                "county": "Allegheny",
-                "zip": zip_code,
-                "price": random.randint(45, 110) * 1000,
-                "beds": random.choice([2, 3, 4]),
-                "baths": random.choice([1, 1.5, 2]),
-                "sqft": random.randint(1150, 1950),
-                "type": random.choice(["Single Family", "Townhouse"]),
-                "deal_type": "Sheriff Sale",
-                "summary": f"מכירת שריף מחוז אלגני. הליך גביית חוב משכנתאי בפיקוח בית המשפט לעניינים אזרחיים בפיטסבורג.",
-                "source_name": "Allegheny County Sheriff Office",
-                "margin_estimate": f"{random.randint(30, 50)}% מתחת למחיר שוק",
-                "docket_id": f"DOCKET-{court_gd}",
-                "owner_name": "Court Ordered Disposition",
-                "url": "https://www.alleghenycountysheriff.us"
-            }
-            allegheny_deals.append(deal)
+            case_match = re.search(r"([A-Z]{2}-\d{2}-\d{6})", block)
+            case_number = case_match.group(1) if case_match else ""
+
+            sale_id_match = re.search(r"\b(\d{1,4}[A-Z]{3}\d{2})\b", block)
+            sale_id = sale_id_match.group(1) if sale_id_match else ""
+
+            status = "Unknown"
+            if re.search(r"\bActive\b", block, re.I):
+                status = "Active"
+            elif re.search(r"\bPostponed\b", block, re.I):
+                status = "Postponed"
+            elif re.search(r"\bStayed\b", block, re.I):
+                status = "Stayed"
+            elif "Third Party" in block:
+                status = "Sold (Third Party)"
+            elif "PLTF Overbid" in block:
+                status = "Sold (Plaintiff Overbid)"
+
+            bid_match = re.search(r"\$([\d,]+\.\d{2})", block)
+            opening_bid = f"${bid_match.group(1)}" if bid_match else ""
+
+            parcel_match = re.search(r"Parcel/Tax ID:\s*([A-Za-z0-9\-]+)", block)
+            parcel_id = parcel_match.group(1).strip() if parcel_match else ""
+
+            municipality = ""
+            address = ""
+            if "Property" in block and "Municipality" in block:
+                prop_section = block.split("Property")[1]
+                lines = [line.strip() for line in prop_section.split("\n") if line.strip()]
+                
+                muni_match = re.search(r"Municipality\s*\n\s*([A-Za-z\s]+)", prop_section)
+                if muni_match:
+                    municipality = muni_match.group(1).strip()
+
+                address_candidates = []
+                for line in lines:
+                    if re.search(r"\d+\s+[A-Za-z0-9\s]+(?:ST|AVE|RD|DR|BLVD|WAY|LANE|CT|PL)", line, re.I):
+                        address_candidates.append(line)
+                    elif re.search(r"[A-Z\s]+,\s*PA\s*\d{5}", line):
+                        address_candidates.append(line)
+
+                address = " ".join(address_candidates[:2]) if address_candidates else ""
+
+            unique_id = f"ALLG-{case_number}" if case_number else f"ALLG-{sale_id or abs(hash(block)) % 10000000}"
+
+            if address or parcel_id:
+                properties.append({
+                    "id": unique_id,
+                    "sale_id": sale_id,
+                    "case_number": case_number,
+                    "status": status,
+                    "opening_bid": opening_bid,
+                    "parcel_id": parcel_id,
+                    "address": address or "Address in comments / verify parcel",
+                    "city": municipality or "Allegheny County",
+                    "state": "PA",
+                    "county": "Allegheny",
+                    "source": "allegheny_sheriff_pdf",
+                    "source_type": "sheriff_sale",
+                    "scraped_at": datetime.utcnow().isoformat()
+                })
 
         except Exception as e:
-            print(f"[Agent 04 - Allegheny Sheriff] שגיאה בסריקה: {e}")
+            continue
 
-    print(f"[Agent 04 - Allegheny Sheriff] איסוף הסתיים. נרשמו {len(allegheny_deals)} נכסים.")
-    return allegheny_deals
+    logging.info(f"Extracted {len(properties)} properties from PDF.")
+    return properties
+
+def run(local_pdf_path: Optional[str] = None):
+    results = []
+
+    if local_pdf_path and os.path.exists(local_pdf_path):
+        logging.info(f"Loading local PDF file: {local_pdf_path}")
+        with open(local_pdf_path, "rb") as f:
+            results = extract_properties_from_pdf(f)
+    else:
+        pdf_url = find_latest_pdf_url()
+        if pdf_url:
+            logging.info(f"Downloading PDF from {pdf_url}...")
+            resp = requests.get(pdf_url, headers=HEADERS, timeout=40)
+            if resp.status_code == 200:
+                results = extract_properties_from_pdf(BytesIO(resp.content))
+
+    if not results:
+        logging.warning("No properties extracted. Check file path or website URL.")
+        return
+
+    output_path = os.path.join(os.path.dirname(__file__), "..", "properties.json")
+    existing = []
+    if os.path.exists(output_path):
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+        except Exception:
+            existing = []
+
+    existing_ids = {p.get("id") for p in existing}
+    added_count = 0
+    active_count = 0
+
+    for prop in results:
+        if prop["status"] == "Active":
+            active_count += 1
+        if prop["id"] not in existing_ids:
+            existing.append(prop)
+            existing_ids.add(prop["id"])
+            added_count += 1
+        else:
+            for ex in existing:
+                if ex.get("id") == prop["id"]:
+                    ex["status"] = prop["status"]
+                    ex["opening_bid"] = prop["opening_bid"]
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(existing, f, indent=2, ensure_ascii=False)
+
+    logging.info(f"Success! Found {active_count} ACTIVE deals. Added {added_count} new records to properties.json.")
 
 if __name__ == "__main__":
-    results = run_collector()
-    print(f"סה\"כ תוצאות: {len(results)}")
+    custom_pdf = sys.argv[1] if len(sys.argv) > 1 else None
+    run(custom_pdf)
