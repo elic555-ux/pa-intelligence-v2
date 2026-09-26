@@ -20,12 +20,9 @@ HEADERS = {
 }
 
 def find_latest_pdf_url() -> Optional[str]:
-    """Scrapes the sheriff sales page to find the latest Sale Listings PDF link."""
     try:
-        logging.info(f"Checking for PDF links at {BASE_PAGE_URL}...")
         resp = requests.get(BASE_PAGE_URL, headers=HEADERS, timeout=20)
         if resp.status_code != 200:
-            logging.error(f"Failed to load Sheriff sales page (HTTP {resp.status_code})")
             return None
 
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -34,18 +31,14 @@ def find_latest_pdf_url() -> Optional[str]:
             text = a_tag.get_text().strip().lower()
             if "sale" in href.lower() and href.lower().endswith(".pdf"):
                 if "listing" in href.lower() or "listing" in text:
-                    logging.info(f"Found active listings PDF link: {href}")
                     return href
             if href.lower().endswith(".pdf") and ("sale" in href.lower() or "october" in href.lower() or "sept" in href.lower()):
-                logging.info(f"Found candidate PDF link: {href}")
                 return href
-
     except Exception as e:
         logging.error(f"Error discovering PDF link: {e}")
     return None
 
 def extract_properties_from_pdf(pdf_stream_or_path) -> List[Dict[str, Any]]:
-    """Parses Teleosoft / CountySuite Sheriff listing PDF format into structured records."""
     logging.info("Starting PDF text extraction...")
     reader = PdfReader(pdf_stream_or_path)
     total_pages = len(reader.pages)
@@ -125,30 +118,24 @@ def extract_properties_from_pdf(pdf_stream_or_path) -> List[Dict[str, Any]]:
                     "source_type": "sheriff_sale",
                     "scraped_at": datetime.utcnow().isoformat()
                 })
-
-        except Exception as e:
+        except Exception:
             continue
 
-    logging.info(f"Extracted {len(properties)} properties from PDF.")
     return properties
 
 def run(local_pdf_path: Optional[str] = None):
     results = []
-
     if local_pdf_path and os.path.exists(local_pdf_path):
-        logging.info(f"Loading local PDF file: {local_pdf_path}")
         with open(local_pdf_path, "rb") as f:
             results = extract_properties_from_pdf(f)
     else:
         pdf_url = find_latest_pdf_url()
         if pdf_url:
-            logging.info(f"Downloading PDF from {pdf_url}...")
             resp = requests.get(pdf_url, headers=HEADERS, timeout=40)
             if resp.status_code == 200:
                 results = extract_properties_from_pdf(BytesIO(resp.content))
 
     if not results:
-        logging.warning("No properties extracted. Check file path or website URL.")
         return
 
     output_path = os.path.join(os.path.dirname(__file__), "..", "properties.json")
@@ -160,7 +147,7 @@ def run(local_pdf_path: Optional[str] = None):
         except Exception:
             existing = []
 
-    # Retroactively fix any existing entries that were saved with 'allegheny_sheriff_pdf'
+    # Retroactively fix any existing entries with '_pdf'
     for item in existing:
         if item.get("source") == "allegheny_sheriff_pdf":
             item["source"] = "allegheny_sheriff"
