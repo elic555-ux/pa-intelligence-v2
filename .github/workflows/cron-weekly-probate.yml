@@ -1,34 +1,13 @@
-name: 2. Weekly Probate & FSBO
+name: "Legacy Probate — use Central Scanner"
 on:
-  schedule:
-    - cron: '0 6 * * 3'
   workflow_dispatch:
-concurrency:
-  group: pa-scanner-queue
-  cancel-in-progress: false
 permissions:
-  contents: write
-  actions: write
+  contents: read
 jobs:
-  run-scraper:
+  instructions:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.10' }
-      - run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 pytz
-      - env:
-          INPUT_SCANNER_ID: '06_probate_estates'
-          INPUT_TARGET_COUNTY: 'Batch_Mode'
-          INPUT_TARGET_CITY: 'Pittsburgh, Allegheny, Philadelphia, Allentown, Reading, Erie, Scranton, Bethlehem, Lancaster'
-          INPUT_NEIGHBORHOODS: 'SECTORS:06_probate_estates | MIN_PRICE:40000 | MAX_PRICE:250000'
-        run: python orchestrator.py
-      - run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add properties.json || true
-          git commit -m "Auto-update: Weekly Probate [skip ci]" || echo "No changes"
-          git pull origin main --no-rebase --strategy-option=ours || true
-          git push origin main
+      - name: Scanner moved to the central workflow
+        run: |
+          echo "כל התזמונים מנוהלים כעת מהמסך דרך Central Scanner." >> "$GITHUB_STEP_SUMMARY"
+          echo "לסריקה ידנית הפעל את cron-daily-mls.yml או את הכפתור באתר." >> "$GITHUB_STEP_SUMMARY"
