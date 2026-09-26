@@ -1,13 +1,17 @@
 {
   "version": "2.7.0-scan-audit-20260926",
   "last_event": {
-    "scan_id": "SCAN-20260926-081718",
-    "started_at": "2026-09-26T08:17:18-04:00",
-    "trigger": "scheduled",
+    "scan_id": "SCAN-20260926-082044",
+    "started_at": "2026-09-26T08:20:44-04:00",
+    "trigger": "manual",
     "orchestrator_version": "2.7.0-scan-audit-20260926",
-    "status": "success",
+    "status": "partial",
     "active_sectors": [
-      "mls"
+      "mls",
+      "reo",
+      "sheriff",
+      "tax",
+      "06_probate_estates"
     ],
     "cities": [
       "Pittsburgh",
@@ -16,14 +20,16 @@
     ],
     "source_results": 856,
     "after_filters": 332,
-    "new": 14,
-    "updated": 318,
-    "unchanged": 0,
+    "new": 0,
+    "updated": 0,
+    "unchanged": 332,
     "off_market_candidates": 0,
-    "errors": [],
+    "errors": [
+      "sheriff list unavailable: קובץ המקור אינו PDF תקין או גדול מ-20MB"
+    ],
     "code_sha256": "76b6c8c2b777",
-    "github_sha": "dcd7822fc4598f40086bb109acf2c887923b101e",
-    "request_id": null,
+    "github_sha": "e2fe1dd3ab548e7db9cf676bcb85268165431db0",
+    "request_id": "787358af-dc52-4bd8-984e-3228ed93219a",
     "property_types": [
       "Single Family",
       "Duplex / Triplex"
@@ -161,6 +167,8 @@
       "Erie City",
       "Millcreek",
       "Summit Heights",
+      "The Retreat",
+      "Wattsburg Boro",
       "Wesleyville Boro",
       "Strip District",
       "East Liberty",
@@ -177,7 +185,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-09-26T08:17:18-04:00",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "success",
         "rows": 856,
         "areas": [
@@ -207,23 +215,34 @@
       },
       "reo": {
         "label": "בנקים וכינוס",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "not_connected",
         "rows": 0
       },
+      "sheriff": {
+        "label": "מכירות שריף",
+        "checked_at": "2026-09-26T08:20:44-04:00",
+        "status": "failed",
+        "rows": 0,
+        "error": "קובץ המקור אינו PDF תקין או גדול מ-20MB",
+        "cached_results": true
+      },
       "tax": {
         "label": "חובות מס",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-09-26T08:17:20-04:00",
+        "checked_at": "2026-09-26T08:20:45-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -569,12 +588,12 @@
     },
     "off_market_detection": "disabled_without_verified_listing_status",
     "total_properties": 483,
-    "finished_at": "2026-09-26T08:17:20-04:00"
+    "finished_at": "2026-09-26T08:20:45-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-09-26T08:17:18-04:00",
+      "checked_at": "2026-09-26T08:20:44-04:00",
       "status": "success",
       "rows": 856,
       "areas": [
@@ -604,34 +623,49 @@
     },
     "reo": {
       "label": "בנקים וכינוס",
+      "checked_at": "2026-09-26T08:20:44-04:00",
       "status": "not_connected",
       "rows": 0
     },
     "tax": {
       "label": "חובות מס",
+      "checked_at": "2026-09-26T08:20:44-04:00",
       "status": "not_connected",
       "rows": 0
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
+      "checked_at": "2026-09-26T08:20:44-04:00",
       "status": "not_connected",
       "rows": 0
     },
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-09-26T08:17:20-04:00",
+      "checked_at": "2026-09-26T08:20:45-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
+    },
+    "sheriff": {
+      "label": "מכירות שריף",
+      "checked_at": "2026-09-26T08:20:44-04:00",
+      "status": "failed",
+      "rows": 0,
+      "error": "קובץ המקור אינו PDF תקין או גדול מ-20MB",
+      "cached_results": true
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20260926-081718",
-    "started_at": "2026-09-26T08:17:18-04:00",
-    "trigger": "scheduled",
+    "scan_id": "SCAN-20260926-082044",
+    "started_at": "2026-09-26T08:20:44-04:00",
+    "trigger": "manual",
     "orchestrator_version": "2.7.0-scan-audit-20260926",
-    "status": "success",
+    "status": "partial",
     "active_sectors": [
-      "mls"
+      "mls",
+      "reo",
+      "sheriff",
+      "tax",
+      "06_probate_estates"
     ],
     "cities": [
       "Pittsburgh",
@@ -640,14 +674,16 @@
     ],
     "source_results": 856,
     "after_filters": 332,
-    "new": 14,
-    "updated": 318,
-    "unchanged": 0,
+    "new": 0,
+    "updated": 0,
+    "unchanged": 332,
     "off_market_candidates": 0,
-    "errors": [],
+    "errors": [
+      "sheriff list unavailable: קובץ המקור אינו PDF תקין או גדול מ-20MB"
+    ],
     "code_sha256": "76b6c8c2b777",
-    "github_sha": "dcd7822fc4598f40086bb109acf2c887923b101e",
-    "request_id": null,
+    "github_sha": "e2fe1dd3ab548e7db9cf676bcb85268165431db0",
+    "request_id": "787358af-dc52-4bd8-984e-3228ed93219a",
     "property_types": [
       "Single Family",
       "Duplex / Triplex"
@@ -785,6 +821,8 @@
       "Erie City",
       "Millcreek",
       "Summit Heights",
+      "The Retreat",
+      "Wattsburg Boro",
       "Wesleyville Boro",
       "Strip District",
       "East Liberty",
@@ -801,7 +839,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-09-26T08:17:18-04:00",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "success",
         "rows": 856,
         "areas": [
@@ -831,23 +869,34 @@
       },
       "reo": {
         "label": "בנקים וכינוס",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "not_connected",
         "rows": 0
       },
+      "sheriff": {
+        "label": "מכירות שריף",
+        "checked_at": "2026-09-26T08:20:44-04:00",
+        "status": "failed",
+        "rows": 0,
+        "error": "קובץ המקור אינו PDF תקין או גדול מ-20MB",
+        "cached_results": true
+      },
       "tax": {
         "label": "חובות מס",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
+        "checked_at": "2026-09-26T08:20:44-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-09-26T08:17:20-04:00",
+        "checked_at": "2026-09-26T08:20:45-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -1193,6 +1242,6 @@
     },
     "off_market_detection": "disabled_without_verified_listing_status",
     "total_properties": 483,
-    "finished_at": "2026-09-26T08:17:20-04:00"
+    "finished_at": "2026-09-26T08:20:45-04:00"
   }
 }
