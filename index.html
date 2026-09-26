@@ -88,6 +88,11 @@
 
     <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
+        <details class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs" open>
+            <summary class="cursor-pointer font-bold text-blue-300">מצב מקורות הסריקה</summary>
+            <div id="scanner-source-status" class="mt-2 space-y-1 text-gray-300">ממתין לדוח הסריקה הראשון.</div>
+            <p class="text-gray-400 mt-2">רשימת MLS עשויה להיות חלקית. OFF MARKET כולל מועמדים שדורשים אימות. ברשומות שריף ייתכן שאין מחיר, שטח או מספר חדרים לבדיקת התאמה למסננים.</p>
+        </details>
         <!-- KPI Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div></button>
@@ -825,7 +830,33 @@
 
         function parseDate(d) { const p = (d||'').split('/'); return p.length===3 ? new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() : 0; }
 
+        let scannerReport = null;
+        async function loadScannerStatus() {
+            try {
+                const response = await fetch('scanner_status.json?t=' + Date.now());
+                if (!response.ok) return null;
+                scannerReport = await response.json();
+                const panel = document.getElementById('scanner-source-status');
+                panel.replaceChildren();
+                const states = {success:'עודכן', partial:'עודכן חלקית', failed:'נכשל', blocked:'המקור חסם גישה',
+                    not_connected:'טרם חובר למקור חי', unsupported_area:'האזור אינו נתמך במקור זה',
+                    imported:'נטען ממסמך שהועלה', needs_verification:'דורש אימות'};
+                const heading = document.createElement('p');
+                const scan = scannerReport.last_scan;
+                heading.textContent = scan ? `גרסה ${scannerReport.version} | ריצה ${scan.scan_id} | ${scan.status === 'success' ? 'הושלם' : scan.status === 'partial' ? 'הושלם חלקית' : 'נכשל'}` : 'טרם הושלמה סריקה';
+                panel.appendChild(heading);
+                for (const item of Object.values(scannerReport.sources || {})) {
+                    const line = document.createElement('p');
+                    const checked = item.checked_at ? ' | ' + new Date(item.checked_at).toLocaleString('he-IL') : '';
+                    line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${checked}`;
+                    panel.appendChild(line);
+                }
+                return scannerReport;
+            } catch (e) { return null; }
+        }
+
         async function loadProperties() {
+            await loadScannerStatus();
             try {
                 const res = await fetch('properties.json?t=' + Date.now());
                 
@@ -847,7 +878,12 @@
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
                             rawList.push(...sheriffRows.filter(p => p.sheriff_status === 'Active' &&
-                                p.sale_date && new Date(p.sale_date + 'T12:00:00') >= today));
+                                p.sale_date && new Date(p.sale_date + 'T12:00:00') >= today).map(p => {
+                                const source = scannerReport?.sources?.sheriff;
+                                const stale = !source || !['success','imported','partial'].includes(source.status) ||
+                                    !p.last_source_check || Date.now() - new Date(p.last_source_check).getTime() > 48*60*60*1000;
+                                return {...p, source_stale: stale, summary: (stale ? 'המידע שמור מסריקה קודמת; הסטטוס הנוכחי לא אומת. ' : '') + (p.summary || '')};
+                            }));
                         }
                     }
                 } catch (error) { console.warn('Sheriff list unavailable', error); }
@@ -859,7 +895,7 @@
                 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
                 rawList.forEach(p => {
-                    const normKey = (p.source_type === 'sheriff' ? 'sheriff:' + p.docket_id :
+                    const normKey = (p.source_type === 'sheriff' ? 'sheriff:' + p.id :
                         p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id));
                     if (!seenKeys.has(normKey)) { 
                         seenKeys.add(normKey); 
@@ -1210,7 +1246,7 @@
                         <td class="p-3 font-bold text-gray-300">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
                         <td class="p-3"><div class="text-emerald-300 font-mono">💰 ${p.projected_rent||'-'}</div><div class="text-amber-300 text-[11px]">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'-')}</div></td>
                         <td class="p-3 font-mono text-amber-300">📅 ${p.listed_date||'-'}</td>
-                        <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score||75}</span></td>
+                        <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score ?? '—'}</span></td>
                         <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
             } else {
@@ -1271,7 +1307,7 @@
             document.getElementById('modal-address').textContent = p.address;
             document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
             document.getElementById('modal-listed-date').textContent = p.listed_date;
-            document.getElementById('modal-price').textContent = `$${(p.price||0).toLocaleString()}`;
+            document.getElementById('modal-price').textContent = p.price ? `$${Number(p.price).toLocaleString()}` : 'לא פורסם';
             document.getElementById('modal-beds').textContent = p.beds||'-';
             document.getElementById('modal-baths').textContent = p.baths||'-';
             document.getElementById('modal-sqft').textContent = p.sqft||'-';
@@ -1280,10 +1316,10 @@
             document.getElementById('modal-yield').textContent = p.gross_yield||'-';
             document.getElementById('modal-rehab').textContent = p.rehab_scope||'-';
             document.getElementById('modal-summary').textContent = p.summary||'אין תיאור נוסף';
-            document.getElementById('modal-occupancy').textContent = p.occupancy||'פנוי';
-            document.getElementById('modal-roof').textContent = p.roof_condition||'תקין';
-            document.getElementById('modal-hvac').textContent = p.hvac_type||'גז טבעי';
-            document.getElementById('modal-year-built').textContent = p.year_built||'1955';
+            document.getElementById('modal-occupancy').textContent = p.occupancy||'לא ידוע';
+            document.getElementById('modal-roof').textContent = p.roof_condition||'לא ידוע';
+            document.getElementById('modal-hvac').textContent = p.hvac_type||'לא ידוע';
+            document.getElementById('modal-year-built').textContent = p.year_built||'לא ידוע';
             document.getElementById('modal-lot-size').textContent = p.lot_size||'-';
             document.getElementById('modal-parking').textContent = p.parking||'-';
             document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
@@ -1428,20 +1464,27 @@
             lucide.createIcons();
 
             const config = buildServerConfig(true);
+            config.requestId = window.crypto?.randomUUID ? window.crypto.randomUUID() : 'manual-' + Date.now();
 
             try {
                 const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
                 let sha = '';
                 const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${tk}` } });
                 if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+                else if(getRes.status !== 404) throw new Error('קריאת ההגדרות נכשלה: HTTP ' + getRes.status);
 
-                await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
+                const configResponse = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${tk}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: "Update config for On-Demand Scan", content: contentBase64, sha: sha || undefined })
                 });
+                if (!configResponse.ok) throw new Error('שמירת ההגדרות נכשלה: HTTP ' + configResponse.status);
             } catch(e) {
-                console.warn("הערה: שגיאה בעדכון קובץ ההגדרות בשרת לפני הסריקה, ממשיך בשיגור...");
+                alert(e.message + '\nהסריקה לא שוגרה. שמור את ההגדרות ונסה שוב.');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                lucide.createIcons();
+                return;
             }
 
             try {
@@ -1453,7 +1496,7 @@
                 
                 if (res.ok || res.status===204) {
                     closeOnDemandScanModal(); 
-                    startBackgroundScanMonitor(); 
+                    startBackgroundScanMonitor(config.requestId);
                 } else {
                     const errorText = await res.text();
                     console.error(errorText);
@@ -1543,27 +1586,33 @@
             lucide.createIcons();
         }
 
-        function startBackgroundScanMonitor() {
+        function startBackgroundScanMonitor(requestId) {
             document.getElementById('scan-progress-toast').classList.remove('hidden');
-            document.getElementById('scan-toast-subtitle').textContent = "סורק בשרת... הדף יתרענן אוטומטית בעוד כדקה וחצי.";
-            scanStartTime = Date.now(); 
+            document.getElementById('scan-toast-subtitle').textContent = 'הסריקה שוגרה. ממתין לתוצאת הריצה בשרת.';
+            scanStartTime = Date.now();
             const tEl = document.getElementById('scan-timer');
-            
             if (scanTimerInterval) clearInterval(scanTimerInterval);
-            scanTimerInterval = setInterval(() => { 
-                const diff = Math.floor((Date.now() - scanStartTime) / 1000); 
-                tEl.textContent = `${String(Math.floor(diff / 60)).padStart(2,'0')}:${String(diff % 60).padStart(2,'0')}`; 
-                
-                if (diff >= 90) {
-                    finishBackgroundScanMonitor();
+            let checking = false;
+            scanTimerInterval = setInterval(async () => {
+                const diff = Math.floor((Date.now() - scanStartTime) / 1000);
+                tEl.textContent = `${String(Math.floor(diff / 60)).padStart(2,'0')}:${String(diff % 60).padStart(2,'0')}`;
+                if (diff >= 600) {
+                    clearInterval(scanTimerInterval);
+                    document.getElementById('scan-toast-subtitle').textContent = 'טרם התקבלה תוצאה לאחר 10 דקות. בדוק את הריצה ב-GitHub Actions.';
+                    return;
                 }
+                if (diff % 20 !== 0 || checking) return;
+                checking = true;
+                try {
+                    const report = await loadScannerStatus();
+                    if (report?.last_scan?.request_id === requestId && ['success','partial','failed'].includes(report.last_scan.status)) {
+                        clearInterval(scanTimerInterval);
+                        await loadProperties();
+                        await loadGeoCatalog();
+                        document.getElementById('scan-progress-toast').classList.add('hidden');
+                    }
+                } finally { checking = false; }
             }, 1000);
-        }
-        
-        function finishBackgroundScanMonitor() {
-            clearInterval(scanTimerInterval); 
-            document.getElementById('scan-progress-toast').classList.add('hidden');
-            window.location.reload(true);
         }
 
         function updateAutoScanUI() {
