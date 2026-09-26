@@ -32,7 +32,8 @@ def find_latest_pdf_url() -> Optional[str]:
             if "sale" in href.lower() and href.lower().endswith(".pdf"):
                 if "listing" in href.lower() or "listing" in text:
                     return href
-            if href.lower().endswith(".pdf") and ("sale" in href.lower() or "october" in href.lower() or "sept" in href.lower()):
+            # Added more months to keep it future-proof
+            if href.lower().endswith(".pdf") and any(x in href.lower() for x in ["sale", "october", "sept", "nov", "dec", "jan"]):
                 return href
     except Exception as e:
         logging.error(f"Error discovering PDF link: {e}")
@@ -50,57 +51,76 @@ def extract_properties_from_pdf(pdf_stream_or_path) -> List[Dict[str, Any]]:
         full_text += f"\n--- PAGE {idx+1} ---\n" + page_text
 
     properties: List[Dict[str, Any]] = []
-    blocks = re.split(r"(?:\n|^)Sale\s*\n", full_text)
+    
+    # במקום לחתוך לפי מילה שבירה כמו Sale, נחפש את מספרי התיקים (תמיד מתחילים בשתי אותיות, מקף, ספרות)
+    # ונחלץ את הטקסט שביניהם כ"בלוק" של נכס
+    matches = list(re.finditer(r"([A-Z]{2}-\d{2}-\d{6})", full_text))
+    
+    if not matches:
+        logging.warning("לא זוהו מספרי תיקים במסמך. ייתכן שפורמט המסמך השתנה לחלוטין.")
+        return properties
 
-    for block in blocks:
-        if "Parcel/Tax ID:" not in block and "Case Number" not in block:
+    # איסוף הבלוקים וסינון כפילויות של מספרי תיק (נשמור את הבלוק הארוך ביותר לכל תיק)
+    blocks_dict = {}
+    for i, match in enumerate(matches):
+        start = match.start()
+        end = matches[i+1].start() if i + 1 < len(matches) else len(full_text)
+        block = full_text[start:end]
+        case_number = match.group(1)
+        
+        if case_number not in blocks_dict or len(block) > len(blocks_dict[case_number]):
+            blocks_dict[case_number] = block
+
+    # מעבר על כל בלוק וחילוץ השדות
+    for case_number, block in blocks_dict.items():
+        if len(block.strip()) < 30:
             continue
 
         try:
-            case_match = re.search(r"([A-Z]{2}-\d{2}-\d{6})", block)
-            case_number = case_match.group(1) if case_match else ""
-
-            sale_id_match = re.search(r"\b(\d{1,4}[A-Z]{3}\d{2})\b", block)
+            sale_id_match = re.search(r"\b(\d{1,4}[A-Z]{3}\d{2})\b", block, re.I)
             sale_id = sale_id_match.group(1) if sale_id_match else ""
 
-            status = "Unknown"
-            if re.search(r"\bActive\b", block, re.I):
-                status = "Active"
-            elif re.search(r"\bPostponed\b", block, re.I):
+            status = "Active" # ברירת מחדל לרשימות חיות
+            if re.search(r"\bPostponed\b", block, re.I):
                 status = "Postponed"
             elif re.search(r"\bStayed\b", block, re.I):
                 status = "Stayed"
-            elif "Third Party" in block:
+            elif re.search(r"Third Party", block, re.I):
                 status = "Sold (Third Party)"
-            elif "PLTF Overbid" in block:
+            elif re.search(r"PLTF Overbid", block, re.I):
                 status = "Sold (Plaintiff Overbid)"
 
-            bid_match = re.search(r"\$([\d,]+\.\d{2})", block)
+            bid_match = re.search(r"\$\s*([\d,]+\.\d{2})", block)
             opening_bid = f"${bid_match.group(1)}" if bid_match else ""
 
-            parcel_match = re.search(r"Parcel/Tax ID:\s*([A-Za-z0-9\-]+)", block)
+            # זיהוי גמיש למספר חלקה
+            parcel_match = re.search(r"(?:Parcel/Tax ID|Parcel ID|Block\s*(?:and|&)\s*Lot|Tax ID)[\s:]*([A-Za-z0-9\-]+)", block, re.I)
             parcel_id = parcel_match.group(1).strip() if parcel_match else ""
 
             municipality = ""
+            muni_match = re.search(r"(?:Municipality)[\s:]*([A-Za-z\s]+?)(?=\n|Property|Parcel|Sale|$)", block, re.I)
+            if muni_match:
+                municipality = muni_match.group(1).strip()
+            
+            if not municipality:
+                 # Fallback
+                 muni_match_fallback = re.search(r"Municipality\s*\n\s*([A-Za-z\s]+)", block)
+                 if muni_match_fallback:
+                     municipality = muni_match_fallback.group(1).strip()
+
             address = ""
-            if "Property" in block and "Municipality" in block:
-                prop_section = block.split("Property")[1]
-                lines = [line.strip() for line in prop_section.split("\n") if line.strip()]
-                
-                muni_match = re.search(r"Municipality\s*\n\s*([A-Za-z\s]+)", prop_section)
-                if muni_match:
-                    municipality = muni_match.group(1).strip()
+            address_candidates = []
+            lines = [line.strip() for line in block.split("\n") if line.strip()]
+            for line in lines:
+                # זיהוי רחוב אופייני או מיקוד בפנסילבניה
+                if re.search(r"^\s*\d+\s+[A-Za-z0-9\s]+(?:ST|AVE|RD|DR|BLVD|WAY|LANE|LN|CT|PL|ROAD|STREET|AVENUE)\b", line, re.I):
+                    address_candidates.append(line)
+                elif re.search(r"\bPA\s*\d{5}\b", line, re.I):
+                    address_candidates.append(line)
 
-                address_candidates = []
-                for line in lines:
-                    if re.search(r"\d+\s+[A-Za-z0-9\s]+(?:ST|AVE|RD|DR|BLVD|WAY|LANE|CT|PL)", line, re.I):
-                        address_candidates.append(line)
-                    elif re.search(r"[A-Z\s]+,\s*PA\s*\d{5}", line):
-                        address_candidates.append(line)
+            address = ", ".join(address_candidates[:2]) if address_candidates else ""
 
-                address = " ".join(address_candidates[:2]) if address_candidates else ""
-
-            unique_id = f"ALLG-{case_number}" if case_number else f"ALLG-{sale_id or abs(hash(block)) % 10000000}"
+            unique_id = f"ALLG-{case_number}"
 
             if address or parcel_id:
                 properties.append({
@@ -118,7 +138,8 @@ def extract_properties_from_pdf(pdf_stream_or_path) -> List[Dict[str, Any]]:
                     "source_type": "sheriff_sale",
                     "scraped_at": datetime.utcnow().isoformat()
                 })
-        except Exception:
+        except Exception as e:
+            logging.debug(f"Error parsing case {case_number}: {e}")
             continue
 
     return properties
@@ -131,11 +152,13 @@ def run(local_pdf_path: Optional[str] = None):
     else:
         pdf_url = find_latest_pdf_url()
         if pdf_url:
+            logging.info(f"Downloading PDF from: {pdf_url}")
             resp = requests.get(pdf_url, headers=HEADERS, timeout=40)
             if resp.status_code == 200:
                 results = extract_properties_from_pdf(BytesIO(resp.content))
 
     if not results:
+        logging.warning("No properties extracted from the Sheriff PDF.")
         return
 
     base_dir = os.path.join(os.path.dirname(__file__), "..")
@@ -198,7 +221,7 @@ def run(local_pdf_path: Optional[str] = None):
     with open(status_path, "w", encoding="utf-8") as f:
         json.dump(status_data, f, indent=2, ensure_ascii=False)
 
-    logging.info(f"Success! Found {active_count} ACTIVE deals. Updated properties.json and scanner_status.json.")
+    logging.info(f"Success! Found {len(results)} total deals ({active_count} ACTIVE). Updated properties.json and scanner_status.json.")
 
 if __name__ == "__main__":
     custom_pdf = sys.argv[1] if len(sys.argv) > 1 else None
