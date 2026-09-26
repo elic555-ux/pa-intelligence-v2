@@ -161,6 +161,7 @@
         <div id="scan-toast-icon"><i data-lucide="loader-2" class="w-7 h-7 text-blue-400 animate-spin"></i></div>
         <div id="scan-toast-content"><h4 class="text-sm font-black text-white tracking-wide">פעולה מתבצעת ברקע...</h4><p class="text-[11px] text-gray-400 font-semibold mt-0.5" id="scan-toast-subtitle">המערכת משדרת וסורקת נתונים.</p></div>
         <div class="mr-4 text-center border-r border-gray-700 pr-4"><span class="block text-[10px] text-gray-500 font-bold mb-0.5">זמן ריצה</span><span class="text-sm font-black font-mono text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded-lg border border-blue-500/30" id="scan-timer">00:00</span></div>
+        <button onclick="closeScanToast()" class="absolute top-2 left-2 p-1 text-gray-500 hover:text-white bg-gray-800 rounded-full transition" title="סגור חלונית"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
     </div>
 
     <!-- Property Modal -->
@@ -555,6 +556,7 @@
         
         let scanTimerInterval = null;
         let scanStartTime = null;
+        let lastKnownScanId = null;
 
         // V8.4: משתנים לסינון ערים רב-ברירה
         let selectedCitiesFilter = null; // null means no geographic filter
@@ -562,6 +564,11 @@
 
         function handlePriceInput(input) { let raw = String(input.value||'').replace(/\D/g, ''); input.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : ''; }
         function getRawPrice(input) { return parseInt(String(input.value||'').replace(/\D/g, '') || 0, 10); }
+
+        function closeScanToast() {
+            document.getElementById('scan-progress-toast').classList.add('hidden');
+            if (scanTimerInterval) clearInterval(scanTimerInterval);
+        }
 
         // סגירת חלון העיר בלחיצה בחוץ
         document.addEventListener('click', function(e) {
@@ -836,6 +843,12 @@
                 const response = await fetch('scanner_status.json?t=' + Date.now());
                 if (!response.ok) return null;
                 scannerReport = await response.json();
+                
+                // Track last known scan ID for auto-refresh logic
+                if (scannerReport.last_scan && scannerReport.last_scan.scan_id) {
+                    lastKnownScanId = scannerReport.last_scan.scan_id;
+                }
+
                 const panel = document.getElementById('scanner-source-status');
                 panel.replaceChildren();
                 const states = {success:'עודכן', partial:'עודכן חלקית', failed:'נכשל', blocked:'המקור חסם גישה',
@@ -870,6 +883,8 @@
                 }
 
                 const rawList = await res.json();
+                
+                // Add Sheriff List if available
                 try {
                     const sheriffResponse = await fetch('sheriff_listings.json?t=' + Date.now());
                     if (sheriffResponse.ok) {
@@ -887,6 +902,7 @@
                         }
                     }
                 } catch (error) { console.warn('Sheriff list unavailable', error); }
+                
                 const seenKeys = new Set(); 
                 let activeProps = [];
                 let archiveChanged = false;
@@ -897,9 +913,27 @@
                 rawList.forEach(p => {
                     const normKey = (p.source_type === 'sheriff' ? 'sheriff:' + p.id :
                         p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id));
+                    
                     if (!seenKeys.has(normKey)) { 
                         seenKeys.add(normKey); 
                         if (!p.listed_date) p.listed_date = '05/09/2026'; 
+
+                        // Normalize Sheriff Deals (Fixing empty prices & messy addresses)
+                        if ((p.source === 'allegheny_sheriff' || p.source_type === 'sheriff_sale' || (p.deal_type||'').toLowerCase().includes('sheriff'))) {
+                            p.deal_type = p.deal_type || 'sheriff'; // Ensure deal_type exists for filters
+                            
+                            // Map opening_bid to price if price is missing
+                            if (!p.price && p.opening_bid) {
+                                // Extract numbers only from opening_bid like "$5,000.00" -> 5000
+                                const cleanBid = String(p.opening_bid).replace(/[^0-9.-]+/g, "");
+                                p.price = parseFloat(cleanBid);
+                            }
+
+                            // Clean generic addresses
+                            if (String(p.address).includes("Address in comments / verify parcel") && p.parcel_id) {
+                                p.address = "Parcel ID: " + p.parcel_id;
+                            }
+                        }
                         
                         const idStr = String(p.id);
                         const currentPrice = Number(p.price) || 0;
@@ -1159,7 +1193,10 @@
             document.getElementById('count-all').textContent = nonArchived.length;
             document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
             document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
+            
+            // Fixed sheriff counter to capture source properly
             document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
+            
             document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
             document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
             document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
@@ -1198,7 +1235,10 @@
                     const dt = (p.deal_type || '').toLowerCase();
                     if (activeCategory === 'mls' && !dt.includes('mls')) return false;
                     if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
+                    
+                    // Fixed sheriff filtering logic
                     if (activeCategory === 'sheriff' && !dt.includes('sheriff') && !(p.source || '').toLowerCase().includes('sheriff') && !(p.source_type || '').toLowerCase().includes('sheriff')) return false;
+                    
                     if (activeCategory === 'tax' && !dt.includes('tax')) return false;
                     if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
                     if (activeCategory === 'offmarket' && !isOffMarketProperty(p)) return false;
@@ -1605,11 +1645,19 @@
                 checking = true;
                 try {
                     const report = await loadScannerStatus();
-                    if (report?.last_scan?.request_id === requestId && ['success','partial','failed'].includes(report.last_scan.status)) {
+                    // Auto-close if the scan_id changed since we started waiting
+                    if (report?.last_scan?.scan_id && lastKnownScanId && report.last_scan.scan_id !== lastKnownScanId) {
                         clearInterval(scanTimerInterval);
                         await loadProperties();
                         await loadGeoCatalog();
-                        document.getElementById('scan-progress-toast').classList.add('hidden');
+                        closeScanToast();
+                    }
+                    // Legacy fallback
+                    else if (report?.last_scan?.request_id === requestId && ['success','partial','failed'].includes(report.last_scan.status)) {
+                        clearInterval(scanTimerInterval);
+                        await loadProperties();
+                        await loadGeoCatalog();
+                        closeScanToast();
                     }
                 } finally { checking = false; }
             }, 1000);
