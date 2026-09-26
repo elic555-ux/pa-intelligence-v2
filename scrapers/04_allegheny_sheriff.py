@@ -138,7 +138,10 @@ def run(local_pdf_path: Optional[str] = None):
     if not results:
         return
 
-    output_path = os.path.join(os.path.dirname(__file__), "..", "properties.json")
+    base_dir = os.path.join(os.path.dirname(__file__), "..")
+    output_path = os.path.join(base_dir, "properties.json")
+    status_path = os.path.join(base_dir, "scanner_status.json")
+
     existing = []
     if os.path.exists(output_path):
         try:
@@ -147,7 +150,6 @@ def run(local_pdf_path: Optional[str] = None):
         except Exception:
             existing = []
 
-    # Retroactively fix any existing entries with '_pdf'
     for item in existing:
         if item.get("source") == "allegheny_sheriff_pdf":
             item["source"] = "allegheny_sheriff"
@@ -171,7 +173,32 @@ def run(local_pdf_path: Optional[str] = None):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
 
-    logging.info(f"Success! Found {active_count} ACTIVE deals. Added/Updated records in properties.json.")
+    # עדכון אוטומטי של קובץ הסטטוס עבור הממשק
+    status_data = {}
+    if os.path.exists(status_path):
+        try:
+            with open(status_path, "r", encoding="utf-8") as f:
+                status_data = json.load(f)
+        except Exception:
+            status_data = {}
+
+    current_time_str = datetime.now().strftime("%d.%m.%Y, %H:%M:%S")
+    status_data["sheriff"] = {
+        "status": "עודכן",
+        "count": active_count,
+        "last_update": current_time_str
+    }
+    if "sources" in status_data and isinstance(status_data["sources"], dict):
+        status_data["sources"]["allegheny_sheriff"] = {
+            "status": "active",
+            "count": active_count,
+            "last_updated": current_time_str
+        }
+
+    with open(status_path, "w", encoding="utf-8") as f:
+        json.dump(status_data, f, indent=2, ensure_ascii=False)
+
+    logging.info(f"Success! Found {active_count} ACTIVE deals. Updated properties.json and scanner_status.json.")
 
 if __name__ == "__main__":
     custom_pdf = sys.argv[1] if len(sys.argv) > 1 else None
