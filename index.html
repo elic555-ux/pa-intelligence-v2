@@ -30,7 +30,17 @@
         .card-viewed { opacity: 0.8; background-color: #080b13 !important; }
         .card-viewed:hover { opacity: 1; background-color: #111827 !important; }
         
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        /* Table Structure Enhancements */
+        .props-table { table-layout: fixed; width: 100%; min-width: 1000px; }
+        .col-location { width: 30%; }
+        .col-price { width: 12%; }
+        .col-features { width: 12%; }
+        .col-yield { width: 15%; }
+        .col-date { width: 10%; }
+        .col-score { width: 8%; text-align: center; }
+        .col-actions { width: 13%; text-align: center; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
         .toast-enter { animation: slideInUp 0.5s ease-out forwards; }
@@ -930,8 +940,8 @@
                             }
 
                             // Clean generic addresses
-                            if (String(p.address).includes("Address in comments / verify parcel") && p.parcel_id) {
-                                p.address = "Parcel ID: " + p.parcel_id;
+                            if (String(p.address).includes("Address in comments / verify parcel") || String(p.address).trim() === "") {
+                                p.address = p.parcel_id ? "נכס שריף (חלקה " + p.parcel_id + ")" : "נכס שריף (חסר מספר חלקה)";
                             }
                         }
                         
@@ -1176,8 +1186,6 @@
         }
 
         // V8.6: Off Market status helper.
-        // off_market_candidate is included because the orchestrator assigns it
-        // only after repeated misses, avoiding a false Off Market on one scan.
         function isOffMarketProperty(p) {
             const status = String((p && (p.status || p.listing_status || p.market_status)) || '')
                 .trim().toLowerCase().replace(/[\s-]+/g, '_');
@@ -1267,7 +1275,7 @@
             if (!filtered.length) { container.innerHTML = selectedCitiesFilter !== null && !selectedCitiesFilter.size ? '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">בחר מחוז, עיר או אזור מהרשימה, או לחץ ״הצג את כל הנכסים״.</div>' : '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
 
             if (currentViewMode === 'table') {
-                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="w-full text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3">מיקום</th><th class="p-3">מחיר</th><th class="p-3">מאפיינים</th><th class="p-3">תשואה/שיפוץ</th><th class="p-3">תאריך</th><th class="p-3 text-center">ציון</th><th class="p-3 text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
+                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">תשואה/שיפוץ</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
                 ${filtered.map(p => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
@@ -1276,16 +1284,16 @@
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
                                 ${isV && activeCategory !== 'archive' ? '<span title="נצפה"><i data-lucide="eye" class="w-3.5 h-3.5 text-gray-500"></i></span>' : ''}
-                                <div class="font-black text-white text-sm">${p.address}</div>
+                                <div class="font-black text-white text-sm truncate" title="${p.address}">${p.address}</div>
                             </div>
-                            <div class="text-[11px] text-gray-400">${p.city}</div>
+                            <div class="text-[11px] text-gray-400 truncate" title="${p.city}">${p.city}</div>
                             ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
                         </td>
-                        <td class="p-3 font-mono font-black text-emerald-400 text-sm">${p.price ? '$' + Number(p.price).toLocaleString() : 'לא פורסם'}</td>
-                        <td class="p-3 font-bold text-gray-300">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
-                        <td class="p-3"><div class="text-emerald-300 font-mono">💰 ${p.projected_rent||'-'}</div><div class="text-amber-300 text-[11px]">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'-')}</div></td>
-                        <td class="p-3 font-mono text-amber-300">📅 ${p.listed_date||'-'}</td>
+                        <td class="p-3 font-mono font-black text-emerald-400 text-sm">${p.price ? '$' + Number(p.price).toLocaleString() : 'ללא הצעת פתיחה'}</td>
+                        <td class="p-3 font-bold text-gray-300 whitespace-nowrap">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
+                        <td class="p-3"><div class="text-emerald-300 font-mono whitespace-nowrap">💰 ${p.projected_rent||'חסר נתון'}</div><div class="text-amber-300 text-[11px] whitespace-nowrap">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'--')}</div></td>
+                        <td class="p-3 font-mono text-amber-300 whitespace-nowrap">📅 ${p.listed_date||'-'}</td>
                         <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score ?? '—'}</span></td>
                         <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
@@ -1308,11 +1316,11 @@
 
                             <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
                             
-                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6">${p.address}</h4><p class="text-xs text-gray-400 mb-2">${p.city}, PA</p>
-                            <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${p.price ? '$' + Number(p.price).toLocaleString() : 'מחיר לא פורסם'}</div>
+                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 truncate" title="${p.address}">${p.address}</h4><p class="text-xs text-gray-400 mb-2 truncate" title="${p.city}, PA">${p.city}, PA</p>
+                            <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${p.price ? '$' + Number(p.price).toLocaleString() : 'ללא הצעת פתיחה'}</div>
                             
                             <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
-                            <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'-'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'-')}</strong></span></div>
+                            <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'---'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'--')}</strong></span></div>
                         
                             <!-- הבלוק הכחול של ה-AI במסך הראשי -->
                             <div class="bg-blue-950/20 p-2.5 rounded-xl border border-blue-500/30 mt-3 mb-1 space-y-1.5">
@@ -1347,7 +1355,7 @@
             document.getElementById('modal-address').textContent = p.address;
             document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
             document.getElementById('modal-listed-date').textContent = p.listed_date;
-            document.getElementById('modal-price').textContent = p.price ? `$${Number(p.price).toLocaleString()}` : 'לא פורסם';
+            document.getElementById('modal-price').textContent = p.price ? `$${Number(p.price).toLocaleString()}` : 'ללא הצעת פתיחה';
             document.getElementById('modal-beds').textContent = p.beds||'-';
             document.getElementById('modal-baths').textContent = p.baths||'-';
             document.getElementById('modal-sqft').textContent = p.sqft||'-';
