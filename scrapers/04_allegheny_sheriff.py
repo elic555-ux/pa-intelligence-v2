@@ -121,7 +121,7 @@ def extract_properties_from_pdf(pdf_stream_or_path) -> List[Dict[str, Any]]:
                     "city": municipality or "Allegheny County",
                     "state": "PA",
                     "county": "Allegheny",
-                    "source": "allegheny_sheriff_pdf",
+                    "source": "allegheny_sheriff",
                     "source_type": "sheriff_sale",
                     "scraped_at": datetime.utcnow().isoformat()
                 })
@@ -160,6 +160,11 @@ def run(local_pdf_path: Optional[str] = None):
         except Exception:
             existing = []
 
+    # Retroactively fix any existing entries that were saved with 'allegheny_sheriff_pdf'
+    for item in existing:
+        if item.get("source") == "allegheny_sheriff_pdf":
+            item["source"] = "allegheny_sheriff"
+
     existing_ids = {p.get("id") for p in existing}
     added_count = 0
     active_count = 0
@@ -174,13 +179,12 @@ def run(local_pdf_path: Optional[str] = None):
         else:
             for ex in existing:
                 if ex.get("id") == prop["id"]:
-                    ex["status"] = prop["status"]
-                    ex["opening_bid"] = prop["opening_bid"]
+                    ex.update(prop)
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
 
-    logging.info(f"Success! Found {active_count} ACTIVE deals. Added {added_count} new records to properties.json.")
+    logging.info(f"Success! Found {active_count} ACTIVE deals. Added/Updated records in properties.json.")
 
 if __name__ == "__main__":
     custom_pdf = sys.argv[1] if len(sys.argv) > 1 else None
