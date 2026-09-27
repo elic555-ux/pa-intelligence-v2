@@ -11,7 +11,7 @@ import hashlib
 import html
 import concurrent.futures
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlencode
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -251,16 +251,29 @@ def county_pin_from_sheriff_parcel(parcel_id):
     return f"{int(ward):04d}{section.upper()}{int(lot):05d}000000"
 
 
-def fetch_county_building_data(parcel_id):
+def fetch_county_building_data(parcel_id, address=None, municipality=None):
     pin = county_pin_from_sheriff_parcel(parcel_id)
     if not pin:
         return None
-    url = (f"https://realestate.alleghenycounty.us/BuildingInfo?ID={pin}"
-           f"&SearchType=2&CurrRow=0&SearchName=&SearchStreet=&SearchNum="
-           f"&SearchMuni=&SearchParcel=&pin={pin}")
+    address_match = re.match(r"^\s*(\d+[A-Za-z]?)\s+(.+?)\s*$", str(address or ""))
+    house_number = address_match.group(1) if address_match else ""
+    street = address_match.group(2) if address_match else ""
+    # The County's search page asks for the street name without its suffix.
+    street = re.sub(r"\s+(?:ST|STREET|AVE|AVENUE|RD|ROAD|DR|DRIVE|BLVD|BOULEVARD|LN|LANE|CT|COURT|PL|PLACE|WAY|TER|TERRACE)\.?$", "", street, flags=re.I).strip()
+    search_muni = re.sub(r"\s+(?:BOROUGH|BORO|TOWNSHIP|TWP)\.?$", "", str(municipality or ""), flags=re.I).strip()
+    query = urlencode({
+        "ID": pin, "SearchType": "2", "CurrRow": "0", "SearchName": "",
+        "SearchStreet": street, "SearchNum": house_number, "SearchMuni": search_muni,
+        "SearchParcel": "", "pin": pin,
+    })
+    # The portal redirects bare parcel links to its search page. Retaining the
+    # source address and municipality makes the County resolve the abbreviated PIN.
+    url = f"https://realestate.alleghenycounty.us/BuildingInfo?{query}"
     response = requests.get(url, headers={"User-Agent": "Mozilla/5.0 PA-RealEstate-Intelligence",
                                           "Accept": "text/html"}, timeout=(5, 12))
     response.raise_for_status()
+    if urlparse(getattr(response, "url", url)).path.rstrip("/").lower() == "/search":
+        raise ValueError(f"County portal did not resolve parcel {parcel_id} from its address")
     parser = CountyTableParser()
     parser.feed(response.text)
     fields = {}
@@ -327,7 +340,10 @@ def enrich_sheriff_rows_from_county(rows):
                 todo[key] = parcel
     # Limit new lookups in each run and parallelize to keep the scan bounded.
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
-        futures = {pool.submit(fetch_county_building_data, parcel): (pin, parcel)
+        row_by_pin = {county_pin_from_sheriff_parcel(row.get("parcel_id")): row for row in rows}
+        futures = {pool.submit(fetch_county_building_data, parcel,
+                               row_by_pin.get(pin, {}).get("address"),
+                               row_by_pin.get(pin, {}).get("municipality")): (pin, parcel)
                    for pin, parcel in list(todo.items())[:40]}
         for future, (pin, parcel) in futures.items():
             try:
@@ -1047,6 +1063,7 @@ def run_orchestrator():
             sheriff_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
             county_matches = enrich_sheriff_rows_from_county(sheriff_rows)
             sheriff_audit["county_property_matches"] = county_matches
+            print(f"🏠 נכסי שריף עם התאמה לנתוני מבנה במחוז: {county_matches}/{len(sheriff_rows)}")
             atomic_write_json(SHERIFF_FILE, sheriff_rows)
             sources["sheriff"].update({"status": "imported" if sheriff_audit["mode"] == "imported" else "success",
                                         "rows": len(sheriff_rows), "source_url": sheriff_pdf,
