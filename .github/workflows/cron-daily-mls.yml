@@ -48,7 +48,7 @@ jobs:
         run: |
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
-          for file in properties.json scan_log.json geo_catalog.json sheriff_listings.json scanner_status.json geocode_cache.json; do
+          for file in properties.json scan_log.json geo_catalog.json sheriff_listings.json scanner_status.json geocode_cache.json sheriff_property_cache.json; do
             if [ -f "$file" ]; then git add "$file"; fi
           done
           if ! git diff --cached --quiet; then
