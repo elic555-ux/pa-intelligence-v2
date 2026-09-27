@@ -906,7 +906,8 @@
                 for (const item of Object.values(scannerReport.sources || {})) {
                     const line = document.createElement('p');
                     const checked = item.checked_at ? ' | ' + new Date(item.checked_at).toLocaleString('he-IL') : '';
-                    line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${checked}`;
+                    const countyMatches = item.county_property_matches !== undefined ? ` | התאמות מבנה ממאגר המחוז: ${item.county_property_matches}` : '';
+                    line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${countyMatches}${checked}`;
                     panel.appendChild(line);
                 }
                 return scannerReport;
@@ -1430,7 +1431,12 @@
                 setCounty('modal-county-hvac', countyData?.heating_cooling);
                 const countyLink = document.getElementById('modal-county-property-link');
                 const pin = countyData?.pin || fallbackPin;
-                countyLink.href = countyData?.source_url || (pin ? `https://realestate.alleghenycounty.us/BuildingInfo?ID=${pin}&SearchType=2&CurrRow=0&SearchName=&SearchStreet=&SearchNum=&SearchMuni=&SearchParcel=&pin=${pin}` : 'https://realestate.alleghenycounty.us/search');
+                const addressMatch = String(p.address || '').match(/^\s*(\d+[A-Za-z]?)\s+(.+?)\s*$/);
+                const houseNumber = addressMatch?.[1] || '';
+                const streetName = (addressMatch?.[2] || '').replace(/\s+(?:ST|STREET|AVE|AVENUE|RD|ROAD|DR|DRIVE|BLVD|BOULEVARD|LN|LANE|CT|COURT|PL|PLACE|WAY|TER|TERRACE)\.?$/i, '').trim();
+                const municipality = String(p.municipality || '').replace(/\s+(?:BOROUGH|BORO|TOWNSHIP|TWP)\.?$/i, '').trim();
+                const countyQuery = new URLSearchParams({ID: pin || '', SearchType: '2', CurrRow: '0', SearchName: '', SearchStreet: streetName, SearchNum: houseNumber, SearchMuni: municipality, SearchParcel: '', pin: pin || ''});
+                countyLink.href = countyData?.source_url || (pin ? `https://realestate.alleghenycounty.us/BuildingInfo?${countyQuery.toString()}` : 'https://realestate.alleghenycounty.us/search');
             }
             if (p.source_type === 'sheriff') {
                 const setSheriff = (id, value, fallback='לא צוין במסמך') => {
