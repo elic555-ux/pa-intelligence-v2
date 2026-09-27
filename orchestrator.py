@@ -69,16 +69,20 @@ def parse_sheriff_text(body, source_url, imported=False):
         raise ValueError(f"תאריך מכירה אינו בטווח עתידי: {sale_day}")
     if not 0 <= (today - printed_day).days <= 21:
         raise ValueError(f"המסמך אינו עדכני מספיק: הופק ב-{printed_day}")
-    blocks = re.split(r"Status\s+Tracts", body, flags=re.I)[1:]
+    # pdftotext's -raw order is "Tracts / Status / 1" (not "Status / Tracts").
+    # Split on each tract header so every sale remains one record.
+    blocks = re.split(r"(?m)^\s*Tracts\s*$", body, flags=re.I)[1:]
     if not blocks:
         raise ValueError("לא זוהו בלוקים של נכסים במסמך")
     rows, seen = [], set()
     skipped_active = 0
     recognized = 0
+    unrecognized_blocks = 0
     for block in blocks:
         facts = block.split('Comments:')[0]
         status = re.search(r"(?m)^\s*(Active|Stayed|Postponed[^\n]*|Cancelled|Canceled|Sold|Continued[^\n]*|Withdrawn|Settled)[ \t]*$", facts, re.I)
         if not status:
+            unrecognized_blocks += 1
             continue
         recognized += 1
         if status.group(1).casefold() != "active":
@@ -86,17 +90,43 @@ def parse_sheriff_text(body, source_url, imported=False):
         docket = re.search(r"\b(?:GD|MG|AR)-\d{2}-\d{5,6}\b", facts, re.I)
         # The address immediately precedes the postal city. No assumptions about
         # a street suffix or municipality based on a Pittsburgh mailing address.
-        address = re.search(r"(?m)^[ \t]*(\d[\w .,'/#&()-]*\S)[ \t]*\n[ \t]*([A-Z][A-Z .'-]+),[ \t]*PA[ \t]+(\d{5})(?:-\d{4})?\b", facts, re.I)
+        address = re.search(r"(?m)^\s*([A-Z][A-Z .'-]+),\s*PA\s+(\d{5})(?:-\d{4})?\b", facts, re.I)
         if not docket or not address:
             skipped_active += 1
             continue
-        street, city, zip_code = (x.strip() for x in address.groups())
+        city, zip_code = (x.strip() for x in address.groups())
+        lines_before_city = facts[:address.start()].splitlines()
+        street_start = next((i for i in range(len(lines_before_city) - 1, -1, -1)
+                             if re.match(r"^\s*\d+\b", lines_before_city[i])), None)
+        if street_start is None:
+            skipped_active += 1
+            continue
+        street = " ".join(line.strip() for line in lines_before_city[street_start:] if line.strip())
         key = docket.group().upper() + ':' + normalize_addr_key(street, city, zip_code)
         if key in seen:
             continue
         seen.add(key)
         sale_type = re.search(r"Sale Type\s*\n([^\n]+)", facts, re.I)
         type_text = sale_type.group(1).strip() if sale_type else ""
+        plaintiff_defendant = re.search(
+            r"Plaintiff\(s\):\s*Defendant\(s\):\s*\n(.*?)\nCase Number\b", facts, re.I | re.S)
+        plaintiff = defendant = None
+        if plaintiff_defendant:
+            parties = [re.sub(r"\s+", " ", line).strip() for line in plaintiff_defendant.group(1).splitlines() if line.strip()]
+            if parties:
+                plaintiff = parties[0]
+                defendant = " ".join(parties[1:]) or None
+        case_line = re.search(r"Case Number\s*\n([^\n]+)", facts, re.I)
+        case_detail = case_line.group(1).strip() if case_line else ""
+        bid_match = re.search(r"\$\s*([\d,]+\.\d{2})", case_detail)
+        cost_tax_bid = bid_match.group(1).replace(',', '') if bid_match else None
+        sale_id_match = re.search(r"(?m)^\s*(\d{1,4}[A-Z]{3}\d{2})\s*$", facts, re.I)
+        tract_match = re.search(r"(?m)^\s*(\d{1,4})\s*$", block)
+        property_line = re.search(
+            re.escape(zip_code) + r"(?:-\d{4})?\s*\n\s*([^\n]+)", facts, re.I)
+        municipality_line = property_line.group(1).strip() if property_line else ""
+        parcel_match = re.search(r"\b(\d{1,4}[A-Z]?-[A-Z0-9]+(?:-[A-Z0-9]+)?)\s*$", municipality_line, re.I)
+        municipality = municipality_line[:parcel_match.start()].strip() if parcel_match else municipality_line
         rows.append({
             "id": "PA-SHERIFF-" + hashlib.sha256(key.encode()).hexdigest()[:20],
             "docket_id": docket.group().upper(), "address": street.title(),
@@ -104,6 +134,13 @@ def parse_sheriff_text(body, source_url, imported=False):
             "price": None, "sqft": None, "beds": None, "baths": None,
             "deal_type": "Sheriff Sale", "source_type": "sheriff",
             "source": "Allegheny County Sheriff's Office", "source_sale_type": type_text,
+            "sheriff_tract": tract_match.group(1) if tract_match else None,
+            "plaintiff": plaintiff,
+            "defendant": defendant,
+            "case_cost_tax_bid": cost_tax_bid,
+            "sale_id": sale_id_match.group(1).upper() if sale_id_match else None,
+            "parcel_id": parcel_match.group(1) if parcel_match else None,
+            "municipality": municipality or None,
             "data_status": "imported_official_document" if imported else "live",
             "market_status": "scheduled_sheriff_sale", "sheriff_status": "Active",
             "sale_date": sale_day.isoformat(), "source_published_date": printed_day.isoformat(),
@@ -112,10 +149,11 @@ def parse_sheriff_text(body, source_url, imported=False):
             "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
             "filter_status": "investment_fields_unavailable",
         })
-    if recognized != len(blocks) or (not rows and skipped_active):
+    if skipped_active or recognized < int(len(blocks) * 0.95) or not rows:
         raise ValueError(f"פענוח חלקי: זוהו {recognized}/{len(blocks)} סטטוסים; {skipped_active} כתובות פעילות לא זוהו")
     return rows, {"published_date": printed_day.isoformat(), "sale_date": sale_day.isoformat(),
                   "parsed_blocks": len(blocks), "skipped_active_addresses": skipped_active,
+                  "unrecognized_blocks": unrecognized_blocks,
                   "mode": "imported" if imported else "live"}
 
 
@@ -864,6 +902,7 @@ def run_orchestrator():
     for sector in ("reo", "tax", "06_probate_estates"):
         sources.setdefault(sector, {"label": SOURCE_LABELS[sector], "status": "not_connected", "rows": 0})
 
+    sheriff_rows = []
     if "sheriff" in active_sectors_now and "Allegheny" in cities_list:
         try:
             sheriff_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
@@ -871,7 +910,7 @@ def run_orchestrator():
             sources["sheriff"].update({"status": "imported" if sheriff_audit["mode"] == "imported" else "success",
                                         "rows": len(sheriff_rows), "source_url": sheriff_pdf,
                                         "investment_filters": "unavailable", **sheriff_audit})
-            if sheriff_audit["skipped_active_addresses"]:
+            if sheriff_audit["skipped_active_addresses"] or sheriff_audit.get("unrecognized_blocks"):
                 sources["sheriff"]["status"] = "partial"
             log_entry["sheriff_active_lots"] = len(sheriff_rows)
             log_entry["sheriff_source_url"] = sheriff_pdf
@@ -973,7 +1012,7 @@ def run_orchestrator():
             log_entry["errors"].append(f"geo catalog write failed: {exc}")
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
 
-    combined = live_results + get_placeholder_sector_results(
+    combined = live_results + sheriff_rows + get_placeholder_sector_results(
         [s for s in active_sectors_now if s != "sheriff" or "Allegheny" not in cities_list]
     )
     log_entry["source_results"] = len(combined)
@@ -1012,6 +1051,11 @@ def run_orchestrator():
                 filter_rejections[reason] += 1
                 continue
 
+        # Sheriff documents often have no verified asking price/property facts;
+        # do not drop official sale records because MLS investment filters cannot apply.
+        if prop.get("source_type") == "sheriff":
+            final_filtered.append(prop)
+            continue
         if p_price is None or not (min_price <= p_price <= max_price):
             filter_rejections["price"] += 1
             continue
