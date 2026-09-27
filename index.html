@@ -256,6 +256,24 @@
                 <p class="text-[11px] text-gray-400">הצעת מחיר אינה מוצגת כמחיר הנכס; הסכום נשמר כשדה Cost &amp; Tax Bid מהמסמך.</p>
             </section>
 
+            <section id="modal-county-property-details" class="hidden space-y-3 bg-cyan-950/20 p-4 rounded-xl border border-cyan-500/30">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <h4 class="text-sm font-black text-cyan-300">נתוני מבנה ממאגר Allegheny County</h4>
+                    <a id="modal-county-property-link" href="#" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-cyan-200 underline">פתיחת הרשומה הרשמית</a>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div><span class="text-gray-400 block">סוג שימוש</span><strong id="modal-county-use" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">מספר חדרים</span><strong id="modal-county-rooms" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">שנת בנייה</span><strong id="modal-county-year" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">סגנון</span><strong id="modal-county-style" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">מצב לפי המחוז</span><strong id="modal-county-condition" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">קומות</span><strong id="modal-county-stories" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">מרתף</span><strong id="modal-county-basement" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">חימום / קירור</span><strong id="modal-county-hvac" class="text-white">-</strong></div>
+                </div>
+                <p class="text-[11px] text-gray-400">הנתונים הם רישומי הערכת המחוז, לא בדיקת מצב עדכנית או מדידה בשטח. יש לאמת לפני רכישה.</p>
+            </section>
+
             <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תיאור מקורי:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
             <div class="pt-3.5 border-t border-gray-800 flex justify-between items-center gap-3">
                 <button onclick="copyPropertyAddress()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span id="copy-btn-text">העתק כתובת</span></button>
@@ -1373,9 +1391,10 @@
             document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
             document.getElementById('modal-listed-date').textContent = p.listed_date;
             document.getElementById('modal-price').textContent = p.price ? `$${Number(p.price).toLocaleString()}` : 'ללא הצעת פתיחה';
-            document.getElementById('modal-beds').textContent = p.beds||'-';
-            document.getElementById('modal-baths').textContent = p.baths||'-';
-            document.getElementById('modal-sqft').textContent = p.sqft||'-';
+            const countyData = p.county_property_data || null;
+            document.getElementById('modal-beds').textContent = p.beds || countyData?.beds || '-';
+            document.getElementById('modal-baths').textContent = p.baths || countyData?.baths || '-';
+            document.getElementById('modal-sqft').textContent = p.sqft || countyData?.sqft || '-';
             document.getElementById('modal-strategy').textContent = p.strategy_label||'-';
             document.getElementById('modal-rent').textContent = p.projected_rent||'-';
             document.getElementById('modal-yield').textContent = p.gross_yield||'-';
@@ -1384,13 +1403,35 @@
             document.getElementById('modal-occupancy').textContent = p.occupancy||'לא ידוע';
             document.getElementById('modal-roof').textContent = p.roof_condition||'לא ידוע';
             document.getElementById('modal-hvac').textContent = p.hvac_type||'לא ידוע';
-            document.getElementById('modal-year-built').textContent = p.year_built||'לא ידוע';
-            document.getElementById('modal-lot-size').textContent = p.lot_size||'-';
+            document.getElementById('modal-year-built').textContent = p.year_built || countyData?.year_built || 'לא ידוע';
+            document.getElementById('modal-lot-size').textContent = p.lot_size || countyData?.lot_size || '-';
             document.getElementById('modal-parking').textContent = p.parking||'-';
             document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
             const sheriffDetails = document.getElementById('modal-sheriff-details');
             sheriffDetails.classList.toggle('hidden', p.source_type !== 'sheriff');
+            const countyDetails = document.getElementById('modal-county-property-details');
+            countyDetails.classList.toggle('hidden', !(p.source_type === 'sheriff' && (countyData || p.parcel_id)));
+            if (p.source_type === 'sheriff' && (countyData || p.parcel_id)) {
+                const parcelParts = String(p.parcel_id || '').match(/[A-Za-z]+|\d+/g) || [];
+                const fallbackPin = parcelParts.length >= 3 && /^\d+$/.test(parcelParts[0]) && /^\d+$/.test(parcelParts[2])
+                    ? `${String(parseInt(parcelParts[0], 10)).padStart(4, '0')}${parcelParts[1].toUpperCase()}${String(parseInt(parcelParts[2], 10)).padStart(5, '0')}000000`
+                    : '';
+                const setCounty = (id, value) => {
+                    document.getElementById(id).textContent = value === 0 ? '0' : (value || 'לא נמצא במאגר');
+                };
+                setCounty('modal-county-use', countyData?.use_code);
+                setCounty('modal-county-rooms', countyData?.total_rooms);
+                setCounty('modal-county-year', countyData?.year_built);
+                setCounty('modal-county-style', countyData?.style);
+                setCounty('modal-county-condition', countyData?.condition);
+                setCounty('modal-county-stories', countyData?.stories);
+                setCounty('modal-county-basement', countyData?.basement);
+                setCounty('modal-county-hvac', countyData?.heating_cooling);
+                const countyLink = document.getElementById('modal-county-property-link');
+                const pin = countyData?.pin || fallbackPin;
+                countyLink.href = countyData?.source_url || (pin ? `https://realestate.alleghenycounty.us/BuildingInfo?ID=${pin}&SearchType=2&CurrRow=0&SearchName=&SearchStreet=&SearchNum=&SearchMuni=&SearchParcel=&pin=${pin}` : 'https://realestate.alleghenycounty.us/search');
+            }
             if (p.source_type === 'sheriff') {
                 const setSheriff = (id, value, fallback='לא צוין במסמך') => {
                     document.getElementById(id).textContent = value === 0 ? '0' : (value || fallback);
