@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import hashlib
 import html
+import concurrent.futures
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 from copy import deepcopy
@@ -23,6 +24,7 @@ CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
+SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
 ORCHESTRATOR_VERSION = "2.7.0-scan-audit-20260926"
 SCANNER_STATUS_FILE = "scanner_status.json"
@@ -208,6 +210,143 @@ def fetch_allegheny_sheriff_listings():
         response.close()
     rows, audit = parse_sheriff_text(extract_sheriff_pdf(bytes(content)), pdf_url)
     return rows, pdf_url, audit
+
+
+class CountyTableParser(HTMLParser):
+    """Collect table cell text from the County assessment portal without JS."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows = []
+        self._row = None
+        self._cell = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == "tr":
+            self._row = []
+        elif tag.lower() in ("td", "th") and self._row is not None:
+            self._cell = []
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            self._cell.append(data)
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in ("td", "th") and self._cell is not None and self._row is not None:
+            value = re.sub(r"\s+", " ", "".join(self._cell)).strip()
+            self._row.append(value)
+            self._cell = None
+        elif tag == "tr" and self._row is not None:
+            if self._row:
+                self.rows.append(self._row)
+            self._row = None
+
+
+def county_pin_from_sheriff_parcel(parcel_id):
+    """Convert abbreviated Sheriff parcel IDs (e.g. 556-G-276) to County PIN."""
+    parts = re.findall(r"[A-Za-z]+|\d+", str(parcel_id or "").strip())
+    if len(parts) < 3 or not parts[0].isdigit() or not parts[2].isdigit():
+        return None
+    ward, section, lot = parts[:3]
+    return f"{int(ward):04d}{section.upper()}{int(lot):05d}000000"
+
+
+def fetch_county_building_data(parcel_id):
+    pin = county_pin_from_sheriff_parcel(parcel_id)
+    if not pin:
+        return None
+    url = (f"https://realestate.alleghenycounty.us/BuildingInfo?ID={pin}"
+           f"&SearchType=2&CurrRow=0&SearchName=&SearchStreet=&SearchNum="
+           f"&SearchMuni=&SearchParcel=&pin={pin}")
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0 PA-RealEstate-Intelligence",
+                                          "Accept": "text/html"}, timeout=(5, 12))
+    response.raise_for_status()
+    parser = CountyTableParser()
+    parser.feed(response.text)
+    fields = {}
+    for row in parser.rows:
+        for i in range(len(row) - 1):
+            label = row[i].rstrip(":").strip().lower()
+            if label:
+                fields[label] = row[i + 1].strip()
+    def get(*labels):
+        for label in labels:
+            value = fields.get(label.lower())
+            if value and value not in ("-", "N/A"):
+                return value
+        return None
+    living = get("living area")
+    living_num = re.search(r"[\d,]+", living or "")
+    lot = get("lot area")
+    lot_num = re.search(r"[\d,]+", lot or "")
+    full_baths = get("full baths")
+    half_baths = get("half baths")
+    def numeric(value):
+        match = re.search(r"\d+(?:\.\d+)?", str(value or ""))
+        return float(match.group()) if match else None
+    baths = (numeric(full_baths) or 0) + (numeric(half_baths) or 0) * 0.5
+    result = {
+        "pin": pin,
+        "parcel_id": get("parcel id"),
+        "address": get("address"),
+        "use_code": get("use code"),
+        "total_rooms": numeric(get("total rooms")),
+        "beds": numeric(get("bedrooms")),
+        "baths": baths or None,
+        "sqft": int(living_num.group().replace(",", "")) if living_num else None,
+        "year_built": numeric(get("year built")),
+        "style": get("style"),
+        "condition": get("condition"),
+        "stories": numeric(get("stories")),
+        "basement": get("basement"),
+        "heating_cooling": get("heating/cooling"),
+        "roof_type": get("roof type"),
+        "lot_size": lot_num.group().replace(",", "") if lot_num else None,
+        "source": "Allegheny County Real Estate Portal",
+        "source_url": url,
+        "retrieved_at": iso_now_est(),
+    }
+    return result if any(result.get(k) is not None for k in ("beds", "sqft", "year_built", "use_code")) else None
+
+
+def enrich_sheriff_rows_from_county(rows):
+    """Enrich Sheriff rows from County parcel records, preserving Sheriff facts separately."""
+    cache = {}
+    if os.path.isfile(SHERIFF_PROPERTY_CACHE_FILE):
+        try:
+            with open(SHERIFF_PROPERTY_CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        except (OSError, ValueError):
+            cache = {}
+    todo = {}
+    for row in rows:
+        parcel = row.get("parcel_id")
+        if parcel:
+            key = county_pin_from_sheriff_parcel(parcel)
+            if key and (key not in cache or not (isinstance(cache.get(key), dict) and cache[key].get("source"))):
+                todo[key] = parcel
+    # Limit new lookups in each run and parallelize to keep the scan bounded.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+        futures = {pool.submit(fetch_county_building_data, parcel): (pin, parcel)
+                   for pin, parcel in list(todo.items())[:40]}
+        for future, (pin, parcel) in futures.items():
+            try:
+                cache[pin] = future.result()
+            except (requests.RequestException, ValueError, OSError) as exc:
+                cache[pin] = {"lookup_error": str(exc), "checked_at": iso_now_est()}
+    for row in rows:
+        pin = county_pin_from_sheriff_parcel(row.get("parcel_id"))
+        data = cache.get(pin) if pin else None
+        if isinstance(data, dict) and data.get("source"):
+            row["county_property_data"] = data
+            for field in ("beds", "baths", "sqft", "year_built", "lot_size"):
+                if not row.get(field) and data.get(field) is not None:
+                    row[field] = data[field]
+            row["county_property_status"] = "matched"
+        else:
+            row["county_property_status"] = "not_found"
+    atomic_write_json(SHERIFF_PROPERTY_CACHE_FILE, cache)
+    return sum(row.get("county_property_status") == "matched" for row in rows)
 
 
 PROPERTY_TYPE_ALIASES = {
@@ -906,6 +1045,8 @@ def run_orchestrator():
     if "sheriff" in active_sectors_now and "Allegheny" in cities_list:
         try:
             sheriff_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
+            county_matches = enrich_sheriff_rows_from_county(sheriff_rows)
+            sheriff_audit["county_property_matches"] = county_matches
             atomic_write_json(SHERIFF_FILE, sheriff_rows)
             sources["sheriff"].update({"status": "imported" if sheriff_audit["mode"] == "imported" else "success",
                                         "rows": len(sheriff_rows), "source_url": sheriff_pdf,
