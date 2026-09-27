@@ -239,6 +239,23 @@
                 </div>
             </div>
 
+            <section id="modal-sheriff-details" class="hidden space-y-2 bg-rose-950/20 p-4 rounded-xl border border-rose-500/30">
+                <h4 class="text-sm font-black text-rose-300">פרטים מתוך מסמך השריף הרשמי</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div><span class="text-gray-400 block">סטטוס במסמך</span><strong id="modal-sheriff-status" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">תאריך מכירה</span><strong id="modal-sheriff-sale-date" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">מספר חלקה / מס</span><strong id="modal-sheriff-parcel" class="text-white font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">Municipality</span><strong id="modal-sheriff-municipality" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">תובע</span><strong id="modal-sheriff-plaintiff" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">נתבע</span><strong id="modal-sheriff-defendant" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">Cost &amp; Tax Bid במסמך</span><strong id="modal-sheriff-bid" class="text-amber-300 font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">Sale ID / Tract</span><strong id="modal-sheriff-sale-tract" class="text-white font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">תאריך פרסום הרשימה</span><strong id="modal-sheriff-published" class="text-white"></strong></div>
+                    <div class="col-span-2 sm:col-span-3"><span class="text-gray-400 block">סוג מכירה כפי שמופיע במסמך</span><strong id="modal-sheriff-sale-type" class="text-white"></strong></div>
+                </div>
+                <p class="text-[11px] text-gray-400">הצעת מחיר אינה מוצגת כמחיר הנכס; הסכום נשמר כשדה Cost &amp; Tax Bid מהמסמך.</p>
+            </section>
+
             <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תיאור מקורי:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
             <div class="pt-3.5 border-t border-gray-800 flex justify-between items-center gap-3">
                 <button onclick="copyPropertyAddress()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span id="copy-btn-text">העתק כתובת</span></button>
@@ -1372,6 +1389,23 @@
             document.getElementById('modal-parking').textContent = p.parking||'-';
             document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
+            const sheriffDetails = document.getElementById('modal-sheriff-details');
+            sheriffDetails.classList.toggle('hidden', p.source_type !== 'sheriff');
+            if (p.source_type === 'sheriff') {
+                const setSheriff = (id, value, fallback='לא צוין במסמך') => {
+                    document.getElementById(id).textContent = value === 0 ? '0' : (value || fallback);
+                };
+                setSheriff('modal-sheriff-status', p.sheriff_status);
+                setSheriff('modal-sheriff-sale-date', p.sale_date);
+                setSheriff('modal-sheriff-parcel', p.parcel_id);
+                setSheriff('modal-sheriff-municipality', p.municipality);
+                setSheriff('modal-sheriff-plaintiff', p.plaintiff);
+                setSheriff('modal-sheriff-defendant', p.defendant);
+                setSheriff('modal-sheriff-bid', p.case_cost_tax_bid ? `$${Number(p.case_cost_tax_bid).toLocaleString()}` : null);
+                setSheriff('modal-sheriff-sale-tract', [p.sale_id, p.sheriff_tract ? `Tract ${p.sheriff_tract}` : null].filter(Boolean).join(' / '));
+                setSheriff('modal-sheriff-published', p.source_published_date);
+                setSheriff('modal-sheriff-sale-type', p.source_sale_type);
+            }
             
             // עדכון חלונית AI ב-Modal
             document.getElementById('modal-ai-class').innerHTML = p.neighborhood_class ? `<span class="px-2 py-0.5 rounded text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-xs text-gray-500">חסר נתון שרת</span>';
