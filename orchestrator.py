@@ -26,7 +26,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.7.0-scan-audit-20260926"
+ORCHESTRATOR_VERSION = "2.8.0-mls-price-history-20260928"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -804,6 +804,59 @@ def append_status_event(history, status, timestamp, scan_id, reason=""):
     return history
 
 
+def detect_mls_price_drops(price_history):
+    """Build verified reductions from successive prices in the same MLS history."""
+    if not isinstance(price_history, list):
+        return []
+    events = []
+    for previous, current in zip(price_history, price_history[1:]):
+        if not isinstance(previous, dict) or not isinstance(current, dict):
+            continue
+        old_price = safe_number(previous.get("price"), None, float)
+        new_price = safe_number(current.get("price"), None, float)
+        if old_price is None or new_price is None or old_price <= 0 or new_price <= 0 or new_price >= old_price:
+            continue
+        amount = round(old_price - new_price, 2)
+        events.append({
+            "date": current.get("date"),
+            "scan_id": current.get("scan_id"),
+            "source": current.get("source", ""),
+            "previous_price": old_price,
+            "current_price": new_price,
+            "drop_amount": amount,
+            "drop_percent": round(amount / old_price * 100, 2),
+        })
+    return events
+
+
+def apply_mls_price_drop_metadata(prop):
+    """Backfill price-drop badges from recorded MLS price history, without inference from other sources."""
+    if not isinstance(prop, dict) or prop.get("source_type") != "mls":
+        return False
+    existing = prop.get("price_drop_history")
+    if not isinstance(existing, list):
+        existing = []
+    events = detect_mls_price_drops(prop.get("price_history"))
+    seen = {
+        (event.get("date"), event.get("previous_price"), event.get("current_price"))
+        for event in existing if isinstance(event, dict)
+    }
+    added = False
+    for event in events:
+        key = (event.get("date"), event.get("previous_price"), event.get("current_price"))
+        if key not in seen:
+            existing.append(event)
+            seen.add(key)
+            added = True
+    prop["price_drop_history"] = existing
+    if existing:
+        prop["price_dropped"] = True
+        prop["last_price_drop"] = existing[-1]
+    else:
+        prop["price_dropped"] = bool(prop.get("price_dropped"))
+    return added
+
+
 def merge_property(existing, incoming, scan_id):
     """
     Merge source data into an existing property without deleting enrichment,
@@ -819,7 +872,9 @@ def merge_property(existing, incoming, scan_id):
         merged["seen_count"] = 1
         merged["missing_scan_count"] = 0
         merged["market_status"] = incoming.get("market_status") or "active"
-        merged["price_history"] = [{"date": timestamp, "price": incoming.get("price"), "source": incoming.get("source", "")}]
+        merged["price_history"] = [{"date": timestamp, "price": incoming.get("price"), "source": incoming.get("source", ""), "scan_id": scan_id}]
+        merged["price_drop_history"] = []
+        merged["price_dropped"] = False
         merged["status_history"] = append_status_event([], merged["market_status"], timestamp, scan_id, "first discovery")
         return merged, "new"
 
@@ -844,8 +899,9 @@ def merge_property(existing, incoming, scan_id):
     if not price_history and old_price is not None:
         price_history.append({"date": existing.get("first_seen") or timestamp, "price": old_price, "source": existing.get("source", "")})
     if new_price is not None and old_price != new_price:
-        price_history.append({"date": timestamp, "price": new_price, "source": incoming.get("source", "")})
+        price_history.append({"date": timestamp, "price": new_price, "source": incoming.get("source", ""), "scan_id": scan_id})
     merged["price_history"] = price_history
+    apply_mls_price_drop_metadata(merged)
 
     status_history = existing.get("status_history")
     if not isinstance(status_history, list):
@@ -924,6 +980,8 @@ def run_orchestrator():
         "new": 0,
         "updated": 0,
         "unchanged": 0,
+        "price_drops": 0,
+        "price_drops_total": 0,
         "off_market_candidates": 0,
         "errors": [],
         "code_sha256": code_hash,
@@ -941,6 +999,8 @@ def run_orchestrator():
 
     try:
         existing_props_dict = load_existing_properties()
+        for existing_property in existing_props_dict.values():
+            apply_mls_price_drop_metadata(existing_property)
     except (OSError, ValueError) as exc:
         log_entry.update({"status": "failed", "finished_at": iso_now_est()})
         log_entry["errors"].append(str(exc))
@@ -1280,6 +1340,8 @@ def run_orchestrator():
         merged, state = merge_property(existing, deal, scan_id)
         existing_props_dict[key] = merged
         log_entry[state] += 1
+        if merged.get("last_price_drop", {}).get("scan_id") == scan_id:
+            log_entry["price_drops"] += 1
 
     # Price-scoped/capped Redfin exports are not evidence that a listing went
     # off market. Only a future explicit listing-status source may do that.
@@ -1314,6 +1376,10 @@ def run_orchestrator():
         print(f"❌ שמירת properties.json נכשלה: {exc}")
 
     log_entry["total_properties"] = len(final_merged_list)
+    log_entry["price_drops_total"] = sum(
+        bool(prop.get("price_dropped")) for prop in final_merged_list
+        if prop.get("source_type") == "mls"
+    )
     log_entry["finished_at"] = iso_now_est()
     append_scan_log(log_entry)
 
