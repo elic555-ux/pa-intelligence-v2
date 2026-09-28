@@ -1051,7 +1051,48 @@ def merge_property(existing, incoming, scan_id):
         merged["seen_count"] = 1
         merged["missing_scan_count"] = 0
         merged["market_status"] = incoming.get("market_status") or "active"
-        merged["price_history"] = [{"date": timestamp, "price": incoming.get("price"), "source": incoming.get("source", "")}]
+        incoming_price_history = incoming.get("price_history")
+        if isinstance(incoming_price_history, list) and incoming_price_history:
+            price_history = deepcopy(incoming_price_history)
+        else:
+            price_history = [{"date": timestamp, "price": incoming.get("price"), "source": incoming.get("source", "")}]
+        merged["price_history"] = price_history
+
+        source_text = " ".join(str(incoming.get(field) or "") for field in ("source", "source_type", "deal_type")).lower()
+        is_mls_listing = any(token in source_text for token in ("mls", "redfin", "realtor", "zillow"))
+        price_drop_history = incoming.get("price_drop_history")
+        if not isinstance(price_drop_history, list):
+            price_drop_history = []
+        if is_mls_listing:
+            for previous_entry, current_entry in zip(price_history, price_history[1:]):
+                if not isinstance(previous_entry, dict) or not isinstance(current_entry, dict):
+                    continue
+                previous_price = safe_number(previous_entry.get("price"), None)
+                current_price = safe_number(current_entry.get("price"), None)
+                if previous_price is None or current_price is None or previous_price <= 0 or current_price <= 0 or current_price >= previous_price:
+                    continue
+                drop_date = current_entry.get("date") or timestamp
+                already_recorded = any(
+                    isinstance(item, dict)
+                    and safe_number(item.get("previous_price"), None) == previous_price
+                    and safe_number(item.get("current_price"), None) == current_price
+                    and item.get("date") == drop_date
+                    for item in price_drop_history
+                )
+                if already_recorded:
+                    continue
+                drop_amount = round(previous_price - current_price, 2)
+                price_drop_history.append({
+                    "date": drop_date,
+                    "scan_id": scan_id if drop_date == timestamp else None,
+                    "source": current_entry.get("source") or incoming.get("source") or "MLS",
+                    "previous_price": previous_price,
+                    "current_price": current_price,
+                    "drop_amount": drop_amount,
+                    "drop_percent": round((drop_amount / previous_price) * 100, 2),
+                })
+        merged["price_drop_history"] = price_drop_history
+        merged["price_dropped"] = bool(incoming.get("price_dropped") or price_drop_history)
         merged["status_history"] = append_status_event([], merged["market_status"], timestamp, scan_id, "first discovery")
         return merged, "new"
 
@@ -1078,6 +1119,54 @@ def merge_property(existing, incoming, scan_id):
     if new_price is not None and old_price != new_price:
         price_history.append({"date": timestamp, "price": new_price, "source": incoming.get("source", "")})
     merged["price_history"] = price_history
+
+    # Track price reductions on an existing MLS listing. New listings establish a
+    # baseline; only a lower price for the same existing listing counts as a drop.
+    old_price_num = safe_number(old_price, None)
+    new_price_num = safe_number(new_price, None)
+    source_text = " ".join(str(incoming.get(field) or existing.get(field) or "") for field in ("source", "source_type", "deal_type")).lower()
+    is_mls_listing = any(token in source_text for token in ("mls", "redfin", "realtor", "zillow"))
+    price_drop_history = existing.get("price_drop_history")
+    if not isinstance(price_drop_history, list):
+        price_drop_history = []
+
+    # Backfill drops from existing history as well as recording this scan's change.
+    # This repairs records whose old price history existed before automatic flagging.
+    if is_mls_listing:
+        for previous_entry, current_entry in zip(price_history, price_history[1:]):
+            if not isinstance(previous_entry, dict) or not isinstance(current_entry, dict):
+                continue
+            previous_price = safe_number(previous_entry.get("price"), None)
+            current_price = safe_number(current_entry.get("price"), None)
+            if previous_price is None or current_price is None or previous_price <= 0 or current_price <= 0 or current_price >= previous_price:
+                continue
+            drop_date = current_entry.get("date") or timestamp
+            already_recorded = any(
+                isinstance(item, dict)
+                and safe_number(item.get("previous_price"), None) == previous_price
+                and safe_number(item.get("current_price"), None) == current_price
+                and item.get("date") == drop_date
+                for item in price_drop_history
+            )
+            if already_recorded:
+                continue
+            drop_amount = round(previous_price - current_price, 2)
+            price_drop_history.append({
+                "date": drop_date,
+                "scan_id": scan_id if drop_date == timestamp else None,
+                "source": current_entry.get("source") or incoming.get("source") or existing.get("source") or "MLS",
+                "previous_price": previous_price,
+                "current_price": current_price,
+                "drop_amount": drop_amount,
+                "drop_percent": round((drop_amount / previous_price) * 100, 2),
+            })
+
+    merged["price_drop_history"] = price_drop_history
+    merged["price_dropped"] = bool(
+        existing.get("price_dropped")
+        or incoming.get("price_dropped")
+        or price_drop_history
+    )
 
     status_history = existing.get("status_history")
     if not isinstance(status_history, list):
