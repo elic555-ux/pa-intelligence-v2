@@ -602,9 +602,26 @@ SECTOR_LOOKBACK_DAYS = {
     "06_probate_estates": 180,
 }
 
+PA_COUNTIES = [
+    "Adams", "Allegheny", "Armstrong", "Beaver", "Bedford", "Berks", "Blair", "Bradford", "Bucks", "Butler",
+    "Cambria", "Cameron", "Carbon", "Centre", "Chester", "Clarion", "Clearfield", "Clinton", "Columbia", "Crawford",
+    "Cumberland", "Dauphin", "Delaware", "Elk", "Erie", "Fayette", "Forest", "Franklin", "Fulton", "Greene",
+    "Huntingdon", "Indiana", "Jefferson", "Juniata", "Lackawanna", "Lancaster", "Lawrence", "Lebanon", "Lehigh",
+    "Luzerne", "Lycoming", "McKean", "Mercer", "Mifflin", "Monroe", "Montgomery", "Montour", "Northampton",
+    "Northumberland", "Perry", "Philadelphia", "Pike", "Potter", "Schuylkill", "Snyder", "Somerset", "Sullivan",
+    "Susquehanna", "Tioga", "Union", "Venango", "Warren", "Washington", "Wayne", "Westmoreland", "Wyoming", "York",
+]
+
+# Redfin publishes Pennsylvania county pages under IDs 2361-2427 in alphabetical order.
+# Eight counties have a known metro market slug; other counties use the statewide slug.
+COUNTY_MARKETS = {
+    "Allegheny": "pittsburgh", "Philadelphia": "philadelphia", "Lehigh": "allentown",
+    "Berks": "reading", "Erie": "erie", "Lackawanna": "scranton",
+    "Northampton": "allentown", "Lancaster": "lancaster",
+}
+
 REGION_MAP = {
     "Pittsburgh": {"market": "pittsburgh", "region_id": "15702", "region_type": "6"},
-    "Allegheny": {"market": "pittsburgh", "region_id": "2362", "region_type": "5"},
     "Philadelphia": {"market": "philadelphia", "region_id": "15502", "region_type": "6"},
     "Allentown": {"market": "allentown", "region_id": "514", "region_type": "6"},
     "Reading": {"market": "reading", "region_id": "16305", "region_type": "6"},
@@ -612,22 +629,22 @@ REGION_MAP = {
     "Scranton": {"market": "scranton", "region_id": "17652", "region_type": "6"},
     "Bethlehem": {"market": "allentown", "region_id": "1616", "region_type": "6"},
     "Lancaster": {"market": "lancaster", "region_id": "10496", "region_type": "6"},
-    "Allegheny County": {"market": "pittsburgh", "region_id": "2362", "region_type": "5", "county_name": "Allegheny", "catalog_area": "Pittsburgh"},
-    "Philadelphia County": {"market": "philadelphia", "region_id": "2411", "region_type": "5", "county_name": "Philadelphia", "catalog_area": "Philadelphia"},
-    "Lehigh County": {"market": "allentown", "region_id": "2399", "region_type": "5", "county_name": "Lehigh", "catalog_area": "Allentown"},
-    "Berks County": {"market": "reading", "region_id": "2366", "region_type": "5", "county_name": "Berks", "catalog_area": "Reading"},
-    "Erie County": {"market": "erie", "region_id": "2385", "region_type": "5", "county_name": "Erie", "catalog_area": "Erie"},
-    "Lackawanna County": {"market": "scranton", "region_id": "2395", "region_type": "5", "county_name": "Lackawanna", "catalog_area": "Scranton"},
-    "Northampton County": {"market": "allentown", "region_id": "2408", "region_type": "5", "county_name": "Northampton", "catalog_area": "Bethlehem"},
-    "Lancaster County": {"market": "lancaster", "region_id": "2396", "region_type": "5", "county_name": "Lancaster", "catalog_area": "Lancaster"},
 }
+COUNTY_REGION_KEYS = {}
+for _index, _county in enumerate(PA_COUNTIES, start=2361):
+    _market = COUNTY_MARKETS.get(_county, "pennsylvania")
+    _key = f"{_county} County"
+    COUNTY_REGION_KEYS[_county] = _key
+    REGION_MAP[_key] = {
+        "market": _market,
+        "region_id": str(_index),
+        "region_type": "5",
+        "county_name": _county,
+        "catalog_area": _county,
+    }
+# Backward-compatible hidden UI scope previously labeled "Allegheny".
+REGION_MAP["Allegheny"] = REGION_MAP["Allegheny County"]
 
-COUNTY_REGION_KEYS = {
-    "Allegheny": "Allegheny County", "Philadelphia": "Philadelphia County",
-    "Lehigh": "Lehigh County", "Berks": "Berks County", "Erie": "Erie County",
-    "Lackawanna": "Lackawanna County", "Northampton": "Northampton County",
-    "Lancaster": "Lancaster County",
-}
 CITY_COUNTY = {
     "Pittsburgh": "Allegheny", "Allegheny": "Allegheny",
     "Philadelphia": "Philadelphia", "Allentown": "Lehigh", "Reading": "Berks",
