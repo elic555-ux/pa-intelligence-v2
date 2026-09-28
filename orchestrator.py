@@ -26,7 +26,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "2.8.0-mls-price-history-20260928"
+ORCHESTRATOR_VERSION = "3.0.0-configured-county-mls-20260928"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -35,6 +35,7 @@ SHERIFF_PAGE = "https://sheriffalleghenycounty.com/sheriffs-sales/"
 SHERIFF_LOCAL_PDF = "sources/allegheny_sheriff.pdf"
 # Edition discovered on the official page. It expires; it is not a permanent feed.
 SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/09/October-Sale-List-Updated-9-24.pdf"
+ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
 
 
 class SheriffPDFLinks(HTMLParser):
@@ -212,6 +213,129 @@ def fetch_allegheny_sheriff_listings():
     return rows, pdf_url, audit
 
 
+class ErieSheriffTableParser(HTMLParser):
+    """Read the public Erie County sheriff listing by its published headers."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows = []
+        self._row = None
+        self._cell = None
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if tag == "tr":
+            self._row = []
+        elif tag in ("td", "th") and self._row is not None:
+            self._cell = []
+        elif tag == "br" and self._cell is not None:
+            self._cell.append("\n")
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            self._cell.append(data)
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in ("td", "th") and self._cell is not None and self._row is not None:
+            self._row.append("".join(self._cell).strip())
+            self._cell = None
+        elif tag == "tr" and self._row is not None:
+            if self._row:
+                self.rows.append(self._row)
+            self._row = None
+
+
+def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
+    """Map active Erie sheriff notices; judgment is never represented as price."""
+    parser = ErieSheriffTableParser()
+    parser.feed(page_html)
+    required = {"case no", "case participants", "attorney", "property address", "judgment", "status"}
+    header_index = None
+    columns = {}
+    for row_index, row in enumerate(parser.rows):
+        normalized = [re.sub(r"[^a-z0-9]+", " ", cell.casefold()).strip() for cell in row]
+        present = {name: normalized.index(name) for name in required if name in normalized}
+        if len(present) == len(required):
+            header_index, columns = row_index, present
+            break
+    if header_index is None:
+        raise ValueError("Erie sheriff listing schema changed: expected case, address, judgment and status columns")
+
+    rows, seen = [], set()
+    skipped = 0
+    canceled = 0
+    for cells in parser.rows[header_index + 1:]:
+        if len(cells) <= max(columns.values()):
+            continue
+        status = re.sub(r"\s+", " ", cells[columns["status"]]).strip()
+        if not status:
+            continue
+        if not status.casefold().startswith("active"):
+            canceled += 1
+            continue
+        case_no = re.sub(r"\s+", " ", cells[columns["case no"]]).strip()
+        participants = re.sub(r"\s+", " ", cells[columns["case participants"]]).strip()
+        attorney = re.sub(r"\s+", " ", cells[columns["attorney"]]).strip()
+        judgment_text = re.sub(r"\s+", " ", cells[columns["judgment"]]).strip()
+        address_lines = [re.sub(r"\s+", " ", line).strip() for line in
+                         cells[columns["property address"]].replace("\r", "\n").split("\n")]
+        address_lines = [line for line in address_lines if line]
+        street = address_lines[0] if address_lines else ""
+        city = zip_code = municipality = upi = None
+        for line in address_lines[1:]:
+            city_match = re.match(r"^(.+?),?\s+PA\s+(\d{5})(?:-\d{4})?$", line, re.I)
+            if city_match:
+                city, zip_code = city_match.group(1).strip().rstrip(","), city_match.group(2)
+            elif re.search(r"\b(?:township|borough|boro|city)\b", line, re.I):
+                municipality = line
+            elif re.match(r"UPI\s*#?\s*:", line, re.I):
+                upi = line
+        if not case_no or not street or not city or not zip_code:
+            skipped += 1
+            continue
+        key = case_no.casefold() + ":" + normalize_addr_key(street, city, zip_code)
+        if key in seen:
+            continue
+        seen.add(key)
+        money = re.search(r"\$\s*([\d,]+(?:\.\d{1,2})?)", judgment_text)
+        judgment_amount = float(money.group(1).replace(",", "")) if money else None
+        uid = "ERIE-SHERIFF-" + hashlib.sha256(key.encode()).hexdigest()[:20]
+        rows.append({
+            "id": uid, "docket_id": case_no, "address": street.title(),
+            "city": city.title(), "county": "Erie", "zip": zip_code,
+            "price": None, "judgment_amount": judgment_amount,
+            "judgment_text": judgment_text or None,
+            "sqft": None, "beds": None, "baths": None,
+            "deal_type": "Sheriff Sale", "source_type": "sheriff",
+            "source": "Erie County Sheriff Sale Listing", "sheriff_status": status,
+            "market_status": "scheduled_sheriff_sale", "participants": participants or None,
+            "attorney": attorney or None, "municipality": municipality,
+            "erie_upi_raw": upi, "data_status": "live",
+            "filter_status": "investment_fields_unavailable",
+            "summary": (f"רישום שריף פעיל במחוז Erie. סכום פסק הדין במסמך: "
+                        f"{judgment_text or 'לא צוין'}; אין לראות בו מחיר נכס או הצעת פתיחה."),
+            "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
+        })
+    return rows, {"parsed_rows": len(parser.rows) - header_index - 1,
+                  "active_rows": len(rows), "skipped_active_addresses": skipped,
+                  "non_active_rows": canceled, "mode": "live", "source_url": source_url}
+
+
+def fetch_erie_sheriff_listings():
+    response = requests.get(
+        ERIE_SHERIFF_URL,
+        headers={"User-Agent": "PA-RealEstate-Intelligence-Hub/2.9", "Accept": "text/html"},
+        timeout=(5, 20),
+    )
+    response.raise_for_status()
+    rows, audit = parse_erie_sheriff_html(response.text, ERIE_SHERIFF_URL)
+    if audit["skipped_active_addresses"]:
+        audit["status"] = "partial"
+    else:
+        audit["status"] = "success"
+    return rows, audit
+
+
 class CountyTableParser(HTMLParser):
     """Collect table cell text from the County assessment portal without JS."""
     def __init__(self):
@@ -243,11 +367,21 @@ class CountyTableParser(HTMLParser):
 
 
 def county_pin_from_sheriff_parcel(parcel_id):
-    """Convert abbreviated Sheriff parcel IDs (e.g. 556-G-276) to County PIN."""
+    """Convert Sheriff parcel IDs to the County's ward/section/lot PIN.
+
+    Sheriff PDFs use both ward-section-lot (556-G-276) and
+    section-lot-ward (R-123-1133) layouts. The latter is confirmed by the
+    official 509 5th Ave record: 1133-R-00123-0000-00.
+    """
     parts = re.findall(r"[A-Za-z]+|\d+", str(parcel_id or "").strip())
-    if len(parts) < 3 or not parts[0].isdigit() or not parts[2].isdigit():
+    if len(parts) < 3:
         return None
-    ward, section, lot = parts[:3]
+    if parts[0].isalpha() and parts[1].isdigit() and parts[2].isdigit():
+        section, lot, ward = parts[:3]
+    elif parts[0].isdigit() and parts[1].isalpha() and parts[2].isdigit():
+        ward, section, lot = parts[:3]
+    else:
+        return None
     return f"{int(ward):04d}{section.upper()}{int(lot):05d}000000"
 
 
@@ -322,7 +456,7 @@ def fetch_county_building_data(parcel_id, address=None, municipality=None):
     return result if any(result.get(k) is not None for k in ("beds", "sqft", "year_built", "use_code")) else None
 
 
-def enrich_sheriff_rows_from_county(rows):
+def enrich_sheriff_rows_from_county(rows, max_lookups=50):
     """Enrich Sheriff rows from County parcel records, preserving Sheriff facts separately."""
     cache = {}
     if os.path.isfile(SHERIFF_PROPERTY_CACHE_FILE):
@@ -331,23 +465,53 @@ def enrich_sheriff_rows_from_county(rows):
                 cache = json.load(f)
         except (OSError, ValueError):
             cache = {}
-    todo = {}
+    if not isinstance(cache, dict):
+        cache = {}
+    parcels_by_pin = {}
     for row in rows:
         parcel = row.get("parcel_id")
         if parcel:
             key = county_pin_from_sheriff_parcel(parcel)
-            if key and (key not in cache or not (isinstance(cache.get(key), dict) and cache[key].get("source"))):
-                todo[key] = parcel
-    # Limit new lookups in each run and parallelize to keep the scan bounded.
+            if key:
+                parcels_by_pin[key] = parcel
+    row_by_pin = {county_pin_from_sheriff_parcel(row.get("parcel_id")): row for row in rows}
+    cache_meta = cache.setdefault("_meta", {})
+    backfill_complete = bool(cache_meta.get("initial_backfill_complete"))
+    # Backfill only parcels never requested before. The 50-record cap applies
+    # only until the current Sheriff roster has been checked once.
+    backfill = {pin: parcel for pin, parcel in parcels_by_pin.items() if pin not in cache}
+    if not backfill_complete:
+        todo = dict(list(backfill.items())[:max(0, int(max_lookups))])
+    else:
+        # After initial backfill, new records are processed without a cap.
+        # Portal failures retry after 24 hours; no-data responses after 30 days.
+        now = datetime.now(EST_TZ)
+        todo = {}
+        for pin, parcel in parcels_by_pin.items():
+            cached = cache.get(pin)
+            if isinstance(cached, dict) and cached.get("source"):
+                continue
+            checked = cached.get("checked_at") or cached.get("retrieved_at") if isinstance(cached, dict) else None
+            try:
+                checked_at = datetime.fromisoformat(checked) if checked else None
+                if checked_at and checked_at.tzinfo is None:
+                    checked_at = EST_TZ.localize(checked_at)
+            except (TypeError, ValueError):
+                checked_at = None
+            cooldown_days = 30 if isinstance(cached, dict) and cached.get("no_data") else 1
+            if checked_at is None or now - checked_at >= timedelta(days=cooldown_days):
+                todo[pin] = parcel
+    attempted_pins = set()
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
-        row_by_pin = {county_pin_from_sheriff_parcel(row.get("parcel_id")): row for row in rows}
         futures = {pool.submit(fetch_county_building_data, parcel,
                                row_by_pin.get(pin, {}).get("address"),
                                row_by_pin.get(pin, {}).get("municipality")): (pin, parcel)
-                   for pin, parcel in list(todo.items())[:40]}
+                   for pin, parcel in todo.items()}
+        attempted_pins.update(pin for pin, _ in futures.values())
         for future, (pin, parcel) in futures.items():
             try:
-                cache[pin] = future.result()
+                result = future.result()
+                cache[pin] = result if result else {"no_data": True, "checked_at": iso_now_est()}
             except (requests.RequestException, ValueError, OSError) as exc:
                 cache[pin] = {"lookup_error": str(exc), "checked_at": iso_now_est()}
     for row in rows:
@@ -360,7 +524,17 @@ def enrich_sheriff_rows_from_county(rows):
                     row[field] = data[field]
             row["county_property_status"] = "matched"
         else:
-            row["county_property_status"] = "not_found"
+            if not pin:
+                row["county_property_status"] = "invalid_parcel_id"
+            elif pin in backfill and pin not in attempted_pins:
+                row["county_property_status"] = "pending_backfill"
+            elif isinstance(data, dict) and data.get("lookup_error"):
+                row["county_property_status"] = "lookup_failed"
+            else:
+                row["county_property_status"] = "no_county_building_data"
+    if not backfill_complete and all(pin in cache for pin in parcels_by_pin):
+        cache_meta["initial_backfill_complete"] = True
+        cache_meta["initial_backfill_completed_at"] = iso_now_est()
     atomic_write_json(SHERIFF_PROPERTY_CACHE_FILE, cache)
     return sum(row.get("county_property_status") == "matched" for row in rows)
 
@@ -438,7 +612,46 @@ REGION_MAP = {
     "Scranton": {"market": "scranton", "region_id": "17652", "region_type": "6"},
     "Bethlehem": {"market": "allentown", "region_id": "1616", "region_type": "6"},
     "Lancaster": {"market": "lancaster", "region_id": "10496", "region_type": "6"},
+    "Allegheny County": {"market": "pittsburgh", "region_id": "2362", "region_type": "5", "county_name": "Allegheny", "catalog_area": "Pittsburgh"},
+    "Philadelphia County": {"market": "philadelphia", "region_id": "2411", "region_type": "5", "county_name": "Philadelphia", "catalog_area": "Philadelphia"},
+    "Lehigh County": {"market": "allentown", "region_id": "2399", "region_type": "5", "county_name": "Lehigh", "catalog_area": "Allentown"},
+    "Berks County": {"market": "reading", "region_id": "2366", "region_type": "5", "county_name": "Berks", "catalog_area": "Reading"},
+    "Erie County": {"market": "erie", "region_id": "2385", "region_type": "5", "county_name": "Erie", "catalog_area": "Erie"},
+    "Lackawanna County": {"market": "scranton", "region_id": "2395", "region_type": "5", "county_name": "Lackawanna", "catalog_area": "Scranton"},
+    "Northampton County": {"market": "allentown", "region_id": "2408", "region_type": "5", "county_name": "Northampton", "catalog_area": "Bethlehem"},
+    "Lancaster County": {"market": "lancaster", "region_id": "2396", "region_type": "5", "county_name": "Lancaster", "catalog_area": "Lancaster"},
 }
+
+COUNTY_REGION_KEYS = {
+    "Allegheny": "Allegheny County", "Philadelphia": "Philadelphia County",
+    "Lehigh": "Lehigh County", "Berks": "Berks County", "Erie": "Erie County",
+    "Lackawanna": "Lackawanna County", "Northampton": "Northampton County",
+    "Lancaster": "Lancaster County",
+}
+CITY_COUNTY = {
+    "Pittsburgh": "Allegheny", "Allegheny": "Allegheny",
+    "Philadelphia": "Philadelphia", "Allentown": "Lehigh", "Reading": "Berks",
+    "Erie": "Erie", "Scranton": "Lackawanna", "Bethlehem": "Northampton",
+    "Lancaster": "Lancaster",
+}
+
+
+def build_mls_scan_areas(cities, counties):
+    """Use county-wide MLS queries for fully selected counties, city feeds otherwise."""
+    selected_counties = {str(county).strip().casefold() for county in counties or []}
+    areas, selected_names = [], set()
+    for county, region_key in COUNTY_REGION_KEYS.items():
+        if county.casefold() in selected_counties:
+            areas.append(region_key)
+            selected_names.add(county.casefold())
+    for city in cities or []:
+        name = str(city).strip()
+        parent = CITY_COUNTY.get(name)
+        if parent and parent.casefold() in selected_names:
+            continue
+        if name and name not in areas:
+            areas.append(name)
+    return areas
 
 DISTRESS_KEYWORDS = [
     "as-is", "as is", "investor", "handyman", "fixer", "tlc", "cash only",
@@ -727,7 +940,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 "docket_id": f"MLS-{mls_number}",
                 "address": addr,
                 "city": row_city,
-                "county": "Allegheny" if clean_city in ["Pittsburgh", "Allegheny"] else "",
+                "county": target.get("county_name") or CITY_COUNTY.get(clean_city) or "",
                 "zip": zip_code,
                 "price": price,
                 "deal_type": "MLS (Realtor / Redfin)",
@@ -766,6 +979,8 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
     if "error" not in audit:
         audit.update({"status": "success", "rows": len(discovered),
                       "limit_reached": len(discovered) >= 350})
+    if audit.get("limit_reached"):
+        audit.update({"status": "partial", "error": "Redfin result cap reached (350); coverage may be incomplete"})
     return discovered
 
 
@@ -804,59 +1019,6 @@ def append_status_event(history, status, timestamp, scan_id, reason=""):
     return history
 
 
-def detect_mls_price_drops(price_history):
-    """Build verified reductions from successive prices in the same MLS history."""
-    if not isinstance(price_history, list):
-        return []
-    events = []
-    for previous, current in zip(price_history, price_history[1:]):
-        if not isinstance(previous, dict) or not isinstance(current, dict):
-            continue
-        old_price = safe_number(previous.get("price"), None, float)
-        new_price = safe_number(current.get("price"), None, float)
-        if old_price is None or new_price is None or old_price <= 0 or new_price <= 0 or new_price >= old_price:
-            continue
-        amount = round(old_price - new_price, 2)
-        events.append({
-            "date": current.get("date"),
-            "scan_id": current.get("scan_id"),
-            "source": current.get("source", ""),
-            "previous_price": old_price,
-            "current_price": new_price,
-            "drop_amount": amount,
-            "drop_percent": round(amount / old_price * 100, 2),
-        })
-    return events
-
-
-def apply_mls_price_drop_metadata(prop):
-    """Backfill price-drop badges from recorded MLS price history, without inference from other sources."""
-    if not isinstance(prop, dict) or prop.get("source_type") != "mls":
-        return False
-    existing = prop.get("price_drop_history")
-    if not isinstance(existing, list):
-        existing = []
-    events = detect_mls_price_drops(prop.get("price_history"))
-    seen = {
-        (event.get("date"), event.get("previous_price"), event.get("current_price"))
-        for event in existing if isinstance(event, dict)
-    }
-    added = False
-    for event in events:
-        key = (event.get("date"), event.get("previous_price"), event.get("current_price"))
-        if key not in seen:
-            existing.append(event)
-            seen.add(key)
-            added = True
-    prop["price_drop_history"] = existing
-    if existing:
-        prop["price_dropped"] = True
-        prop["last_price_drop"] = existing[-1]
-    else:
-        prop["price_dropped"] = bool(prop.get("price_dropped"))
-    return added
-
-
 def merge_property(existing, incoming, scan_id):
     """
     Merge source data into an existing property without deleting enrichment,
@@ -872,9 +1034,7 @@ def merge_property(existing, incoming, scan_id):
         merged["seen_count"] = 1
         merged["missing_scan_count"] = 0
         merged["market_status"] = incoming.get("market_status") or "active"
-        merged["price_history"] = [{"date": timestamp, "price": incoming.get("price"), "source": incoming.get("source", ""), "scan_id": scan_id}]
-        merged["price_drop_history"] = []
-        merged["price_dropped"] = False
+        merged["price_history"] = [{"date": timestamp, "price": incoming.get("price"), "source": incoming.get("source", "")}]
         merged["status_history"] = append_status_event([], merged["market_status"], timestamp, scan_id, "first discovery")
         return merged, "new"
 
@@ -899,9 +1059,8 @@ def merge_property(existing, incoming, scan_id):
     if not price_history and old_price is not None:
         price_history.append({"date": existing.get("first_seen") or timestamp, "price": old_price, "source": existing.get("source", "")})
     if new_price is not None and old_price != new_price:
-        price_history.append({"date": timestamp, "price": new_price, "source": incoming.get("source", ""), "scan_id": scan_id})
+        price_history.append({"date": timestamp, "price": new_price, "source": incoming.get("source", "")})
     merged["price_history"] = price_history
-    apply_mls_price_drop_metadata(merged)
 
     status_history = existing.get("status_history")
     if not isinstance(status_history, list):
@@ -980,8 +1139,6 @@ def run_orchestrator():
         "new": 0,
         "updated": 0,
         "unchanged": 0,
-        "price_drops": 0,
-        "price_drops_total": 0,
         "off_market_candidates": 0,
         "errors": [],
         "code_sha256": code_hash,
@@ -999,8 +1156,6 @@ def run_orchestrator():
 
     try:
         existing_props_dict = load_existing_properties()
-        for existing_property in existing_props_dict.values():
-            apply_mls_price_drop_metadata(existing_property)
     except (OSError, ValueError) as exc:
         log_entry.update({"status": "failed", "finished_at": iso_now_est()})
         log_entry["errors"].append(str(exc))
@@ -1078,6 +1233,9 @@ def run_orchestrator():
     selected_property_types = list(dict.fromkeys(selected_property_types))
     configured_cities = server_config.get("cities")
     cities_list = configured_cities if isinstance(configured_cities, list) else ["Pittsburgh"]
+    configured_counties = server_config.get("counties")
+    counties_list = configured_counties if isinstance(configured_counties, list) else []
+    mls_scan_areas = build_mls_scan_areas(cities_list, counties_list)
     selected_neighborhoods = [
         str(v).strip()
         for v in (server_config.get("neighborhoods") or [])
@@ -1087,6 +1245,8 @@ def run_orchestrator():
 
     log_entry["active_sectors"] = active_sectors_now
     log_entry["cities"] = cities_list
+    log_entry["counties"] = counties_list
+    log_entry["mls_scan_areas"] = mls_scan_areas
     log_entry["property_types"] = selected_property_types
     log_entry["min_baths"] = min_baths
     log_entry["market_state_basis"] = "raw_live_mls_before_user_filters"
@@ -1118,40 +1278,114 @@ def run_orchestrator():
         sources.setdefault(sector, {"label": SOURCE_LABELS[sector], "status": "not_connected", "rows": 0})
 
     sheriff_rows = []
-    if "sheriff" in active_sectors_now and "Allegheny" in cities_list:
-        try:
-            sheriff_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
-            county_matches = enrich_sheriff_rows_from_county(sheriff_rows)
-            sheriff_audit["county_property_matches"] = county_matches
-            print(f"🏠 נכסי שריף עם התאמה לנתוני מבנה במחוז: {county_matches}/{len(sheriff_rows)}")
-            atomic_write_json(SHERIFF_FILE, sheriff_rows)
-            sources["sheriff"].update({"status": "imported" if sheriff_audit["mode"] == "imported" else "success",
-                                        "rows": len(sheriff_rows), "source_url": sheriff_pdf,
-                                        "investment_filters": "unavailable", **sheriff_audit})
-            if sheriff_audit["skipped_active_addresses"] or sheriff_audit.get("unrecognized_blocks"):
-                sources["sheriff"]["status"] = "partial"
+    sheriff_county_results = {}
+    if "sheriff" in active_sectors_now:
+        requested_counties = []
+        for county in counties_list:
+            name = str(county).strip()
+            if name in COUNTY_REGION_KEYS and name not in requested_counties:
+                requested_counties.append(name)
+        for area in cities_list:
+            mapped = CITY_COUNTY.get(str(area).strip())
+            if mapped and mapped not in requested_counties:
+                requested_counties.append(mapped)
+        for county in requested_counties:
+            if county not in {"Allegheny", "Erie"}:
+                sheriff_county_results[county] = {
+                    "status": "not_connected", "rows": 0,
+                    "error": f"אין עדיין מתאם מקור שריף מאומת למחוז {county}",
+                }
+
+        for county in [name for name in requested_counties if name in {"Allegheny", "Erie"}]:
+            try:
+                if county == "Allegheny":
+                    county_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
+                    county_matches = enrich_sheriff_rows_from_county(county_rows, max_lookups=50)
+                    sheriff_audit.update({
+                        "county_property_matches": county_matches,
+                        "county_property_pending": sum(row.get("county_property_status") == "pending_backfill" for row in county_rows),
+                        "county_property_lookup_failed": sum(row.get("county_property_status") == "lookup_failed" for row in county_rows),
+                        "county_property_no_data": sum(row.get("county_property_status") == "no_county_building_data" for row in county_rows),
+                        "status": "imported" if sheriff_audit["mode"] == "imported" else "success",
+                        "source_url": sheriff_pdf,
+                    })
+                    if sheriff_audit.get("skipped_active_addresses") or sheriff_audit.get("unrecognized_blocks"):
+                        sheriff_audit["status"] = "partial"
+                    print(f"🏠 Allegheny building matches: {county_matches}/{len(county_rows)}")
+                    print(f"⚖️ שריף Allegheny: {len(county_rows)} רשומות פעילות; מקור: {sheriff_pdf}")
+                else:
+                    county_rows, sheriff_audit = fetch_erie_sheriff_listings()
+                    print(f"⚖️ שריף Erie: {len(county_rows)} רשומות פעילות; מקור: {ERIE_SHERIFF_URL}")
+                sheriff_rows.extend(county_rows)
+                sheriff_county_results[county] = {
+                    "status": sheriff_audit.get("status", "success"),
+                    "rows": len(county_rows), **sheriff_audit,
+                }
+            except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
+                response = getattr(exc, "response", None)
+                blocked = response is not None and response.status_code in (401, 403)
+                sheriff_county_results[county] = {
+                    "status": "blocked" if blocked else "failed", "rows": 0, "error": str(exc),
+                }
+                log_entry["errors"].append(f"sheriff {county} source unavailable: {exc}")
+                print(f"⚠️ מקור השריף במחוז {county} לא עודכן: {exc}")
+
+        if requested_counties:
+            try:
+                cached_sheriff_rows = load_json_file(SHERIFF_FILE, [])
+                if not isinstance(cached_sheriff_rows, list):
+                    cached_sheriff_rows = []
+                persisted_sheriff_rows = []
+                for cached in cached_sheriff_rows:
+                    county = str(cached.get("county") or "").strip()
+                    if county not in requested_counties:
+                        persisted_sheriff_rows.append(cached)
+                        continue
+                    county_status = sheriff_county_results.get(county, {}).get("status")
+                    # Replace a county's cache only after a clean fetch. Keep old
+                    # rows during failed/partial requests so a flaky feed does not
+                    # erase notices the user already has.
+                    if county_status not in ("success", "imported"):
+                        persisted_sheriff_rows.append(cached)
+                persisted_keys = {property_key(row) for row in persisted_sheriff_rows}
+                for fresh in sheriff_rows:
+                    key = property_key(fresh)
+                    if key not in persisted_keys:
+                        persisted_sheriff_rows.append(fresh)
+                        persisted_keys.add(key)
+                atomic_write_json(SHERIFF_FILE, persisted_sheriff_rows)
+            except OSError as exc:
+                log_entry["errors"].append(f"sheriff listing save failed: {exc}")
+                for item in sheriff_county_results.values():
+                    item["status"] = "partial"
+                    item["save_error"] = str(exc)
+            statuses = [item.get("status") for item in sheriff_county_results.values()]
+            aggregate_status = ("success" if statuses and all(s in ("success", "imported") for s in statuses)
+                                else "partial" if any(s in ("success", "imported", "partial") for s in statuses)
+                                else "not_connected" if statuses and all(s == "not_connected" for s in statuses)
+                                else "failed")
+            sources["sheriff"].update({
+                "status": aggregate_status, "rows": len(sheriff_rows),
+                "counties": sheriff_county_results, "investment_filters": "unavailable",
+            })
             log_entry["sheriff_active_lots"] = len(sheriff_rows)
-            log_entry["sheriff_source_url"] = sheriff_pdf
-            print(f"⚖️ שריף Allegheny: {len(sheriff_rows)} רשומות פעילות מתאריך מכירה עתידי; מקור: {sheriff_pdf}")
-        except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
-            response = getattr(exc, "response", None)
-            blocked = response is not None and response.status_code in (401, 403)
-            sources["sheriff"].update({"status": "blocked" if blocked else "failed", "error": str(exc),
-                                        "cached_results": True})
-            log_entry["errors"].append(f"sheriff list unavailable: {exc}")
-            print(f"⚠️ רשימת השריף לא עודכנה: {exc}")
-    elif "sheriff" in active_sectors_now:
-        sources["sheriff"].update({"status": "unsupported_area", "error": "כרגע חיבור השריף תומך במחוז Allegheny בלבד"})
+            log_entry["sheriff_sources_by_county"] = sheriff_county_results
+        else:
+            sources["sheriff"].update({
+                "status": "unsupported_area",
+                "error": "חיבורי שריף חיים זמינים כרגע רק למחוזות Allegheny ו-Erie",
+            })
 
     live_results = []
     if "mls" in active_sectors_now:
         mls_audits = []
-        for city in cities_list:
+        for city in mls_scan_areas:
             area_audit = {}
             live_results.extend(fetch_live_mls_for_city(city, min_price, max_price, area_audit))
             mls_audits.append(area_audit)
         good = sum(a.get("status") == "success" for a in mls_audits)
-        sources["mls"].update({"status": "success" if good == len(mls_audits) and good else "partial" if good else "failed",
+        usable = sum(a.get("status") in ("success", "partial") for a in mls_audits)
+        sources["mls"].update({"status": "success" if good == len(mls_audits) and good else "partial" if usable else "failed",
                                  "rows": len(live_results), "areas": mls_audits,
                                  "coverage": "not_proven_complete"})
         for item in mls_audits:
@@ -1160,7 +1394,7 @@ def run_orchestrator():
 
     # Geography QA: prove what each configured Redfin region actually returned.
     geography_qa = {}
-    for area in cities_list:
+    for area in mls_scan_areas:
         area_rows = [p for p in live_results if p.get("source_scan_area") == area]
         target = REGION_MAP.get(area) or {}
         actual_cities = {}
@@ -1205,7 +1439,7 @@ def run_orchestrator():
         old = areas.get(area)
         if isinstance(old, dict) and old.get("region_id") != REGION_MAP[area]["region_id"]:
             del areas[area]
-    for area in cities_list:
+    for area in mls_scan_areas:
         target = REGION_MAP.get(area) or {}
         rows = [p for p in live_results if p.get("source_scan_area") == area
                 and (not p.get("source_state") or p["source_state"].upper() == "PA")
@@ -1231,7 +1465,7 @@ def run_orchestrator():
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
 
     combined = live_results + sheriff_rows + get_placeholder_sector_results(
-        [s for s in active_sectors_now if s != "sheriff" or "Allegheny" not in cities_list]
+        [s for s in active_sectors_now if s not in ("mls", "sheriff")]
     )
     log_entry["source_results"] = len(combined)
 
@@ -1340,8 +1574,6 @@ def run_orchestrator():
         merged, state = merge_property(existing, deal, scan_id)
         existing_props_dict[key] = merged
         log_entry[state] += 1
-        if merged.get("last_price_drop", {}).get("scan_id") == scan_id:
-            log_entry["price_drops"] += 1
 
     # Price-scoped/capped Redfin exports are not evidence that a listing went
     # off market. Only a future explicit listing-status source may do that.
@@ -1376,10 +1608,6 @@ def run_orchestrator():
         print(f"❌ שמירת properties.json נכשלה: {exc}")
 
     log_entry["total_properties"] = len(final_merged_list)
-    log_entry["price_drops_total"] = sum(
-        bool(prop.get("price_dropped")) for prop in final_merged_list
-        if prop.get("source_type") == "mls"
-    )
     log_entry["finished_at"] = iso_now_est()
     append_scan_log(log_entry)
 
