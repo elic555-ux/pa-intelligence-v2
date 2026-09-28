@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- PA UI PATCH 2026-09-28: scan sources collapsed; MLS and price drops separated; price-drop rows and cards highlighted. -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -14,6 +15,7 @@
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .kpi-active-all { background-color: rgba(59, 130, 246, 0.2) !important; border-color: #3b82f6 !important; box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); transform: translateY(-2px); }
         .kpi-active-mls { background-color: rgba(6, 182, 212, 0.2) !important; border-color: #22d3ee !important; box-shadow: 0 0 20px rgba(34, 211, 238, 0.5); transform: translateY(-2px); }
+        .kpi-active-price_drop { background-color: rgba(244, 63, 94, 0.2) !important; border-color: #fb7185 !important; box-shadow: 0 0 20px rgba(251, 113, 133, 0.45); transform: translateY(-2px); }
         .kpi-active-distressed { background-color: rgba(245, 158, 11, 0.2) !important; border-color: #fbbf24 !important; box-shadow: 0 0 20px rgba(251, 191, 36, 0.5); transform: translateY(-2px); }
         .kpi-active-sheriff { background-color: rgba(244, 63, 94, 0.2) !important; border-color: #fb7185 !important; box-shadow: 0 0 20px rgba(251, 113, 133, 0.5); transform: translateY(-2px); }
         .kpi-active-tax { background-color: rgba(168, 85, 247, 0.2) !important; border-color: #c084fc !important; box-shadow: 0 0 20px rgba(192, 132, 252, 0.5); transform: translateY(-2px); }
@@ -111,15 +113,16 @@
 
     <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
-        <details class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs" open>
+        <details class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs">
             <summary class="cursor-pointer font-bold text-blue-300">מצב מקורות הסריקה</summary>
             <div id="scanner-source-status" class="mt-2 space-y-1 text-gray-300">ממתין לדוח הסריקה הראשון.</div>
             <p class="text-gray-400 mt-2">רשימת MLS עשויה להיות חלקית. OFF MARKET כולל מועמדים שדורשים אימות. ברשומות שריף ייתכן שאין מחיר, שטח או מספר חדרים לבדיקת התאמה למסננים.</p>
         </details>
         <!-- KPI Cards -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div></button>
-            <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS וירידות מחיר</span><i data-lucide="trending-down" class="w-4 h-4 text-cyan-400"></i></div><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div></button>
+            <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS</span><i data-lucide="house" class="w-4 h-4 text-cyan-400"></i></div><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div></button>
+            <button onclick="setCategory('price_drop')" id="btn-cat-price_drop" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">ירידות מחיר</span><i data-lucide="trending-down" class="w-4 h-4 text-rose-400"></i></div><div class="text-2xl font-black text-rose-300" id="count-price-drop">0</div></button>
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div></button>
             <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">מכירות שריף</span><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i></div><div class="text-2xl font-black text-rose-300" id="count-sheriff">0</div></button>
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
@@ -1252,6 +1255,7 @@
             
             document.getElementById('count-all').textContent = nonArchived.length;
             document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
+            document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped).length;
             document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
             
             // Fixed sheriff counter to capture source properly
@@ -1266,8 +1270,8 @@
 
         function setCategory(cat) {
             activeCategory = cat;
-            ['all', 'mls', 'distressed', 'sheriff', 'tax', 'probate', 'offmarket', 'archive'].forEach(c => {
-                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate', 'kpi-active-offmarket', 'kpi-active-archive');
+            ['all', 'mls', 'price_drop', 'distressed', 'sheriff', 'tax', 'probate', 'offmarket', 'archive'].forEach(c => {
+                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-price_drop', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate', 'kpi-active-offmarket', 'kpi-active-archive');
                 if (c === cat) document.getElementById(`btn-cat-${c}`)?.classList.add(`kpi-active-${c}`);
             });
             renderCards();
@@ -1297,6 +1301,7 @@
                     
                     const dt = (p.deal_type || '').toLowerCase();
                     if (activeCategory === 'mls' && !dt.includes('mls')) return false;
+                    if (activeCategory === 'price_drop' && !p.price_dropped) return false;
                     if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
                     
                     // Fixed sheriff filtering logic
@@ -1335,7 +1340,7 @@
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
                     const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
-                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
+                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${p.price_dropped ? 'bg-rose-950/50 border-r-4 border-r-rose-400 shadow-[inset_-4px_0_0_rgba(251,113,133,0.35)]' : ''} ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
                                 <span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span>
@@ -1359,7 +1364,7 @@
                     const isV = viewedDeals.has(String(p.id));
                     const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
 
-                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800')} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
+                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${p.price_dropped ? 'border-rose-500/70 bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.16)]' : (isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800'))} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         
                         ${isGoodDeal ? '<span class="absolute -top-3 -right-3 bg-emerald-600 text-white font-black text-[10px] px-2 py-1 rounded-md shadow-lg rotate-12 z-20">DEAL!</span>' : ''}
 
