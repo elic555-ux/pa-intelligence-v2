@@ -29,6 +29,19 @@
         /* Viewed Card Style */
         .card-viewed { opacity: 0.8; background-color: #080b13 !important; }
         .card-viewed:hover { opacity: 1; background-color: #111827 !important; }
+        .property-number-badge {
+            display: inline-flex;
+            flex: 0 0 20px;
+            width: 20px;
+            height: 20px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #3b82f6;
+            border-radius: 9999px;
+            background: #172554;
+            color: #dbeafe;
+            font: 700 10px/1 'JetBrains Mono', monospace;
+        }
         
         /* Table Structure Enhancements */
         .props-table { table-layout: fixed; width: 100%; min-width: 1000px; }
@@ -198,7 +211,7 @@
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">מחיר</span><strong class="text-2xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
-                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">חדרים</span><strong class="text-xl font-extrabold text-white" id="modal-beds"></strong></div>
+                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">חדרי שינה</span><strong class="text-xl font-extrabold text-white" id="modal-beds"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">רחצה</span><strong class="text-xl font-extrabold text-white" id="modal-baths"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
             </div>
@@ -264,6 +277,9 @@
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div><span class="text-gray-400 block">סוג שימוש</span><strong id="modal-county-use" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">מספר חדרים</span><strong id="modal-county-rooms" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">חדרי שינה לפי המחוז</span><strong id="modal-county-beds" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">חדרי רחצה לפי המחוז</span><strong id="modal-county-baths" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">שטח מגורים לפי המחוז</span><strong id="modal-county-sqft" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">שנת בנייה</span><strong id="modal-county-year" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">סגנון</span><strong id="modal-county-style" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">מצב לפי המחוז</span><strong id="modal-county-condition" class="text-white">-</strong></div>
@@ -1261,6 +1277,9 @@
 
         function renderCards() {
             const container = document.getElementById('properties-container');
+            // Assign one stable sequence across every category. Changing the
+            // Sheriff/Off Market/Bank filter must not restart numbering at 1.
+            const displayNumberById = new Map(rawProperties.map((p, index) => [String(p.id), index + 1]));
             const stratF = document.getElementById('filter-strategy').value;
             const typeF = document.getElementById('filter-type').value, priceF = document.getElementById('filter-price').value;
             const minPrice = getRawPrice(document.getElementById('filter-min-price')), sortBy = document.getElementById('sort-by').value;
@@ -1312,13 +1331,14 @@
 
             if (currentViewMode === 'table') {
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">תשואה/שיפוץ</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
-                ${filtered.map(p => {
+                ${filtered.map((p, index) => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
                     const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
                     return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
+                                <span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span>
                                 ${isV && activeCategory !== 'archive' ? '<span title="נצפה"><i data-lucide="eye" class="w-3.5 h-3.5 text-gray-500"></i></span>' : ''}
                                 <div class="font-black text-white text-sm truncate" title="${p.address}">${p.address}</div>
                             </div>
@@ -1333,8 +1353,8 @@
                         <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score ?? '—'}</span></td>
                         <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
-            } else {
-                container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">` + filtered.map(p => {
+                } else {
+                container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">` + filtered.map((p, index) => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
                     const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
@@ -1352,7 +1372,7 @@
 
                             <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
                             
-                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 truncate" title="${p.address}">${p.address}</h4><p class="text-xs text-gray-400 mb-2 truncate" title="${p.city}, PA">${p.city}, PA</p>
+                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${p.address}"><span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span><span class="truncate">${p.address}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${p.city}, PA">${p.city}, PA</p>
                             <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${p.price ? '$' + Number(p.price).toLocaleString() : 'ללא הצעת פתיחה'}</div>
                             
                             <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
@@ -1415,14 +1435,26 @@
             countyDetails.classList.toggle('hidden', !(p.source_type === 'sheriff' && (countyData || p.parcel_id)));
             if (p.source_type === 'sheriff' && (countyData || p.parcel_id)) {
                 const parcelParts = String(p.parcel_id || '').match(/[A-Za-z]+|\d+/g) || [];
-                const fallbackPin = parcelParts.length >= 3 && /^\d+$/.test(parcelParts[0]) && /^\d+$/.test(parcelParts[2])
-                    ? `${String(parseInt(parcelParts[0], 10)).padStart(4, '0')}${parcelParts[1].toUpperCase()}${String(parseInt(parcelParts[2], 10)).padStart(5, '0')}000000`
-                    : '';
+                let fallbackPin = '';
+                if (parcelParts.length >= 3) {
+                    let ward, section, lot;
+                    if (/^[A-Za-z]+$/.test(parcelParts[0]) && /^\d+$/.test(parcelParts[1]) && /^\d+$/.test(parcelParts[2])) {
+                        [section, lot, ward] = parcelParts;
+                    } else if (/^\d+$/.test(parcelParts[0]) && /^[A-Za-z]+$/.test(parcelParts[1]) && /^\d+$/.test(parcelParts[2])) {
+                        [ward, section, lot] = parcelParts;
+                    }
+                    if (ward && section && lot) {
+                        fallbackPin = `${String(parseInt(ward, 10)).padStart(4, '0')}${section.toUpperCase()}${String(parseInt(lot, 10)).padStart(5, '0')}000000`;
+                    }
+                }
                 const setCounty = (id, value) => {
                     document.getElementById(id).textContent = value === 0 ? '0' : (value || 'לא נמצא במאגר');
                 };
                 setCounty('modal-county-use', countyData?.use_code);
                 setCounty('modal-county-rooms', countyData?.total_rooms);
+                setCounty('modal-county-beds', countyData?.beds);
+                setCounty('modal-county-baths', countyData?.baths);
+                setCounty('modal-county-sqft', countyData?.sqft ? `${Number(countyData.sqft).toLocaleString()} SqFt` : null);
                 setCounty('modal-county-year', countyData?.year_built);
                 setCounty('modal-county-style', countyData?.style);
                 setCounty('modal-county-condition', countyData?.condition);
