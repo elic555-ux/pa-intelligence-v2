@@ -26,13 +26,14 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.0.0-configured-county-mls-20260928"
+ORCHESTRATOR_VERSION = "3.1.0-sheriff-pdf-fallback-20260929"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
 
 SHERIFF_PAGE = "https://sheriffalleghenycounty.com/sheriffs-sales/"
 SHERIFF_LOCAL_PDF = "sources/allegheny_sheriff.pdf"
+SHERIFF_BUNDLED_PDF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "October-Sale-List-Updated-9-24.pdf")
 # Edition discovered on the official page. It expires; it is not a permanent feed.
 SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/09/October-Sale-List-Updated-9-24.pdf"
 ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
@@ -171,13 +172,19 @@ def extract_sheriff_pdf(content):
 
 
 def fetch_allegheny_sheriff_listings():
-    """One bounded public download, with a clearly marked local import option."""
+    """Use the live official PDF when available, then a validated bundled copy."""
+    local_errors = []
     if os.path.isfile(SHERIFF_LOCAL_PDF):
-        with open(SHERIFF_LOCAL_PDF, "rb") as f:
-            body = extract_sheriff_pdf(f.read(20_000_001))
-        rows, audit = parse_sheriff_text(body, SHERIFF_LOCAL_PDF, imported=True)
-        return rows, SHERIFF_LOCAL_PDF, audit
-    headers = {"User-Agent": "PA-RealEstate-Intelligence-Hub/2.7", "Accept": "text/html,application/pdf"}
+        try:
+            with open(SHERIFF_LOCAL_PDF, "rb") as f:
+                body = extract_sheriff_pdf(f.read(20_000_001))
+            rows, audit = parse_sheriff_text(body, SHERIFF_LOCAL_PDF, imported=True)
+            return rows, SHERIFF_LOCAL_PDF, audit
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            local_errors.append(f"{SHERIFF_LOCAL_PDF}: {exc}")
+            print(f"ℹ️ PDF מקומי בנתיב המקור לא נטען: {exc}")
+
+    headers = {"User-Agent": "PA-RealEstate-Intelligence-Hub/3.1", "Accept": "text/html,application/pdf"}
     links = []
     try:
         page = requests.get(SHERIFF_PAGE, headers=headers, timeout=(5, 15))
@@ -186,31 +193,55 @@ def fetch_allegheny_sheriff_listings():
         parser.feed(page.text)
         links = [url for url in parser.links if re.search(r"sale[^/]*list", url, re.I)]
     except requests.RequestException as exc:
-        print(f"ℹ️ דף השריף אינו זמין: {exc}")
+        print(f"ℹ️ דף השריף אינו זמין; אנסה את הקישור הידוע ואת ה־PDF המצורף: {exc}")
+
     configured_url = os.environ.get("SHERIFF_PDF_URL", "").strip()
     if configured_url:
         if not valid_sheriff_pdf_url(configured_url):
             raise ValueError("SHERIFF_PDF_URL חייב להיות קישור PDF באתר השריף הרשמי")
-        pdf_url = configured_url
-    elif links:
-        pdf_url = links[0]
-    elif now_est().date().isoformat() <= "2026-10-05":
-        pdf_url = SHERIFF_KNOWN_PDF
+        candidate_urls = [configured_url]
     else:
-        raise ValueError("לא נמצא קישור עדכני; אפשר לצרף PDF רשמי ב-sources/allegheny_sheriff.pdf")
-    print(f"📄 מנסה PDF שריף ישיר: {pdf_url}")
-    response = requests.get(pdf_url, headers=headers, timeout=(5, 30), stream=True)
-    try:
-        response.raise_for_status()
-        content = bytearray()
-        for chunk in response.iter_content(65536):
-            content.extend(chunk)
-            if len(content) > 20_000_000:
-                raise ValueError("PDF גדול מ-20MB")
-    finally:
-        response.close()
-    rows, audit = parse_sheriff_text(extract_sheriff_pdf(bytes(content)), pdf_url)
-    return rows, pdf_url, audit
+        candidate_urls = links[:3]
+        if now_est().date().isoformat() <= "2026-10-05" and SHERIFF_KNOWN_PDF not in candidate_urls:
+            candidate_urls.append(SHERIFF_KNOWN_PDF)
+
+    download_errors = []
+    for pdf_url in candidate_urls:
+        print(f"📄 מנסה PDF שריף ישיר: {pdf_url}")
+        try:
+            response = requests.get(pdf_url, headers=headers, timeout=(5, 30), stream=True)
+            try:
+                response.raise_for_status()
+                content = bytearray()
+                for chunk in response.iter_content(65536):
+                    if chunk:
+                        content.extend(chunk)
+                    if len(content) > 20_000_000:
+                        raise ValueError("PDF גדול מ-20MB")
+            finally:
+                response.close()
+            body = extract_sheriff_pdf(bytes(content))
+            rows, audit = parse_sheriff_text(body, pdf_url)
+            return rows, pdf_url, audit
+        except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
+            download_errors.append(f"{pdf_url}: {exc}")
+            print(f"ℹ️ קישור PDF לא שמיש, ממשיך למקור הבא: {exc}")
+
+    # This checked-in official PDF is a bounded fallback. The parser independently
+    # verifies its printed date and upcoming sale date before accepting any records.
+    if os.path.isfile(SHERIFF_BUNDLED_PDF):
+        try:
+            with open(SHERIFF_BUNDLED_PDF, "rb") as f:
+                body = extract_sheriff_pdf(f.read(20_000_001))
+            rows, audit = parse_sheriff_text(body, SHERIFF_BUNDLED_PDF, imported=True)
+            audit["fallback_reason"] = "; ".join(download_errors or local_errors) or "live source unavailable"
+            print(f"✅ שימוש ב־PDF הרשמי המצורף: {len(rows)} רשומות פעילות")
+            return rows, SHERIFF_BUNDLED_PDF, audit
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            local_errors.append(f"{SHERIFF_BUNDLED_PDF}: {exc}")
+
+    details = "; ".join(download_errors + local_errors)
+    raise ValueError("לא ניתן לקרוא PDF שריף עדכני" + (f": {details}" if details else ""))
 
 
 class ErieSheriffTableParser(HTMLParser):
