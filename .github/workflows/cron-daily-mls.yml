@@ -9,7 +9,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: pa-scanner-queue
+  # Shared by every workflow that writes repository data files.
+  group: pa-repo-write-queue
   cancel-in-progress: false
 
 jobs:
@@ -53,7 +54,12 @@ jobs:
           done
           if ! git diff --cached --quiet; then
             git commit -m "Update scanner data and source status"
-            git pull --rebase origin "${GITHUB_REF_NAME}"
+            if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+              # Never leave conflict markers in JSON files for the summary step.
+              git rebase --abort || true
+              echo "::error::Could not safely rebase scanner data. No conflicted files were pushed."
+              exit 1
+            fi
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
       - name: Publish scan summary
