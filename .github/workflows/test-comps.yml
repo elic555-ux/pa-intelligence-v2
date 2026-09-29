@@ -6,6 +6,11 @@ on:
 permissions:
   contents: write
 
+# Serialize this workflow with scanner workflows that push to the same branch.
+concurrency:
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+
 jobs:
   test-comps:
     runs-on: ubuntu-latest
@@ -66,7 +71,12 @@ jobs:
               echo "No report or cache changes to commit."
             else
               git commit -m "Test comps engine with RentCast"
-              git push
+              if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+                git rebase --abort || true
+                echo "::error::Could not safely rebase comps data. No conflicted files were pushed."
+                exit 1
+              fi
+              git push origin "HEAD:${GITHUB_REF_NAME}"
             fi
           else
             echo "No JSON report or cache found to commit."
