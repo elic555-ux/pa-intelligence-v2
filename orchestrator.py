@@ -26,7 +26,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.1.0-sheriff-pdf-fallback-20260929"
+ORCHESTRATOR_VERSION = "3.3.0-homesteps-reo-20260929"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -37,6 +37,155 @@ SHERIFF_BUNDLED_PDF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "
 # Edition discovered on the official page. It expires; it is not a permanent feed.
 SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/09/October-Sale-List-Updated-9-24.pdf"
 ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
+HOMESTEPS_SEARCH_URL = "https://www.homesteps.com/listing/search?search=Pennsylvania"
+
+
+class JsonLdScripts(HTMLParser):
+    """Collect JSON-LD script bodies without depending on BeautifulSoup."""
+    def __init__(self):
+        super().__init__()
+        self.scripts = []
+        self._collect = False
+        self._parts = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag.lower() == "script" and attrs.get("type", "").lower() == "application/ld+json":
+            self._collect = True
+            self._parts = []
+
+    def handle_data(self, data):
+        if self._collect:
+            self._parts.append(data)
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "script" and self._collect:
+            self.scripts.append("".join(self._parts))
+            self._parts = []
+            self._collect = False
+
+
+def _jsonld_walk(value):
+    """Yield dictionaries from JSON-LD graphs and arrays."""
+    if isinstance(value, list):
+        for item in value:
+            yield from _jsonld_walk(item)
+    elif isinstance(value, dict):
+        yield value
+        for key in ("@graph", "mainEntity", "itemListElement"):
+            if key in value:
+                yield from _jsonld_walk(value[key])
+
+
+def _schema_types(value):
+    raw = value.get("@type", []) if isinstance(value, dict) else []
+    return {str(item).casefold() for item in (raw if isinstance(raw, list) else [raw])}
+
+
+def parse_homesteps_listings(page_html, source_url=HOMESTEPS_SEARCH_URL):
+    """Parse only official, active Freddie Mac HomeSteps listings in PA."""
+    parser = JsonLdScripts()
+    parser.feed(page_html)
+    found, rows, seen = 0, [], set()
+    status_counts = {}
+    for body in parser.scripts:
+        try:
+            payload = json.loads(body)
+        except (TypeError, ValueError):
+            continue
+        for listing in _jsonld_walk(payload):
+            if "realestatelisting" not in _schema_types(listing):
+                continue
+            found += 1
+            status = ""
+            for prop in listing.get("additionalProperty", []) or []:
+                if isinstance(prop, dict) and str(prop.get("name", "")).strip().casefold() == "status":
+                    status = str(prop.get("value") or "").strip()
+                    break
+            status_counts[status or "UNKNOWN"] = status_counts.get(status or "UNKNOWN", 0) + 1
+            if status.casefold() != "active":
+                continue
+
+            loc = listing.get("@location") or listing.get("location") or {}
+            address_obj = loc.get("address") or {}
+            if not isinstance(address_obj, dict):
+                continue
+            street = re.sub(r"\s+", " ", str(address_obj.get("streetAddress") or "")).strip()
+            city = re.sub(r"\s+", " ", str(address_obj.get("addressLocality") or "")).strip()
+            state = str(address_obj.get("addressRegion") or "").strip().upper()
+            zip_code = str(address_obj.get("postalCode") or "").strip()
+            canonical_url = str(listing.get("url") or "").strip()
+            if not street or not city or state not in {"PA", "PENNSYLVANIA"} or not re.fullmatch(r"\d{5}(?:-\d{4})?", zip_code):
+                continue
+            if canonical_url:
+                parsed_url = urlparse(canonical_url)
+                if parsed_url.scheme != "https" or parsed_url.hostname not in {"www.homesteps.com", "homesteps.com"}:
+                    continue
+            key = normalize_addr_key(street, city, zip_code)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+
+            offer = listing.get("offers") or {}
+            item = offer.get("itemOffered") or {}
+            if isinstance(item, list):
+                item = item[0] if item else {}
+            raw_price = str(offer.get("price") or "")
+            price = safe_number(re.sub(r"[^0-9.]", "", raw_price), None, float)
+            if price is None or price <= 0:
+                continue
+            beds = safe_number(item.get("numberOfBedrooms"), None, int)
+            baths = safe_number(item.get("numberOfBathroomsTotal"), None, float)
+            floor_size = item.get("floorSize") or listing.get("floorSize") or {}
+            if isinstance(floor_size, dict):
+                sqft_raw = floor_size.get("value") or floor_size.get("minValue")
+            else:
+                sqft_raw = floor_size
+            sqft = safe_number(sqft_raw, None, int)
+            raw_type = item.get("accommodationCategory") or item.get("@type") or ""
+            property_type = normalize_property_type(raw_type)
+            city_county = {
+                "York": "York", "Philadelphia": "Philadelphia", "Pittsburgh": "Allegheny",
+                "Erie": "Erie", "Allentown": "Lehigh", "Reading": "Berks",
+                "Scranton": "Lackawanna", "Bethlehem": "Northampton", "Lancaster": "Lancaster",
+            }.get(city)
+            county = (city_county + " County") if city_county else ""
+            row_id = "PA-REO-FREDDIEMAC-" + hashlib.sha256(key.encode()).hexdigest()[:20]
+            rows.append({
+                "id": row_id, "docket_id": row_id, "address": street, "city": city,
+                "county": county, "zip": zip_code, "price": price,
+                "deal_type": "Freddie Mac REO", "source": "Freddie Mac HomeSteps",
+                "source_type": "reo", "data_status": "live",
+                "type": property_type, "property_type": property_type,
+                "source_property_type": raw_type or None,
+                "beds": beds, "baths": baths, "sqft": sqft,
+                "url": canonical_url or source_url,
+                "summary": f"נכס REO פעיל שמופיע באתר Freddie Mac HomeSteps. מחיר מבוקש ${price:,.0f}.",
+                "market_status": "active", "reo_provider": "freddie_mac_homesteps",
+                "last_source_check": iso_now_est(),
+            })
+    return rows, {"jsonld_listings": found, "status_counts": status_counts,
+                  "active_rows": len(rows), "source_url": source_url}
+
+
+def fetch_homesteps_reo():
+    headers = {"User-Agent": USER_AGENTS[0], "Accept": "text/html,application/xhtml+xml"}
+    response = requests.get(HOMESTEPS_SEARCH_URL, headers=headers, timeout=30)
+    response.raise_for_status()
+    if len(response.content) > 8_000_000:
+        raise ValueError("HomeSteps response exceeded 8 MB safety limit")
+    rows, audit = parse_homesteps_listings(response.text, response.url)
+    page_text = response.text.casefold()
+    valid_empty_result_page = ("homesteps" in page_text and
+                               "search our homes" in page_text and
+                               urlparse(response.url).hostname in {"www.homesteps.com", "homesteps.com"})
+    if audit["jsonld_listings"] == 0 and not valid_empty_result_page:
+        raise ValueError("HomeSteps result schema changed: no RealEstateListing JSON-LD records")
+    # One provider is a verified start, not complete coverage of bank-owned stock.
+    audit["provider"] = "freddie_mac_homesteps"
+    audit["coverage"] = "partial_single_provider"
+    audit["status"] = "partial"
+    return rows, audit
 
 
 class SheriffPDFLinks(HTMLParser):
@@ -99,13 +248,28 @@ def parse_sheriff_text(body, source_url, imported=False):
             skipped_active += 1
             continue
         city, zip_code = (x.strip() for x in address.groups())
-        lines_before_city = facts[:address.start()].splitlines()
-        street_start = next((i for i in range(len(lines_before_city) - 1, -1, -1)
-                             if re.match(r"^\s*\d+\b", lines_before_city[i])), None)
-        if street_start is None:
+        raw_lines = facts.splitlines()
+        city_line_index = next((i for i, line in enumerate(raw_lines)
+                                if line.strip() and address.group(0).strip().casefold() in line.strip().casefold()), None)
+        sale_label_index = next((i for i, line in enumerate(raw_lines[:city_line_index or 0])
+                                 if line.strip().casefold() == "sale type"), None)
+        if city_line_index is None or sale_label_index is None:
             skipped_active += 1
             continue
-        street = " ".join(line.strip() for line in lines_before_city[street_start:] if line.strip())
+        # The PDF may wrap the address over multiple lines. Skip the sale type
+        # value and join every remaining line up to city/state/ZIP; taking the
+        # last line alone can return fragments such as "VACANT LAND".
+        address_lines = [line.strip() for line in raw_lines[sale_label_index + 2:city_line_index] if line.strip()]
+        if len(address_lines) < 1:
+            skipped_active += 1
+            continue
+        street = re.sub(r"\s+", " ", " ".join(address_lines)).strip()
+        # Some sheriff entries append a land-use note to the street line.
+        # Keep it out of the address sent to the county parcel matcher.
+        street = re.sub(r"\s+-\s*(?:VACANT|AGRICULTURAL)\b.*$", "", street, flags=re.I).strip()
+        if re.search(r"\b(?:Sale Type|Case Number|Parcel/Tax ID|Plaintiff|Attorney|Cost & Tax Bid)\b", street, re.I):
+            skipped_active += 1
+            continue
         key = docket.group().upper() + ':' + normalize_addr_key(street, city, zip_code)
         if key in seen:
             continue
@@ -515,7 +679,8 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
         todo = dict(list(backfill.items())[:max(0, int(max_lookups))])
     else:
         # After initial backfill, new records are processed without a cap.
-        # Portal failures retry after 24 hours; no-data responses after 30 days.
+        # Retry failed lookups hourly so corrected addresses can recover quickly;
+        # stable no-data responses remain cached for 30 days.
         now = datetime.now(EST_TZ)
         todo = {}
         for pin, parcel in parcels_by_pin.items():
@@ -529,8 +694,8 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
                     checked_at = EST_TZ.localize(checked_at)
             except (TypeError, ValueError):
                 checked_at = None
-            cooldown_days = 30 if isinstance(cached, dict) and cached.get("no_data") else 1
-            if checked_at is None or now - checked_at >= timedelta(days=cooldown_days):
+            cooldown = timedelta(days=30) if isinstance(cached, dict) and cached.get("no_data") else timedelta(hours=1)
+            if checked_at is None or now - checked_at >= cooldown:
                 todo[pin] = parcel
     attempted_pins = set()
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
@@ -1407,11 +1572,11 @@ def run_orchestrator():
     sources = {}
     for sector in active_sectors_now:
         sources[sector] = {"label": SOURCE_LABELS.get(sector, sector), "checked_at": iso_now_est(),
-                           "status": "pending" if sector in ("mls", "sheriff") else "not_connected",
+                           "status": "pending" if sector in ("mls", "sheriff", "reo") else "not_connected",
                            "rows": 0}
     log_entry["sources"] = sources
-    # These sectors have no verified adapter yet, regardless of a checkbox.
-    for sector in ("reo", "tax", "06_probate_estates"):
+    # Tax claims and probate remain intentionally disabled until a verified feed is mapped.
+    for sector in ("tax", "06_probate_estates"):
         sources.setdefault(sector, {"label": SOURCE_LABELS[sector], "status": "not_connected", "rows": 0})
 
     sheriff_rows = []
@@ -1513,6 +1678,39 @@ def run_orchestrator():
                 "error": "חיבורי שריף חיים זמינים כרגע רק למחוזות Allegheny ו-Erie",
             })
 
+    reo_rows = []
+    if "reo" in active_sectors_now:
+        try:
+            reo_rows, reo_audit = fetch_homesteps_reo()
+            selected_county_keys = {str(value).strip().casefold() for value in counties_list if str(value).strip()}
+            all_counties_selected = {name.casefold() for name in PA_COUNTIES}.issubset(selected_county_keys)
+            geo_dropped = 0
+            if not all_counties_selected:
+                scoped_rows = []
+                for row in reo_rows:
+                    county_name = str(row.get("county") or "").removesuffix(" County").strip().casefold()
+                    if county_name and county_name in selected_county_keys:
+                        scoped_rows.append(row)
+                    else:
+                        geo_dropped += 1
+                reo_rows = scoped_rows
+            sources["reo"].update({
+                "status": "partial", "rows": len(reo_rows), "provider": reo_audit["provider"],
+                "coverage": reo_audit["coverage"], "source_url": reo_audit["source_url"],
+                "jsonld_listings": reo_audit["jsonld_listings"],
+                "active_status_counts": reo_audit["status_counts"],
+                "geography_dropped": geo_dropped,
+                "scope": "all_selected_pa_counties" if all_counties_selected else "known_county_matches_only",
+                "note": "חיבור אמיתי ראשון; HomeSteps מייצג Freddie Mac בלבד ואינו מכסה את כל נכסי הבנקים",
+            })
+            print(f"🏦 HomeSteps/Freddie Mac: {len(reo_rows)} נכסים פעילים בפנסילבניה; הכיסוי חלקי (ספק יחיד)")
+        except (requests.RequestException, OSError, ValueError) as exc:
+            sources["reo"].update({"status": "failed", "rows": 0, "provider": "freddie_mac_homesteps",
+                                   "coverage": "partial_single_provider", "source_url": HOMESTEPS_SEARCH_URL,
+                                   "error": str(exc)})
+            log_entry["errors"].append(f"REO HomeSteps source unavailable: {exc}")
+            print(f"⚠️ HomeSteps/Freddie Mac לא עודכן: {exc}")
+
     live_results = []
     if "mls" in active_sectors_now:
         mls_audits = []
@@ -1601,8 +1799,8 @@ def run_orchestrator():
             log_entry["errors"].append(f"geo catalog write failed: {exc}")
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
 
-    combined = live_results + sheriff_rows + get_placeholder_sector_results(
-        [s for s in active_sectors_now if s not in ("mls", "sheriff")]
+    combined = live_results + sheriff_rows + reo_rows + get_placeholder_sector_results(
+        [s for s in active_sectors_now if s not in ("mls", "sheriff", "reo")]
     )
     log_entry["source_results"] = len(combined)
 
@@ -1687,6 +1885,12 @@ def run_orchestrator():
     log_entry["after_filters"] = len(final_filtered)
     log_entry["filter_rejections"] = filter_rejections
     log_entry["source_property_type_counts"] = source_type_counts
+    for sector, source in sources.items():
+        if sector in {"mls", "reo", "sheriff", "tax", "06_probate_estates"}:
+            source["passed_filters"] = sum(1 for prop in final_filtered if prop.get("source_type") == sector)
+    log_entry["source_passed_filters"] = {
+        sector: source.get("passed_filters", 0) for sector, source in sources.items()
+    }
     location_counts = {}
     for prop in live_results:
         loc = str(prop.get("source_location") or "UNKNOWN").strip() or "UNKNOWN"
@@ -1706,8 +1910,27 @@ def run_orchestrator():
             print(f"⚠️ תוצאה ללא מזהה/כתובת דולגה: {deal.get('id', 'unknown')}")
             continue
 
-        seen_keys.add(key)
         existing = existing_props_dict.get(key)
+        # Sheriff addresses can be corrected when the PDF line wrapping is
+        # parsed properly. Reconcile only on the exact docket + parcel pair and
+        # only if it identifies one old record, preserving its stable ID.
+        if existing is None and deal.get("source_type") == "sheriff":
+            docket = str(deal.get("docket_id") or "").strip().upper()
+            parcel = re.sub(r"[^a-z0-9]", "", str(deal.get("parcel_id") or "").lower())
+            candidates = []
+            if docket and parcel:
+                for old_key, old in existing_props_dict.items():
+                    if old_key == key or not isinstance(old, dict) or old.get("source_type") != "sheriff":
+                        continue
+                    old_docket = str(old.get("docket_id") or "").strip().upper()
+                    old_parcel = re.sub(r"[^a-z0-9]", "", str(old.get("parcel_id") or "").lower())
+                    if old_docket == docket and old_parcel == parcel:
+                        candidates.append((old_key, old))
+            if len(candidates) == 1:
+                old_key, existing = candidates[0]
+                deal["id"] = existing.get("id") or deal.get("id")
+                existing_props_dict.pop(old_key, None)
+        seen_keys.add(key)
         merged, state = merge_property(existing, deal, scan_id)
         existing_props_dict[key] = merged
         log_entry[state] += 1
