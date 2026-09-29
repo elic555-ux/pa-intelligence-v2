@@ -1058,7 +1058,11 @@
                     const line = document.createElement('p');
                     const checked = item.checked_at ? ' | ' + new Date(item.checked_at).toLocaleString('he-IL') : '';
                     const countyMatches = item.county_property_matches !== undefined ? ` | התאמות מבנה ממאגר המחוז: ${item.county_property_matches}` : '';
-                    line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${countyMatches}${checked}`;
+                    const provider = item.provider ? ` | ספק: ${item.provider}` : '';
+                    const coverage = item.coverage === 'partial_single_provider' ? ' | כיסוי חלקי: ספק אחד בלבד' : '';
+                    const passedFilters = item.passed_filters !== undefined ? ` | עברו סינון: ${item.passed_filters}` : '';
+                    const note = item.note ? ` | ${item.note}` : '';
+                    line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${passedFilters}${provider}${coverage}${countyMatches}${note}${checked}`;
                     panel.appendChild(line);
                 }
                 return scannerReport;
