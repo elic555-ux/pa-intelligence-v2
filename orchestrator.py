@@ -37,6 +37,7 @@ SHERIFF_BUNDLED_PDF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "
 # Edition discovered on the official page. It expires; it is not a permanent feed.
 SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/09/October-Sale-List-Updated-9-24.pdf"
 ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
+LEHIGH_SHERIFF_URL = "https://salesweb.civilview.com/Sales/SalesSearch?countyId=51"
 HOMESTEPS_SEARCH_URL = "https://www.homesteps.com/listing/search?search=Pennsylvania"
 
 
@@ -515,6 +516,150 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
                   "active_rows": len(rows), "skipped_active_addresses": skipped,
                   "non_active_rows": canceled, "mode": "live", "source_url": source_url}
 
+
+
+class LehighSheriffTableParser(HTMLParser):
+    """Collect table rows from the public Lehigh County sheriff sales portal."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows = []
+        self._row = None
+        self._cell = None
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if tag == "tr":
+            self._row = []
+        elif tag in ("td", "th") and self._row is not None:
+            self._cell = []
+        elif tag == "br" and self._cell is not None:
+            self._cell.append(" ")
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            self._cell.append(data)
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in ("td", "th") and self._cell is not None and self._row is not None:
+            self._row.append(re.sub(r"\s+", " ", "".join(self._cell)).strip())
+            self._cell = None
+        elif tag == "tr" and self._row is not None:
+            if self._row:
+                self.rows.append(self._row)
+            self._row = None
+
+
+def parse_lehigh_sheriff_html(page_html, source_url=LEHIGH_SHERIFF_URL, today=None):
+    """Parse upcoming, dated sale notices; a judgment is not a property price."""
+    parser = LehighSheriffTableParser()
+    parser.feed(page_html)
+    required = {"sheriff #", "sales date", "plaintiff", "defendant", "address",
+                "attorney name", "parcel #", "court case #"}
+    columns = None
+    header_index = None
+    for i, row in enumerate(parser.rows):
+        normalized = [re.sub(r"[^a-z0-9#]+", " ", cell.casefold()).strip() for cell in row]
+        found = {name: normalized.index(name) for name in required if name in normalized}
+        if len(found) == len(required):
+            columns, header_index = found, i
+            break
+    if columns is None:
+        raise ValueError("Lehigh sheriff portal schema changed: required listing columns were not found")
+
+    today = today or now_est().date()
+    rows, seen = [], set()
+    expired, skipped = 0, 0
+    for cells in parser.rows[header_index + 1:]:
+        if len(cells) <= max(columns.values()):
+            continue
+        sale_raw = cells[columns["sales date"]].strip()
+        try:
+            sale_day = datetime.strptime(sale_raw, "%m/%d/%Y").date()
+        except ValueError:
+            try:
+                sale_day = datetime.strptime(sale_raw, "%Y-%m-%d").date()
+            except ValueError:
+                skipped += 1
+                continue
+        # Portal pages may retain past notices. Only accept upcoming dates within
+        # six months, so stale or unusually distant rows do not look active.
+        if sale_day < today or (sale_day - today).days > 180:
+            expired += 1
+            continue
+        sheriff_no = re.sub(r"\s+", " ", cells[columns["sheriff #"]]).strip()
+        plaintiff = re.sub(r"\s+", " ", cells[columns["plaintiff"]]).strip()
+        defendant = re.sub(r"\s+", " ", cells[columns["defendant"]]).strip()
+        address = re.sub(r"\s+", " ", cells[columns["address"]]).strip()
+        attorney = re.sub(r"\s+", " ", cells[columns["attorney name"]]).strip()
+        parcel = re.sub(r"\s+", " ", cells[columns["parcel #"]]).strip()
+        court_case = re.sub(r"\s+", " ", cells[columns["court case #"]]).strip()
+        # The portal prints street and USPS city in a single uppercase cell.
+        # Split on a known Lehigh County mailing locality; a generic regex can
+        # mistakenly treat the street name as the city.
+        locality_names = (
+            "Fountain Hill", "New Tripoli", "Center Valley", "Laurys Station",
+            "Trexlertown", "Breinigsville", "Germansville", "Catasauqua",
+            "Schnecksville", "Whitehall", "Allentown", "Bethlehem", "Slatington",
+            "Coopersburg", "Fogelsville", "Macungie", "Wescosville", "Alburtis",
+            "East Texas", "Orefield", "Zionsville", "Emmaus", "Coplay", "Ironton",
+        )
+        match = None
+        for locality in sorted(locality_names, key=len, reverse=True):
+            candidate = re.match(
+                rf"^(.+?)\s+({re.escape(locality)})\s+PA\s+(\d{{5}})(?:-\d{{4}})?$",
+                address, re.I,
+            )
+            if candidate:
+                match = candidate
+                break
+        if not sheriff_no or not match:
+            skipped += 1
+            continue
+        street, city, zip_code = match.group(1).strip(), match.group(2).strip(), match.group(3)
+        street = re.sub(r"\s+(?:VACANT LAND|LAND)$", "", street, flags=re.I).strip()
+        if not street or not city:
+            skipped += 1
+            continue
+        key = "|".join((sheriff_no.casefold(), court_case.casefold(), parcel.casefold()))
+        if key in seen:
+            continue
+        seen.add(key)
+        uid = "LEHIGH-SHERIFF-" + hashlib.sha256(key.encode()).hexdigest()[:20]
+        rows.append({
+            "id": uid, "docket_id": sheriff_no, "address": street.title(),
+            "city": city.title(), "county": "Lehigh", "zip": zip_code,
+            "price": None, "judgment_amount": None, "sqft": None,
+            "beds": None, "baths": None, "deal_type": "Sheriff Sale",
+            "source_type": "sheriff", "source": "Lehigh County Sheriff Sales Listing",
+            "sheriff_status": "Scheduled", "market_status": "scheduled_sheriff_sale",
+            "sale_date": sale_day.isoformat(), "plaintiff": plaintiff or None,
+            "defendant": defendant or None, "attorney": attorney or None,
+            "parcel_id": parcel or None, "court_case": court_case or None,
+            "data_status": "live", "filter_status": "investment_fields_unavailable",
+            "summary": (f"מכירת שריף מתוכננת במחוז Lehigh ל-{sale_day.isoformat()}. "
+                        "מחיר, מצב הנכס ותוצאת המכירה לא אומתו; יש לבדוק עדכון במקור."),
+            "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
+        })
+    if not rows:
+        raise ValueError("Lehigh sheriff portal returned no validated upcoming sale rows")
+    return rows, {"status": "success", "mode": "live", "parsed_rows": len(parser.rows) - header_index - 1,
+                  "active_rows": len(rows), "expired_or_out_of_window_rows": expired,
+                  "skipped_rows": skipped, "coverage": "official_portal_upcoming_notices",
+                  "disclaimer": "County portal says information is summary-only and not warranted for accuracy/completeness/timeliness.",
+                  "source_url": source_url}
+
+
+def fetch_lehigh_sheriff_listings():
+    headers = {"User-Agent": "PA-RealEstate-Intelligence-Hub/3.3", "Accept": "text/html,application/xhtml+xml"}
+    response = requests.get(LEHIGH_SHERIFF_URL, headers=headers, timeout=(5, 25))
+    response.raise_for_status()
+    if len(response.content) > 8_000_000:
+        raise ValueError("Lehigh sheriff response exceeded 8 MB safety limit")
+    page_text = re.sub(r"<[^>]+>", " ", response.text, flags=re.S)
+    if "Lehigh County" not in page_text or "Foreclosure Sales Listing" not in page_text:
+        raise ValueError("Lehigh sheriff source identity check failed")
+    return parse_lehigh_sheriff_html(response.text, response.url)
 
 def fetch_erie_sheriff_listings():
     response = requests.get(
@@ -1592,13 +1737,13 @@ def run_orchestrator():
             if mapped and mapped not in requested_counties:
                 requested_counties.append(mapped)
         for county in requested_counties:
-            if county not in {"Allegheny", "Erie"}:
+            if county not in {"Allegheny", "Erie", "Lehigh"}:
                 sheriff_county_results[county] = {
                     "status": "not_connected", "rows": 0,
                     "error": f"אין עדיין מתאם מקור שריף מאומת למחוז {county}",
                 }
 
-        for county in [name for name in requested_counties if name in {"Allegheny", "Erie"}]:
+        for county in [name for name in requested_counties if name in {"Allegheny", "Erie", "Lehigh"}]:
             try:
                 if county == "Allegheny":
                     county_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
@@ -1615,9 +1760,12 @@ def run_orchestrator():
                         sheriff_audit["status"] = "partial"
                     print(f"🏠 Allegheny building matches: {county_matches}/{len(county_rows)}")
                     print(f"⚖️ שריף Allegheny: {len(county_rows)} רשומות פעילות; מקור: {sheriff_pdf}")
-                else:
+                elif county == "Erie":
                     county_rows, sheriff_audit = fetch_erie_sheriff_listings()
                     print(f"⚖️ שריף Erie: {len(county_rows)} רשומות פעילות; מקור: {ERIE_SHERIFF_URL}")
+                else:
+                    county_rows, sheriff_audit = fetch_lehigh_sheriff_listings()
+                    print(f"⚖️ שריף Lehigh: {len(county_rows)} רשומות עתידיות; מקור: {LEHIGH_SHERIFF_URL}")
                 sheriff_rows.extend(county_rows)
                 sheriff_county_results[county] = {
                     "status": sheriff_audit.get("status", "success"),
@@ -1675,7 +1823,7 @@ def run_orchestrator():
         else:
             sources["sheriff"].update({
                 "status": "unsupported_area",
-                "error": "חיבורי שריף חיים זמינים כרגע רק למחוזות Allegheny ו-Erie",
+                "error": "חיבורי שריף חיים זמינים כרגע רק למחוזות Allegheny, Erie ו-Lehigh",
             })
 
     reo_rows = []
