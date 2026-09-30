@@ -234,7 +234,7 @@ def parse_sheriff_text(body, source_url, imported=False):
     unrecognized_blocks = 0
     for block in blocks:
         facts = block.split('Comments:')[0]
-        status = re.search(r"(?m)^\s*(Active|Stayed|Postponed[^\n]*|Cancelled|Canceled|Sold|Continued[^\n]*|Withdrawn|Settled)[ \t]*$", facts, re.I)
+        status = re.search(r"(?m)^\s*(Active|Stayed|Postponed[^\n]*|Cancelled|Canceled|Sold|Continued[^\n]*|Withdrawn|Settled|Money Made)[ \t]*$", facts, re.I)
         if not status:
             unrecognized_blocks += 1
             continue
