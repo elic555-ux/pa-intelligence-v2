@@ -6,7 +6,9 @@ from datetime import datetime, timezone, timedelta
 
 PROPERTIES_FILE = 'properties.json'
 GEOCODE_CACHE_FILE = 'geocode_cache.json'
+CONFIG_FILE = 'scan_config.json'
 GEOCODE_RETRY_DAYS = 30
+MAX_GEOCODE_REQUESTS_PER_RUN = 20
 ANALYZER_VERSION = '2.1'
 
 
@@ -17,6 +19,25 @@ def utc_now_iso():
 def normalize_geocode_key(address, city, state="PA"):
     parts = [str(address or "").strip().lower(), str(city or "").strip().lower(), str(state or "").strip().lower()]
     return " | ".join(" ".join(p.split()) for p in parts)
+
+
+def normalize_county(value):
+    text = " ".join(str(value or "").casefold().replace(",", " ").split())
+    if text.endswith(" county"):
+        text = text[:-7].strip()
+    return text
+
+
+def load_selected_counties():
+    """Return only the counties selected for the current scanner configuration."""
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        values = config.get('counties', []) if isinstance(config, dict) else []
+        return {normalize_county(value) for value in values if normalize_county(value)}
+    except (OSError, json.JSONDecodeError, TypeError) as e:
+        print(f"⚠️ לא ניתן לקרוא את המחוזות שנבחרו; Analyzer לא יבצע עיבוד נכסים: {e}")
+        return set()
 
 
 def load_geocode_cache():
@@ -262,12 +283,20 @@ def run_analyzer():
         print("❌ properties.json אינו מכיל רשימת נכסים.")
         return
 
+    selected_counties = load_selected_counties()
+    print(f"🎯 Analyzer מוגבל למחוזות שנבחרו: {sorted(selected_counties)}")
+    if not selected_counties:
+        print("⏭️ לא נבחרו מחוזות תקינים; אין עיבוד נכסים ולא נשלחות בקשות מיקום.")
+        return
+
     updated_properties = []
     analyzed_count = 0
     geocoded_count = 0
     geocode_cache_hits = 0
     geocode_skipped_failed = 0
     geocode_requests = 0
+    geocode_batch_skipped = 0
+    outside_counties_skipped = 0
     cache = load_geocode_cache()
     cache_changed = False
 
@@ -276,11 +305,17 @@ def run_analyzer():
             updated_properties.append(prop)
             continue
 
-        # Geocoding V2.1:
+        county_key = normalize_county(prop.get('county'))
+        if not county_key or county_key not in selected_counties:
+            updated_properties.append(prop)
+            outside_counties_skipped += 1
+            continue
+
+        # Geocoding:
         # 1) existing coordinates -> no request
         # 2) persistent cache hit -> no request
         # 3) recent failed lookup -> no repeated request for 30 days
-        # 4) legacy "unavailable" -> migrate to cache without retrying immediately
+        # 4) only selected counties are eligible; cap live calls at 20 per run
         lat = positive_number(prop.get('lat'))
         try:
             lng = float(prop.get('lng')) if prop.get('lng') is not None else None
@@ -313,6 +348,9 @@ def run_analyzer():
                 cache[key] = {'status': 'unavailable', 'attempted_at': attempted_at}
                 cache_changed = True
                 geocode_skipped_failed += 1
+
+            elif geocode_requests >= MAX_GEOCODE_REQUESTS_PER_RUN:
+                geocode_batch_skipped += 1
 
             else:
                 print(f"📍 מאתר קואורדינטות: {address}...")
@@ -364,9 +402,11 @@ def run_analyzer():
         f"{geocoded_count} נכסים קיבלו קואורדינטות."
     )
     print(
-        f"🗺️ Geocode QA — בקשות חיצוניות: {geocode_requests} | "
+        f"🗺️ Geocode QA — בקשות חיצוניות: {geocode_requests}/{MAX_GEOCODE_REQUESTS_PER_RUN} | "
         f"Cache hits: {geocode_cache_hits} | "
-        f"דילוג על כשלונות טריים: {geocode_skipped_failed}"
+        f"דילוג על כשלונות טריים: {geocode_skipped_failed} | "
+        f"ממתינים לסבב הבא: {geocode_batch_skipped} | "
+        f"מחוץ למחוזות שנבחרו: {outside_counties_skipped}"
     )
     print("ℹ️ ARV, Rent, Rehab ו-Neighborhood Class עדיין אומדנים זמניים ולא נתונים מאומתים.")
 
