@@ -26,7 +26,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.4.0-lehigh-tax-list-20261001"
+ORCHESTRATOR_VERSION = "3.5.0-hud-homestore-reo-20261001"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -39,6 +39,7 @@ SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/
 ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
 LEHIGH_SHERIFF_URL = "https://salesweb.civilview.com/Sales/SalesSearch?countyId=51"
 HOMESTEPS_SEARCH_URL = "https://www.homesteps.com/listing/search?search=Pennsylvania"
+HUD_HOME_STORE_SEARCH_URL = "https://www.hudhomestore.gov/searchresult"
 LEHIGH_TAX_SALE_PAGE = "https://www.lehighcountytaxclaim.com/"
 
 
@@ -358,6 +359,141 @@ def fetch_homesteps_reo():
     audit["coverage"] = "partial_single_provider"
     audit["status"] = "partial"
     return rows, audit
+
+
+class HUDHomeStoreResultsParser(HTMLParser):
+    """Read HUD's public search-result JSON embedded in its official page."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.available_properties = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "input":
+            return
+        attrs = dict(attrs)
+        if attrs.get("id") == "available_prop":
+            self.available_properties = attrs.get("value")
+
+
+def parse_hud_homestore_listings(page_html, county, source_url):
+    """Parse active, priced HUD-owned listings for a single PA county."""
+    parser = HUDHomeStoreResultsParser()
+    parser.feed(page_html)
+    if not parser.available_properties:
+        raise ValueError("HUD Home Store response has no available_prop result payload")
+    try:
+        records = json.loads(parser.available_properties)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("HUD Home Store available_prop payload is invalid JSON") from exc
+    if not isinstance(records, list):
+        raise ValueError("HUD Home Store available_prop payload is not a list")
+
+    today = now_est().date()
+    rows, seen, excluded = [], set(), {"wrong_county_or_state": 0, "missing_required_fields": 0,
+                                      "past_bid_deadline": 0, "invalid_price": 0}
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        item_county = re.sub(r"\s+", " ", str(item.get("propertyCounty") or "")).strip()
+        state = str(item.get("propertyState") or "").strip().upper()
+        if state != "PA" or item_county.casefold() != county.casefold():
+            excluded["wrong_county_or_state"] += 1
+            continue
+
+        case_number = re.sub(r"\s+", "", str(item.get("propertyCaseNumber") or ""))
+        street = re.sub(r"\s+", " ", str(item.get("propertyAddress") or "")).strip()
+        city = re.sub(r"\s+", " ", str(item.get("propertyCity") or "")).strip()
+        zip_code = str(item.get("propertyZip") or "").strip()
+        if not case_number or not street or not city or not re.fullmatch(r"\d{5}(?:-\d{4})?", zip_code):
+            excluded["missing_required_fields"] += 1
+            continue
+
+        deadline_text = str(item.get("periodDeadlineDate") or "").strip()
+        deadline = None
+        if deadline_text:
+            try:
+                deadline = datetime.strptime(deadline_text, "%m/%d/%Y").date()
+            except ValueError:
+                deadline = None
+        status = re.sub(r"\s+", " ", str(item.get("propertyStatusDesc") or item.get("propertyStatus") or "")).strip()
+        if deadline is not None and deadline < today:
+            excluded["past_bid_deadline"] += 1
+            continue
+        if deadline is None and status.casefold() not in {"new listing", "price reduced", "pending bid opening", "showcase"}:
+            excluded["missing_required_fields"] += 1
+            continue
+
+        price = safe_number(re.sub(r"[^0-9.]", "", str(item.get("listPrice") or "")), None, float)
+        if price is None or price <= 0:
+            excluded["invalid_price"] += 1
+            continue
+        key = case_number.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+
+        property_type = normalize_property_type(item.get("propertyType") or "")
+        listing_url = "https://www.hudhomestore.gov/propertydetails?caseNumber=" + case_number
+        row_id = "PA-REO-HUD-" + hashlib.sha256(key.encode()).hexdigest()[:20]
+        beds = safe_number(item.get("bedrooms"), None, int)
+        baths = safe_number(item.get("bathroomsdecimal") or item.get("bathrooms"), None, float)
+        sqft = safe_number(item.get("squareFootage"), None, int)
+        rows.append({
+            "id": row_id, "docket_id": case_number, "address": street, "city": city,
+            "county": item_county + " County", "zip": zip_code, "price": price,
+            "deal_type": "HUD REO", "source": "HUD Home Store",
+            "source_type": "reo", "data_status": "live",
+            "type": property_type, "property_type": property_type,
+            "beds": beds, "baths": baths, "sqft": sqft,
+            "year_built": safe_number(item.get("yearBuilt"), None, int),
+            "url": listing_url, "source_url": source_url,
+            "summary": (f"נכס HUD REO פעיל. מחיר מבוקש ${price:,.0f}. "
+                        f"מועד אחרון להצעה: {deadline_text or 'לא פורסם'}. "
+                        f"מספר תיק HUD: {case_number}."),
+            "market_status": "active", "reo_provider": "hud_home_store",
+            "hud_case_number": case_number, "hud_listing_status": status or None,
+            "hud_listing_period": str(item.get("listingPeriod") or "").strip() or None,
+            "hud_bid_deadline": deadline_text or None,
+            "hud_fha_financing": str(item.get("fhaFinancing") or "").strip() or None,
+            "last_source_check": iso_now_est(),
+        })
+    return rows, {"provider": "hud_home_store", "county": county,
+                  "source_url": source_url, "status": "success",
+                  "result_payload_rows": len(records), "active_rows": len(rows),
+                  "excluded": excluded}
+
+
+def fetch_hud_homestore_reo(counties):
+    """Fetch free official HUD Home Store listings county by county."""
+    rows, audits = [], {}
+    county_names = sorted({str(value).strip().removesuffix(" County").strip()
+                           for value in counties if str(value).strip()}, key=str.casefold)
+    if not county_names:
+        return rows, {"provider": "hud_home_store", "status": "not_connected",
+                      "counties": {}, "rows": 0, "source_url": HUD_HOME_STORE_SEARCH_URL,
+                      "reason": "no selected Pennsylvania county to query"}
+    headers = {"User-Agent": USER_AGENTS[0], "Accept": "text/html,application/xhtml+xml"}
+    session = requests.Session()
+    for county in county_names:
+        search_url = requests.Request("GET", HUD_HOME_STORE_SEARCH_URL,
+                                      params={"citystate": f"{county} County, PA"}).prepare().url
+        try:
+            response = session.get(search_url, headers=headers, timeout=25)
+            response.raise_for_status()
+            if len(response.content) > 8_000_000:
+                raise ValueError("HUD Home Store response exceeded 8 MB safety limit")
+            county_rows, audit = parse_hud_homestore_listings(response.text, county, response.url)
+            rows.extend(county_rows)
+            audits[county] = audit
+        except (requests.RequestException, OSError, ValueError) as exc:
+            audits[county] = {"provider": "hud_home_store", "county": county,
+                              "source_url": search_url, "status": "failed", "rows": 0,
+                              "error": str(exc)}
+    return rows, {"provider": "hud_home_store", "status": "success" if audits and all(
+        item.get("status") == "success" for item in audits.values()) else "partial" if any(
+        item.get("status") == "success" for item in audits.values()) else "failed",
+        "counties": audits, "rows": len(rows),
+        "source_url": HUD_HOME_STORE_SEARCH_URL}
 
 
 class SheriffPDFLinks(HTMLParser):
@@ -2050,36 +2186,68 @@ def run_orchestrator():
 
     reo_rows = []
     if "reo" in active_sectors_now:
+        selected_county_names = {str(value).strip().removesuffix(" County").strip()
+                                 for value in counties_list if str(value).strip()}
+        for area in cities_list:
+            parent_county = CITY_COUNTY.get(str(area).strip())
+            if parent_county:
+                selected_county_names.add(parent_county)
+        if not selected_county_names:
+            selected_county_names = set(PA_COUNTIES)
+        selected_county_keys = {name.casefold() for name in selected_county_names}
+        all_counties_selected = {name.casefold() for name in PA_COUNTIES}.issubset(selected_county_keys)
+        reo_provider_audits = {}
+
+        # Freddie Mac HomeSteps: keep only results whose county can be verified
+        # against the user's selected geography.
         try:
-            reo_rows, reo_audit = fetch_homesteps_reo()
-            selected_county_keys = {str(value).strip().casefold() for value in counties_list if str(value).strip()}
-            all_counties_selected = {name.casefold() for name in PA_COUNTIES}.issubset(selected_county_keys)
+            homesteps_rows, homesteps_audit = fetch_homesteps_reo()
             geo_dropped = 0
-            if not all_counties_selected:
-                scoped_rows = []
-                for row in reo_rows:
-                    county_name = str(row.get("county") or "").removesuffix(" County").strip().casefold()
-                    if county_name and county_name in selected_county_keys:
-                        scoped_rows.append(row)
-                    else:
-                        geo_dropped += 1
-                reo_rows = scoped_rows
-            sources["reo"].update({
-                "status": "partial", "rows": len(reo_rows), "provider": reo_audit["provider"],
-                "coverage": reo_audit["coverage"], "source_url": reo_audit["source_url"],
-                "jsonld_listings": reo_audit["jsonld_listings"],
-                "active_status_counts": reo_audit["status_counts"],
+            scoped_homesteps_rows = []
+            for row in homesteps_rows:
+                county_name = str(row.get("county") or "").removesuffix(" County").strip().casefold()
+                if county_name and county_name in selected_county_keys:
+                    scoped_homesteps_rows.append(row)
+                else:
+                    geo_dropped += 1
+            reo_rows.extend(scoped_homesteps_rows)
+            reo_provider_audits["freddie_mac_homesteps"] = {
+                **homesteps_audit, "status": "success", "rows": len(scoped_homesteps_rows),
                 "geography_dropped": geo_dropped,
-                "scope": "all_selected_pa_counties" if all_counties_selected else "known_county_matches_only",
-                "note": "חיבור אמיתי ראשון; HomeSteps מייצג Freddie Mac בלבד ואינו מכסה את כל נכסי הבנקים",
-            })
-            print(f"🏦 HomeSteps/Freddie Mac: {len(reo_rows)} נכסים פעילים בפנסילבניה; הכיסוי חלקי (ספק יחיד)")
+                "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
+            }
+            print(f"🏦 HomeSteps/Freddie Mac: {len(scoped_homesteps_rows)} נכסים במחוזות שנבחרו")
         except (requests.RequestException, OSError, ValueError) as exc:
-            sources["reo"].update({"status": "failed", "rows": 0, "provider": "freddie_mac_homesteps",
-                                   "coverage": "partial_single_provider", "source_url": HOMESTEPS_SEARCH_URL,
-                                   "error": str(exc)})
+            reo_provider_audits["freddie_mac_homesteps"] = {
+                "provider": "freddie_mac_homesteps", "status": "failed", "rows": 0,
+                "source_url": HOMESTEPS_SEARCH_URL, "error": str(exc),
+            }
             log_entry["errors"].append(f"REO HomeSteps source unavailable: {exc}")
             print(f"⚠️ HomeSteps/Freddie Mac לא עודכן: {exc}")
+
+        # HUD Home Store: query only selected counties and import the official
+        # current-price, bid-deadline and property-detail records.
+        hud_rows, hud_audit = fetch_hud_homestore_reo(selected_county_names)
+        reo_rows.extend(hud_rows)
+        reo_provider_audits["hud_home_store"] = hud_audit
+        for county_name, county_audit in hud_audit.get("counties", {}).items():
+            if county_audit.get("status") == "failed":
+                log_entry["errors"].append(
+                    f"REO HUD Home Store {county_name} unavailable: {county_audit.get('error', 'unknown error')}")
+        for county_name, county_audit in hud_audit.get("counties", {}).items():
+            print(f"🏛️ HUD Home Store {county_name}: {county_audit.get('active_rows', county_audit.get('rows', 0))} נכסים פעילים")
+
+        success_count = sum(audit.get("status") in {"success", "partial"}
+                            for audit in reo_provider_audits.values())
+        aggregate_status = "partial" if success_count else "failed"
+        sources["reo"].update({
+            "status": aggregate_status, "rows": len(reo_rows),
+            "providers": reo_provider_audits,
+            "provider_count": len(reo_provider_audits),
+            "coverage": "partial_multi_provider",
+            "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
+            "note": "המקור כולל Freddie Mac HomeSteps ונכסי HUD REO; אינו כולל את כלל הבנקים. HUD הוא מקור ממשלתי נפרד.",
+        })
 
     live_results = []
     if "mls" in active_sectors_now:
