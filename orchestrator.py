@@ -9,6 +9,9 @@ import subprocess
 import tempfile
 import hashlib
 import html
+import posixpath
+import zipfile
+import xml.etree.ElementTree as ET
 import concurrent.futures
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse, urlencode
@@ -26,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.5.0-hud-homestore-reo-20261001"
+ORCHESTRATOR_VERSION = "3.6.0-erie-repository-tax-20261001"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -41,6 +44,138 @@ LEHIGH_SHERIFF_URL = "https://salesweb.civilview.com/Sales/SalesSearch?countyId=
 HOMESTEPS_SEARCH_URL = "https://www.homesteps.com/listing/search?search=Pennsylvania"
 HUD_HOME_STORE_SEARCH_URL = "https://www.hudhomestore.gov/searchresult"
 LEHIGH_TAX_SALE_PAGE = "https://www.lehighcountytaxclaim.com/"
+ERIE_TAX_SALE_PAGE = "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/"
+
+
+def _xlsx_cell_text(cell, shared_strings, ns):
+    """Read one XLSX cell using only the Python standard library."""
+    cell_type = cell.attrib.get("t")
+    if cell_type == "inlineStr":
+        return "".join(node.text or "" for node in cell.findall(".//m:t", ns)).strip()
+    value = cell.find("m:v", ns)
+    if value is None or value.text is None:
+        return ""
+    raw = value.text
+    if cell_type == "s":
+        try:
+            return shared_strings[int(raw)]
+        except (ValueError, IndexError):
+            return ""
+    return raw.strip()
+
+
+def parse_erie_repository_xlsx(content, source_url):
+    """Parse Erie County's published repository workbook, excluding unavailable lots."""
+    if not content.startswith(b"PK") or len(content) > 10_000_000:
+        raise ValueError("Erie repository source is not a valid XLSX or exceeds the size limit")
+    ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+          "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+          "rel": "http://schemas.openxmlformats.org/package/2006/relationships"}
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            names = set(archive.namelist())
+            if "xl/workbook.xml" not in names or "xl/_rels/workbook.xml.rels" not in names:
+                raise ValueError("XLSX workbook structure is incomplete")
+            shared_strings = []
+            if "xl/sharedStrings.xml" in names:
+                shared_root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+                shared_strings = ["".join(node.text or "" for node in item.findall(".//m:t", ns))
+                                  for item in shared_root.findall("m:si", ns)]
+            workbook = ET.fromstring(archive.read("xl/workbook.xml"))
+            first_sheet = workbook.find("m:sheets/m:sheet", ns)
+            if first_sheet is None:
+                raise ValueError("XLSX contains no worksheets")
+            relationship_id = first_sheet.attrib.get("{" + ns["r"] + "}id")
+            relationships = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+            target = next((item.attrib.get("Target") for item in relationships.findall("rel:Relationship", ns)
+                           if item.attrib.get("Id") == relationship_id), None)
+            if not target:
+                raise ValueError("XLSX first worksheet could not be located")
+            sheet_path = target.lstrip("/") if target.startswith("/") else posixpath.normpath(posixpath.join("xl", target))
+            if sheet_path not in names:
+                raise ValueError("XLSX worksheet file is missing")
+            sheet = ET.fromstring(archive.read(sheet_path))
+    except (zipfile.BadZipFile, ET.ParseError, KeyError) as exc:
+        raise ValueError(f"Erie repository workbook could not be read: {exc}") from exc
+
+    rows = []
+    header_map = None
+    for row_node in sheet.findall(".//m:sheetData/m:row", ns):
+        values = {}
+        for cell in row_node.findall("m:c", ns):
+            match = re.match(r"([A-Z]+)", cell.attrib.get("r", ""))
+            if not match:
+                continue
+            column = 0
+            for char in match.group(1):
+                column = column * 26 + ord(char) - 64
+            values[column] = _xlsx_cell_text(cell, shared_strings, ns)
+        if not values:
+            continue
+        if header_map is None:
+            normalized = {re.sub(r"\s+", " ", value).strip().casefold(): col
+                          for col, value in values.items() if value}
+            if "parcel number" in normalized and "property location/description" in normalized:
+                header_map = normalized
+            continue
+        parcel = values.get(header_map.get("parcel number", -1), "").strip()
+        location = re.sub(r"\s+", " ", values.get(header_map.get("property location/description", -1), "")).strip()
+        docket = values.get(header_map.get("judical sale docket #", -1), "").strip()
+        status = values.get(header_map.get("current status", -1), "").strip()
+        if not parcel and not location:
+            continue
+        if not re.fullmatch(r"\d{2}-\d{3}-\d{3}\.\d(?:-\d{3}\.\d{2})?", parcel) or not location:
+            continue
+        unavailable = re.search(r"pending|held|removed|sold|unavailable", status, re.I)
+        unavailable = unavailable or re.search(r"\(\s*HELD\b", location, re.I)
+        if unavailable:
+            continue
+        safe_parcel = re.sub(r"[^A-Za-z0-9]", "", parcel)
+        docket = docket or f"Repository-{safe_parcel}"
+        rows.append({
+            "id": f"tax-erie-repository-{safe_parcel}", "county": "Erie",
+            "city": "Erie County", "address": location, "zip": None,
+            "parcel_id": parcel, "sale_number": docket, "owner_name": None,
+            "source_type": "tax", "deal_type": "Tax Repository Candidate",
+            "market_status": "repository_bid_candidate", "tax_sale_type": "repository",
+            "opening_bid": None, "minimum_bid": 250.0, "price": None,
+            "source_url": source_url, "source_text_quality": "official_county_xlsx",
+            "repository_status": status or "לא מצוין בקובץ",
+            "description": ("מועמד לרשימת Repository של Erie County; הצעה מינימלית שמצוינת בכותרת המקור: $250, "
+                            "אינה מחיר נכס או הצעת רכישה. הרשימה משתנה ויש לאמת זמינות ישירות מול לשכת המס.")
+        })
+    if header_map is None:
+        raise ValueError("Erie repository workbook headers changed; no rows were imported")
+    return rows
+
+
+def fetch_erie_repository_list():
+    """Download the current Erie County repository workbook from its official page."""
+    headers = {"User-Agent": "PA-Property-Research/1.0"}
+    page = requests.get(ERIE_TAX_SALE_PAGE, timeout=35, headers=headers)
+    page.raise_for_status()
+    if urlparse(page.url).hostname not in {"eriecountypa.gov", "www.eriecountypa.gov"}:
+        raise ValueError("Erie Tax Sales page redirected away from the official county site")
+    parser = OfficialSaleLinks()
+    parser.feed(page.text)
+    candidates = [(urljoin(page.url, href), label) for href, label in parser.links
+                  if href and "repository list" in label.casefold()
+                  and urlparse(urljoin(page.url, href)).path.casefold().endswith(".xlsx")]
+    if not candidates:
+        raise ValueError("No official Erie County Repository XLSX link was found")
+    workbook_url, label = candidates[0]
+    parsed = urlparse(workbook_url)
+    if parsed.scheme != "https" or parsed.hostname not in {"eriecountypa.gov", "www.eriecountypa.gov"}:
+        raise ValueError("Erie Repository workbook is outside the official county domain")
+    response = requests.get(workbook_url, timeout=45, headers=headers)
+    response.raise_for_status()
+    rows = parse_erie_repository_xlsx(response.content, workbook_url)
+    if not rows:
+        raise ValueError("Erie repository workbook had no eligible rows; existing tax data was left untouched")
+    audit = {"status": "success", "rows": len(rows), "source_url": workbook_url,
+             "page_url": ERIE_TAX_SALE_PAGE, "list_label": label,
+             "excluded_unavailable": True, "note": "Repository candidates only; availability must be confirmed with Erie County."}
+    return rows, audit
 
 
 class OfficialSaleLinks(HTMLParser):
@@ -2159,30 +2294,49 @@ def run_orchestrator():
 
     tax_rows = []
     if "tax" in active_sectors_now:
-        requested_tax_counties = {str(name).strip().casefold() for name in counties_list}
-        # Map selected target cities into their county; this keeps source coverage scoped.
+        requested_tax_counties = {str(name).strip().removesuffix(" County").casefold()
+                                  for name in counties_list if str(name).strip()}
+        # Map selected target cities into their county; tax requests stay within the selected geography.
         requested_tax_counties.update(str(CITY_COUNTY.get(str(area).strip(), "")).strip().casefold()
                                         for area in cities_list if CITY_COUNTY.get(str(area).strip()))
-        if "lehigh" in requested_tax_counties:
+        county_names = {"allegheny": "Allegheny", "erie": "Erie", "lehigh": "Lehigh"}
+        county_audits = {}
+        for county_key in sorted(requested_tax_counties):
+            county_name = county_names.get(county_key, county_key.title())
             try:
-                tax_rows, tax_audit = fetch_lehigh_judicial_tax_list()
-                county_audits = {"Lehigh": tax_audit}
-                for county_name in sorted(requested_tax_counties - {"lehigh"}):
-                    county_audits[county_name.title()] = {
+                if county_key == "erie":
+                    county_rows, tax_audit = fetch_erie_repository_list()
+                    tax_rows.extend(county_rows)
+                    county_audits[county_name] = {**tax_audit, "rows": len(county_rows)}
+                    print(f"🧾 Erie Repository: {len(county_rows)} רשומות מועמדות; מקור רשמי: {tax_audit.get('source_url')}")
+                elif county_key == "lehigh":
+                    county_rows, tax_audit = fetch_lehigh_judicial_tax_list()
+                    tax_rows.extend(county_rows)
+                    county_audits[county_name] = {**tax_audit, "rows": len(county_rows)}
+                    print(f"🧾 Lehigh Judicial Sale: {len(county_rows)} רשומות מועמדות; sale date {tax_audit.get('sale_date')}")
+                else:
+                    county_audits[county_name] = {
                         "status": "not_connected", "rows": 0,
-                        "reason": "no verified current tax-sale feed connected for this county",
+                        "reason": "no verified current tax feed connected for this county",
                     }
-                tax_status = "partial" if len(county_audits) > 1 else tax_audit.get("status", "success")
-                sources["tax"].update({**tax_audit, "status": tax_status,
-                                       "rows": len(tax_rows), "counties": county_audits})
-                print(f"🧾 Lehigh Judicial Sale: {len(tax_rows)} רשומות מועמדות; sale date {tax_audit.get('sale_date')}")
             except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
-                sources["tax"].update({"status": "failed", "rows": 0, "counties": {"Lehigh": {"status": "failed", "error": str(exc)}}})
-                log_entry["errors"].append(f"tax Lehigh source unavailable: {exc}")
-                print(f"⚠️ רשימת מס Lehigh לא עודכנה: {exc}")
+                response = getattr(exc, "response", None)
+                blocked = response is not None and response.status_code in (401, 403)
+                county_audits[county_name] = {"status": "blocked" if blocked else "failed", "rows": 0, "error": str(exc)}
+                log_entry["errors"].append(f"tax {county_name} source unavailable: {exc}")
+                print(f"⚠️ מקור חובות המס במחוז {county_name} לא עודכן: {exc}")
+
+        county_statuses = [item.get("status", "success") for item in county_audits.values()]
+        connected_statuses = [status for status in county_statuses if status != "not_connected"]
+        if not county_audits or not connected_statuses:
+            tax_status = "not_connected"
+        elif all(status == "success" for status in county_statuses):
+            tax_status = "success"
+        elif any(status in ("success", "partial") for status in county_statuses):
+            tax_status = "partial"
         else:
-            sources["tax"].update({"status": "not_connected", "rows": 0,
-                                  "reason": "selected counties do not include Lehigh; no verified tax feed for the selected counties yet"})
+            tax_status = "failed"
+        sources["tax"].update({"status": tax_status, "rows": len(tax_rows), "counties": county_audits})
 
     reo_rows = []
     if "reo" in active_sectors_now:
