@@ -1,10 +1,10 @@
 {
-  "version": "3.4.0-lehigh-tax-list-20261001",
+  "version": "3.5.0-hud-homestore-reo-20261001",
   "last_event": {
-    "scan_id": "SCAN-20261001-093936",
-    "started_at": "2026-10-01T09:39:36-04:00",
+    "scan_id": "SCAN-20261001-103055",
+    "started_at": "2026-10-01T10:30:55-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.4.0-lehigh-tax-list-20261001",
+    "orchestrator_version": "3.5.0-hud-homestore-reo-20261001",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -19,15 +19,15 @@
       "Allentown",
       "Erie"
     ],
-    "source_results": 1051,
+    "source_results": 1054,
     "after_filters": 688,
-    "new": 9,
-    "updated": 1,
-    "unchanged": 678,
+    "new": 2,
+    "updated": 12,
+    "unchanged": 674,
     "off_market_candidates": 0,
     "errors": [],
-    "code_sha256": "2641d8edbcb8",
-    "github_sha": "94a44bbab30519a8902ecef68e2b70b1dd8be4f1",
+    "code_sha256": "f6cf4623de43",
+    "github_sha": "a1366c9d3ae39306528ed0891b2b239c671236bf",
     "request_id": "d46b4e63-0cba-49b7-98ea-e40f6cc4494b",
     "counties": [
       "Allegheny",
@@ -147,7 +147,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "success",
         "rows": 650,
         "areas": [
@@ -161,14 +161,14 @@
           {
             "area": "Erie County",
             "status": "success",
-            "rows": 220,
+            "rows": 219,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 81,
+            "rows": 82,
             "coverage": "not_proven_complete",
             "limit_reached": false
           }
@@ -178,26 +178,86 @@
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "partial",
-        "rows": 1,
-        "provider": "freddie_mac_homesteps",
-        "coverage": "partial_single_provider",
-        "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
-        "jsonld_listings": 12,
-        "active_status_counts": {
-          "Active": 6,
-          "Under Contract": 5,
-          "Coming Soon": 1
+        "rows": 4,
+        "providers": {
+          "freddie_mac_homesteps": {
+            "jsonld_listings": 12,
+            "status_counts": {
+              "Active": 6,
+              "Under Contract": 5,
+              "Coming Soon": 1
+            },
+            "active_rows": 6,
+            "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
+            "provider": "freddie_mac_homesteps",
+            "coverage": "partial_single_provider",
+            "status": "success",
+            "rows": 1,
+            "geography_dropped": 5,
+            "scope": "selected_counties_only"
+          },
+          "hud_home_store": {
+            "provider": "hud_home_store",
+            "status": "success",
+            "counties": {
+              "Allegheny": {
+                "provider": "hud_home_store",
+                "county": "Allegheny",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Allegheny+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 3,
+                "active_rows": 3,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              },
+              "Erie": {
+                "provider": "hud_home_store",
+                "county": "Erie",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Erie+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 0,
+                "active_rows": 0,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              },
+              "Lehigh": {
+                "provider": "hud_home_store",
+                "county": "Lehigh",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Lehigh+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 0,
+                "active_rows": 0,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              }
+            },
+            "rows": 3,
+            "source_url": "https://www.hudhomestore.gov/searchresult"
+          }
         },
-        "geography_dropped": 5,
-        "scope": "known_county_matches_only",
-        "note": "חיבור אמיתי ראשון; HomeSteps מייצג Freddie Mac בלבד ואינו מכסה את כל נכסי הבנקים",
+        "provider_count": 2,
+        "coverage": "partial_multi_provider",
+        "scope": "selected_counties_only",
+        "note": "המקור כולל Freddie Mac HomeSteps ונכסי HUD REO; אינו כולל את כלל הבנקים. HUD הוא מקור ממשלתי נפרד.",
         "passed_filters": 0
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "partial",
         "rows": 391,
         "counties": {
@@ -246,7 +306,7 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "partial",
         "rows": 9,
         "sale_date": "2026-10-21",
@@ -279,7 +339,7 @@
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "not_connected",
         "rows": 0,
         "passed_filters": 0
@@ -287,7 +347,7 @@
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-01T09:39:49-04:00",
+        "checked_at": "2026-10-01T10:31:12-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -342,19 +402,19 @@
           "West Mifflin": 13,
           "Bridgeville": 4,
           "Pittsburgh": 169,
-          "Mc Kees Rocks": 15,
+          "Mc Kees Rocks": 14,
           "Cheswick": 3,
           "Pitcairn": 3,
+          "Coraopolis": 11,
+          "Bethel Park": 5,
           "Duquesne": 5,
           "Monroeville": 3,
           "Mckeesport": 20,
           "Springdale": 3,
-          "Coraopolis": 10,
           "Tarentum": 8,
           "Oakdale": 2,
           "Clairton": 10,
           "Gibsonia": 1,
-          "Bethel Park": 4,
           "Millvale": 1,
           "New Kensington": 2,
           "North Versailles": 6,
@@ -383,7 +443,7 @@
           "Brackenridge": 2,
           "Imperial": 1,
           "South Park": 2,
-          "Buena Vista": 2,
+          "Buena Vista": 1,
           "White Oak": 1,
           "Bairdford": 1,
           "Mount Oliver": 1,
@@ -394,11 +454,15 @@
           "West Mifflin": 13,
           "Hunting Ridge": 1,
           "North Oakland": 1,
-          "McKees Rocks": 10,
+          "McKees Rocks": 9,
           "Penn Hills": 25,
           "Harmar": 2,
           "Pitcairn": 3,
           "Pittsburgh": 2,
+          "Coraopolis": 5,
+          "Millvale": 5,
+          "Oakland": 4,
+          "Bethel Park": 5,
           "Beechview": 4,
           "Swissvale": 9,
           "Carrick": 8,
@@ -417,11 +481,9 @@
           "South Side": 4,
           "Findlay Twp": 2,
           "Clairton": 6,
-          "Wilkinsburg": 7,
+          "Wilkinsburg": 6,
           "Hampton": 2,
-          "Bethel Park": 4,
           "Brentwood": 6,
-          "Millvale": 4,
           "Bloomfield": 3,
           "Plum Boro": 5,
           "N Versailles": 6,
@@ -435,7 +497,7 @@
           "Whitehall": 2,
           "Jefferson Hills": 5,
           "East Liberty": 1,
-          "Elizabeth Twp/Boro": 6,
+          "Elizabeth Twp/Boro": 5,
           "Liberty Boro": 1,
           "Overbrook": 3,
           "Natrona Hts/Harrison Twp.": 5,
@@ -453,7 +515,6 @@
           "Brookline": 4,
           "Dravosburg": 1,
           "Heidelberg": 1,
-          "Coraopolis": 4,
           "Munhall": 5,
           "N Braddock": 2,
           "Marshall Shadeland": 2,
@@ -478,7 +539,6 @@
           "Stowe Twp": 5,
           "Observatory Hill": 1,
           "Reserve": 1,
-          "Oakland": 3,
           "Point Breeze": 1,
           "Polish Hill": 1,
           "West Deer": 3,
@@ -508,16 +568,15 @@
           "Oakdale": 1,
           "Mt. Lebanon": 2,
           "Garfield": 1,
-          "Avalon": 1,
-          "Morningside": 1
+          "Avalon": 1
         }
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 220,
+        "rows": 219,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Erie": 150,
+          "Erie": 149,
           "North East": 10,
           "Lake City": 7,
           "Girard": 5,
@@ -540,7 +599,7 @@
           "Waterford Township": 1
         },
         "source_locations": {
-          "Erie": 134,
+          "Erie": 133,
           "Meadow Green Acres": 1,
           "North East": 10,
           "Lake City Boro": 7,
@@ -574,9 +633,10 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 81,
+        "rows": 82,
         "city_mismatch_count": 0,
         "actual_cities": {
+          "Center Valley": 1,
           "Allentown": 44,
           "Fountain Hill": 2,
           "Breinigsville": 9,
@@ -593,6 +653,7 @@
           "Wescosville": 1
         },
         "source_locations": {
+          "Upper Saucon Twp": 1,
           "Horners Addition": 1,
           "Allentown City": 27,
           "Red Maple Acres Mhp": 1,
@@ -637,28 +698,28 @@
       }
     },
     "raw_mls_seen": 648,
-    "duplicates_removed": 3,
+    "duplicates_removed": 4,
     "filter_rejections": {
       "price": 1,
-      "sqft": 238,
-      "beds": 33,
+      "sqft": 239,
+      "beds": 32,
       "baths": 0,
-      "property_type": 57,
-      "property_type_unknown": 31,
+      "property_type": 58,
+      "property_type_unknown": 32,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 428,
+      "Single Family Residential": 427,
       "Townhouse": 46,
-      "Condo/Co-op": 24,
-      "Multi-Family (2-4 Unit)": 47,
+      "Condo/Co-op": 25,
+      "Multi-Family (2-4 Unit)": 46,
       "Vacant Land": 68,
       "Ranch": 1,
       "Multi-Family (5+ Unit)": 1,
-      "Mobile/Manufactured Home": 27,
+      "Mobile/Manufactured Home": 28,
       "Unknown": 8,
-      "UNKNOWN": 400,
+      "UNKNOWN": 403,
       "Single-Family": 1
     },
     "source_passed_filters": {
@@ -669,40 +730,40 @@
       "06_probate_estates": 0
     },
     "redfin_location_top25": {
-      "Erie": 134,
+      "Erie": 133,
       "Allentown City": 27,
       "Penn Hills": 25,
       "McKeesport": 15,
       "West Mifflin": 13,
-      "McKees Rocks": 10,
       "North East": 10,
       "Edinboro": 9,
+      "McKees Rocks": 9,
       "Swissvale": 9,
       "Carrick": 8,
       "Lake City Boro": 7,
       "Tarentum": 7,
-      "Wilkinsburg": 7,
       "Brentwood": 6,
       "Clairton": 6,
-      "Elizabeth Twp/Boro": 6,
       "Hazelwood": 6,
       "N Versailles": 6,
+      "Wilkinsburg": 6,
+      "Bethel Park": 5,
+      "Coraopolis": 5,
       "Corry": 5,
       "Duquesne": 5,
+      "Elizabeth Twp/Boro": 5,
       "Jefferson Hills": 5,
-      "Moon/Crescent Twp": 5,
-      "Munhall": 5,
-      "Natrona Hts/Harrison Twp.": 5,
-      "Plum Boro": 5
+      "Millvale": 5,
+      "Moon/Crescent Twp": 5
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "total_properties": 3088,
-    "finished_at": "2026-10-01T09:39:50-04:00"
+    "total_properties": 3090,
+    "finished_at": "2026-10-01T10:31:13-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-01T09:39:36-04:00",
+      "checked_at": "2026-10-01T10:30:55-04:00",
       "status": "success",
       "rows": 650,
       "areas": [
@@ -716,14 +777,14 @@
         {
           "area": "Erie County",
           "status": "success",
-          "rows": 220,
+          "rows": 219,
           "coverage": "not_proven_complete",
           "limit_reached": false
         },
         {
           "area": "Lehigh County",
           "status": "success",
-          "rows": 81,
+          "rows": 82,
           "coverage": "not_proven_complete",
           "limit_reached": false
         }
@@ -733,26 +794,86 @@
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-01T09:39:36-04:00",
+      "checked_at": "2026-10-01T10:30:55-04:00",
       "status": "partial",
-      "rows": 1,
-      "provider": "freddie_mac_homesteps",
-      "coverage": "partial_single_provider",
-      "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
-      "jsonld_listings": 12,
-      "active_status_counts": {
-        "Active": 6,
-        "Under Contract": 5,
-        "Coming Soon": 1
+      "rows": 4,
+      "providers": {
+        "freddie_mac_homesteps": {
+          "jsonld_listings": 12,
+          "status_counts": {
+            "Active": 6,
+            "Under Contract": 5,
+            "Coming Soon": 1
+          },
+          "active_rows": 6,
+          "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
+          "provider": "freddie_mac_homesteps",
+          "coverage": "partial_single_provider",
+          "status": "success",
+          "rows": 1,
+          "geography_dropped": 5,
+          "scope": "selected_counties_only"
+        },
+        "hud_home_store": {
+          "provider": "hud_home_store",
+          "status": "success",
+          "counties": {
+            "Allegheny": {
+              "provider": "hud_home_store",
+              "county": "Allegheny",
+              "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Allegheny+County%2C+PA",
+              "status": "success",
+              "result_payload_rows": 3,
+              "active_rows": 3,
+              "excluded": {
+                "wrong_county_or_state": 0,
+                "missing_required_fields": 0,
+                "past_bid_deadline": 0,
+                "invalid_price": 0
+              }
+            },
+            "Erie": {
+              "provider": "hud_home_store",
+              "county": "Erie",
+              "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Erie+County%2C+PA",
+              "status": "success",
+              "result_payload_rows": 0,
+              "active_rows": 0,
+              "excluded": {
+                "wrong_county_or_state": 0,
+                "missing_required_fields": 0,
+                "past_bid_deadline": 0,
+                "invalid_price": 0
+              }
+            },
+            "Lehigh": {
+              "provider": "hud_home_store",
+              "county": "Lehigh",
+              "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Lehigh+County%2C+PA",
+              "status": "success",
+              "result_payload_rows": 0,
+              "active_rows": 0,
+              "excluded": {
+                "wrong_county_or_state": 0,
+                "missing_required_fields": 0,
+                "past_bid_deadline": 0,
+                "invalid_price": 0
+              }
+            }
+          },
+          "rows": 3,
+          "source_url": "https://www.hudhomestore.gov/searchresult"
+        }
       },
-      "geography_dropped": 5,
-      "scope": "known_county_matches_only",
-      "note": "חיבור אמיתי ראשון; HomeSteps מייצג Freddie Mac בלבד ואינו מכסה את כל נכסי הבנקים",
+      "provider_count": 2,
+      "coverage": "partial_multi_provider",
+      "scope": "selected_counties_only",
+      "note": "המקור כולל Freddie Mac HomeSteps ונכסי HUD REO; אינו כולל את כלל הבנקים. HUD הוא מקור ממשלתי נפרד.",
       "passed_filters": 0
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-01T09:39:36-04:00",
+      "checked_at": "2026-10-01T10:30:55-04:00",
       "status": "partial",
       "rows": 9,
       "sale_date": "2026-10-21",
@@ -785,7 +906,7 @@
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-01T09:39:36-04:00",
+      "checked_at": "2026-10-01T10:30:55-04:00",
       "status": "not_connected",
       "rows": 0,
       "passed_filters": 0
@@ -793,12 +914,12 @@
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-01T09:39:49-04:00",
+      "checked_at": "2026-10-01T10:31:12-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-01T09:39:36-04:00",
+      "checked_at": "2026-10-01T10:30:55-04:00",
       "status": "partial",
       "rows": 391,
       "counties": {
@@ -852,10 +973,10 @@
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261001-093936",
-    "started_at": "2026-10-01T09:39:36-04:00",
+    "scan_id": "SCAN-20261001-103055",
+    "started_at": "2026-10-01T10:30:55-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.4.0-lehigh-tax-list-20261001",
+    "orchestrator_version": "3.5.0-hud-homestore-reo-20261001",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -870,15 +991,15 @@
       "Allentown",
       "Erie"
     ],
-    "source_results": 1051,
+    "source_results": 1054,
     "after_filters": 688,
-    "new": 9,
-    "updated": 1,
-    "unchanged": 678,
+    "new": 2,
+    "updated": 12,
+    "unchanged": 674,
     "off_market_candidates": 0,
     "errors": [],
-    "code_sha256": "2641d8edbcb8",
-    "github_sha": "94a44bbab30519a8902ecef68e2b70b1dd8be4f1",
+    "code_sha256": "f6cf4623de43",
+    "github_sha": "a1366c9d3ae39306528ed0891b2b239c671236bf",
     "request_id": "d46b4e63-0cba-49b7-98ea-e40f6cc4494b",
     "counties": [
       "Allegheny",
@@ -998,7 +1119,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "success",
         "rows": 650,
         "areas": [
@@ -1012,14 +1133,14 @@
           {
             "area": "Erie County",
             "status": "success",
-            "rows": 220,
+            "rows": 219,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 81,
+            "rows": 82,
             "coverage": "not_proven_complete",
             "limit_reached": false
           }
@@ -1029,26 +1150,86 @@
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "partial",
-        "rows": 1,
-        "provider": "freddie_mac_homesteps",
-        "coverage": "partial_single_provider",
-        "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
-        "jsonld_listings": 12,
-        "active_status_counts": {
-          "Active": 6,
-          "Under Contract": 5,
-          "Coming Soon": 1
+        "rows": 4,
+        "providers": {
+          "freddie_mac_homesteps": {
+            "jsonld_listings": 12,
+            "status_counts": {
+              "Active": 6,
+              "Under Contract": 5,
+              "Coming Soon": 1
+            },
+            "active_rows": 6,
+            "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
+            "provider": "freddie_mac_homesteps",
+            "coverage": "partial_single_provider",
+            "status": "success",
+            "rows": 1,
+            "geography_dropped": 5,
+            "scope": "selected_counties_only"
+          },
+          "hud_home_store": {
+            "provider": "hud_home_store",
+            "status": "success",
+            "counties": {
+              "Allegheny": {
+                "provider": "hud_home_store",
+                "county": "Allegheny",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Allegheny+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 3,
+                "active_rows": 3,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              },
+              "Erie": {
+                "provider": "hud_home_store",
+                "county": "Erie",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Erie+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 0,
+                "active_rows": 0,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              },
+              "Lehigh": {
+                "provider": "hud_home_store",
+                "county": "Lehigh",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Lehigh+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 0,
+                "active_rows": 0,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              }
+            },
+            "rows": 3,
+            "source_url": "https://www.hudhomestore.gov/searchresult"
+          }
         },
-        "geography_dropped": 5,
-        "scope": "known_county_matches_only",
-        "note": "חיבור אמיתי ראשון; HomeSteps מייצג Freddie Mac בלבד ואינו מכסה את כל נכסי הבנקים",
+        "provider_count": 2,
+        "coverage": "partial_multi_provider",
+        "scope": "selected_counties_only",
+        "note": "המקור כולל Freddie Mac HomeSteps ונכסי HUD REO; אינו כולל את כלל הבנקים. HUD הוא מקור ממשלתי נפרד.",
         "passed_filters": 0
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "partial",
         "rows": 391,
         "counties": {
@@ -1097,7 +1278,7 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "partial",
         "rows": 9,
         "sale_date": "2026-10-21",
@@ -1130,7 +1311,7 @@
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-01T09:39:36-04:00",
+        "checked_at": "2026-10-01T10:30:55-04:00",
         "status": "not_connected",
         "rows": 0,
         "passed_filters": 0
@@ -1138,7 +1319,7 @@
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-01T09:39:49-04:00",
+        "checked_at": "2026-10-01T10:31:12-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -1193,19 +1374,19 @@
           "West Mifflin": 13,
           "Bridgeville": 4,
           "Pittsburgh": 169,
-          "Mc Kees Rocks": 15,
+          "Mc Kees Rocks": 14,
           "Cheswick": 3,
           "Pitcairn": 3,
+          "Coraopolis": 11,
+          "Bethel Park": 5,
           "Duquesne": 5,
           "Monroeville": 3,
           "Mckeesport": 20,
           "Springdale": 3,
-          "Coraopolis": 10,
           "Tarentum": 8,
           "Oakdale": 2,
           "Clairton": 10,
           "Gibsonia": 1,
-          "Bethel Park": 4,
           "Millvale": 1,
           "New Kensington": 2,
           "North Versailles": 6,
@@ -1234,7 +1415,7 @@
           "Brackenridge": 2,
           "Imperial": 1,
           "South Park": 2,
-          "Buena Vista": 2,
+          "Buena Vista": 1,
           "White Oak": 1,
           "Bairdford": 1,
           "Mount Oliver": 1,
@@ -1245,11 +1426,15 @@
           "West Mifflin": 13,
           "Hunting Ridge": 1,
           "North Oakland": 1,
-          "McKees Rocks": 10,
+          "McKees Rocks": 9,
           "Penn Hills": 25,
           "Harmar": 2,
           "Pitcairn": 3,
           "Pittsburgh": 2,
+          "Coraopolis": 5,
+          "Millvale": 5,
+          "Oakland": 4,
+          "Bethel Park": 5,
           "Beechview": 4,
           "Swissvale": 9,
           "Carrick": 8,
@@ -1268,11 +1453,9 @@
           "South Side": 4,
           "Findlay Twp": 2,
           "Clairton": 6,
-          "Wilkinsburg": 7,
+          "Wilkinsburg": 6,
           "Hampton": 2,
-          "Bethel Park": 4,
           "Brentwood": 6,
-          "Millvale": 4,
           "Bloomfield": 3,
           "Plum Boro": 5,
           "N Versailles": 6,
@@ -1286,7 +1469,7 @@
           "Whitehall": 2,
           "Jefferson Hills": 5,
           "East Liberty": 1,
-          "Elizabeth Twp/Boro": 6,
+          "Elizabeth Twp/Boro": 5,
           "Liberty Boro": 1,
           "Overbrook": 3,
           "Natrona Hts/Harrison Twp.": 5,
@@ -1304,7 +1487,6 @@
           "Brookline": 4,
           "Dravosburg": 1,
           "Heidelberg": 1,
-          "Coraopolis": 4,
           "Munhall": 5,
           "N Braddock": 2,
           "Marshall Shadeland": 2,
@@ -1329,7 +1511,6 @@
           "Stowe Twp": 5,
           "Observatory Hill": 1,
           "Reserve": 1,
-          "Oakland": 3,
           "Point Breeze": 1,
           "Polish Hill": 1,
           "West Deer": 3,
@@ -1359,16 +1540,15 @@
           "Oakdale": 1,
           "Mt. Lebanon": 2,
           "Garfield": 1,
-          "Avalon": 1,
-          "Morningside": 1
+          "Avalon": 1
         }
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 220,
+        "rows": 219,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Erie": 150,
+          "Erie": 149,
           "North East": 10,
           "Lake City": 7,
           "Girard": 5,
@@ -1391,7 +1571,7 @@
           "Waterford Township": 1
         },
         "source_locations": {
-          "Erie": 134,
+          "Erie": 133,
           "Meadow Green Acres": 1,
           "North East": 10,
           "Lake City Boro": 7,
@@ -1425,9 +1605,10 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 81,
+        "rows": 82,
         "city_mismatch_count": 0,
         "actual_cities": {
+          "Center Valley": 1,
           "Allentown": 44,
           "Fountain Hill": 2,
           "Breinigsville": 9,
@@ -1444,6 +1625,7 @@
           "Wescosville": 1
         },
         "source_locations": {
+          "Upper Saucon Twp": 1,
           "Horners Addition": 1,
           "Allentown City": 27,
           "Red Maple Acres Mhp": 1,
@@ -1488,28 +1670,28 @@
       }
     },
     "raw_mls_seen": 648,
-    "duplicates_removed": 3,
+    "duplicates_removed": 4,
     "filter_rejections": {
       "price": 1,
-      "sqft": 238,
-      "beds": 33,
+      "sqft": 239,
+      "beds": 32,
       "baths": 0,
-      "property_type": 57,
-      "property_type_unknown": 31,
+      "property_type": 58,
+      "property_type_unknown": 32,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 428,
+      "Single Family Residential": 427,
       "Townhouse": 46,
-      "Condo/Co-op": 24,
-      "Multi-Family (2-4 Unit)": 47,
+      "Condo/Co-op": 25,
+      "Multi-Family (2-4 Unit)": 46,
       "Vacant Land": 68,
       "Ranch": 1,
       "Multi-Family (5+ Unit)": 1,
-      "Mobile/Manufactured Home": 27,
+      "Mobile/Manufactured Home": 28,
       "Unknown": 8,
-      "UNKNOWN": 400,
+      "UNKNOWN": 403,
       "Single-Family": 1
     },
     "source_passed_filters": {
@@ -1520,35 +1702,35 @@
       "06_probate_estates": 0
     },
     "redfin_location_top25": {
-      "Erie": 134,
+      "Erie": 133,
       "Allentown City": 27,
       "Penn Hills": 25,
       "McKeesport": 15,
       "West Mifflin": 13,
-      "McKees Rocks": 10,
       "North East": 10,
       "Edinboro": 9,
+      "McKees Rocks": 9,
       "Swissvale": 9,
       "Carrick": 8,
       "Lake City Boro": 7,
       "Tarentum": 7,
-      "Wilkinsburg": 7,
       "Brentwood": 6,
       "Clairton": 6,
-      "Elizabeth Twp/Boro": 6,
       "Hazelwood": 6,
       "N Versailles": 6,
+      "Wilkinsburg": 6,
+      "Bethel Park": 5,
+      "Coraopolis": 5,
       "Corry": 5,
       "Duquesne": 5,
+      "Elizabeth Twp/Boro": 5,
       "Jefferson Hills": 5,
-      "Moon/Crescent Twp": 5,
-      "Munhall": 5,
-      "Natrona Hts/Harrison Twp.": 5,
-      "Plum Boro": 5
+      "Millvale": 5,
+      "Moon/Crescent Twp": 5
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "total_properties": 3088,
-    "finished_at": "2026-10-01T09:39:50-04:00"
+    "total_properties": 3090,
+    "finished_at": "2026-10-01T10:31:13-04:00"
   },
   "sheriff": {
     "status": "עודכן",
