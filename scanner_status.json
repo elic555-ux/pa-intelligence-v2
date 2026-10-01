@@ -1,10 +1,10 @@
 {
-  "version": "3.5.0-hud-homestore-reo-20261001",
+  "version": "3.6.0-erie-repository-tax-20261001",
   "last_event": {
-    "scan_id": "SCAN-20261001-103055",
-    "started_at": "2026-10-01T10:30:55-04:00",
+    "scan_id": "SCAN-20261001-110414",
+    "started_at": "2026-10-01T11:04:14-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.5.0-hud-homestore-reo-20261001",
+    "orchestrator_version": "3.6.0-erie-repository-tax-20261001",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -19,15 +19,15 @@
       "Allentown",
       "Erie"
     ],
-    "source_results": 1054,
-    "after_filters": 688,
-    "new": 2,
-    "updated": 12,
-    "unchanged": 674,
+    "source_results": 1218,
+    "after_filters": 850,
+    "new": 163,
+    "updated": 0,
+    "unchanged": 687,
     "off_market_candidates": 0,
     "errors": [],
-    "code_sha256": "f6cf4623de43",
-    "github_sha": "a1366c9d3ae39306528ed0891b2b239c671236bf",
+    "code_sha256": "4a46df6b89f9",
+    "github_sha": "41043db605c372e7f77846344c3fccb585da48a6",
     "request_id": "d46b4e63-0cba-49b7-98ea-e40f6cc4494b",
     "counties": [
       "Allegheny",
@@ -147,7 +147,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "success",
         "rows": 650,
         "areas": [
@@ -174,11 +174,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 291
+        "passed_filters": 290
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "partial",
         "rows": 4,
         "providers": {
@@ -257,7 +257,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "partial",
         "rows": 391,
         "counties": {
@@ -306,15 +306,24 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "partial",
-        "rows": 9,
-        "sale_date": "2026-10-21",
-        "list_label": "Judicial Sale List as of 9-18-26",
-        "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
-        "ocr": true,
-        "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF.",
+        "rows": 173,
         "counties": {
+          "Allegheny": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no verified current tax feed connected for this county"
+          },
+          "Erie": {
+            "status": "success",
+            "rows": 164,
+            "source_url": "https://eriecountypa.gov/wp-content/uploads/2026/07/2026-Repository-List-PUBLIC.xlsx",
+            "page_url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
+            "list_label": "Repository List",
+            "excluded_unavailable": true,
+            "note": "Repository candidates only; availability must be confirmed with Erie County."
+          },
           "Lehigh": {
             "status": "success",
             "rows": 9,
@@ -323,23 +332,13 @@
             "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
             "ocr": true,
             "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
-          },
-          "Allegheny": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax-sale feed connected for this county"
-          },
-          "Erie": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax-sale feed connected for this county"
           }
         },
-        "passed_filters": 9
+        "passed_filters": 172
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "not_connected",
         "rows": 0,
         "passed_filters": 0
@@ -347,7 +346,7 @@
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-01T10:31:12-04:00",
+        "checked_at": "2026-10-01T11:04:30-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -455,10 +454,11 @@
           "Hunting Ridge": 1,
           "North Oakland": 1,
           "McKees Rocks": 9,
-          "Penn Hills": 25,
+          "Penn Hills": 24,
           "Harmar": 2,
           "Pitcairn": 3,
           "Pittsburgh": 2,
+          "Spring Hill": 3,
           "Coraopolis": 5,
           "Millvale": 5,
           "Oakland": 4,
@@ -544,7 +544,6 @@
           "West Deer": 3,
           "Cheswick": 1,
           "Baldwin Boro": 1,
-          "Spring Hill": 2,
           "Elliott": 3,
           "Troy Hill": 1,
           "Wilmerding": 1,
@@ -698,10 +697,10 @@
       }
     },
     "raw_mls_seen": 648,
-    "duplicates_removed": 4,
+    "duplicates_removed": 5,
     "filter_rejections": {
       "price": 1,
-      "sqft": 239,
+      "sqft": 240,
       "beds": 32,
       "baths": 0,
       "property_type": 58,
@@ -719,20 +718,20 @@
       "Multi-Family (5+ Unit)": 1,
       "Mobile/Manufactured Home": 28,
       "Unknown": 8,
-      "UNKNOWN": 403,
+      "UNKNOWN": 567,
       "Single-Family": 1
     },
     "source_passed_filters": {
-      "mls": 291,
+      "mls": 290,
       "reo": 0,
       "sheriff": 388,
-      "tax": 9,
+      "tax": 172,
       "06_probate_estates": 0
     },
     "redfin_location_top25": {
       "Erie": 133,
       "Allentown City": 27,
-      "Penn Hills": 25,
+      "Penn Hills": 24,
       "McKeesport": 15,
       "West Mifflin": 13,
       "North East": 10,
@@ -757,13 +756,13 @@
       "Moon/Crescent Twp": 5
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "total_properties": 3090,
-    "finished_at": "2026-10-01T10:31:13-04:00"
+    "total_properties": 3253,
+    "finished_at": "2026-10-01T11:04:30-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-01T10:30:55-04:00",
+      "checked_at": "2026-10-01T11:04:14-04:00",
       "status": "success",
       "rows": 650,
       "areas": [
@@ -790,11 +789,11 @@
         }
       ],
       "coverage": "not_proven_complete",
-      "passed_filters": 291
+      "passed_filters": 290
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-01T10:30:55-04:00",
+      "checked_at": "2026-10-01T11:04:14-04:00",
       "status": "partial",
       "rows": 4,
       "providers": {
@@ -873,15 +872,24 @@
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-01T10:30:55-04:00",
+      "checked_at": "2026-10-01T11:04:14-04:00",
       "status": "partial",
-      "rows": 9,
-      "sale_date": "2026-10-21",
-      "list_label": "Judicial Sale List as of 9-18-26",
-      "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
-      "ocr": true,
-      "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF.",
+      "rows": 173,
       "counties": {
+        "Allegheny": {
+          "status": "not_connected",
+          "rows": 0,
+          "reason": "no verified current tax feed connected for this county"
+        },
+        "Erie": {
+          "status": "success",
+          "rows": 164,
+          "source_url": "https://eriecountypa.gov/wp-content/uploads/2026/07/2026-Repository-List-PUBLIC.xlsx",
+          "page_url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
+          "list_label": "Repository List",
+          "excluded_unavailable": true,
+          "note": "Repository candidates only; availability must be confirmed with Erie County."
+        },
         "Lehigh": {
           "status": "success",
           "rows": 9,
@@ -890,23 +898,13 @@
           "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
           "ocr": true,
           "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
-        },
-        "Allegheny": {
-          "status": "not_connected",
-          "rows": 0,
-          "reason": "no verified current tax-sale feed connected for this county"
-        },
-        "Erie": {
-          "status": "not_connected",
-          "rows": 0,
-          "reason": "no verified current tax-sale feed connected for this county"
         }
       },
-      "passed_filters": 9
+      "passed_filters": 172
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-01T10:30:55-04:00",
+      "checked_at": "2026-10-01T11:04:14-04:00",
       "status": "not_connected",
       "rows": 0,
       "passed_filters": 0
@@ -914,12 +912,12 @@
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-01T10:31:12-04:00",
+      "checked_at": "2026-10-01T11:04:30-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-01T10:30:55-04:00",
+      "checked_at": "2026-10-01T11:04:14-04:00",
       "status": "partial",
       "rows": 391,
       "counties": {
@@ -973,10 +971,10 @@
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261001-103055",
-    "started_at": "2026-10-01T10:30:55-04:00",
+    "scan_id": "SCAN-20261001-110414",
+    "started_at": "2026-10-01T11:04:14-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.5.0-hud-homestore-reo-20261001",
+    "orchestrator_version": "3.6.0-erie-repository-tax-20261001",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -991,15 +989,15 @@
       "Allentown",
       "Erie"
     ],
-    "source_results": 1054,
-    "after_filters": 688,
-    "new": 2,
-    "updated": 12,
-    "unchanged": 674,
+    "source_results": 1218,
+    "after_filters": 850,
+    "new": 163,
+    "updated": 0,
+    "unchanged": 687,
     "off_market_candidates": 0,
     "errors": [],
-    "code_sha256": "f6cf4623de43",
-    "github_sha": "a1366c9d3ae39306528ed0891b2b239c671236bf",
+    "code_sha256": "4a46df6b89f9",
+    "github_sha": "41043db605c372e7f77846344c3fccb585da48a6",
     "request_id": "d46b4e63-0cba-49b7-98ea-e40f6cc4494b",
     "counties": [
       "Allegheny",
@@ -1119,7 +1117,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "success",
         "rows": 650,
         "areas": [
@@ -1146,11 +1144,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 291
+        "passed_filters": 290
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "partial",
         "rows": 4,
         "providers": {
@@ -1229,7 +1227,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "partial",
         "rows": 391,
         "counties": {
@@ -1278,15 +1276,24 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "partial",
-        "rows": 9,
-        "sale_date": "2026-10-21",
-        "list_label": "Judicial Sale List as of 9-18-26",
-        "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
-        "ocr": true,
-        "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF.",
+        "rows": 173,
         "counties": {
+          "Allegheny": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no verified current tax feed connected for this county"
+          },
+          "Erie": {
+            "status": "success",
+            "rows": 164,
+            "source_url": "https://eriecountypa.gov/wp-content/uploads/2026/07/2026-Repository-List-PUBLIC.xlsx",
+            "page_url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
+            "list_label": "Repository List",
+            "excluded_unavailable": true,
+            "note": "Repository candidates only; availability must be confirmed with Erie County."
+          },
           "Lehigh": {
             "status": "success",
             "rows": 9,
@@ -1295,23 +1302,13 @@
             "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
             "ocr": true,
             "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
-          },
-          "Allegheny": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax-sale feed connected for this county"
-          },
-          "Erie": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax-sale feed connected for this county"
           }
         },
-        "passed_filters": 9
+        "passed_filters": 172
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-01T10:30:55-04:00",
+        "checked_at": "2026-10-01T11:04:14-04:00",
         "status": "not_connected",
         "rows": 0,
         "passed_filters": 0
@@ -1319,7 +1316,7 @@
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-01T10:31:12-04:00",
+        "checked_at": "2026-10-01T11:04:30-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -1427,10 +1424,11 @@
           "Hunting Ridge": 1,
           "North Oakland": 1,
           "McKees Rocks": 9,
-          "Penn Hills": 25,
+          "Penn Hills": 24,
           "Harmar": 2,
           "Pitcairn": 3,
           "Pittsburgh": 2,
+          "Spring Hill": 3,
           "Coraopolis": 5,
           "Millvale": 5,
           "Oakland": 4,
@@ -1516,7 +1514,6 @@
           "West Deer": 3,
           "Cheswick": 1,
           "Baldwin Boro": 1,
-          "Spring Hill": 2,
           "Elliott": 3,
           "Troy Hill": 1,
           "Wilmerding": 1,
@@ -1670,10 +1667,10 @@
       }
     },
     "raw_mls_seen": 648,
-    "duplicates_removed": 4,
+    "duplicates_removed": 5,
     "filter_rejections": {
       "price": 1,
-      "sqft": 239,
+      "sqft": 240,
       "beds": 32,
       "baths": 0,
       "property_type": 58,
@@ -1691,20 +1688,20 @@
       "Multi-Family (5+ Unit)": 1,
       "Mobile/Manufactured Home": 28,
       "Unknown": 8,
-      "UNKNOWN": 403,
+      "UNKNOWN": 567,
       "Single-Family": 1
     },
     "source_passed_filters": {
-      "mls": 291,
+      "mls": 290,
       "reo": 0,
       "sheriff": 388,
-      "tax": 9,
+      "tax": 172,
       "06_probate_estates": 0
     },
     "redfin_location_top25": {
       "Erie": 133,
       "Allentown City": 27,
-      "Penn Hills": 25,
+      "Penn Hills": 24,
       "McKeesport": 15,
       "West Mifflin": 13,
       "North East": 10,
@@ -1729,8 +1726,8 @@
       "Moon/Crescent Twp": 5
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "total_properties": 3090,
-    "finished_at": "2026-10-01T10:31:13-04:00"
+    "total_properties": 3253,
+    "finished_at": "2026-10-01T11:04:30-04:00"
   },
   "sheriff": {
     "status": "עודכן",
