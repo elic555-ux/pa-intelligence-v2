@@ -99,6 +99,58 @@ def get_coordinates(address, city, state="PA"):
     return None, None
 
 
+
+REPOSITORY_ANALYSIS_FIELDS = (
+    "arv", "arv_status", "arv_method", "arv_confidence", "arv_source",
+    "flip_rehab", "rental_rehab", "rehab_status", "rehab_method", "rehab_confidence", "rehab_source",
+    "mao_flip", "mao_flip_status", "mao_flip_method", "mao_flip_confidence",
+    "monthly_rent_est", "rent_status", "rent_method", "rent_confidence", "rent_source",
+    "mao_rental", "mao_rental_status", "mao_rental_method", "mao_rental_confidence",
+    "neighborhood_class", "neighborhood_class_status", "neighborhood_class_method",
+    "neighborhood_class_confidence", "neighborhood_class_source",
+    "ai_summary", "summary_status", "summary_method",
+)
+
+
+def is_repository_record(prop):
+    return (str(prop.get("source_type") or "").casefold() == "tax"
+            and str(prop.get("tax_sale_type") or "").casefold() == "repository")
+
+
+def mark_repository_source_only(prop):
+    """Clear unsupported property estimates and coordinates for repository parcel descriptions."""
+    changed = False
+    for field in REPOSITORY_ANALYSIS_FIELDS:
+        default = "not_applicable" if field.endswith("_status") else None
+        if prop.get(field) != default:
+            prop[field] = default
+            changed = True
+    if prop.get("analyzer_version") != ANALYZER_VERSION:
+        prop["analyzer_version"] = ANALYZER_VERSION
+        changed = True
+    if prop.get("analysis_mode") != "source_record_only":
+        prop["analysis_mode"] = "source_record_only"
+        changed = True
+    if prop.get("analysis_is_ai") is not False:
+        prop["analysis_is_ai"] = False
+        changed = True
+    notice = ("רשומת Repository מתוך רשימת מחוז רשמית. המקור אינו מספק נתוני בית מאומתים; "
+              "לא חושבו שווי, שכירות, שיפוץ או מיקום. יש לאמת את parcel והזמינות מול המחוז.")
+    if prop.get("analysis_disclaimer") != notice:
+        prop["analysis_disclaimer"] = notice
+        changed = True
+    prop["analysis_skip_reason"] = "repository_parcel_record_has_no_verified_building_facts"
+    # The official workbook contains legal descriptions, not geocodable street addresses.
+    # Remove only coordinates known to have come from the prior OSM lookup.
+    if prop.get("geocode_source") == "OpenStreetMap Nominatim" or prop.get("geocode_status") == "verified_external_service":
+        for field in ("lat", "lng", "geocode_source", "geocode_updated_at", "geocode_last_attempt_at"):
+            if field in prop:
+                prop.pop(field, None)
+                changed = True
+        prop["geocode_status"] = "not_geocoded_repository_description"
+        changed = True
+    return changed
+
 def positive_number(value):
     """מחזיר מספר חיובי, או None אם הערך חסר/לא תקין."""
     if value is None or isinstance(value, bool):
@@ -297,11 +349,20 @@ def run_analyzer():
     geocode_requests = 0
     geocode_batch_skipped = 0
     outside_counties_skipped = 0
+    repository_source_only = 0
+    repository_records_cleaned = 0
     cache = load_geocode_cache()
     cache_changed = False
 
     for prop in properties:
         if not isinstance(prop, dict):
+            updated_properties.append(prop)
+            continue
+
+        if is_repository_record(prop):
+            if mark_repository_source_only(prop):
+                repository_records_cleaned += 1
+            repository_source_only += 1
             updated_properties.append(prop)
             continue
 
@@ -401,6 +462,8 @@ def run_analyzer():
         f"{analyzed_count} נכסים נותחו/עודכנו, "
         f"{geocoded_count} נכסים קיבלו קואורדינטות."
     )
+    print(f"🧾 Repository: {repository_source_only} רשומות הושארו כרשומות מקור בלבד; "
+          f"{repository_records_cleaned} נוקו מאומדנים/קואורדינטות לא מתאימים.")
     print(
         f"🗺️ Geocode QA — בקשות חיצוניות: {geocode_requests}/{MAX_GEOCODE_REQUESTS_PER_RUN} | "
         f"Cache hits: {geocode_cache_hits} | "
