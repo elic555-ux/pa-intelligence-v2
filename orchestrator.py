@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.0-erie-repository-tax-20261001"
+ORCHESTRATOR_VERSION = "3.6.1-erie-repository-analyzer-cleanup-20261001"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -2693,12 +2693,31 @@ def run_orchestrator():
         print("::warning::One or more selected sources did not complete. See scanner_status.json.")
 
 
+def repository_analysis_cleanup_needed(properties):
+    """Return whether repository records still carry analyzer estimates or OSM coordinates."""
+    if not isinstance(properties, list):
+        return False
+    metrics = ("arv", "flip_rehab", "rental_rehab", "mao_flip", "monthly_rent_est",
+               "mao_rental", "neighborhood_class", "ai_summary")
+    return any(
+        isinstance(prop, dict)
+        and prop.get("source_type") == "tax"
+        and prop.get("tax_sale_type") == "repository"
+        and (prop.get("analysis_mode") != "source_record_only"
+             or prop.get("geocode_source") == "OpenStreetMap Nominatim"
+             or any(prop.get(field) is not None for field in metrics))
+        for prop in properties
+    )
+
+
 if __name__ == "__main__":
     run_orchestrator()
     # Analyzer runs only after an MLS scan that actually changed properties.
     if os.environ.get("GITHUB_OUTPUT"):
         latest = load_json_file(SCANNER_STATUS_FILE, {}).get("last_event", {})
+        stored_properties = load_json_file(PROPERTIES_FILE, [])
+        repository_cleanup_needed = repository_analysis_cleanup_needed(stored_properties)
         analyze = bool(latest.get("status") in ("success", "partial") and
-                       (latest.get("new", 0) or latest.get("updated", 0)))
+                       ((latest.get("new", 0) or latest.get("updated", 0)) or repository_cleanup_needed))
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             output.write(f"analyze={'true' if analyze else 'false'}\n")
