@@ -26,7 +26,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.3.0-homesteps-reo-20260929"
+ORCHESTRATOR_VERSION = "3.4.0-lehigh-tax-list-20261001"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -39,6 +39,177 @@ SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/
 ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
 LEHIGH_SHERIFF_URL = "https://salesweb.civilview.com/Sales/SalesSearch?countyId=51"
 HOMESTEPS_SEARCH_URL = "https://www.homesteps.com/listing/search?search=Pennsylvania"
+LEHIGH_TAX_SALE_PAGE = "https://www.lehighcountytaxclaim.com/"
+
+
+class OfficialSaleLinks(HTMLParser):
+    """Find the current judicial-sale list link from the county's official page."""
+    def __init__(self):
+        super().__init__()
+        self.links = []
+        self._href = None
+        self._parts = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == "a":
+            self._href = dict(attrs).get("href")
+            self._parts = []
+
+    def handle_data(self, data):
+        if self._href is not None:
+            self._parts.append(data)
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "a" and self._href is not None:
+            self.links.append((self._href, re.sub(r"\s+", " ", " ".join(self._parts)).strip()))
+            self._href = None
+            self._parts = []
+
+
+def _lehigh_ocr_row_text(words, anchor_y, x_min, x_max, tolerance):
+    selected = [(x, token) for x, y, token in words
+                if abs(y - anchor_y) <= tolerance and x_min <= x < x_max]
+    return " ".join(token for _, token in sorted(selected))
+
+
+def parse_lehigh_judicial_sale_tsv(tsv, source_url, sale_date):
+    """Parse the scanned official list by OCR coordinates; reject incomplete rows."""
+    lines = tsv.splitlines()
+    if not lines:
+        return []
+    try:
+        header = lines[0].split("\t")
+        page_width = int(next(row.split("\t")[8] for row in lines[1:]
+                              if row.split("\t")[0] == "1"))
+        page_height = int(next(row.split("\t")[9] for row in lines[1:]
+                               if row.split("\t")[0] == "1"))
+    except (StopIteration, ValueError, IndexError):
+        return []
+
+    words = []
+    for line in lines[1:]:
+        cols = line.split("\t")
+        if len(cols) < 12 or cols[0] != "5":
+            continue
+        try:
+            left, top, width, height = map(int, cols[6:10])
+        except ValueError:
+            continue
+        token = cols[11].strip()
+        if not token:
+            continue
+        # PDF page 3 is rotated. Transform the word centers into upright coordinates.
+        x_upright = top + height / 2
+        y_upright = page_width - (left + width / 2)
+        words.append((x_upright, y_upright, token))
+
+    anchors = []
+    for x, y, token in words:
+        cleaned = token.rstrip(".,:;]")
+        if 0.10 * page_width <= x <= 0.20 * page_width and re.fullmatch(r"25-\d{4}", cleaned):
+            anchors.append((y, cleaned))
+    anchors.sort()
+    if len(anchors) < 1 or len(anchors) > 100:
+        return []
+    gaps = [anchors[i + 1][0] - anchors[i][0] for i in range(len(anchors) - 1)
+            if anchors[i + 1][0] > anchors[i][0]]
+    tolerance = max(18, min(45, (sorted(gaps)[len(gaps) // 2] * 0.48) if gaps else 36))
+
+    rows = []
+    for y, sale_number in anchors:
+        def col(lo, hi):
+            return _lehigh_ocr_row_text(words, y, lo * page_height, hi * page_height, tolerance)
+        municipality = col(.16, .33).replace(" TOWNSHIP", " Township").replace(" CITY OF ", "City of ")
+        parcel_text = col(.33, .50).replace("]", "1").replace("[", "1")
+        owner = col(.50, .68)
+        address = col(.68, .84)
+        bid_text = col(.84, 1.05)
+        parcel_match = re.search(r"\b\d{2}-\d{12,14}-\d{1,2}\b", parcel_text)
+        # Keep only plausible street addresses and a valid numeric opening bid.
+        address = re.sub(r"\s+", " ", address).strip(" ,.;")
+        bid_match = re.search(r"\$?\s*(\d{1,3}(?:,\d{3})*\.\d{2})", bid_text)
+        if not municipality or not parcel_match or not re.match(r"^\d{1,6}\s+\S+", address) or not bid_match:
+            continue
+        municipality_clean = re.sub(r"\s+", " ", municipality).strip()
+        municipality_clean = re.sub(r"^LOWER Township MACUNGIE$", "LOWER MACUNGIE Township", municipality_clean, flags=re.I)
+        municipality_clean = re.sub(r"^UPPER Township MACUNGIE$", "UPPER MACUNGIE Township", municipality_clean, flags=re.I)
+        city = municipality_clean
+        if municipality_clean.casefold().startswith("city of "):
+            city = municipality_clean[8:].strip().title()
+        else:
+            city = municipality_clean.title()
+        rows.append({
+            "id": f"tax-lehigh-{sale_number}", "county": "Lehigh", "city": city,
+            "municipality": municipality_clean, "address": address.title(), "zip": None,
+            "parcel_id": parcel_match.group(0), "sale_number": sale_number,
+            "owner_name": re.sub(r"\s+", " ", owner).strip(),
+            "source_type": "tax", "deal_type": "Tax Sale Candidate",
+            "market_status": "scheduled_tax_sale", "tax_sale_type": "judicial",
+            "sale_date": sale_date.isoformat(), "opening_bid": float(bid_match.group(1).replace(",", "")),
+            "price": None, "source_url": source_url,
+            "source_text_quality": "ocr_from_official_scanned_pdf",
+            "description": "מועמד למכירה שיפוטית; מחיר הפתיחה אינו מחיר רכישה סופי. יש לאמת מול המסמך הרשמי ולבדוק שעבודים, מיסים, מצב הנכס ועלויות נוספות.",
+        })
+    return rows
+
+
+def fetch_lehigh_judicial_tax_list(today=None):
+    """Read only the current, future-dated Lehigh Judicial Sale list."""
+    page = requests.get(LEHIGH_TAX_SALE_PAGE, timeout=35, headers={"User-Agent": "PA-Property-Research/1.0"})
+    page.raise_for_status()
+    if urlparse(page.url).hostname not in {"www.lehighcountytaxclaim.com", "lehighcountytaxclaim.com"}:
+        raise ValueError("Lehigh tax source redirected away from the official county contractor")
+    html_text = page.text
+    text = html.unescape(re.sub(r"<[^>]+>", " ", html_text))
+    text = re.sub(r"\s+", " ", text)
+    notice = re.search(r"Judicial Sale Continued to ([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})", text, re.I)
+    if not notice:
+        raise ValueError("Official page does not publish a recognizable current Judicial Sale date")
+    sale_date = datetime.strptime(" ".join(notice.groups()), "%B %d %Y").date()
+    today = today or now_est().date()
+    if sale_date < today:
+        return [], {"status": "success", "rows": 0, "reason": "official_sale_date_not_future",
+                    "sale_date": sale_date.isoformat(), "source_url": LEHIGH_TAX_SALE_PAGE}
+
+    parser = OfficialSaleLinks()
+    parser.feed(html_text)
+    candidates = [(urljoin(LEHIGH_TAX_SALE_PAGE, href), label)
+                  for href, label in parser.links
+                  if href and re.search(r"Judicial Sale\s*List as of", label, re.I)
+                  and urlparse(urljoin(LEHIGH_TAX_SALE_PAGE, href)).path.casefold().endswith(".pdf")]
+    if not candidates:
+        raise ValueError("No official current Judicial Sale List PDF link found")
+    pdf_url, pdf_label = candidates[0]
+    parsed_url = urlparse(pdf_url)
+    if parsed_url.scheme != "https" or parsed_url.hostname != "www.lehighcountytaxclaim.com":
+        raise ValueError("Judicial Sale PDF link is outside the official Lehigh source")
+    pdf_response = requests.get(pdf_url, timeout=45, headers={"User-Agent": "PA-Property-Research/1.0"})
+    pdf_response.raise_for_status()
+    if not pdf_response.content.startswith(b"%PDF-") or len(pdf_response.content) > 15_000_000:
+        raise ValueError("Official Judicial Sale document is not a valid PDF or exceeds the safe size limit")
+
+    rows = []
+    with tempfile.TemporaryDirectory(prefix="lehigh-tax-") as temp_dir:
+        pdf_path = os.path.join(temp_dir, "sale.pdf")
+        with open(pdf_path, "wb") as handle:
+            handle.write(pdf_response.content)
+        subprocess.run(["pdftoppm", "-png", "-r", "220", "-f", "1", "-l", "5", pdf_path,
+                        os.path.join(temp_dir, "page")], check=True, capture_output=True, text=True, timeout=60)
+        pages = sorted(name for name in os.listdir(temp_dir) if name.endswith(".png"))
+        for image_path in pages:
+            ocr = subprocess.run(["tesseract", os.path.join(temp_dir, image_path), "stdout", "tsv", "--psm", "11"],
+                                 check=True, capture_output=True, text=True, timeout=60)
+            rows.extend(parse_lehigh_judicial_sale_tsv(ocr.stdout, pdf_url, sale_date))
+    unique = {}
+    for row in rows:
+        unique[row["sale_number"]] = row
+    rows = list(unique.values())
+    if not rows:
+        raise ValueError("OCR found no complete sale rows; existing tax data was left untouched")
+    audit = {"status": "success", "rows": len(rows), "sale_date": sale_date.isoformat(),
+             "list_label": pdf_label, "source_url": pdf_url, "ocr": True,
+             "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."}
+    return rows, audit
 
 
 class JsonLdScripts(HTMLParser):
@@ -1618,6 +1789,15 @@ def run_orchestrator():
 
     try:
         existing_props_dict = load_existing_properties()
+        today_est = now_est().date()
+        expired_tax_keys = [key for key, row in existing_props_dict.items()
+                            if isinstance(row, dict) and row.get("source_type") == "tax"
+                            and row.get("sale_date")
+                            and str(row.get("sale_date"))[:10] < today_est.isoformat()]
+        for key in expired_tax_keys:
+            existing_props_dict.pop(key, None)
+        if expired_tax_keys:
+            log_entry["expired_tax_candidates_removed"] = len(expired_tax_keys)
     except (OSError, ValueError) as exc:
         log_entry.update({"status": "failed", "finished_at": iso_now_est()})
         log_entry["errors"].append(str(exc))
@@ -1732,12 +1912,12 @@ def run_orchestrator():
     sources = {}
     for sector in active_sectors_now:
         sources[sector] = {"label": SOURCE_LABELS.get(sector, sector), "checked_at": iso_now_est(),
-                           "status": "pending" if sector in ("mls", "sheriff", "reo") else "not_connected",
+                           "status": "pending" if sector in ("mls", "sheriff", "reo", "tax") else "not_connected",
                            "rows": 0}
     log_entry["sources"] = sources
-    # Tax claims and probate remain intentionally disabled until a verified feed is mapped.
-    for sector in ("tax", "06_probate_estates"):
-        sources.setdefault(sector, {"label": SOURCE_LABELS[sector], "status": "not_connected", "rows": 0})
+    # Probate remains disabled until a verified feed is mapped. Tax is connected below for Lehigh.
+    sources.setdefault("tax", {"label": SOURCE_LABELS["tax"], "status": "not_connected", "rows": 0})
+    sources.setdefault("06_probate_estates", {"label": SOURCE_LABELS["06_probate_estates"], "status": "not_connected", "rows": 0})
 
     sheriff_rows = []
     sheriff_county_results = {}
@@ -1840,6 +2020,33 @@ def run_orchestrator():
                 "status": "unsupported_area",
                 "error": "חיבורי שריף חיים זמינים כרגע רק למחוזות Allegheny, Erie ו-Lehigh",
             })
+
+    tax_rows = []
+    if "tax" in active_sectors_now:
+        requested_tax_counties = {str(name).strip().casefold() for name in counties_list}
+        # Map selected target cities into their county; this keeps source coverage scoped.
+        requested_tax_counties.update(str(CITY_COUNTY.get(str(area).strip(), "")).strip().casefold()
+                                        for area in cities_list if CITY_COUNTY.get(str(area).strip()))
+        if "lehigh" in requested_tax_counties:
+            try:
+                tax_rows, tax_audit = fetch_lehigh_judicial_tax_list()
+                county_audits = {"Lehigh": tax_audit}
+                for county_name in sorted(requested_tax_counties - {"lehigh"}):
+                    county_audits[county_name.title()] = {
+                        "status": "not_connected", "rows": 0,
+                        "reason": "no verified current tax-sale feed connected for this county",
+                    }
+                tax_status = "partial" if len(county_audits) > 1 else tax_audit.get("status", "success")
+                sources["tax"].update({**tax_audit, "status": tax_status,
+                                       "rows": len(tax_rows), "counties": county_audits})
+                print(f"🧾 Lehigh Judicial Sale: {len(tax_rows)} רשומות מועמדות; sale date {tax_audit.get('sale_date')}")
+            except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
+                sources["tax"].update({"status": "failed", "rows": 0, "counties": {"Lehigh": {"status": "failed", "error": str(exc)}}})
+                log_entry["errors"].append(f"tax Lehigh source unavailable: {exc}")
+                print(f"⚠️ רשימת מס Lehigh לא עודכנה: {exc}")
+        else:
+            sources["tax"].update({"status": "not_connected", "rows": 0,
+                                  "reason": "selected counties do not include Lehigh; no verified tax feed for the selected counties yet"})
 
     reo_rows = []
     if "reo" in active_sectors_now:
@@ -1962,8 +2169,8 @@ def run_orchestrator():
             log_entry["errors"].append(f"geo catalog write failed: {exc}")
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
 
-    combined = live_results + sheriff_rows + reo_rows + get_placeholder_sector_results(
-        [s for s in active_sectors_now if s not in ("mls", "sheriff", "reo")]
+    combined = live_results + sheriff_rows + tax_rows + reo_rows + get_placeholder_sector_results(
+        [s for s in active_sectors_now if s not in ("mls", "sheriff", "reo", "tax")]
     )
     log_entry["source_results"] = len(combined)
 
@@ -2001,9 +2208,9 @@ def run_orchestrator():
                 filter_rejections[reason] += 1
                 continue
 
-        # Sheriff documents often have no verified asking price/property facts;
-        # do not drop official sale records because MLS investment filters cannot apply.
-        if prop.get("source_type") == "sheriff":
+        # Official auction candidate rows often have no verified asking price/property facts;
+        # do not drop them because MLS investment filters cannot apply.
+        if prop.get("source_type") in {"sheriff", "tax"}:
             final_filtered.append(prop)
             continue
         if p_price is None or not (min_price <= p_price <= max_price):
@@ -2077,6 +2284,22 @@ def run_orchestrator():
         # Sheriff addresses can be corrected when the PDF line wrapping is
         # parsed properly. Reconcile only on the exact docket + parcel pair and
         # only if it identifies one old record, preserving its stable ID.
+        if existing is None and deal.get("source_type") == "tax":
+            sale_number = str(deal.get("sale_number") or "").strip().upper()
+            parcel = re.sub(r"[^a-z0-9]", "", str(deal.get("parcel_id") or "").lower())
+            candidates = []
+            if sale_number and parcel:
+                for old_key, old in existing_props_dict.items():
+                    if old_key == key or not isinstance(old, dict) or old.get("source_type") != "tax":
+                        continue
+                    old_sale = str(old.get("sale_number") or "").strip().upper()
+                    old_parcel = re.sub(r"[^a-z0-9]", "", str(old.get("parcel_id") or "").lower())
+                    if old_sale == sale_number and old_parcel == parcel:
+                        candidates.append((old_key, old))
+            if len(candidates) == 1:
+                old_key, existing = candidates[0]
+                deal["id"] = existing.get("id") or deal.get("id")
+                existing_props_dict.pop(old_key, None)
         if existing is None and deal.get("source_type") == "sheriff":
             docket = str(deal.get("docket_id") or "").strip().upper()
             parcel = re.sub(r"[^a-z0-9]", "", str(deal.get("parcel_id") or "").lower())
