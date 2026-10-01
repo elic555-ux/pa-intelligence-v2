@@ -460,6 +460,8 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
     rows, seen = [], set()
     skipped = 0
     canceled = 0
+    incomplete = 0
+    invalid_zip_rows = 0
     for cells in parser.rows[header_index + 1:]:
         if len(cells) <= max(columns.values()):
             continue
@@ -478,17 +480,26 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
         address_lines = [line for line in address_lines if line]
         street = address_lines[0] if address_lines else ""
         city = zip_code = municipality = upi = None
+        raw_city_zip = None
         for line in address_lines[1:]:
-            city_match = re.match(r"^(.+?),?\s+PA\s+(\d{5})(?:-\d{4})?$", line, re.I)
+            # Keep an active case even when the county portal has a malformed
+            # ZIP (the current portal has published a 4-digit ZIP on one row).
+            # A bad ZIP must never be silently repaired or guessed.
+            city_match = re.match(r"^(.+?),?\s+PA\s+(\d{1,5}(?:-\d{4})?)$", line, re.I)
             if city_match:
-                city, zip_code = city_match.group(1).strip().rstrip(","), city_match.group(2)
+                city = city_match.group(1).strip().rstrip(",")
+                raw_city_zip = city_match.group(2)
+                zip_code = raw_city_zip if re.fullmatch(r"\d{5}(?:-\d{4})?", raw_city_zip) else None
             elif re.search(r"\b(?:township|borough|boro|city)\b", line, re.I):
                 municipality = line
             elif re.match(r"UPI\s*#?\s*:", line, re.I):
                 upi = line
-        if not case_no or not street or not city or not zip_code:
+        if not case_no or not street or not city:
             skipped += 1
             continue
+        if not zip_code:
+            incomplete += 1
+            invalid_zip_rows += 1
         key = case_no.casefold() + ":" + normalize_addr_key(street, city, zip_code)
         if key in seen:
             continue
@@ -499,6 +510,8 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
         rows.append({
             "id": uid, "docket_id": case_no, "address": street.title(),
             "city": city.title(), "county": "Erie", "zip": zip_code,
+            "source_address_raw": " | ".join(address_lines),
+            "address_quality": "verified_zip" if zip_code else "invalid_or_missing_zip",
             "price": None, "judgment_amount": judgment_amount,
             "judgment_text": judgment_text or None,
             "sqft": None, "beds": None, "baths": None,
@@ -509,11 +522,13 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
             "erie_upi_raw": upi, "data_status": "live",
             "filter_status": "investment_fields_unavailable",
             "summary": (f"רישום שריף פעיל במחוז Erie. סכום פסק הדין במסמך: "
-                        f"{judgment_text or 'לא צוין'}; אין לראות בו מחיר נכס או הצעת פתיחה."),
+                        f"{judgment_text or 'לא צוין'}; אין לראות בו מחיר נכס או הצעת פתיחה."
+                        + (f" המיקוד במקור אינו תקין ({raw_city_zip}); יש לאמת ידנית." if not zip_code else "")),
             "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
         })
     return rows, {"parsed_rows": len(parser.rows) - header_index - 1,
                   "active_rows": len(rows), "skipped_active_addresses": skipped,
+                  "incomplete_active_rows": incomplete, "invalid_zip_rows": invalid_zip_rows,
                   "non_active_rows": canceled, "mode": "live", "source_url": source_url}
 
 
@@ -669,7 +684,7 @@ def fetch_erie_sheriff_listings():
     )
     response.raise_for_status()
     rows, audit = parse_erie_sheriff_html(response.text, ERIE_SHERIFF_URL)
-    if audit["skipped_active_addresses"]:
+    if audit["skipped_active_addresses"] or audit.get("incomplete_active_rows"):
         audit["status"] = "partial"
     else:
         audit["status"] = "success"
