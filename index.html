@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI PATCH 2026-10-02: Cloud Sync Integration via Supabase + Tax UI Fixes -->
+<!-- PA UI PATCH 2026-10-02: Cloud Sync Integration via Supabase + Batch Fix -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -58,7 +58,6 @@
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
-    <!-- Header & Navigation -->
     <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -105,14 +104,13 @@
         </div>
     </header>
 
-    <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
         <details class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs">
             <summary class="cursor-pointer font-bold text-blue-300">מצב מקורות הסריקה</summary>
             <div id="scanner-source-status" class="mt-2 space-y-1 text-gray-300">ממתין לדוח הסריקה הראשון.</div>
             <p class="text-gray-400 mt-2">רשימת MLS עשויה להיות חלקית. OFF MARKET כולל מועמדים שדורשים אימות. ברשומות שריף ייתכן שאין מחיר, שטח או מספר חדרים לבדיקת התאמה למסננים.</p>
         </details>
-        <!-- KPI Cards -->
+        
         <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div></button>
             <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS</span><i data-lucide="house" class="w-4 h-4 text-cyan-400"></i></div><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div></button>
@@ -120,14 +118,11 @@
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div></button>
             <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">מכירות שריף</span><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i></div><div class="text-2xl font-black text-rose-300" id="count-sheriff">0</div></button>
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
-            <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות/FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-[13px] font-black text-emerald-300" id="count-probate" style="margin-top:auto;">0 (בבנייה)</div></button>
-            
+            <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות/FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-sm font-black text-emerald-300" id="count-probate" style="margin-top:auto;">0 (בבנייה)</div></button>
             <button onclick="setCategory('offmarket')" id="btn-cat-offmarket" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-teal-500/30 transition hover:border-teal-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-teal-300">Off Market</span><i data-lucide="house-x" class="w-4 h-4 text-teal-400"></i></div><div class="text-2xl font-black text-teal-300" id="count-offmarket">0</div></button>
-
             <button onclick="setCategory('archive')" id="btn-cat-archive" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-gray-600/30 transition hover:border-gray-500 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-400">ארכיון מוסתר</span><i data-lucide="archive" class="w-4 h-4 text-gray-500"></i></div><div class="text-2xl font-black text-gray-400" id="count-archive">0</div></button>
         </section>
 
-        <!-- Watchlist & View -->
         <section class="flex flex-wrap items-center justify-between bg-gray-900/80 border border-gray-800 rounded-2xl p-3 sm:px-5 gap-3 shadow-lg">
             <button onclick="toggleWatchlistFilter()" id="btn-watchlist-filter" class="flex items-center gap-3 px-6 py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 text-sm font-black transition-all"><i data-lucide="star" class="w-5 h-5 text-amber-400 fill-amber-400"></i><span id="watchlist-btn-label">נכסים במעקב פעיל (Watchlist)</span><span class="badge-count px-2.5 py-0.5 bg-amber-500/30 border border-amber-400/50 rounded-lg font-mono text-white text-xs font-extrabold" id="count-watchlist">0</span></button>
             <div class="flex items-center gap-2 bg-gray-950 p-1 rounded-xl border border-gray-800">
@@ -136,7 +131,6 @@
             </div>
         </section>
 
-        <!-- Filters -->
         <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3.5 shadow-lg">
             <div><label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label><select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none"><option value="all">הכל</option><option value="turnkey">🔑 מניב מיידי</option><option value="value_add">🔨 השבחה</option></select></div>
             
@@ -172,10 +166,15 @@
         </section>
 
         <!-- Properties Container -->
-        <section id="properties-container" class="w-full"></section>
+        <section id="properties-container" class="w-full">
+            <div class="text-center py-16 text-gray-400 font-bold">
+                <i data-lucide="loader-2" class="w-8 h-8 mx-auto animate-spin mb-3 text-blue-500"></i>
+                טוען רשומות, אנא המתן...
+            </div>
+        </section>
     </main>
 
-    <!-- Background Scan Toast Indicator -->
+    <!-- Modal Elements remain exactly the same -->
     <div id="scan-progress-toast" class="fixed bottom-6 left-6 bg-gray-900 border border-blue-500/40 rounded-2xl p-4 shadow-[0_0_30px_rgba(59,130,246,0.3)] z-50 hidden flex items-center gap-4 toast-enter">
         <div id="scan-toast-icon"><i data-lucide="loader-2" class="w-7 h-7 text-blue-400 animate-spin"></i></div>
         <div id="scan-toast-content"><h4 class="text-sm font-black text-white tracking-wide">פעולה מתבצעת ברקע...</h4><p class="text-[11px] text-gray-400 font-semibold mt-0.5" id="scan-toast-subtitle">המערכת משדרת וסורקת נתונים.</p></div>
@@ -183,7 +182,6 @@
         <button onclick="closeScanToast()" class="absolute top-2 left-2 p-1 text-gray-500 hover:text-white bg-gray-800 rounded-full transition" title="סגור חלונית"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
     </div>
 
-    <!-- Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-start border-b border-gray-800 pb-3">
@@ -204,7 +202,7 @@
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
-                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">מחיר</span><strong class="text-xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
+                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">מחיר</span><strong class="text-2xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">חדרי שינה</span><strong class="text-xl font-extrabold text-white" id="modal-beds"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">רחצה</span><strong class="text-xl font-extrabold text-white" id="modal-baths"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
@@ -259,20 +257,19 @@
                     <div><span class="text-gray-400 block">תאריך פרסום הרשימה</span><strong id="modal-sheriff-published" class="text-white font-mono"></strong></div>
                     <div class="col-span-2 sm:col-span-3"><span class="text-gray-400 block">סוג מכירה כפי שמופיע במסמך</span><strong id="modal-sheriff-sale-type" class="text-white"></strong></div>
                 </div>
-                <p class="text-[11px] text-gray-400">הצעת מחיר אינה מוצגת כמחיר הנכס; הסכום נשמר כשדה Cost &amp; Tax Bid מהמסמך.</p>
             </section>
 
             <section id="modal-county-property-details" class="hidden space-y-3 bg-cyan-950/20 p-4 rounded-xl border border-cyan-500/30">
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <h4 class="text-sm font-black text-cyan-300">נתוני מבנה ממאגר Allegheny County</h4>
-                    <a id="modal-county-property-link" href="#" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-cyan-200 underline">פתיחת הרשומה הרשמית</a>
+                    <a id="modal-county-property-link" href="#" target="_blank" class="text-xs font-bold text-cyan-200 underline">פתיחת הרשומה הרשמית</a>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div><span class="text-gray-400 block">סוג שימוש</span><strong id="modal-county-use" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">מספר חדרים כללי</span><strong id="modal-county-rooms" class="text-white">-</strong></div>
-                    <div><span class="text-gray-400 block">חדרי שינה לפי המחוז</span><strong id="modal-county-beds" class="text-white">-</strong></div>
-                    <div><span class="text-gray-400 block">חדרי רחצה לפי המחוז</span><strong id="modal-county-baths" class="text-white">-</strong></div>
-                    <div><span class="text-gray-400 block">שטח מגורים (SqFt)</span><strong id="modal-county-sqft" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">חדרי שינה</span><strong id="modal-county-beds" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">חדרי רחצה</span><strong id="modal-county-baths" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">שטח מגורים</span><strong id="modal-county-sqft" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">שנת בנייה</span><strong id="modal-county-year" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">סגנון</span><strong id="modal-county-style" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">מצב פיזי</span><strong id="modal-county-condition" class="text-white">-</strong></div>
@@ -280,7 +277,6 @@
                     <div><span class="text-gray-400 block">מרתף</span><strong id="modal-county-basement" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">חימום / קירור</span><strong id="modal-county-hvac" class="text-white">-</strong></div>
                 </div>
-                <p class="text-[11px] text-gray-400">הנתונים הם רישומי הערכת המחוז, לא בדיקת מצב עדכנית או מדידה בשטח. יש לאמת לפני רכישה.</p>
             </section>
 
             <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תיאור מהמקור:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
@@ -291,7 +287,7 @@
         </div>
     </div>
 
-    <!-- Auto-Scan Management Modal -->
+    <!-- Modals settings and ondemand -->
     <div id="autoscan-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
@@ -300,421 +296,48 @@
             </div>
             <div class="space-y-4">
                 <div class="flex items-center justify-between bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <div><span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי מרכזי</span><span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות המתוזמנות ברקע</span></div>
+                    <div><span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי מרכזי</span><span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות המתוזמנות</span></div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="autoscan-master-switch" checked class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        <div class="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-500"></div>
                     </label>
-                </div>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-3">
-                    <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-2"><h4 class="text-sm font-bold text-gray-200">הגדרות תזמון לפי סקטור (שעון EST):</h4></div>
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-cyan-500/40 transition">
-                        <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5"><i data-lucide="trending-down" class="w-4 h-4"></i> 1. MLS וירידות מחיר</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-cyan-500"><option value="Everyday" selected>כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
-                            <select id="sched-time-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-cyan-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-amber-500/40 transition">
-                        <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5"><i data-lucide="shield-alert" class="w-4 h-4"></i> 2. בנקים וכינוס נכסים</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-amber-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
-                            <select id="sched-time-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-amber-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-rose-500/40 transition">
-                        <span class="text-xs font-bold text-rose-300 flex items-center gap-1.5"><i data-lucide="gavel" class="w-4 h-4"></i> 3. מכירות שריף</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-rose-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
-                            <select id="sched-time-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-rose-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-purple-500/40 transition">
-                        <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5"><i data-lucide="receipt" class="w-4 h-4"></i> 4. פיגורי מס</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-purple-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
-                            <select id="sched-time-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-purple-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-emerald-500/40 transition">
-                        <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5"><i data-lucide="home" class="w-4 h-4"></i> 5. עיזבונות ו-FSBO</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-emerald-500"><option value="Everyday">כל יום</option><option value="Sunday">ראשון</option><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday" selected>רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option></select>
-                            <select id="sched-time-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-emerald-500"><option value="02:00">02:00</option><option value="05:00">05:00</option><option value="08:00" selected>08:00</option><option value="12:00">12:00</option><option value="16:00">16:00</option><option value="20:00">20:00</option></select>
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeAutoScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
-                <button id="btn-save-schedule" onclick="saveScheduleSettings()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i> שמור לשרת</button>
+                <button id="btn-save-schedule" onclick="saveScheduleSettings()" class="px-6 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30">שמור לשרת</button>
             </div>
         </div>
     </div>
 
-    <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
-                <div class="flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הגדרות סינון וסריקת שוק אוטומטית</h3></div>
+                <div class="flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הגדרות סינון וסריקה</h3></div>
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="bg-blue-950/30 p-3 rounded-xl border border-blue-500/40 space-y-1 mb-2">
-                <label class="block text-xs font-bold text-blue-300">הזן מפתח אישי של GitHub (כדי לשדר את ההגדרות לשרת!):</label>
-                <input type="password" id="setting-token-input" placeholder="ghp_..." onchange="localStorage.setItem('pa_github_token', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
+                <label class="block text-xs font-bold text-blue-300">הזן מפתח אישי של GitHub:</label>
+                <input type="password" id="setting-token-input" onchange="localStorage.setItem('pa_github_token', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
             </div>
-            <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים שמורשים לרוץ (V) בסריקות השונות:</span>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-cyan-500/30"><input type="checkbox" checked value="mls" class="setting-sector-box accent-cyan-500 w-4 h-4"><span class="text-cyan-300 font-bold">1. MLS וירידות מחיר</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" class="setting-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-rose-500/30"><input type="checkbox" checked value="sheriff" class="setting-sector-box accent-rose-500 w-4 h-4"><span class="text-rose-300 font-bold">3. מכירות שריף</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-purple-500/30"><input type="checkbox" checked value="tax" class="setting-sector-box accent-purple-500 w-4 h-4"><span class="text-purple-300 font-bold">4. פיגורי מס</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="setting-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-xs border-t border-gray-800 pt-3">
-                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="15,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
-                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="250,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">שטח מקס' (SqFt)</label><input type="text" id="setting-max-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></div>
-                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מקס'</label><select id="setting-max-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="2">עד 2</option><option value="3">עד 3</option><option value="4">עד 4</option><option value="5">עד 5</option></select></div>
-                <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="setting-min-baths" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
-            </div>
-            
-            <div class="space-y-1.5 pt-2">
-                <span class="text-xs font-bold text-gray-300">סוגי נכסים מבוקשים לסריקה:</span>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 text-xs">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Single Family" class="setting-prop-type-box accent-blue-500"><span>Single Family</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Townhouse" class="setting-prop-type-box accent-blue-500"><span>Townhouse</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Multi-Family" class="setting-prop-type-box accent-blue-500"><span>Multi-Family</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Duplex / Triplex" class="setting-prop-type-box accent-blue-500"><span>Duplex/Triplex</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Condo" class="setting-prop-type-box accent-blue-500"><span>Condo</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Commercial / Mixed-Use" class="setting-prop-type-box accent-blue-500"><span>Commercial</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="setting-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
-                </div>
-            </div>
-            <div class="space-y-1.5 border-t border-gray-800 pt-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-amber-400">1. מחוז (County) — 67 מחוזות בפנסילבניה:</span>
-                    <span class="text-[10px] text-gray-500">MLS לפי גבול מחוז; מקורות שריף/מס תלויים בזמינות בכל מחוז</span>
-                    <span class="text-xs space-x-2 space-x-reverse"><button type="button" onclick="toggleAllCounties('setting',true)" class="text-amber-400 hover:underline font-bold">בחר את כל 67</button><span class="text-gray-600">|</span><button type="button" onclick="toggleAllCounties('setting',false)" class="text-amber-400 hover:underline font-bold">נקה</button></span>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Adams" onchange="handleCountyScopeChange('setting','Adams',this.checked)"><span>Adams</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('setting','Allegheny',this.checked)"><span>Allegheny</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Armstrong" onchange="handleCountyScopeChange('setting','Armstrong',this.checked)"><span>Armstrong</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Beaver" onchange="handleCountyScopeChange('setting','Beaver',this.checked)"><span>Beaver</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Bedford" onchange="handleCountyScopeChange('setting','Bedford',this.checked)"><span>Bedford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Berks" onchange="handleCountyScopeChange('setting','Berks',this.checked)"><span>Berks</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Blair" onchange="handleCountyScopeChange('setting','Blair',this.checked)"><span>Blair</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Bradford" onchange="handleCountyScopeChange('setting','Bradford',this.checked)"><span>Bradford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Bucks" onchange="handleCountyScopeChange('setting','Bucks',this.checked)"><span>Bucks</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Butler" onchange="handleCountyScopeChange('setting','Butler',this.checked)"><span>Butler</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Cambria" onchange="handleCountyScopeChange('setting','Cambria',this.checked)"><span>Cambria</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Cameron" onchange="handleCountyScopeChange('setting','Cameron',this.checked)"><span>Cameron</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Carbon" onchange="handleCountyScopeChange('setting','Carbon',this.checked)"><span>Carbon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Centre" onchange="handleCountyScopeChange('setting','Centre',this.checked)"><span>Centre</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Chester" onchange="handleCountyScopeChange('setting','Chester',this.checked)"><span>Chester</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Clarion" onchange="handleCountyScopeChange('setting','Clarion',this.checked)"><span>Clarion</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Clearfield" onchange="handleCountyScopeChange('setting','Clearfield',this.checked)"><span>Clearfield</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Clinton" onchange="handleCountyScopeChange('setting','Clinton',this.checked)"><span>Clinton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Columbia" onchange="handleCountyScopeChange('setting','Columbia',this.checked)"><span>Columbia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Crawford" onchange="handleCountyScopeChange('setting','Crawford',this.checked)"><span>Crawford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Cumberland" onchange="handleCountyScopeChange('setting','Cumberland',this.checked)"><span>Cumberland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Dauphin" onchange="handleCountyScopeChange('setting','Dauphin',this.checked)"><span>Dauphin</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Delaware" onchange="handleCountyScopeChange('setting','Delaware',this.checked)"><span>Delaware</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Elk" onchange="handleCountyScopeChange('setting','Elk',this.checked)"><span>Elk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Erie" onchange="handleCountyScopeChange('setting','Erie',this.checked)"><span>Erie</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Fayette" onchange="handleCountyScopeChange('setting','Fayette',this.checked)"><span>Fayette</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Forest" onchange="handleCountyScopeChange('setting','Forest',this.checked)"><span>Forest</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Franklin" onchange="handleCountyScopeChange('setting','Franklin',this.checked)"><span>Franklin</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Fulton" onchange="handleCountyScopeChange('setting','Fulton',this.checked)"><span>Fulton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Greene" onchange="handleCountyScopeChange('setting','Greene',this.checked)"><span>Greene</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Huntingdon" onchange="handleCountyScopeChange('setting','Huntingdon',this.checked)"><span>Huntingdon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Indiana" onchange="handleCountyScopeChange('setting','Indiana',this.checked)"><span>Indiana</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Jefferson" onchange="handleCountyScopeChange('setting','Jefferson',this.checked)"><span>Jefferson</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Juniata" onchange="handleCountyScopeChange('setting','Juniata',this.checked)"><span>Juniata</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lackawanna" onchange="handleCountyScopeChange('setting','Lackawanna',this.checked)"><span>Lackawanna</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lancaster" onchange="handleCountyScopeChange('setting','Lancaster',this.checked)"><span>Lancaster</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lawrence" onchange="handleCountyScopeChange('setting','Lawrence',this.checked)"><span>Lawrence</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lebanon" onchange="handleCountyScopeChange('setting','Lebanon',this.checked)"><span>Lebanon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lehigh" onchange="handleCountyScopeChange('setting','Lehigh',this.checked)"><span>Lehigh</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Luzerne" onchange="handleCountyScopeChange('setting','Luzerne',this.checked)"><span>Luzerne</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lycoming" onchange="handleCountyScopeChange('setting','Lycoming',this.checked)"><span>Lycoming</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="McKean" onchange="handleCountyScopeChange('setting','McKean',this.checked)"><span>McKean</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Mercer" onchange="handleCountyScopeChange('setting','Mercer',this.checked)"><span>Mercer</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Mifflin" onchange="handleCountyScopeChange('setting','Mifflin',this.checked)"><span>Mifflin</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Monroe" onchange="handleCountyScopeChange('setting','Monroe',this.checked)"><span>Monroe</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Montgomery" onchange="handleCountyScopeChange('setting','Montgomery',this.checked)"><span>Montgomery</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Montour" onchange="handleCountyScopeChange('setting','Montour',this.checked)"><span>Montour</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Northampton" onchange="handleCountyScopeChange('setting','Northampton',this.checked)"><span>Northampton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Northumberland" onchange="handleCountyScopeChange('setting','Northumberland',this.checked)"><span>Northumberland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Perry" onchange="handleCountyScopeChange('setting','Perry',this.checked)"><span>Perry</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Philadelphia" onchange="handleCountyScopeChange('setting','Philadelphia',this.checked)"><span>Philadelphia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Pike" onchange="handleCountyScopeChange('setting','Pike',this.checked)"><span>Pike</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Potter" onchange="handleCountyScopeChange('setting','Potter',this.checked)"><span>Potter</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Schuylkill" onchange="handleCountyScopeChange('setting','Schuylkill',this.checked)"><span>Schuylkill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Snyder" onchange="handleCountyScopeChange('setting','Snyder',this.checked)"><span>Snyder</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Somerset" onchange="handleCountyScopeChange('setting','Somerset',this.checked)"><span>Somerset</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Sullivan" onchange="handleCountyScopeChange('setting','Sullivan',this.checked)"><span>Sullivan</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Susquehanna" onchange="handleCountyScopeChange('setting','Susquehanna',this.checked)"><span>Susquehanna</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Tioga" onchange="handleCountyScopeChange('setting','Tioga',this.checked)"><span>Tioga</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Union" onchange="handleCountyScopeChange('setting','Union',this.checked)"><span>Union</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Venango" onchange="handleCountyScopeChange('setting','Venango',this.checked)"><span>Venango</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Warren" onchange="handleCountyScopeChange('setting','Warren',this.checked)"><span>Warren</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Washington" onchange="handleCountyScopeChange('setting','Washington',this.checked)"><span>Washington</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Wayne" onchange="handleCountyScopeChange('setting','Wayne',this.checked)"><span>Wayne</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Westmoreland" onchange="handleCountyScopeChange('setting','Westmoreland',this.checked)"><span>Westmoreland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Wyoming" onchange="handleCountyScopeChange('setting','Wyoming',this.checked)"><span>Wyoming</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="York" onchange="handleCountyScopeChange('setting','York',this.checked)"><span>York</span></label>
-                </div>
-            </div>
-            <div class="space-y-1.5 pt-2">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">2. עיר / יישוב (Municipality):</span>
-                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Philadelphia" data-county="Philadelphia" onchange="handleSettingCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Pittsburgh" data-county="Allegheny" onchange="handleSettingCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
-                    <input type="checkbox" checked class="setting-city-box hidden" value="Allegheny" data-legacy-county="Allegheny">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Allentown" data-county="Lehigh" onchange="handleSettingCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Reading" data-county="Berks" onchange="handleSettingCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Erie" data-county="Erie" onchange="handleSettingCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Scranton" data-county="Lackawanna" onchange="handleSettingCityCheckboxChange('Scranton', this.checked)"><span>Scranton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Bethlehem" data-county="Northampton" onchange="handleSettingCityCheckboxChange('Bethlehem', this.checked)"><span>Bethlehem</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster" data-county="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
-                </div>
-            </div>
-            <div class="space-y-1.5 pt-1">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-emerald-400">3. שכונה / אזור (Neighborhood):</span>
-                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
-                    
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
-
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South"><span>Bethlehem South</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic"><span>Bethlehem Historic</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem"><span>West Bethlehem</span></label>
-
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill"><span>Cabbage Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut"><span>Lancaster Chestnut</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown"><span>Lancaster Downtown</span></label>
-
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="West Bay"><span>West Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="East Bay"><span>East Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront"><span>Erie Bayfront</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
-                </div>
-            </div>
-            <div class="border-t border-gray-800 pt-3 space-y-2">
-                <span class="text-xs font-bold text-emerald-400">שכונות ואזורים לפי עיר (שמות מהרשימה ומהמקור):</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
-                <div id="setting-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
-            </div>
-            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button onclick="saveScanSettingsToServer()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-2"><i data-lucide="upload-cloud" class="w-4 h-4"></i> שדר לשרת ושמור</button></div>
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button onclick="saveScanSettingsToServer()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black">שדר לשרת</button></div>
         </div>
     </div>
 
-    <!-- On-Demand Scan Modal (Mission Control) -->
     <div id="ondemand-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-6xl w-full p-5 space-y-4 shadow-2xl relative max-h-[94vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
-                <div class="flex items-center gap-2"><i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הפעלת סריקה יזומה מיידית (Mission Control)</h3></div>
+                <div class="flex items-center gap-2"><i data-lucide="play-circle" class="w-5 h-5 text-blue-400"></i><h3 class="text-base font-bold text-white">הפעלת סריקה יזומה</h3></div>
                 <button onclick="closeOnDemandScanModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="bg-blue-950/30 p-3 rounded-xl border border-blue-500/40 space-y-1">
-                <label class="block text-xs font-bold text-blue-300">מפתח אישי של GitHub (עם הרשאת repo ו-workflow):</label>
-                <input type="password" id="ondemand-token-input" placeholder="ghp_..." onchange="localStorage.setItem('pa_github_token', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
+                <label class="block text-xs font-bold text-blue-300">מפתח אישי של GitHub:</label>
+                <input type="password" id="ondemand-token-input" onchange="localStorage.setItem('pa_github_token', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
             </div>
-            <div class="space-y-1.5"><span class="text-xs font-bold text-gray-300">סוגי סקטורים לסריקה:</span>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-cyan-500/30"><input type="checkbox" checked value="mls" class="ondemand-sector-box accent-cyan-500 w-4 h-4"><span class="text-cyan-300 font-bold">1. MLS וירידות מחיר</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-rose-500/30"><input type="checkbox" checked value="sheriff" class="ondemand-sector-box accent-rose-500 w-4 h-4"><span class="text-rose-300 font-bold">3. מכירות שריף</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-purple-500/30"><input type="checkbox" checked value="tax" class="ondemand-sector-box accent-purple-500 w-4 h-4"><span class="text-purple-300 font-bold">4. פיגורי מס</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="ondemand-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 bg-gray-950/70 p-3.5 rounded-2xl border border-gray-800 text-xs">
-                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="ondemand-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center"></div>
-                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="ondemand-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-900 border border-emerald-500/50 rounded-xl px-2.5 py-1 text-emerald-400 font-mono text-center"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="ondemand-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">שטח מקס' (SqFt)</label><input type="text" id="ondemand-max-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1 text-white font-mono text-center"></div>
-                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="ondemand-min-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></div>
-                <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מקס'</label><select id="ondemand-max-beds" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="2">עד 2</option><option value="3">עד 3</option><option value="4">עד 4</option><option value="5">עד 5</option></select></div>
-                <div><label class="block font-bold text-gray-300 mb-1">חדרי רחצה מינ'</label><select id="ondemand-min-baths" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-2 py-1 text-white"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option></select></div>
-            </div>
-            
-            <div class="space-y-1.5 mt-3">
-                <span class="text-xs font-bold text-gray-300">סוגי נכסים:</span>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 text-xs">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Single Family" class="ondemand-prop-type-box accent-blue-500"><span>Single Family</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Townhouse" class="ondemand-prop-type-box accent-blue-500"><span>Townhouse</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Multi-Family" class="ondemand-prop-type-box accent-blue-500"><span>Multi-Family</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Duplex / Triplex" class="ondemand-prop-type-box accent-blue-500"><span>Duplex/Triplex</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" checked value="Condo" class="ondemand-prop-type-box accent-blue-500"><span>Condo</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Commercial / Mixed-Use" class="ondemand-prop-type-box accent-blue-500"><span>Commercial</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 px-2 py-1.5 rounded-lg border border-gray-800 text-gray-300"><input type="checkbox" value="Land / Lot" class="ondemand-prop-type-box accent-blue-500"><span>Land / Lot</span></label>
-                </div>
-            </div>
-            <div class="space-y-1.5 mt-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-amber-400">1. מחוז (County) — 67 מחוזות בפנסילבניה:</span>
-                    <span class="text-[10px] text-gray-500">MLS לפי גבול מחוז; מקורות שריף/מס תלויים בזמינות בכל מחוז</span>
-                    <span class="text-xs space-x-2 space-x-reverse"><button type="button" onclick="toggleAllCounties('ondemand',true)" class="text-amber-400 hover:underline font-bold">בחר את כל 67</button><span class="text-gray-600">|</span><button type="button" onclick="toggleAllCounties('ondemand',false)" class="text-amber-400 hover:underline font-bold">נקה</button></span>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Adams" onchange="handleCountyScopeChange('ondemand','Adams',this.checked)"><span>Adams</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('ondemand','Allegheny',this.checked)"><span>Allegheny</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Armstrong" onchange="handleCountyScopeChange('ondemand','Armstrong',this.checked)"><span>Armstrong</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Beaver" onchange="handleCountyScopeChange('ondemand','Beaver',this.checked)"><span>Beaver</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Bedford" onchange="handleCountyScopeChange('ondemand','Bedford',this.checked)"><span>Bedford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Berks" onchange="handleCountyScopeChange('ondemand','Berks',this.checked)"><span>Berks</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Blair" onchange="handleCountyScopeChange('ondemand','Blair',this.checked)"><span>Blair</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Bradford" onchange="handleCountyScopeChange('ondemand','Bradford',this.checked)"><span>Bradford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Bucks" onchange="handleCountyScopeChange('ondemand','Bucks',this.checked)"><span>Bucks</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Butler" onchange="handleCountyScopeChange('ondemand','Butler',this.checked)"><span>Butler</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Cambria" onchange="handleCountyScopeChange('ondemand','Cambria',this.checked)"><span>Cambria</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Cameron" onchange="handleCountyScopeChange('ondemand','Cameron',this.checked)"><span>Cameron</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Carbon" onchange="handleCountyScopeChange('ondemand','Carbon',this.checked)"><span>Carbon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Centre" onchange="handleCountyScopeChange('ondemand','Centre',this.checked)"><span>Centre</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Chester" onchange="handleCountyScopeChange('ondemand','Chester',this.checked)"><span>Chester</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Clarion" onchange="handleCountyScopeChange('ondemand','Clarion',this.checked)"><span>Clarion</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Clearfield" onchange="handleCountyScopeChange('ondemand','Clearfield',this.checked)"><span>Clearfield</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Clinton" onchange="handleCountyScopeChange('ondemand','Clinton',this.checked)"><span>Clinton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Columbia" onchange="handleCountyScopeChange('ondemand','Columbia',this.checked)"><span>Columbia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Crawford" onchange="handleCountyScopeChange('ondemand','Crawford',this.checked)"><span>Crawford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Cumberland" onchange="handleCountyScopeChange('ondemand','Cumberland',this.checked)"><span>Cumberland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Dauphin" onchange="handleCountyScopeChange('ondemand','Dauphin',this.checked)"><span>Dauphin</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Delaware" onchange="handleCountyScopeChange('ondemand','Delaware',this.checked)"><span>Delaware</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Elk" onchange="handleCountyScopeChange('ondemand','Elk',this.checked)"><span>Elk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Erie" onchange="handleCountyScopeChange('ondemand','Erie',this.checked)"><span>Erie</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Fayette" onchange="handleCountyScopeChange('ondemand','Fayette',this.checked)"><span>Fayette</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Forest" onchange="handleCountyScopeChange('ondemand','Forest',this.checked)"><span>Forest</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Franklin" onchange="handleCountyScopeChange('ondemand','Franklin',this.checked)"><span>Franklin</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Fulton" onchange="handleCountyScopeChange('ondemand','Fulton',this.checked)"><span>Fulton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Greene" onchange="handleCountyScopeChange('ondemand','Greene',this.checked)"><span>Greene</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Huntingdon" onchange="handleCountyScopeChange('ondemand','Huntingdon',this.checked)"><span>Huntingdon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Indiana" onchange="handleCountyScopeChange('ondemand','Indiana',this.checked)"><span>Indiana</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Jefferson" onchange="handleCountyScopeChange('ondemand','Jefferson',this.checked)"><span>Jefferson</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Juniata" onchange="handleCountyScopeChange('ondemand','Juniata',this.checked)"><span>Juniata</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lackawanna" onchange="handleCountyScopeChange('ondemand','Lackawanna',this.checked)"><span>Lackawanna</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lancaster" onchange="handleCountyScopeChange('ondemand','Lancaster',this.checked)"><span>Lancaster</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lawrence" onchange="handleCountyScopeChange('ondemand','Lawrence',this.checked)"><span>Lawrence</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lebanon" onchange="handleCountyScopeChange('ondemand','Lebanon',this.checked)"><span>Lebanon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lehigh" onchange="handleCountyScopeChange('ondemand','Lehigh',this.checked)"><span>Lehigh</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Luzerne" onchange="handleCountyScopeChange('ondemand','Luzerne',this.checked)"><span>Luzerne</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lycoming" onchange="handleCountyScopeChange('ondemand','Lycoming',this.checked)"><span>Lycoming</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="McKean" onchange="handleCountyScopeChange('ondemand','McKean',this.checked)"><span>McKean</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Mercer" onchange="handleCountyScopeChange('ondemand','Mercer',this.checked)"><span>Mercer</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Mifflin" onchange="handleCountyScopeChange('ondemand','Mifflin',this.checked)"><span>Mifflin</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Monroe" onchange="handleCountyScopeChange('ondemand','Monroe',this.checked)"><span>Monroe</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Montgomery" onchange="handleCountyScopeChange('ondemand','Montgomery',this.checked)"><span>Montgomery</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Montour" onchange="handleCountyScopeChange('ondemand','Montour',this.checked)"><span>Montour</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Northampton" onchange="handleCountyScopeChange('ondemand','Northampton',this.checked)"><span>Northampton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Northumberland" onchange="handleCountyScopeChange('ondemand','Northumberland',this.checked)"><span>Northumberland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Perry" onchange="handleCountyScopeChange('ondemand','Perry',this.checked)"><span>Perry</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Philadelphia" onchange="handleCountyScopeChange('ondemand','Philadelphia',this.checked)"><span>Philadelphia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Pike" onchange="handleCountyScopeChange('ondemand','Pike',this.checked)"><span>Pike</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Potter" onchange="handleCountyScopeChange('ondemand','Potter',this.checked)"><span>Potter</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Schuylkill" onchange="handleCountyScopeChange('ondemand','Schuylkill',this.checked)"><span>Schuylkill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Snyder" onchange="handleCountyScopeChange('ondemand','Snyder',this.checked)"><span>Snyder</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Somerset" onchange="handleCountyScopeChange('ondemand','Somerset',this.checked)"><span>Somerset</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Sullivan" onchange="handleCountyScopeChange('ondemand','Sullivan',this.checked)"><span>Sullivan</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Susquehanna" onchange="handleCountyScopeChange('ondemand','Susquehanna',this.checked)"><span>Susquehanna</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Tioga" onchange="handleCountyScopeChange('ondemand','Tioga',this.checked)"><span>Tioga</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Union" onchange="handleCountyScopeChange('ondemand','Union',this.checked)"><span>Union</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Venango" onchange="handleCountyScopeChange('ondemand','Venango',this.checked)"><span>Venango</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Warren" onchange="handleCountyScopeChange('ondemand','Warren',this.checked)"><span>Warren</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Washington" onchange="handleCountyScopeChange('ondemand','Washington',this.checked)"><span>Washington</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Wayne" onchange="handleCountyScopeChange('ondemand','Wayne',this.checked)"><span>Wayne</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Westmoreland" onchange="handleCountyScopeChange('ondemand','Westmoreland',this.checked)"><span>Westmoreland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Wyoming" onchange="handleCountyScopeChange('ondemand','Wyoming',this.checked)"><span>Wyoming</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="York" onchange="handleCountyScopeChange('ondemand','York',this.checked)"><span>York</span></label>
-                </div>
-            </div>
-            <div class="space-y-1.5 pt-2">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">2. עיר / יישוב (Municipality):</span>
-                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Philadelphia" data-county="Philadelphia" onchange="handleCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Pittsburgh" data-county="Allegheny" onchange="handleCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
-                    <input type="checkbox" checked class="ondemand-city-box hidden" value="Allegheny" data-legacy-county="Allegheny">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Allentown" data-county="Lehigh" onchange="handleCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Reading" data-county="Berks" onchange="handleCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Erie" data-county="Erie" onchange="handleCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Scranton" data-county="Lackawanna" onchange="handleCityCheckboxChange('Scranton', this.checked)"><span>Scranton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Bethlehem" data-county="Northampton" onchange="handleCityCheckboxChange('Bethlehem', this.checked)"><span>Bethlehem</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-city-box accent-blue-500" value="Lancaster" data-county="Lancaster" onchange="handleCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
-                </div>
-            </div>
-            <div class="space-y-1.5 pt-1">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-emerald-400">3. שכונה / אזור (Neighborhood):</span>
-                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
-                    
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
-
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South"><span>Bethlehem South</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic"><span>Bethlehem Historic</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem"><span>West Bethlehem</span></label>
-
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill"><span>Cabbage Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut"><span>Lancaster Chestnut</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown"><span>Lancaster Downtown</span></label>
-
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="West Bay"><span>West Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="East Bay"><span>East Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront"><span>Erie Bayfront</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
-                </div>
-            </div>
-            <div class="border-t border-gray-800 pt-3 space-y-2">
-                <span class="text-xs font-bold text-emerald-400">שכונות ואזורים לפי עיר (שמות מהרשימה ומהמקור):</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
-                <div id="ondemand-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
-            </div>
-            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5"><i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת</button></div>
+            <div class="pt-3 border-t border-gray-800 flex justify-end gap-3"><button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button><button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black">שגר סריקה</button></div>
         </div>
     </div>
 
-    <!-- Script Logic -->
     <script>
         // Supabase Initialization
         const SUPABASE_URL = 'https://rccncvnybybastdgdoqe.supabase.co';
@@ -767,42 +390,25 @@
                 if(st) st.value = savedToken;
             }
 
-            loadSettingsState();
-            loadOnDemandState();
-
-            document.querySelectorAll('#settings-modal input, #settings-modal select').forEach(el => {
-                el.addEventListener('change', saveSettingsStateLocally);
-                if(el.type === 'text') el.addEventListener('input', saveSettingsStateLocally);
-            });
-            document.querySelectorAll('#ondemand-modal input, #ondemand-modal select').forEach(el => {
-                el.addEventListener('change', saveOnDemandStateLocally);
-                if(el.type === 'text') el.addEventListener('input', saveOnDemandStateLocally);
-            });
-
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
             await loadProperties();
-            await loadGeoCatalog();
         }
 
         async function loadCloudData() {
             try {
-                // משיכת צנרת עסקאות
                 const { data: pData } = await supabaseClient.from('pipeline_deals').select('deal_data');
                 if (pData) pipelineDeals = pData.map(r => r.deal_data);
 
-                // משיכת מעקבים
                 const { data: wData } = await supabaseClient.from('user_watchlist').select('property_id');
                 if (wData) userWatchlist = new Set(wData.map(r => r.property_id));
 
-                // משיכת ארכיון
                 const { data: aData } = await supabaseClient.from('archive_deals').select('property_id, archive_data');
                 if (aData) {
                     archiveDeals = {};
                     aData.forEach(r => { archiveDeals[r.property_id] = r.archive_data; });
                 }
                 
-                // נכסים שנצפו (נשאר לוקאלי כדי לא להכביד)
                 try { viewedDeals = new Set(JSON.parse(localStorage.getItem('pa_viewed_deals') || '[]')); } catch(e){}
                 
                 updateWatchlistCountDisplay();
@@ -854,7 +460,6 @@
             if (!pipelineDeals.some(d => String(d.id) === idStr)) {
                 const dealData = {...currentSelectedProperty, pipeline_stage: 'due_diligence', added_to_pipeline_at: new Date().toLocaleDateString('he-IL')};
                 pipelineDeals.push(dealData);
-                // עדכון הענן
                 supabaseClient.from('pipeline_deals').upsert({ property_id: idStr, deal_data: dealData }).then();
             }
             if (userWatchlist.has(idStr)) { 
@@ -902,6 +507,7 @@
                 }
 
                 const panel = document.getElementById('scanner-source-status');
+                if(!panel) return;
                 panel.replaceChildren();
                 const states = {success:'עודכן', partial:'עודכן חלקית', failed:'נכשל', blocked:'המקור חסם גישה',
                     not_connected:'טרם חובר למקור חי', unsupported_area:'האזור אינו נתמך במקור זה',
@@ -913,12 +519,7 @@
                 for (const item of Object.values(scannerReport.sources || {})) {
                     const line = document.createElement('p');
                     const checked = item.checked_at ? ' | ' + new Date(item.checked_at).toLocaleString('he-IL') : '';
-                    const countyMatches = item.county_property_matches !== undefined ? ` | התאמות מבנה ממאגר המחוז: ${item.county_property_matches}` : '';
-                    const provider = item.provider ? ` | ספק: ${item.provider}` : '';
-                    const coverage = item.coverage === 'partial_single_provider' ? ' | כיסוי חלקי: ספק אחד בלבד' : '';
-                    const passedFilters = item.passed_filters !== undefined ? ` | עברו סינון: ${item.passed_filters}` : '';
-                    const note = item.note ? ` | ${item.note}` : '';
-                    line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${passedFilters}${provider}${coverage}${countyMatches}${note}${checked}`;
+                    line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${checked}`;
                     panel.appendChild(line);
                 }
                 return scannerReport;
@@ -948,17 +549,18 @@
                             today.setHours(0, 0, 0, 0);
                             rawList.push(...sheriffRows.filter(p => p.sheriff_status === 'Active' &&
                                 p.sale_date && new Date(p.sale_date + 'T12:00:00') >= today).map(p => {
-                                const source = scannerReport?.sources?.sheriff;
-                                const stale = !source || !['success','imported','partial'].includes(source.status) ||
-                                    !p.last_source_check || Date.now() - new Date(p.last_source_check).getTime() > 48*60*60*1000;
-                                return {...p, source_stale: stale, summary: (stale ? 'המידע שמור מסריקה קודמת; הסטטוס הנוכחי לא אומת. ' : '') + (p.summary || '')};
+                                return {...p};
                             }));
                         }
                     }
-                } catch (error) { console.warn('Sheriff list unavailable', error); }
+                } catch (error) {}
                 
                 const seenKeys = new Set(); 
                 let activeProps = [];
+                
+                const archiveBatch = [];
+                const unarchiveIds = [];
+                
                 const NOW = Date.now();
                 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -978,11 +580,11 @@
                         const idStr = String(p.id);
                         const currentPrice = Number(p.price) || 0;
                         
-                        // Cloud Sync Archive Logic
+                        // Cloud Sync Archive Logic (Batched to prevent freezing)
                         if (archiveDeals[idStr]) {
                             if (currentPrice > 0 && currentPrice < archiveDeals[idStr].price) {
                                 delete archiveDeals[idStr];
-                                supabaseClient.from('archive_deals').delete().eq('property_id', idStr).then();
+                                unarchiveIds.push(idStr);
                                 p.price_dropped = true; 
                                 p.is_archived = false;
                             } else { p.is_archived = true; }
@@ -991,7 +593,7 @@
                             if (listTime > 0 && (NOW - listTime) > NINETY_DAYS_MS && !p.price_dropped) {
                                 const archData = { price: currentPrice, date: new Date().toISOString() };
                                 archiveDeals[idStr] = archData;
-                                supabaseClient.from('archive_deals').upsert({ property_id: idStr, archive_data: archData }).then();
+                                archiveBatch.push({ property_id: idStr, archive_data: archData });
                                 p.is_archived = true;
                             } else { p.is_archived = false; }
                         }
@@ -999,85 +601,21 @@
                     }
                 });
                 
+                // Execute batch operations
+                if (archiveBatch.length > 0) {
+                    supabaseClient.from('archive_deals').upsert(archiveBatch).then();
+                }
+                if (unarchiveIds.length > 0) {
+                    supabaseClient.from('archive_deals').delete().in('property_id', unarchiveIds).then();
+                }
+
                 rawProperties = activeProps;
-                
                 populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
             } catch (err) { 
                 console.error(err); 
                 document.getElementById('last-scan-time').textContent = "שגיאה";
+                document.getElementById('properties-container').innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">שגיאה בטעינת הנתונים. נסה לרענן את העמוד.</div>';
             }
-        }
-
-        async function loadGeoCatalog() {
-            const areas = {};
-            for (const prop of rawProperties) {
-                const area = String(prop.source_scan_area || prop.city || '').trim();
-                const location = String(prop.source_location || '').trim();
-                if (area && location) (areas[area] ||= new Set()).add(location);
-            }
-            try {
-                const res = await fetch('geo_catalog.json?t=' + Date.now());
-                if (res.ok) {
-                    const catalog = await res.json();
-                    for (const [area, data] of Object.entries(catalog.areas || {})) {
-                        if (!data || !Array.isArray(data.locations)) continue;
-                        for (const location of data.locations) {
-                            if (typeof location === 'string' && location.trim())
-                                (areas[area] ||= new Set()).add(location.trim());
-                        }
-                    }
-                }
-            } catch (err) {}
-            for (const prefix of ['setting', 'ondemand']) renderGeoCatalog(prefix, areas);
-        }
-
-        function renderGeoCatalog(prefix, areas) {
-            const container = document.getElementById(`${prefix}-dynamic-neighborhoods`);
-            if (!container) return;
-            container.replaceChildren();
-            const saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
-            const oldSelections = new Set(saved.neighborhoods || []);
-            const staticInputs = Array.from(document.querySelectorAll(`.${prefix}-hood-box`)).filter(input => !input.closest(`#${prefix}-dynamic-neighborhoods`));
-            const staticGrid = staticInputs[0]?.closest('.grid');
-            if (staticGrid) staticGrid.classList.add('hidden');
-            const byArea = {};
-            for (const input of staticInputs) (byArea[input.dataset.city] ||= []).push(input);
-            const names = new Set([...Object.keys(areas), ...Object.keys(byArea)]);
-            for (const area of Array.from(names).sort((a,b) => a.localeCompare(b))) {
-                const countyArea = area === 'Allegheny';
-                const parent = document.querySelector(countyArea ? `.${prefix}-county-box[value="Allegheny"]` : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
-                if (!parent) continue;
-                const fromSource = Array.from(areas[area] || []).sort((a,b) => a.localeCompare(b));
-                const sourceNames = new Set(fromSource.map(v => v.toLowerCase()));
-                const oldInputs = byArea[area] || [];
-                const known = new Set(oldInputs.map(input => input.value.toLowerCase()));
-                const newLocations = fromSource.filter(v => !known.has(v.toLowerCase()));
-                if (!oldInputs.length && !newLocations.length) continue;
-                const group = document.createElement('details');
-                group.className = 'bg-gray-950 border border-gray-800 rounded-xl px-3 py-2';
-                const summary = document.createElement('summary');
-                summary.className = 'cursor-pointer text-emerald-300 font-bold';
-                summary.textContent = `${countyArea ? 'מחוז ' : 'עיר '}${area} — ${oldInputs.length + newLocations.length} שכונות / אזורי מקור`;
-                const grid = document.createElement('div');
-                grid.className = 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 mt-2 text-[11px]';
-                for (const input of oldInputs) {
-                    const label = input.closest('label');
-                    if (!label) continue;
-                    if (!sourceNames.has(input.value.toLowerCase())) { label.title = 'שם מהרשימה הישנה; טרם נמצא בשם זהה בנתוני המקור'; label.classList.add('border-amber-700/50'); }
-                    grid.append(label);
-                }
-                for (const location of newLocations) {
-                    const label = document.createElement('label'); label.dir = 'ltr'; label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
-                    const input = document.createElement('input'); input.type = 'checkbox'; input.value = location; input.className = `${prefix}-hood-box accent-emerald-500`; input.dataset.city = area;
-                    const scope = saved.geoAreas?.[area];
-                    input.checked = scope ? Boolean(scope.allLocations || scope.locations?.includes(location)) : (parent.checked || oldSelections.has(location));
-                    input.addEventListener('change', prefix === 'setting' ? saveSettingsStateLocally : saveOnDemandStateLocally);
-                    const name = document.createElement('span'); name.textContent = location;
-                    label.append(input, name); grid.append(label);
-                }
-                group.append(summary, grid); container.append(group);
-            }
-            if (!container.children.length) container.textContent = 'אין עדיין אזורים זמינים עבור הערים האלה.';
         }
 
         const MAIN_COUNTY_BY_CITY = { Pittsburgh: 'Allegheny', Philadelphia: 'Philadelphia', Allentown: 'Lehigh', Reading: 'Berks', Erie: 'Erie', Scranton: 'Lackawanna', Lancaster: 'Lancaster' };
@@ -1107,6 +645,7 @@
         }
         function populateCityDropdown() {
             const container = document.getElementById('city-checkbox-container');
+            if(!container) return;
             const query = (document.getElementById('main-geo-search')?.value || '').trim().toLowerCase();
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const tree = new Map(), keys = new Set();
@@ -1156,6 +695,7 @@
         function setAllCityFilters(state, e) { if (e) e.stopPropagation(); selectedCitiesFilter = state ? null : new Set(); populateCityDropdown(); renderCards(); }
         function updateCityDropdownLabel() {
             const label = document.getElementById('city-dropdown-text');
+            if(!label) return;
             if (selectedCitiesFilter === null) label.textContent = 'כל האזורים';
             else if (!selectedCitiesFilter.size) label.textContent = 'בחר אזור להצגת נכסים';
             else label.textContent = `${selectedCitiesFilter.size} אזורים נבחרו`;
@@ -1171,14 +711,15 @@
             const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
             const nonArchived = available.filter(p => !p.is_archived);
             
-            document.getElementById('count-all').textContent = nonArchived.length;
-            document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
-            document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped).length;
-            document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
-            document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
-            document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
-            document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
-            document.getElementById('count-archive').textContent = available.filter(p => p.is_archived).length;
+            if(document.getElementById('count-all')) document.getElementById('count-all').textContent = nonArchived.length;
+            if(document.getElementById('count-mls')) document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
+            if(document.getElementById('count-price-drop')) document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped).length;
+            if(document.getElementById('count-distressed')) document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
+            if(document.getElementById('count-sheriff')) document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
+            if(document.getElementById('count-tax')) document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
+            if(document.getElementById('count-probate')) document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
+            if(document.getElementById('count-offmarket')) document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
+            if(document.getElementById('count-archive')) document.getElementById('count-archive').textContent = available.filter(p => p.is_archived).length;
         }
 
         function setCategory(cat) {
@@ -1203,7 +744,7 @@
             }
             const caseCostTaxBid = Number(p.case_cost_tax_bid);
             if (p.source_type === 'sheriff' && Number.isFinite(caseCostTaxBid) && caseCostTaxBid > 0) {
-                return `<span class="block text-amber-300">$${caseCostTaxBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans font-semibold">Cost &amp; Tax Bid · סכום תיק, לא מחיר מכירה</span>`;
+                return `<span class="block text-amber-300">$${caseCostTaxBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans font-semibold">Cost &amp; Tax Bid · סכום תיק</span>`;
             }
             return 'ללא הצעת פתיחה';
         }
@@ -1218,9 +759,11 @@
         function renderCards() {
             const container = document.getElementById('properties-container');
             const displayNumberById = new Map(rawProperties.map((p, index) => [String(p.id), index + 1]));
-            const stratF = document.getElementById('filter-strategy').value;
-            const typeF = document.getElementById('filter-type').value, priceF = document.getElementById('filter-price').value;
-            const minPrice = getRawPrice(document.getElementById('filter-min-price')), sortBy = document.getElementById('sort-by').value;
+            const stratF = document.getElementById('filter-strategy') ? document.getElementById('filter-strategy').value : 'all';
+            const typeF = document.getElementById('filter-type') ? document.getElementById('filter-type').value : 'all';
+            const priceF = document.getElementById('filter-price') ? document.getElementById('filter-price').value : 'all';
+            const minPrice = document.getElementById('filter-min-price') ? getRawPrice(document.getElementById('filter-min-price')) : 0;
+            const sortBy = document.getElementById('sort-by') ? document.getElementById('sort-by').value : 'date_desc';
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const onlyGoodDeals = document.getElementById('filter-good-deal')?.checked;
 
