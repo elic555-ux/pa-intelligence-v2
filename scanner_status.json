@@ -1,8 +1,8 @@
 {
   "version": "3.6.6-live-sheriff-pdf-20261002",
   "last_event": {
-    "scan_id": "SCAN-20261002-124543",
-    "started_at": "2026-10-02T12:45:43-04:00",
+    "scan_id": "SCAN-20261002-134629",
+    "started_at": "2026-10-02T13:46:29-04:00",
     "trigger": "manual",
     "orchestrator_version": "3.6.6-live-sheriff-pdf-20261002",
     "status": "partial",
@@ -15,18 +15,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2750,
-    "after_filters": 2013,
-    "new": 1087,
-    "updated": 777,
-    "unchanged": 149,
+    "source_results": 2684,
+    "after_filters": 1944,
+    "new": 8,
+    "updated": 221,
+    "unchanged": 1715,
     "off_market_candidates": 0,
     "errors": [
-      "tax Lehigh source unavailable: Official page does not publish a recognizable current Judicial Sale date",
       "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
     "code_sha256": "c90caaa59a81",
-    "github_sha": "fcad987d175b46e1d0fb3b6834b43be78f9eb2cc",
+    "github_sha": "dfa621c24f9d006ed7c190198f4b3f78c315cbc1",
     "request_id": null,
     "counties": [
       "Allegheny",
@@ -60,9 +59,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
-        "rows": 2128,
+        "rows": 2129,
         "areas": [
           {
             "area": "Allegheny County",
@@ -82,7 +81,7 @@
           {
             "area": "Erie County",
             "status": "success",
-            "rows": 347,
+            "rows": 348,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -123,11 +122,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 1399
+        "passed_filters": 1397
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -290,9 +289,9 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
-        "rows": 450,
+        "rows": 374,
         "counties": {
           "Philadelphia": {
             "status": "not_connected",
@@ -320,27 +319,26 @@
             "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
           },
           "Allegheny": {
-            "status": "partial",
-            "rows": 281,
-            "published_date": "2026-09-24",
+            "status": "success",
+            "rows": 204,
+            "published_date": "2026-10-01",
             "sale_date": "2026-10-05",
-            "parsed_blocks": 376,
+            "parsed_blocks": 377,
             "skipped_active_addresses": 0,
             "unrecognized_blocks": 0,
-            "mode": "imported",
-            "fallback_reason": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf: קובץ המקור אינו PDF תקין או גדול מ-20MB",
-            "county_property_matches": 262,
+            "mode": "live",
+            "county_property_matches": 190,
             "county_property_pending": 0,
-            "county_property_lookup_failed": 14,
-            "county_property_no_data": 3,
-            "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
+            "county_property_lookup_failed": 11,
+            "county_property_no_data": 2,
+            "source_url": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf"
           },
           "Lehigh": {
             "status": "success",
-            "rows": 139,
+            "rows": 140,
             "mode": "live",
-            "parsed_rows": 139,
-            "active_rows": 139,
+            "parsed_rows": 140,
+            "active_rows": 140,
             "expired_or_out_of_window_rows": 0,
             "skipped_rows": 0,
             "coverage": "official_portal_upcoming_notices",
@@ -361,13 +359,13 @@
           }
         },
         "investment_filters": "unavailable",
-        "passed_filters": 445
+        "passed_filters": 369
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
-        "rows": 164,
+        "rows": 173,
         "counties": {
           "Allegheny": {
             "status": "not_connected",
@@ -403,9 +401,13 @@
             "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
           },
           "Lehigh": {
-            "status": "failed",
-            "rows": 0,
-            "error": "Official page does not publish a recognizable current Judicial Sale date"
+            "status": "success",
+            "rows": 9,
+            "sale_date": "2026-10-21",
+            "list_label": "Judicial Sale List as of 9-18-26",
+            "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
+            "ocr": true,
+            "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
           },
           "Northampton": {
             "status": "not_connected",
@@ -459,11 +461,11 @@
           }
         ],
         "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
-        "passed_filters": 163
+        "passed_filters": 172
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "not_connected",
         "rows": 0,
         "scope": "selected_counties_only",
@@ -502,18 +504,18 @@
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-02T12:45:54-04:00",
+        "checked_at": "2026-10-02T13:46:45-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
-    "sheriff_active_lots": 450,
+    "sheriff_active_lots": 374,
     "sheriff_sources_by_county": {
       "Philadelphia": {
         "status": "not_connected",
@@ -541,27 +543,26 @@
         "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
       },
       "Allegheny": {
-        "status": "partial",
-        "rows": 281,
-        "published_date": "2026-09-24",
+        "status": "success",
+        "rows": 204,
+        "published_date": "2026-10-01",
         "sale_date": "2026-10-05",
-        "parsed_blocks": 376,
+        "parsed_blocks": 377,
         "skipped_active_addresses": 0,
         "unrecognized_blocks": 0,
-        "mode": "imported",
-        "fallback_reason": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf: קובץ המקור אינו PDF תקין או גדול מ-20MB",
-        "county_property_matches": 262,
+        "mode": "live",
+        "county_property_matches": 190,
         "county_property_pending": 0,
-        "county_property_lookup_failed": 14,
-        "county_property_no_data": 3,
-        "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
+        "county_property_lookup_failed": 11,
+        "county_property_no_data": 2,
+        "source_url": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf"
       },
       "Lehigh": {
         "status": "success",
-        "rows": 139,
+        "rows": 140,
         "mode": "live",
-        "parsed_rows": 139,
-        "active_rows": 139,
+        "parsed_rows": 140,
+        "active_rows": 140,
         "expired_or_out_of_window_rows": 0,
         "skipped_rows": 0,
         "coverage": "official_portal_upcoming_notices",
@@ -587,21 +588,22 @@
         "rows": 350,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Pittsburgh": 189,
+          "Pittsburgh": 190,
           "Brackenridge": 2,
           "West Mifflin": 12,
           "Monroeville": 14,
           "Mc Kees Rocks": 9,
           "Cheswick": 3,
           "Castle Shannon": 1,
-          "Pitcairn": 2,
+          "Pitcairn": 1,
+          "Baden": 1,
           "Homestead": 11,
           "New Kensington": 3,
           "Mckeesport": 10,
           "Turtle Creek": 3,
           "Verona": 5,
           "Natrona Heights": 4,
-          "Carnegie": 7,
+          "Carnegie": 6,
           "Gibsonia": 7,
           "Bridgeville": 2,
           "Coraopolis": 8,
@@ -644,9 +646,11 @@
           "Penn Hills": 22,
           "Harmar": 2,
           "Castle Shannon": 3,
-          "Pitcairn": 2,
+          "Pitcairn": 1,
+          "Shadyside": 2,
+          "South Side": 6,
+          "Marshall": 1,
           "Forest Hills Boro": 4,
-          "Lincoln Place": 4,
           "Whitaker": 2,
           "Banksville/Westwood": 3,
           "Baldwin Boro": 7,
@@ -702,7 +706,6 @@
           "Shaler": 2,
           "McCandless": 1,
           "ALLEGHENY": 2,
-          "South Side": 5,
           "East Allegheny": 2,
           "Clairton": 4,
           "Brentwood": 9,
@@ -710,13 +713,13 @@
           "Stowe Twp": 1,
           "N Versailles": 5,
           "Greenfield": 3,
-          "Shadyside": 1,
           "West End": 1,
           "Etna": 1,
           "Homewood-Brushton": 2,
           "Hazelwood": 5,
           "Braddock Hills": 1,
           "Reserve": 1,
+          "Lincoln Place": 3,
           "East Liberty": 1,
           "Liberty Boro": 1,
           "Point Breeze": 2,
@@ -724,7 +727,7 @@
           "Sharpsburg": 1,
           "Knoxville": 1,
           "East Deer": 1,
-          "Carnegie": 4,
+          "Carnegie": 3,
           "Squirrel Hill": 1,
           "East McKeesport": 1,
           "Port Vue": 2,
@@ -882,12 +885,12 @@
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 347,
+        "rows": 348,
         "city_mismatch_count": 0,
         "actual_cities": {
+          "Erie": 225,
           "Waterford": 6,
           "North East": 25,
-          "Erie": 224,
           "Albion": 9,
           "Lake City": 10,
           "Girard": 5,
@@ -914,6 +917,7 @@
           "Saegertown": 1
         },
         "source_locations": {
+          "Summit Heights": 3,
           "Rainbow Valley": 1,
           "North East": 24,
           "Erie": 204,
@@ -944,7 +948,6 @@
           "GreenGateVillage": 1,
           "Union City Borough": 1,
           "Brandy Run": 2,
-          "Summit Heights": 2,
           "Rolling Meadows": 1,
           "Asbury Woods Estate": 3,
           "Cranesville": 2,
@@ -964,7 +967,7 @@
         "city_mismatch_count": 0,
         "actual_cities": {
           "Covington Township": 21,
-          "Carbondale": 25,
+          "Carbondale": 26,
           "Scranton": 124,
           "Jermyn": 4,
           "Moosic": 10,
@@ -976,7 +979,7 @@
           "Dickson City": 11,
           "Thornhurst": 3,
           "Madison Township": 2,
-          "Clarks Summit": 10,
+          "Clarks Summit": 9,
           "Old Forge": 10,
           "Gouldsboro": 6,
           "Blakely": 2,
@@ -1016,7 +1019,7 @@
         },
         "source_locations": {
           "Covington Township": 1,
-          "Carbondale": 23,
+          "Carbondale": 24,
           "Scranton": 118,
           "Jermyn": 4,
           "Moosic": 5,
@@ -1032,7 +1035,7 @@
           "William Swetland Plot": 1,
           "Madisonville": 1,
           "Madison Twp": 1,
-          "Clarks Summit": 8,
+          "Clarks Summit": 7,
           "Old Forge": 10,
           "Big Bass Lake": 3,
           "Blakely": 6,
@@ -1086,7 +1089,8 @@
         "rows": 198,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Lancaster": 75,
+          "Elizabethtown": 11,
+          "Lancaster": 74,
           "New Holland": 5,
           "Manheim": 7,
           "Marietta": 3,
@@ -1098,7 +1102,6 @@
           "Ronks": 1,
           "Narvon": 1,
           "Gap": 6,
-          "Elizabethtown": 10,
           "Stevens": 3,
           "Lititz": 12,
           "New Providence": 3,
@@ -1123,6 +1126,7 @@
           "Manheim Township": 3
         },
         "source_locations": {
+          "Elizabethtown": 6,
           "ROSS": 1,
           "New Holland": 1,
           "Lancaster": 28,
@@ -1160,7 +1164,6 @@
           "LANCASTER CITY WARD 7": 2,
           "WEST END LANCASTER": 2,
           "GROFFDALE MHP": 1,
-          "HAMILTON PARK": 1,
           "HEMPFIELD GREEN": 1,
           "MUDDY CREEK VILLAGE": 2,
           "MARIETTA": 1,
@@ -1184,7 +1187,6 @@
           "LANCASTER": 5,
           "NEW  HOLLAND": 1,
           "SUNSET ESTATES MHP": 1,
-          "Elizabethtown": 5,
           "TRIPLE J MHP": 1,
           "Holtwood": 1,
           "LAKEVIEW COUNTRY ESTATES": 1,
@@ -1417,9 +1419,15 @@
           "FISHTOWN": 2,
           "RITTENHOUSE SQUARE": 6,
           "TEMPLE UNIVERSITY": 8,
-          "Philadelphia": 52,
+          "Philadelphia": 50,
           "BREWERYTOWN": 6,
           "MILL CREEK": 9,
+          "2400 SOUTH": 1,
+          "FAIRHILL": 3,
+          "MAYFAIR": 2,
+          "WEST PHILADELPHIA": 6,
+          "MT AIRY": 2,
+          "CASTOR GARDENS": 2,
           "GERMANTOWN": 7,
           "WISTER": 2,
           "HUNTING PARK": 4,
@@ -1441,25 +1449,23 @@
           "JUNIATA": 3,
           "SCOTCHBROOK": 1,
           "ALLEGHENY WEST": 3,
-          "WEST PHILADELPHIA": 5,
           "KENSINGTON": 8,
           "COBBS CREEK": 7,
           "STRAWBERRY MANSION": 9,
-          "MT AIRY": 1,
           "NICETOWN-TIOGA": 1,
           "PHILADELPHIA (SOUTHWEST)": 7,
-          "POINT BREEZE": 7,
+          "POINT BREEZE": 6,
           "OLNEY": 5,
           "TACONY": 7,
           "HADDINGTON": 6,
           "PHILADELPHIA": 7,
           "PARKSIDE": 4,
           "NORRIS SQUARE": 2,
-          "FRANKFORD": 13,
+          "FRANKFORD": 12,
           "BRIDESBURG": 3,
           "WEST PASSYUNK": 3,
           "CENTER CITY": 1,
-          "WISSINOMING": 2,
+          "WISSINOMING": 1,
           "EAST MT AIRY": 2,
           "OXFORD CIRCLE": 2,
           "LOWER MOYAMENSING": 4,
@@ -1468,16 +1474,14 @@
           "HOLMESBURG": 3,
           "ROXBOROUGH": 2,
           "PHILADELPHIA (NORTHEAST)": 4,
-          "PORT RICHMOND": 9,
+          "PORT RICHMOND": 8,
           "MAYFAIR (EAST)": 1,
           "HARTRANFT": 1,
           "SPRING GARDEN": 2,
           "PHILADELPHIA (WEST)": 4,
-          "FAIRHILL": 2,
           "PHILADELPHIA (SOUTH)": 1,
           "SOCIETY HILL": 1,
           "MARCONI PARK EAST": 2,
-          "MAYFAIR": 1,
           "ART MUSEUM AREA": 1,
           "BUSTLETON": 1,
           "EAST OAK LANE": 1,
@@ -1496,42 +1500,41 @@
           "FAIRMOUNT": 1,
           "BELMONT": 1,
           "NORTH CENTRAL": 2,
-          "AVENUE OF THE ARTS": 1,
-          "CASTOR GARDENS": 1
+          "AVENUE OF THE ARTS": 1
         }
       }
     },
-    "raw_mls_seen": 2124,
+    "raw_mls_seen": 2125,
     "duplicates_removed": 7,
     "filter_rejections": {
       "price": 1,
       "sqft": 0,
-      "beds": 462,
+      "beds": 463,
       "baths": 5,
-      "property_type": 162,
-      "property_type_unknown": 100,
+      "property_type": 163,
+      "property_type_unknown": 101,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 851,
-      "Condo/Co-op": 74,
+      "Single Family Residential": 848,
+      "Condo/Co-op": 75,
       "Multi-Family (2-4 Unit)": 113,
-      "Townhouse": 575,
-      "Vacant Land": 409,
-      "Mobile/Manufactured Home": 85,
+      "Townhouse": 576,
+      "Vacant Land": 410,
+      "Mobile/Manufactured Home": 86,
       "Parking": 2,
       "Unknown": 19,
       "Multi-Family (5+ Unit)": 1,
-      "UNKNOWN": 618,
+      "UNKNOWN": 551,
       "Single-Family": 2,
       "Townhome": 1
     },
     "source_passed_filters": {
-      "mls": 1399,
+      "mls": 1397,
       "reo": 6,
-      "sheriff": 445,
-      "tax": 163,
+      "sheriff": 369,
+      "tax": 172,
       "06_probate_estates": 0,
       "fsbo": 0
     },
@@ -1540,11 +1543,11 @@
       "Scranton": 118,
       "Reading": 88,
       "Allentown City": 58,
-      "Philadelphia": 52,
+      "Philadelphia": 50,
       "Lancaster": 28,
       "READING": 27,
+      "Carbondale": 24,
       "North East": 24,
-      "Carbondale": 23,
       "Penn Hills": 22,
       "Dunmore": 19,
       "Bethlehem City": 18,
@@ -1552,8 +1555,8 @@
       "Monroeville": 14,
       "Archbald": 13,
       "Easton": 13,
-      "FRANKFORD": 13,
       "Eagle Lake": 12,
+      "FRANKFORD": 12,
       "West Mifflin": 12,
       "Birdsboro": 11,
       "Edinboro": 11,
@@ -1563,17 +1566,17 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 5,
-    "price_drop_properties": 5,
-    "total_properties": 4355,
-    "finished_at": "2026-10-02T12:45:55-04:00"
+    "price_drop_events": 3,
+    "price_drop_properties": 3,
+    "total_properties": 4363,
+    "finished_at": "2026-10-02T13:46:45-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-02T12:45:43-04:00",
+      "checked_at": "2026-10-02T13:46:29-04:00",
       "status": "partial",
-      "rows": 2128,
+      "rows": 2129,
       "areas": [
         {
           "area": "Allegheny County",
@@ -1593,7 +1596,7 @@
         {
           "area": "Erie County",
           "status": "success",
-          "rows": 347,
+          "rows": 348,
           "coverage": "not_proven_complete",
           "limit_reached": false
         },
@@ -1634,11 +1637,11 @@
         }
       ],
       "coverage": "not_proven_complete",
-      "passed_filters": 1399
+      "passed_filters": 1397
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-02T12:45:43-04:00",
+      "checked_at": "2026-10-02T13:46:29-04:00",
       "status": "partial",
       "rows": 8,
       "providers": {
@@ -1801,9 +1804,9 @@
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-02T12:45:43-04:00",
+      "checked_at": "2026-10-02T13:46:29-04:00",
       "status": "partial",
-      "rows": 164,
+      "rows": 173,
       "counties": {
         "Allegheny": {
           "status": "not_connected",
@@ -1839,9 +1842,13 @@
           "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
         },
         "Lehigh": {
-          "status": "failed",
-          "rows": 0,
-          "error": "Official page does not publish a recognizable current Judicial Sale date"
+          "status": "success",
+          "rows": 9,
+          "sale_date": "2026-10-21",
+          "list_label": "Judicial Sale List as of 9-18-26",
+          "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
+          "ocr": true,
+          "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
         },
         "Northampton": {
           "status": "not_connected",
@@ -1895,11 +1902,11 @@
         }
       ],
       "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
-      "passed_filters": 163
+      "passed_filters": 172
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-02T12:45:43-04:00",
+      "checked_at": "2026-10-02T13:46:29-04:00",
       "status": "not_connected",
       "rows": 0,
       "scope": "selected_counties_only",
@@ -1939,14 +1946,14 @@
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-02T12:45:54-04:00",
+      "checked_at": "2026-10-02T13:46:45-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-02T12:45:43-04:00",
+      "checked_at": "2026-10-02T13:46:29-04:00",
       "status": "partial",
-      "rows": 450,
+      "rows": 374,
       "counties": {
         "Philadelphia": {
           "status": "not_connected",
@@ -1974,27 +1981,26 @@
           "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
         },
         "Allegheny": {
-          "status": "partial",
-          "rows": 281,
-          "published_date": "2026-09-24",
+          "status": "success",
+          "rows": 204,
+          "published_date": "2026-10-01",
           "sale_date": "2026-10-05",
-          "parsed_blocks": 376,
+          "parsed_blocks": 377,
           "skipped_active_addresses": 0,
           "unrecognized_blocks": 0,
-          "mode": "imported",
-          "fallback_reason": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf: קובץ המקור אינו PDF תקין או גדול מ-20MB",
-          "county_property_matches": 262,
+          "mode": "live",
+          "county_property_matches": 190,
           "county_property_pending": 0,
-          "county_property_lookup_failed": 14,
-          "county_property_no_data": 3,
-          "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
+          "county_property_lookup_failed": 11,
+          "county_property_no_data": 2,
+          "source_url": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf"
         },
         "Lehigh": {
           "status": "success",
-          "rows": 139,
+          "rows": 140,
           "mode": "live",
-          "parsed_rows": 139,
-          "active_rows": 139,
+          "parsed_rows": 140,
+          "active_rows": 140,
           "expired_or_out_of_window_rows": 0,
           "skipped_rows": 0,
           "coverage": "official_portal_upcoming_notices",
@@ -2015,18 +2021,18 @@
         }
       },
       "investment_filters": "unavailable",
-      "passed_filters": 445
+      "passed_filters": 369
     },
     "fsbo": {
       "label": "FSBO",
-      "checked_at": "2026-10-02T12:45:43-04:00",
+      "checked_at": "2026-10-02T13:46:29-04:00",
       "status": "not_connected",
       "rows": 0
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261002-124543",
-    "started_at": "2026-10-02T12:45:43-04:00",
+    "scan_id": "SCAN-20261002-134629",
+    "started_at": "2026-10-02T13:46:29-04:00",
     "trigger": "manual",
     "orchestrator_version": "3.6.6-live-sheriff-pdf-20261002",
     "status": "partial",
@@ -2039,18 +2045,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2750,
-    "after_filters": 2013,
-    "new": 1087,
-    "updated": 777,
-    "unchanged": 149,
+    "source_results": 2684,
+    "after_filters": 1944,
+    "new": 8,
+    "updated": 221,
+    "unchanged": 1715,
     "off_market_candidates": 0,
     "errors": [
-      "tax Lehigh source unavailable: Official page does not publish a recognizable current Judicial Sale date",
       "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
     "code_sha256": "c90caaa59a81",
-    "github_sha": "fcad987d175b46e1d0fb3b6834b43be78f9eb2cc",
+    "github_sha": "dfa621c24f9d006ed7c190198f4b3f78c315cbc1",
     "request_id": null,
     "counties": [
       "Allegheny",
@@ -2084,9 +2089,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
-        "rows": 2128,
+        "rows": 2129,
         "areas": [
           {
             "area": "Allegheny County",
@@ -2106,7 +2111,7 @@
           {
             "area": "Erie County",
             "status": "success",
-            "rows": 347,
+            "rows": 348,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -2147,11 +2152,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 1399
+        "passed_filters": 1397
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -2314,9 +2319,9 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
-        "rows": 450,
+        "rows": 374,
         "counties": {
           "Philadelphia": {
             "status": "not_connected",
@@ -2344,27 +2349,26 @@
             "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
           },
           "Allegheny": {
-            "status": "partial",
-            "rows": 281,
-            "published_date": "2026-09-24",
+            "status": "success",
+            "rows": 204,
+            "published_date": "2026-10-01",
             "sale_date": "2026-10-05",
-            "parsed_blocks": 376,
+            "parsed_blocks": 377,
             "skipped_active_addresses": 0,
             "unrecognized_blocks": 0,
-            "mode": "imported",
-            "fallback_reason": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf: קובץ המקור אינו PDF תקין או גדול מ-20MB",
-            "county_property_matches": 262,
+            "mode": "live",
+            "county_property_matches": 190,
             "county_property_pending": 0,
-            "county_property_lookup_failed": 14,
-            "county_property_no_data": 3,
-            "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
+            "county_property_lookup_failed": 11,
+            "county_property_no_data": 2,
+            "source_url": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf"
           },
           "Lehigh": {
             "status": "success",
-            "rows": 139,
+            "rows": 140,
             "mode": "live",
-            "parsed_rows": 139,
-            "active_rows": 139,
+            "parsed_rows": 140,
+            "active_rows": 140,
             "expired_or_out_of_window_rows": 0,
             "skipped_rows": 0,
             "coverage": "official_portal_upcoming_notices",
@@ -2385,13 +2389,13 @@
           }
         },
         "investment_filters": "unavailable",
-        "passed_filters": 445
+        "passed_filters": 369
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "partial",
-        "rows": 164,
+        "rows": 173,
         "counties": {
           "Allegheny": {
             "status": "not_connected",
@@ -2427,9 +2431,13 @@
             "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
           },
           "Lehigh": {
-            "status": "failed",
-            "rows": 0,
-            "error": "Official page does not publish a recognizable current Judicial Sale date"
+            "status": "success",
+            "rows": 9,
+            "sale_date": "2026-10-21",
+            "list_label": "Judicial Sale List as of 9-18-26",
+            "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
+            "ocr": true,
+            "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
           },
           "Northampton": {
             "status": "not_connected",
@@ -2483,11 +2491,11 @@
           }
         ],
         "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
-        "passed_filters": 163
+        "passed_filters": 172
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "not_connected",
         "rows": 0,
         "scope": "selected_counties_only",
@@ -2526,18 +2534,18 @@
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-02T12:45:43-04:00",
+        "checked_at": "2026-10-02T13:46:29-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-02T12:45:54-04:00",
+        "checked_at": "2026-10-02T13:46:45-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
-    "sheriff_active_lots": 450,
+    "sheriff_active_lots": 374,
     "sheriff_sources_by_county": {
       "Philadelphia": {
         "status": "not_connected",
@@ -2565,27 +2573,26 @@
         "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
       },
       "Allegheny": {
-        "status": "partial",
-        "rows": 281,
-        "published_date": "2026-09-24",
+        "status": "success",
+        "rows": 204,
+        "published_date": "2026-10-01",
         "sale_date": "2026-10-05",
-        "parsed_blocks": 376,
+        "parsed_blocks": 377,
         "skipped_active_addresses": 0,
         "unrecognized_blocks": 0,
-        "mode": "imported",
-        "fallback_reason": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf: קובץ המקור אינו PDF תקין או גדול מ-20MB",
-        "county_property_matches": 262,
+        "mode": "live",
+        "county_property_matches": 190,
         "county_property_pending": 0,
-        "county_property_lookup_failed": 14,
-        "county_property_no_data": 3,
-        "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
+        "county_property_lookup_failed": 11,
+        "county_property_no_data": 2,
+        "source_url": "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf"
       },
       "Lehigh": {
         "status": "success",
-        "rows": 139,
+        "rows": 140,
         "mode": "live",
-        "parsed_rows": 139,
-        "active_rows": 139,
+        "parsed_rows": 140,
+        "active_rows": 140,
         "expired_or_out_of_window_rows": 0,
         "skipped_rows": 0,
         "coverage": "official_portal_upcoming_notices",
@@ -2611,21 +2618,22 @@
         "rows": 350,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Pittsburgh": 189,
+          "Pittsburgh": 190,
           "Brackenridge": 2,
           "West Mifflin": 12,
           "Monroeville": 14,
           "Mc Kees Rocks": 9,
           "Cheswick": 3,
           "Castle Shannon": 1,
-          "Pitcairn": 2,
+          "Pitcairn": 1,
+          "Baden": 1,
           "Homestead": 11,
           "New Kensington": 3,
           "Mckeesport": 10,
           "Turtle Creek": 3,
           "Verona": 5,
           "Natrona Heights": 4,
-          "Carnegie": 7,
+          "Carnegie": 6,
           "Gibsonia": 7,
           "Bridgeville": 2,
           "Coraopolis": 8,
@@ -2668,9 +2676,11 @@
           "Penn Hills": 22,
           "Harmar": 2,
           "Castle Shannon": 3,
-          "Pitcairn": 2,
+          "Pitcairn": 1,
+          "Shadyside": 2,
+          "South Side": 6,
+          "Marshall": 1,
           "Forest Hills Boro": 4,
-          "Lincoln Place": 4,
           "Whitaker": 2,
           "Banksville/Westwood": 3,
           "Baldwin Boro": 7,
@@ -2726,7 +2736,6 @@
           "Shaler": 2,
           "McCandless": 1,
           "ALLEGHENY": 2,
-          "South Side": 5,
           "East Allegheny": 2,
           "Clairton": 4,
           "Brentwood": 9,
@@ -2734,13 +2743,13 @@
           "Stowe Twp": 1,
           "N Versailles": 5,
           "Greenfield": 3,
-          "Shadyside": 1,
           "West End": 1,
           "Etna": 1,
           "Homewood-Brushton": 2,
           "Hazelwood": 5,
           "Braddock Hills": 1,
           "Reserve": 1,
+          "Lincoln Place": 3,
           "East Liberty": 1,
           "Liberty Boro": 1,
           "Point Breeze": 2,
@@ -2748,7 +2757,7 @@
           "Sharpsburg": 1,
           "Knoxville": 1,
           "East Deer": 1,
-          "Carnegie": 4,
+          "Carnegie": 3,
           "Squirrel Hill": 1,
           "East McKeesport": 1,
           "Port Vue": 2,
@@ -2906,12 +2915,12 @@
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 347,
+        "rows": 348,
         "city_mismatch_count": 0,
         "actual_cities": {
+          "Erie": 225,
           "Waterford": 6,
           "North East": 25,
-          "Erie": 224,
           "Albion": 9,
           "Lake City": 10,
           "Girard": 5,
@@ -2938,6 +2947,7 @@
           "Saegertown": 1
         },
         "source_locations": {
+          "Summit Heights": 3,
           "Rainbow Valley": 1,
           "North East": 24,
           "Erie": 204,
@@ -2968,7 +2978,6 @@
           "GreenGateVillage": 1,
           "Union City Borough": 1,
           "Brandy Run": 2,
-          "Summit Heights": 2,
           "Rolling Meadows": 1,
           "Asbury Woods Estate": 3,
           "Cranesville": 2,
@@ -2988,7 +2997,7 @@
         "city_mismatch_count": 0,
         "actual_cities": {
           "Covington Township": 21,
-          "Carbondale": 25,
+          "Carbondale": 26,
           "Scranton": 124,
           "Jermyn": 4,
           "Moosic": 10,
@@ -3000,7 +3009,7 @@
           "Dickson City": 11,
           "Thornhurst": 3,
           "Madison Township": 2,
-          "Clarks Summit": 10,
+          "Clarks Summit": 9,
           "Old Forge": 10,
           "Gouldsboro": 6,
           "Blakely": 2,
@@ -3040,7 +3049,7 @@
         },
         "source_locations": {
           "Covington Township": 1,
-          "Carbondale": 23,
+          "Carbondale": 24,
           "Scranton": 118,
           "Jermyn": 4,
           "Moosic": 5,
@@ -3056,7 +3065,7 @@
           "William Swetland Plot": 1,
           "Madisonville": 1,
           "Madison Twp": 1,
-          "Clarks Summit": 8,
+          "Clarks Summit": 7,
           "Old Forge": 10,
           "Big Bass Lake": 3,
           "Blakely": 6,
@@ -3110,7 +3119,8 @@
         "rows": 198,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Lancaster": 75,
+          "Elizabethtown": 11,
+          "Lancaster": 74,
           "New Holland": 5,
           "Manheim": 7,
           "Marietta": 3,
@@ -3122,7 +3132,6 @@
           "Ronks": 1,
           "Narvon": 1,
           "Gap": 6,
-          "Elizabethtown": 10,
           "Stevens": 3,
           "Lititz": 12,
           "New Providence": 3,
@@ -3147,6 +3156,7 @@
           "Manheim Township": 3
         },
         "source_locations": {
+          "Elizabethtown": 6,
           "ROSS": 1,
           "New Holland": 1,
           "Lancaster": 28,
@@ -3184,7 +3194,6 @@
           "LANCASTER CITY WARD 7": 2,
           "WEST END LANCASTER": 2,
           "GROFFDALE MHP": 1,
-          "HAMILTON PARK": 1,
           "HEMPFIELD GREEN": 1,
           "MUDDY CREEK VILLAGE": 2,
           "MARIETTA": 1,
@@ -3208,7 +3217,6 @@
           "LANCASTER": 5,
           "NEW  HOLLAND": 1,
           "SUNSET ESTATES MHP": 1,
-          "Elizabethtown": 5,
           "TRIPLE J MHP": 1,
           "Holtwood": 1,
           "LAKEVIEW COUNTRY ESTATES": 1,
@@ -3441,9 +3449,15 @@
           "FISHTOWN": 2,
           "RITTENHOUSE SQUARE": 6,
           "TEMPLE UNIVERSITY": 8,
-          "Philadelphia": 52,
+          "Philadelphia": 50,
           "BREWERYTOWN": 6,
           "MILL CREEK": 9,
+          "2400 SOUTH": 1,
+          "FAIRHILL": 3,
+          "MAYFAIR": 2,
+          "WEST PHILADELPHIA": 6,
+          "MT AIRY": 2,
+          "CASTOR GARDENS": 2,
           "GERMANTOWN": 7,
           "WISTER": 2,
           "HUNTING PARK": 4,
@@ -3465,25 +3479,23 @@
           "JUNIATA": 3,
           "SCOTCHBROOK": 1,
           "ALLEGHENY WEST": 3,
-          "WEST PHILADELPHIA": 5,
           "KENSINGTON": 8,
           "COBBS CREEK": 7,
           "STRAWBERRY MANSION": 9,
-          "MT AIRY": 1,
           "NICETOWN-TIOGA": 1,
           "PHILADELPHIA (SOUTHWEST)": 7,
-          "POINT BREEZE": 7,
+          "POINT BREEZE": 6,
           "OLNEY": 5,
           "TACONY": 7,
           "HADDINGTON": 6,
           "PHILADELPHIA": 7,
           "PARKSIDE": 4,
           "NORRIS SQUARE": 2,
-          "FRANKFORD": 13,
+          "FRANKFORD": 12,
           "BRIDESBURG": 3,
           "WEST PASSYUNK": 3,
           "CENTER CITY": 1,
-          "WISSINOMING": 2,
+          "WISSINOMING": 1,
           "EAST MT AIRY": 2,
           "OXFORD CIRCLE": 2,
           "LOWER MOYAMENSING": 4,
@@ -3492,16 +3504,14 @@
           "HOLMESBURG": 3,
           "ROXBOROUGH": 2,
           "PHILADELPHIA (NORTHEAST)": 4,
-          "PORT RICHMOND": 9,
+          "PORT RICHMOND": 8,
           "MAYFAIR (EAST)": 1,
           "HARTRANFT": 1,
           "SPRING GARDEN": 2,
           "PHILADELPHIA (WEST)": 4,
-          "FAIRHILL": 2,
           "PHILADELPHIA (SOUTH)": 1,
           "SOCIETY HILL": 1,
           "MARCONI PARK EAST": 2,
-          "MAYFAIR": 1,
           "ART MUSEUM AREA": 1,
           "BUSTLETON": 1,
           "EAST OAK LANE": 1,
@@ -3520,42 +3530,41 @@
           "FAIRMOUNT": 1,
           "BELMONT": 1,
           "NORTH CENTRAL": 2,
-          "AVENUE OF THE ARTS": 1,
-          "CASTOR GARDENS": 1
+          "AVENUE OF THE ARTS": 1
         }
       }
     },
-    "raw_mls_seen": 2124,
+    "raw_mls_seen": 2125,
     "duplicates_removed": 7,
     "filter_rejections": {
       "price": 1,
       "sqft": 0,
-      "beds": 462,
+      "beds": 463,
       "baths": 5,
-      "property_type": 162,
-      "property_type_unknown": 100,
+      "property_type": 163,
+      "property_type_unknown": 101,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 851,
-      "Condo/Co-op": 74,
+      "Single Family Residential": 848,
+      "Condo/Co-op": 75,
       "Multi-Family (2-4 Unit)": 113,
-      "Townhouse": 575,
-      "Vacant Land": 409,
-      "Mobile/Manufactured Home": 85,
+      "Townhouse": 576,
+      "Vacant Land": 410,
+      "Mobile/Manufactured Home": 86,
       "Parking": 2,
       "Unknown": 19,
       "Multi-Family (5+ Unit)": 1,
-      "UNKNOWN": 618,
+      "UNKNOWN": 551,
       "Single-Family": 2,
       "Townhome": 1
     },
     "source_passed_filters": {
-      "mls": 1399,
+      "mls": 1397,
       "reo": 6,
-      "sheriff": 445,
-      "tax": 163,
+      "sheriff": 369,
+      "tax": 172,
       "06_probate_estates": 0,
       "fsbo": 0
     },
@@ -3564,11 +3573,11 @@
       "Scranton": 118,
       "Reading": 88,
       "Allentown City": 58,
-      "Philadelphia": 52,
+      "Philadelphia": 50,
       "Lancaster": 28,
       "READING": 27,
+      "Carbondale": 24,
       "North East": 24,
-      "Carbondale": 23,
       "Penn Hills": 22,
       "Dunmore": 19,
       "Bethlehem City": 18,
@@ -3576,8 +3585,8 @@
       "Monroeville": 14,
       "Archbald": 13,
       "Easton": 13,
-      "FRANKFORD": 13,
       "Eagle Lake": 12,
+      "FRANKFORD": 12,
       "West Mifflin": 12,
       "Birdsboro": 11,
       "Edinboro": 11,
@@ -3587,10 +3596,10 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 5,
-    "price_drop_properties": 5,
-    "total_properties": 4355,
-    "finished_at": "2026-10-02T12:45:55-04:00"
+    "price_drop_events": 3,
+    "price_drop_properties": 3,
+    "total_properties": 4363,
+    "finished_at": "2026-10-02T13:46:45-04:00"
   },
   "sheriff": {
     "status": "עודכן",
