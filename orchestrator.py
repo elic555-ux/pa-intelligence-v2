@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.5-source-details-20261002"
+ORCHESTRATOR_VERSION = "3.6.6-live-sheriff-pdf-20261002"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -37,8 +37,9 @@ SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מ�
 SHERIFF_PAGE = "https://sheriffalleghenycounty.com/sheriffs-sales/"
 SHERIFF_LOCAL_PDF = "sources/allegheny_sheriff.pdf"
 SHERIFF_BUNDLED_PDF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "October-Sale-List-Updated-9-24.pdf")
-# Edition discovered on the official page. It expires; it is not a permanent feed.
-SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/09/October-Sale-List-Updated-9-24.pdf"
+# Current October edition verified on the official sheriff site (updated 10/2).
+# This bounded fallback is attempted only when page discovery has no usable PDF.
+SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/October-Sale-List-Updated-10-2.pdf"
 ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
 LEHIGH_SHERIFF_URL = "https://salesweb.civilview.com/Sales/SalesSearch?countyId=51"
 HOMESTEPS_SEARCH_URL = "https://www.homesteps.com/listing/search?search=Pennsylvania"
@@ -2362,7 +2363,8 @@ def run_orchestrator():
                         "county_property_pending": sum(row.get("county_property_status") == "pending_backfill" for row in county_rows),
                         "county_property_lookup_failed": sum(row.get("county_property_status") == "lookup_failed" for row in county_rows),
                         "county_property_no_data": sum(row.get("county_property_status") == "no_county_building_data" for row in county_rows),
-                        "status": "imported" if sheriff_audit["mode"] == "imported" else "success",
+                        "status": ("partial" if sheriff_audit.get("fallback_reason") else
+                                   "imported" if sheriff_audit["mode"] == "imported" else "success"),
                         "source_url": sheriff_pdf,
                     })
                     if sheriff_audit.get("skipped_active_addresses") or sheriff_audit.get("unrecognized_blocks"):
