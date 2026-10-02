@@ -3,6 +3,7 @@ import json
 import csv
 import io
 import os
+import time
 from datetime import datetime, date
 from html import unescape
 from urllib.parse import quote_plus
@@ -14,7 +15,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.6"
+VERSION = "2.7-resilient"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -27,7 +28,7 @@ DEFAULT_ZIP = "15213"
 
 OUTPUT_DIR = Path("COMPS_REPORTS")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.5"}
+HEADERS = {"User-Agent": "PA-RealEstate-Intelligence-Hub-Comps/2.7"}
 
 SUFFIXES = {
     "AVENUE": "AVE", "AV": "AVE", "AVE": "AVE",
@@ -69,12 +70,7 @@ def norm(value):
 
 def street_tokens(value):
     tokens = norm(value).split()
-
-    # Normalize spelled-out ordinal street names used by listing sites
-    # to the numeric form commonly used by Allegheny County records:
-    # FIFTH -> 5TH, FIRST -> 1ST, etc.
     tokens = [ORDINAL_WORDS.get(token, token) for token in tokens]
-
     if tokens and tokens[-1] in SUFFIXES:
         tokens[-1] = SUFFIXES[tokens[-1]]
     return tokens
@@ -106,19 +102,28 @@ def parse_address(address):
     return {"house_number": m.group(1), "street": m.group(2), "unit": unit}
 
 
-def ckan_search(resource_id, filters=None, q=None, limit=500):
+def ckan_search(resource_id, filters=None, q=None, limit=500, max_retries=3):
+    """
+    WPRDC query with Exponential Backoff retry to handle temporary 5xx or timeouts.
+    """
     params = {"resource_id": resource_id, "limit": limit}
     if filters:
         params["filters"] = json.dumps(filters, separators=(",", ":"))
     if q:
         params["q"] = q
 
-    r = requests.get(CKAN_SEARCH, params=params, headers=HEADERS, timeout=TIMEOUT)
-    r.raise_for_status()
-    payload = r.json()
-    if not payload.get("success"):
-        raise RuntimeError("WPRDC API returned success=false")
-    return (payload.get("result") or {}).get("records") or []
+    for attempt in range(max_retries):
+        try:
+            r = requests.get(CKAN_SEARCH, params=params, headers=HEADERS, timeout=TIMEOUT)
+            r.raise_for_status()
+            payload = r.json()
+            if not payload.get("success"):
+                raise RuntimeError("WPRDC API returned success=false")
+            return (payload.get("result") or {}).get("records") or []
+        except (requests.RequestException, RuntimeError) as exc:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)
 
 
 def unique_records(records):
@@ -138,10 +143,6 @@ def unique_records(records):
 
 
 def get_candidates(target):
-    """
-    חיפוש מדורג.
-    לא מניח ש-Unit הוא Parcel נפרד (חשוב במיוחד ב-Co-op).
-    """
     house = target["house_number"]
     city = target["city"]
     zipcode = target["zip"]
@@ -165,29 +166,24 @@ def get_candidates(target):
 
     records = []
 
-    # 1. House + City + ZIP
     filters = {"PROPERTYHOUSENUM": house, "PROPERTYCITY": city}
     if zipcode:
         filters["PROPERTYZIP"] = zipcode
     records += add("house_city_zip", filters=filters)
 
-    # 2. House + City
     records += add(
         "house_city",
         filters={"PROPERTYHOUSENUM": house, "PROPERTYCITY": city}
     )
 
-    # 3. House only - then local street filtering
     records += add("house_only", filters={"PROPERTYHOUSENUM": house})
 
-    # 4. Free-text fallback for street core / address variants
     core = street_core(street)
     if core:
         records += add("street_core_text", q=f"{house} {core}")
 
     records = unique_records(records)
 
-    # Keep candidates whose street is plausibly the requested street.
     target_core = street_core(street)
     plausible = []
     for rec in records:
@@ -196,8 +192,6 @@ def get_candidates(target):
             if target_core == rec_core or target_core in rec_core or rec_core in target_core:
                 plausible.append(rec)
 
-    # If the API search returned no street match, retain all house-number
-    # candidates for diagnostics, but they will not resolve automatically.
     return (plausible if plausible else records), attempts
 
 
@@ -238,21 +232,12 @@ def score_candidate(rec, target):
             score -= 25
             reasons.append("different_unit")
         else:
-            # Blank unit is NOT fatal: co-op/master-parcel possibility.
             reasons.append("county_unit_blank")
 
     return score, reasons
 
 
 def classify_structure(scored, target):
-    """
-    Safe resolution rules:
-    - exact_unit_parcel: exact requested unit is independently assessed.
-    - likely_master_or_coop_parcel: exactly one strong same-address blank-unit parcel.
-    - building_parcel_candidates: multiple strong parcels at same building address.
-      In this case we deliberately do NOT choose one automatically.
-    - unresolved: no safe match.
-    """
     if not scored:
         return "unresolved", None
 
@@ -282,9 +267,6 @@ def classify_structure(scored, target):
     if len(blank_units) == 1 and not nonblank_units:
         return "likely_master_or_coop_parcel", blank_units[0]
 
-    # Critical safety rule: if County has several strong parcels for the
-    # same building address and none matches Unit 621, expose all candidates.
-    # Never guess which parcel represents the requested co-op unit.
     if len(same_address) > 1:
         return "building_parcel_candidates", None
 
@@ -294,9 +276,7 @@ def classify_structure(scored, target):
     return "unresolved", None
 
 
-
 def same_address_candidates(scored):
-    """Return strong County records for the exact building address."""
     return [
         x for x in scored
         if "house_exact" in x["reasons"]
@@ -306,15 +286,6 @@ def same_address_candidates(scored):
 
 
 def infer_building_reference(scored, target):
-    """
-    For unit addresses where County exposes multiple blank-unit parcels,
-    identify a *building reference* without pretending the requested unit
-    is independently parcelized.
-
-    Residential multi-unit uses are preferred over auxiliary/commercial
-    parcels. This is a building-level reference only and is never treated
-    as proof of Unit ownership/parcel identity.
-    """
     if not norm(target.get("unit")):
         return None
 
@@ -356,7 +327,6 @@ def infer_building_reference(scored, target):
     best = ranked[0]
     second_score = ranked[1]["building_reference_score"] if len(ranked) > 1 else -999
 
-    # Require affirmative residential evidence and a clear lead.
     if (
         "residential_multiunit_use" in best["building_reference_reasons"]
         and best["building_reference_score"] >= 120
@@ -423,10 +393,6 @@ REDFIN_USER_AGENT = (
 
 
 def redfin_city_sold_rows(max_pages=8, page_size=350):
-    """
-    Best-effort Redfin downloadable sold-search CSV adapter.
-    This is intentionally non-fatal because it is not a stable public API.
-    """
     base_url = "https://www.redfin.com/stingray/api/gis-csv"
     all_rows, errors = [], []
 
@@ -475,6 +441,8 @@ def redfin_city_sold_rows(max_pages=8, page_size=350):
 
     headers = list(all_rows[0].keys()) if all_rows else []
     return all_rows, errors, headers
+
+
 def _parse_sale_date(value):
     text = clean(value)
     if not text:
@@ -493,8 +461,6 @@ def _parse_sale_date(value):
 
 def _plausible_sqft(value):
     n = _num(value)
-    # Prevent malformed CSV values such as 135 from being treated as
-    # living area for a 2-bedroom apartment.
     if n is None:
         return None
     return n if 300 <= n <= 10000 else None
@@ -525,8 +491,6 @@ def discover_same_building_sold_comps(target, subject):
         )
         sold_date = _parse_sale_date(sold_date_raw)
 
-        # Strict closed-sale gate. The previous run proved that this endpoint
-        # can return Active / MLS Listing rows. Never allow those into comps.
         if norm(raw_status) != "sold" or not sold_date:
             continue
 
@@ -593,6 +557,8 @@ def discover_same_building_sold_comps(target, subject):
         reverse=True,
     )
     return comps, errors, len(rows), headers
+
+
 def _page_text(html):
     text = re.sub(r"(?is)<script.*?</script>", " ", html or "")
     text = re.sub(r"(?is)<style.*?</style>", " ", text)
@@ -601,19 +567,7 @@ def _page_text(html):
     return re.sub(r"\s+", " ", text).strip()
 
 
-
-
-
-
 def realtor_sold_index_comps(target, subject):
-    """
-    Best-effort Realtor.com recently-sold index adapter.
-    Unlike the blocked Homes.com pagination, this requests a public sold-results
-    page and extracts only same-building cards. No hardcoded comp values.
-    A row is accepted only when the card itself contains Sold + price + unit.
-    If a sold date is absent from the index card, the property detail URL is
-    fetched and must provide the date before the comp becomes verified.
-    """
     house = clean(target.get("house_number"))
     street = clean(target.get("street"))
     city = clean(target.get("city"))
@@ -648,7 +602,6 @@ def realtor_sold_index_comps(target, subject):
             errors.append(f"Realtor sold index error: {type(exc).__name__}: {exc}")
             continue
 
-        # Find local windows around exact building occurrences.
         for m in re.finditer(rf"\b{re.escape(house)}\b", text, flags=re.I):
             window = text[max(0,m.start()-220):min(len(text),m.start()+650)]
             nwin=norm(window)
@@ -680,7 +633,6 @@ def realtor_sold_index_comps(target, subject):
                     sold_date=_parse_sale_date(dm.group(1))
                     if sold_date: break
 
-            # Extract likely property-detail link containing this unit.
             detail_url=None
             unit_pat=re.escape(str(unit))
             hrefs=re.findall(r'href=["\']([^"\']+)["\']',raw_html,re.I)
@@ -693,7 +645,6 @@ def realtor_sold_index_comps(target, subject):
                         detail_url=href
                         break
 
-            # Index cards often omit date. Verify detail page before acceptance.
             beds=baths=sqft=None
             if not sold_date and detail_url:
                 try:
@@ -709,7 +660,6 @@ def realtor_sold_index_comps(target, subject):
                             if dm:
                                 sold_date=_parse_sale_date(dm.group(1))
                                 if sold_date: break
-                        # Require page to corroborate price.
                         if f"{int(sold_price):,}" not in dtext and str(int(sold_price)) not in dtext:
                             sold_date=None
                         bm=re.search(r"(\d+(?:\.\d+)?)\s*(?:bed|beds|bd)\b",dtext[:10000],re.I)
@@ -752,12 +702,6 @@ def realtor_sold_index_comps(target, subject):
 
 
 def bing_rss_verified_comps(target, subject, max_results=30):
-    """
-    Bing RSS is used only for URL discovery. A search snippet is NEVER treated
-    as a verified sale. Each discovered property page is fetched separately
-    and must itself contain: exact building + different unit + Sold event +
-    sold date + sold price. This avoids relying on blocked ZIP index pages.
-    """
     house = clean(target.get("house_number"))
     street = clean(target.get("street"))
     city = clean(target.get("city"))
@@ -811,7 +755,6 @@ def bing_rss_verified_comps(target, subject, max_results=30):
         if house not in ntext or not any(x and x in ntext for x in street_norms):
             continue
 
-        # Unit can be expressed as Unit 326, Apt 326 or #326.
         unit = None
         for pat in (
             r"(?:Unit|Apt)\s*#?\s*([0-9A-Za-z-]{1,8})",
@@ -824,7 +767,6 @@ def bing_rss_verified_comps(target, subject, max_results=30):
         if not unit or norm(unit) == target_unit:
             continue
 
-        # Search compact local windows around explicit SOLD occurrences.
         sale = None
         for sm in re.finditer(r"\bSold\b", text, flags=re.I):
             window = text[max(0, sm.start()-220): min(len(text), sm.start()+420)]
@@ -901,11 +843,6 @@ def bing_rss_verified_comps(target, subject, max_results=30):
 
 
 def homes_sold_index_comps(target, subject, max_pages=12):
-    """
-    Discover same-building closed sales from Homes.com's public ZIP sold index.
-    No sale is hardcoded. Each accepted row must contain the exact building,
-    a unit number, SOLD + date, and a price in the same local text window.
-    """
     zipcode = clean(target.get("zip"))
     street = clean(target.get("street"))
     house = clean(target.get("house_number"))
@@ -916,13 +853,11 @@ def homes_sold_index_comps(target, subject, max_pages=12):
     }
     errors, comps, seen = [], [], set()
 
-    # Homes uses /sold/ and /sold/pN/ pagination.
     urls = [f"https://www.homes.com/pittsburgh-pa/{zipcode}/sold/"] + [
         f"https://www.homes.com/pittsburgh-pa/{zipcode}/sold/p{i}/"
         for i in range(2, max_pages + 1)
     ]
 
-    # Accept Fifth/5th spelling variants.
     street_variants = {norm(street), norm(street.replace("FIFTH", "5TH"))}
     street_variants |= {s.replace("FIFTH", "5TH") for s in list(street_variants)}
 
@@ -937,8 +872,6 @@ def homes_sold_index_comps(target, subject, max_pages=12):
             errors.append(f"Homes sold page error: {type(exc).__name__}: {exc}")
             continue
 
-        # Split around every occurrence of the house number; inspect bounded
-        # windows so a price/date from another card cannot be attached.
         for m in re.finditer(rf"\b{re.escape(house)}\b", text, flags=re.I):
             window = text[max(0, m.start()-180): min(len(text), m.start()+520)]
             nwin = norm(window)
@@ -965,8 +898,6 @@ def homes_sold_index_comps(target, subject, max_pages=12):
             if not sold_date:
                 continue
 
-            # Price must be in this card/window. Choose the nearest plausible
-            # dollar amount before the SOLD phrase when possible.
             prefix = window[:dm.start()]
             prices = re.findall(r"\$([\d,]{4,})", prefix)
             if not prices:
@@ -1017,15 +948,6 @@ def homes_sold_index_comps(target, subject, max_pages=12):
 
 
 def search_engine_same_building_sold_comps(target, subject, max_units=12):
-    """
-    Best-effort second-source discovery using public search-result HTML.
-    This does NOT hardcode any comp. It searches the exact building address,
-    extracts candidate property URLs, fetches those public pages, and accepts
-    only pages that independently contain the same building, a unit, a SOLD
-    event, a sale date and a sale price.
-
-    Failure is safe: returns no comps and ARV remains unavailable.
-    """
     base = clean(target.get("street"))
     city = clean(target.get("city"))
     state = clean(target.get("state"))
@@ -1045,7 +967,6 @@ def search_engine_same_building_sold_comps(target, subject, max_units=12):
     except Exception as exc:
         return [], [f"search_error: {type(exc).__name__}: {exc}"]
 
-    # Extract only known real-estate property-page destinations.
     hrefs = re.findall(r'href=["\'](?:/url\?q=)?(https?://[^"&\']+)', html, flags=re.I)
     allowed = ("realtor.com", "homes.com", "compass.com", "redfin.com", "coldwellbankerhomes.com")
     urls = []
@@ -1067,12 +988,10 @@ def search_engine_same_building_sold_comps(target, subject, max_units=12):
         except Exception:
             continue
 
-        # Require exact building identity in page text.
         ntext = norm(text)
         if norm(base) not in ntext and norm(base.replace("FIFTH", "5TH")) not in ntext:
             continue
 
-        # Unit extraction from URL/title/text.
         unit = None
         for pat in (
             r"(?:unit|apt)[-_ /#]*(\d{1,4}[A-Za-z]?)",
@@ -1085,11 +1004,9 @@ def search_engine_same_building_sold_comps(target, subject, max_units=12):
         if not unit or norm(unit) == norm(target.get("unit")) or norm(unit) in seen_units:
             continue
 
-        # Require explicit SOLD language.
         if not re.search(r"\b(?:sold|last sold|sold for|date sold)\b", text, flags=re.I):
             continue
 
-        # Parse a date close to sold language.
         sold_date = None
         for pat in (
             r"(?:Sold|Date Sold|Last sold)(?:\s*(?:on|:|-))?\s*([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})",
@@ -1104,7 +1021,6 @@ def search_engine_same_building_sold_comps(target, subject, max_units=12):
         if not sold_date:
             continue
 
-        # Parse price near sold language first.
         sold_price = None
         for pat in (
             r"(?:Sold for|Last sold for|Last Sold Price|Sold)\s*\$([\d,]{4,})",
@@ -1161,7 +1077,6 @@ def search_engine_same_building_sold_comps(target, subject, max_units=12):
 
 
 def merge_verified_comps(primary, secondary):
-    """Deduplicate by unit + sold date + price, preferring richer records."""
     merged = {}
     for comp in list(primary or []) + list(secondary or []):
         if comp.get("verification") != "unit_level_closed_sale_verified":
@@ -1193,8 +1108,6 @@ def conservative_arv_from_comps(comps, subject):
     if len(verified) < 3:
         return None, "insufficient_date_verified_closed_sales", "unavailable"
 
-    # Reject stale records from ARV. Same-building co-op comps may expand
-    # to 24 months, but not beyond that without explicit review.
     cutoff = date.today().replace(year=date.today().year - 2)
     verified = [
         c for c in verified
@@ -1220,8 +1133,12 @@ def conservative_arv_from_comps(comps, subject):
 def sales_for_parcel(parcel_id):
     if not parcel_id:
         return []
-    rows = ckan_search(SALES_RESOURCE_ID, filters={"PARID": parcel_id}, limit=500)
-    return rows
+    try:
+        rows = ckan_search(SALES_RESOURCE_ID, filters={"PARID": parcel_id}, limit=500)
+        return rows
+    except Exception as exc:
+        print(f"⚠️ שגיאה בשליפת היסטוריית מכירות מ-WPRDC עבור החלקה {parcel_id}: {exc}")
+        return []
 
 
 def compact_assessment(rec):
@@ -1240,7 +1157,6 @@ def compact_assessment(rec):
 
 
 def compact_sale(rec):
-    # Preserve useful fields even if schema names vary.
     preferred = [
         "PARID", "FULL_ADDRESS", "PROPERTYHOUSENUM",
         "PROPERTYADDRESSSTREET", "PROPERTYADDRESSSUF",
@@ -1252,7 +1168,6 @@ def compact_sale(rec):
     return {k: rec.get(k) for k in preferred if k in rec}
 
 
-
 # ---------------------------------------------------------------------------
 # RentCast V2.6 - FREE -> CACHE -> API, sold-property records + usage guard
 # ---------------------------------------------------------------------------
@@ -1260,12 +1175,11 @@ RENTCAST_BASE = "https://api.rentcast.io/v1"
 RENTCAST_CACHE_DIR = OUTPUT_DIR / "rentcast_cache"
 RENTCAST_USAGE_FILE = OUTPUT_DIR / "rentcast_usage.json"
 
-# Developer plan safety policy for this private system.
 RENTCAST_MONTHLY_LIMIT = 50
-RENTCAST_AUTO_STOP_AT = 45       # keep 5 requests in reserve
+RENTCAST_AUTO_STOP_AT = 45       
 RENTCAST_WARNING_AT = 36
-RENTCAST_BILLING_DAY = 22        # current subscription billing/reset day
-RENTCAST_MAX_CALLS_PER_RUN = 1   # hard local rule for this engine
+RENTCAST_BILLING_DAY = 22        
+RENTCAST_MAX_CALLS_PER_RUN = 1   
 
 def _rentcast_full_address(target, include_unit=True):
     a = f"{clean(target.get('house_number'))} {clean(target.get('street'))}"
@@ -1280,8 +1194,6 @@ def _rentcast_value_cache_path(target):
     return RENTCAST_CACHE_DIR / f"{_rentcast_key(_rentcast_full_address(target))}_value.json"
 
 def _rentcast_sold_cache_path(target, days=730):
-    # Building/area cache intentionally omits the unit so other units in the same
-    # building can reuse the same paid response.
     base = _rentcast_full_address(target, include_unit=False)
     return RENTCAST_CACHE_DIR / f"{_rentcast_key(base)}_sold_{int(days)}d.json"
 
@@ -1321,9 +1233,6 @@ def _rentcast_cycle_start(now=None):
     return date(y, m, RENTCAST_BILLING_DAY).isoformat()
 
 def _rentcast_infer_existing_calls():
-    # We already have one successful AVM cache from the first live integration.
-    # More generally, count distinct successful cached endpoint responses as the
-    # safest local baseline if the usage ledger does not exist yet.
     if not RENTCAST_CACHE_DIR.exists():
         return 0
     calls = 0
@@ -1339,7 +1248,6 @@ def _rentcast_load_usage():
     next_reset = _rentcast_next_reset(now)
     data = _rentcast_read_json(RENTCAST_USAGE_FILE) or {}
 
-    # New billing cycle: reset our local counter automatically.
     if data.get("cycle_start") != cycle_start:
         data = {
             "provider": "RentCast",
@@ -1395,7 +1303,11 @@ def _rentcast_record_success(usage):
     _rentcast_write_json(RENTCAST_USAGE_FILE, usage)
     return usage
 
-def _rentcast_api_get(path, params):
+def _rentcast_api_get(path, params, max_retries=3):
+    """
+    RentCast API query with Exponential Backoff retry to handle 429 Too Many Requests
+    and temporary connection issues without crashing.
+    """
     allowed, usage = _rentcast_can_call()
     if not allowed:
         return None, {
@@ -1416,46 +1328,55 @@ def _rentcast_api_get(path, params):
             "usage": _rentcast_usage_public(usage),
         }
 
-    try:
-        r = requests.get(
-            RENTCAST_BASE + path,
-            params=params,
-            headers={
-                "Accept": "application/json",
-                "X-Api-Key": key,
-                "User-Agent": HEADERS["User-Agent"],
-            },
-            timeout=TIMEOUT,
-        )
-        if r.status_code >= 400:
-            return None, {
-                "status": "authentication_failed" if r.status_code == 401 else "http_error",
+    for attempt in range(max_retries):
+        try:
+            r = requests.get(
+                RENTCAST_BASE + path,
+                params=params,
+                headers={
+                    "Accept": "application/json",
+                    "X-Api-Key": key,
+                    "User-Agent": HEADERS["User-Agent"],
+                },
+                timeout=TIMEOUT,
+            )
+            
+            if r.status_code == 429: 
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt + 1)
+                    continue
+                    
+            if r.status_code >= 400:
+                return None, {
+                    "status": "authentication_failed" if r.status_code == 401 else "http_error",
+                    "http_status": r.status_code,
+                    "message": clean(r.text)[:500],
+                    "counted_successful_call": False,
+                    "usage": _rentcast_usage_public(usage),
+                }
+
+            payload = r.json()
+            if r.status_code == 200:
+                usage = _rentcast_record_success(usage)
+
+            return payload, {
+                "status": "success",
                 "http_status": r.status_code,
-                "message": clean(r.text)[:500],
+                "message": None,
+                "counted_successful_call": r.status_code == 200,
+                "usage": _rentcast_usage_public(usage),
+            }
+        except Exception as exc:
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt + 1)
+                continue
+            return None, {
+                "status": "request_error",
+                "http_status": None,
+                "message": f"{type(exc).__name__}: {exc}",
                 "counted_successful_call": False,
                 "usage": _rentcast_usage_public(usage),
             }
-
-        payload = r.json()
-        # RentCast bills successful HTTP 200 responses. Count only those.
-        if r.status_code == 200:
-            usage = _rentcast_record_success(usage)
-
-        return payload, {
-            "status": "success",
-            "http_status": r.status_code,
-            "message": None,
-            "counted_successful_call": r.status_code == 200,
-            "usage": _rentcast_usage_public(usage),
-        }
-    except Exception as exc:
-        return None, {
-            "status": "request_error",
-            "http_status": None,
-            "message": f"{type(exc).__name__}: {exc}",
-            "counted_successful_call": False,
-            "usage": _rentcast_usage_public(usage),
-        }
 
 def _rentcast_comp_address(c):
     if clean(c.get("formattedAddress")):
@@ -1482,8 +1403,6 @@ def _rentcast_iso_date(v):
         return None
 
 def _rentcast_sale_evidence(record):
-    # Property records can expose a direct last-sale pair and/or transaction
-    # history. Accept only explicit sale date + sale price evidence.
     candidates = []
 
     direct_date = None
@@ -1618,8 +1537,6 @@ def rentcast_sold_properties(target, subject, days=730):
             "usage": _rentcast_usage_public(_rentcast_load_usage()),
         }
     else:
-        # One broad paid request, then Python performs the strict same-building
-        # filtering locally. This maximizes useful data per RentCast request.
         params = {
             "address": _rentcast_full_address(target, include_unit=False),
             "radius": 0.25,
@@ -1723,17 +1640,12 @@ def attach_rentcast_to_result(result):
         result["rentcast"] = {"status": "skipped_no_target", "api_calls": 0}
         return result
 
-    # For this diagnostic property we know 2bd/1ba from the subject record.
-    # Environment variables can override these later when the engine is called
-    # from the main application with real subject attributes.
     subject = {
         "beds": _num(os.getenv("TARGET_BEDS", "2")),
         "baths": _num(os.getenv("TARGET_BATHS", "1")),
         "sqft": _num(os.getenv("TARGET_SQFT")),
     }
 
-    # Existing AVM cache is reused at zero cost. If absent, V2.6 prioritizes the
-    # sold-property request and does not automatically spend a second call.
     value_cache = _rentcast_read_json(_rentcast_value_cache_path(target))
     if value_cache and value_cache.get("response") is not None:
         rc_value = rentcast_value_estimate(target, subject)
@@ -1747,7 +1659,7 @@ def attach_rentcast_to_result(result):
             "diagnostic": {
                 "status": "skipped",
                 "http_status": None,
-                "message": "V2.6 prioritizes /properties sold records over a new AVM request.",
+                "message": "V2.7 prioritizes /properties sold records over a new AVM request.",
                 "usage": _rentcast_usage_public(_rentcast_load_usage()),
             },
         }
@@ -1877,9 +1789,6 @@ def build_result(address, city, state, zipcode):
                 }
                 result["assessment"] = compact_assessment(rec)
 
-                # County parcel sales are intentionally NOT fetched here.
-                # A master/building parcel sale must never be presented as
-                # the requested co-op unit's sale history.
                 result["sales_history"] = []
                 result["sales_history_count"] = 0
                 result["sales_history_status"] = (
@@ -1899,10 +1808,6 @@ def build_result(address, city, state, zipcode):
                     "arv_allowed_from_master_parcel_sales": False,
                 }
 
-                # PHASE 2 SAFETY GATE:
-                # County/WPRDC sales are parcel-level. Because the requested
-                # co-op unit is not independently parcelized here, they cannot
-                # prove a sale belongs to Unit 621. Do not manufacture comps.
                 subject = {
                     "beds": _num(os.getenv("TARGET_BEDS", "2")),
                     "baths": _num(os.getenv("TARGET_BATHS", "1")),
@@ -1913,9 +1818,6 @@ def build_result(address, city, state, zipcode):
                 )
                 verification_warnings = []
 
-                # V2.1 fallback: if the strict Redfin feed cannot supply enough
-                # verified same-building sales, discover and verify public
-                # unit property-history pages. No comp is hardcoded.
                 realtor_comps = []
                 realtor_errors = []
                 bing_comps = []
@@ -1936,8 +1838,6 @@ def build_result(address, city, state, zipcode):
                     )
                     sold_comps = merge_verified_comps(sold_comps, bing_comps)
 
-                # Final best-effort fallback. Still requires direct property-page
-                # verification and therefore cannot manufacture a comp.
                 if len(sold_comps) < 3:
                     secondary_comps, secondary_errors = search_engine_same_building_sold_comps(
                         target, subject
@@ -2206,9 +2106,6 @@ def main():
     try:
         result = build_result(args.address, args.city, args.state, args.zipcode)
 
-        # V2.6 safety fix:
-        # Some safe building-reference branches return early from build_result().
-        # Ensure the RentCast layer is attached exactly once before the result is saved.
         if "rentcast" not in result:
             result = attach_rentcast_to_result(result)
     except requests.RequestException as exc:
@@ -2230,7 +2127,7 @@ def main():
     print_summary(result)
 
     rc = result.get("rentcast") or {}
-    print("\n--- RENTCAST V2.6 ---")
+    print("\n--- RENTCAST V2.7 ---")
     print(f"RentCast status: {rc.get('status', 'not_attached')}")
     print(f"RentCast API calls this run: {rc.get('api_calls', 0)}")
 
@@ -2265,8 +2162,6 @@ def main():
 
     print(f"\n📄 JSON נשמר: {output_file}")
 
-    # A verified unit parcel OR a safe building-level reference is success.
-    # Truly unresolved cases remain exit code 3 so GitHub Actions highlights them.
     if result["status"] not in {"resolved", "building_reference_resolved"}:
         sys.exit(3)
 
