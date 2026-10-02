@@ -9,7 +9,7 @@ GEOCODE_CACHE_FILE = 'geocode_cache.json'
 CONFIG_FILE = 'scan_config.json'
 GEOCODE_RETRY_DAYS = 30
 MAX_GEOCODE_REQUESTS_PER_RUN = 20
-ANALYZER_VERSION = '2.1'
+ANALYZER_VERSION = '2.2-source-record-guard'
 
 
 def utc_now_iso():
@@ -100,7 +100,7 @@ def get_coordinates(address, city, state="PA"):
 
 
 
-REPOSITORY_ANALYSIS_FIELDS = (
+SOURCE_ONLY_ANALYSIS_FIELDS = (
     "arv", "arv_status", "arv_method", "arv_confidence", "arv_source",
     "flip_rehab", "rental_rehab", "rehab_status", "rehab_method", "rehab_confidence", "rehab_source",
     "mao_flip", "mao_flip_status", "mao_flip_method", "mao_flip_confidence",
@@ -117,10 +117,15 @@ def is_repository_record(prop):
             and str(prop.get("tax_sale_type") or "").casefold() == "repository")
 
 
-def mark_repository_source_only(prop):
-    """Clear unsupported property estimates and coordinates for repository parcel descriptions."""
+def is_public_court_record(prop):
+    """Public auction/tax records are source evidence, not MLS asking prices."""
+    return str(prop.get("source_type") or "").casefold() in {"sheriff", "sheriff_sale", "tax"}
+
+
+def mark_public_record_source_only(prop):
+    """Remove estimates derived from auction bids or court records; preserve source facts."""
     changed = False
-    for field in REPOSITORY_ANALYSIS_FIELDS:
+    for field in SOURCE_ONLY_ANALYSIS_FIELDS:
         default = "not_applicable" if field.endswith("_status") else None
         if prop.get(field) != default:
             prop[field] = default
@@ -134,15 +139,25 @@ def mark_repository_source_only(prop):
     if prop.get("analysis_is_ai") is not False:
         prop["analysis_is_ai"] = False
         changed = True
-    notice = ("רשומת Repository מתוך רשימת מחוז רשמית. המקור אינו מספק נתוני בית מאומתים; "
-              "לא חושבו שווי, שכירות, שיפוץ או מיקום. יש לאמת את parcel והזמינות מול המחוז.")
+    if is_repository_record(prop):
+        notice = ("רשומת Repository מתוך רשימת מחוז רשמית. המקור אינו מספק נתוני בית מאומתים; "
+                  "לא חושבו שווי, שכירות או שיפוץ. יש לאמת את החלקה והזמינות מול המחוז.")
+        skip_reason = "repository_parcel_record_has_no_verified_building_facts"
+    else:
+        notice = ("רשומת מכרז/חוב מס ממקור ציבורי. סכום פסק דין, Cost & Tax Bid, הצעת פתיחה "
+                  "או מינימום Repository אינם מחיר שוק. לא חושבו ARV, שכירות, שיפוץ או MAO.")
+        skip_reason = "public_court_record_amount_is_not_market_price"
     if prop.get("analysis_disclaimer") != notice:
         prop["analysis_disclaimer"] = notice
         changed = True
-    prop["analysis_skip_reason"] = "repository_parcel_record_has_no_verified_building_facts"
+    if prop.get("analysis_skip_reason") != skip_reason:
+        prop["analysis_skip_reason"] = skip_reason
+        changed = True
     # The official workbook contains legal descriptions, not geocodable street addresses.
     # Remove only coordinates known to have come from the prior OSM lookup.
-    if prop.get("geocode_source") == "OpenStreetMap Nominatim" or prop.get("geocode_status") == "verified_external_service":
+    if (is_repository_record(prop) and
+            (prop.get("geocode_source") == "OpenStreetMap Nominatim" or
+             prop.get("geocode_status") == "verified_external_service")):
         for field in ("lat", "lng", "geocode_source", "geocode_updated_at", "geocode_last_attempt_at"):
             if field in prop:
                 prop.pop(field, None)
@@ -349,8 +364,8 @@ def run_analyzer():
     geocode_requests = 0
     geocode_batch_skipped = 0
     outside_counties_skipped = 0
-    repository_source_only = 0
-    repository_records_cleaned = 0
+    source_only_count = 0
+    source_records_cleaned = 0
     cache = load_geocode_cache()
     cache_changed = False
 
@@ -359,10 +374,10 @@ def run_analyzer():
             updated_properties.append(prop)
             continue
 
-        if is_repository_record(prop):
-            if mark_repository_source_only(prop):
-                repository_records_cleaned += 1
-            repository_source_only += 1
+        if is_public_court_record(prop):
+            if mark_public_record_source_only(prop):
+                source_records_cleaned += 1
+            source_only_count += 1
             updated_properties.append(prop)
             continue
 
@@ -462,8 +477,8 @@ def run_analyzer():
         f"{analyzed_count} נכסים נותחו/עודכנו, "
         f"{geocoded_count} נכסים קיבלו קואורדינטות."
     )
-    print(f"🧾 Repository: {repository_source_only} רשומות הושארו כרשומות מקור בלבד; "
-          f"{repository_records_cleaned} נוקו מאומדנים/קואורדינטות לא מתאימים.")
+    print(f"🧾 מכרזים/חובות מס: {source_only_count} רשומות הושארו כרשומות מקור בלבד; "
+          f"{source_records_cleaned} נוקו מאומדני Analyzer לא מתאימים.")
     print(
         f"🗺️ Geocode QA — בקשות חיצוניות: {geocode_requests}/{MAX_GEOCODE_REQUESTS_PER_RUN} | "
         f"Cache hits: {geocode_cache_hits} | "
