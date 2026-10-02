@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI PATCH 2026-09-28: scan sources collapsed; MLS and price drops separated; price-drop rows and cards highlighted. -->
+<!-- PA UI PATCH 2026-10-02: Cloud Sync Integration via Supabase + Tax UI Fixes -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -9,6 +9,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
         body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
@@ -28,24 +30,16 @@
         .watchlist-btn-active .badge-count { background-color: #0f172a !important; color: #fbbf24 !important; }
         .hot-deal-border { box-shadow: 0 0 16px -2px rgba(217, 119, 6, 0.3); border-color: rgba(217, 119, 6, 0.5) !important; }
         
-        /* Viewed Card Style */
         .card-viewed { opacity: 0.8; background-color: #080b13 !important; }
         .card-viewed:hover { opacity: 1; background-color: #111827 !important; }
         .property-number-badge {
-            display: inline-flex;
-            flex: 0 0 20px;
-            width: 20px;
-            height: 20px;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #3b82f6;
-            border-radius: 9999px;
-            background: #172554;
-            color: #dbeafe;
+            display: inline-flex; flex: 0 0 20px; width: 20px; height: 20px;
+            align-items: center; justify-content: center;
+            border: 1px solid #3b82f6; border-radius: 9999px;
+            background: #172554; color: #dbeafe;
             font: 700 10px/1 'JetBrains Mono', monospace;
         }
         
-        /* Table Structure Enhancements */
         .props-table { table-layout: fixed; width: 100%; min-width: 1000px; }
         .col-location { width: 30%; }
         .col-price { width: 12%; }
@@ -74,7 +68,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.6 AI</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Cloud Synced ☁️</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -126,7 +120,7 @@
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div></button>
             <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">מכירות שריף</span><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i></div><div class="text-2xl font-black text-rose-300" id="count-sheriff">0</div></button>
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
-            <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות ו-FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-2xl font-black text-emerald-300" id="count-probate">0</div></button>
+            <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות/FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-[13px] font-black text-emerald-300" id="count-probate" style="margin-top:auto;">0 (בבנייה)</div></button>
             
             <button onclick="setCategory('offmarket')" id="btn-cat-offmarket" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-teal-500/30 transition hover:border-teal-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-teal-300">Off Market</span><i data-lucide="house-x" class="w-4 h-4 text-teal-400"></i></div><div class="text-2xl font-black text-teal-300" id="count-offmarket">0</div></button>
 
@@ -146,7 +140,6 @@
         <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3.5 shadow-lg">
             <div><label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label><select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none"><option value="all">הכל</option><option value="turnkey">🔑 מניב מיידי</option><option value="value_add">🔨 השבחה</option></select></div>
             
-            <!-- מסנן גאוגרפי ללוח הנכסים הקיימים בלבד -->
             <div class="relative" id="city-filter-wrapper">
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מחוז / עיר / אזור מקור</label>
                 <button type="button" class="w-full bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-between px-2.5 py-2 text-right" onclick="toggleCityDropdown(event)">
@@ -205,21 +198,18 @@
                 <div class="flex items-center gap-2 flex-wrap justify-end">
                     <button onclick="moveToPipelineFromModal()" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black flex items-center gap-1.5 text-xs"><i data-lucide="send" class="w-4 h-4"></i>לחדר עסקאות</button>
                     <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 text-amber-400 flex items-center gap-1.5 text-xs font-bold"><i data-lucide="star" class="w-4 h-4"></i><span id="modal-watchlist-text">מעקב</span></button>
-                    
                     <span id="modal-archive-btn-container"></span>
-                    
                     <button onclick="closePropertyModal()" class="text-gray-400 hover:text-white p-2 rounded-xl bg-gray-800/80 ml-2"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
-                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">מחיר</span><strong class="text-2xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
+                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">מחיר</span><strong class="text-xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">חדרי שינה</span><strong class="text-xl font-extrabold text-white" id="modal-beds"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">רחצה</span><strong class="text-xl font-extrabold text-white" id="modal-baths"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
             </div>
 
-            <!-- New AI Section in Modal -->
             <div class="bg-blue-950/20 p-4 rounded-xl border border-blue-500/30">
                 <div class="flex justify-between items-center border-b border-gray-800/60 pb-2 mb-3">
                     <span class="font-black text-blue-300 flex items-center gap-1.5 text-sm"><i data-lucide="brain-circuit" class="w-5 h-5"></i> ניתוח AI מורחב (Analyzer)</span>
@@ -251,7 +241,7 @@
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">מגרש</span><strong class="text-white text-sm" id="modal-lot-size"></strong></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חניה</span><strong class="text-white text-sm" id="modal-parking"></strong></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">עסקה</span><span class="text-white text-sm" id="modal-deal-type"></span></div>
-                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">תיק</span><span class="text-blue-300 font-mono" id="modal-docket"></span></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">תיק</span><span class="text-blue-300 font-mono truncate block" id="modal-docket"></span></div>
                 </div>
             </div>
 
@@ -259,14 +249,14 @@
                 <h4 class="text-sm font-black text-rose-300">פרטים מתוך מסמך השריף הרשמי</h4>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                     <div><span class="text-gray-400 block">סטטוס במסמך</span><strong id="modal-sheriff-status" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">תאריך מכירה</span><strong id="modal-sheriff-sale-date" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">תאריך מכירה</span><strong id="modal-sheriff-sale-date" class="text-white font-mono"></strong></div>
                     <div><span class="text-gray-400 block">מספר חלקה / מס</span><strong id="modal-sheriff-parcel" class="text-white font-mono"></strong></div>
                     <div><span class="text-gray-400 block">Municipality</span><strong id="modal-sheriff-municipality" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">תובע</span><strong id="modal-sheriff-plaintiff" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">נתבע</span><strong id="modal-sheriff-defendant" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">תובע</span><strong id="modal-sheriff-plaintiff" class="text-white truncate block"></strong></div>
+                    <div><span class="text-gray-400 block">נתבע</span><strong id="modal-sheriff-defendant" class="text-white truncate block"></strong></div>
                     <div><span class="text-gray-400 block">Cost &amp; Tax Bid במסמך</span><strong id="modal-sheriff-bid" class="text-amber-300 font-mono"></strong></div>
                     <div><span class="text-gray-400 block">Sale ID / Tract</span><strong id="modal-sheriff-sale-tract" class="text-white font-mono"></strong></div>
-                    <div><span class="text-gray-400 block">תאריך פרסום הרשימה</span><strong id="modal-sheriff-published" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">תאריך פרסום הרשימה</span><strong id="modal-sheriff-published" class="text-white font-mono"></strong></div>
                     <div class="col-span-2 sm:col-span-3"><span class="text-gray-400 block">סוג מכירה כפי שמופיע במסמך</span><strong id="modal-sheriff-sale-type" class="text-white"></strong></div>
                 </div>
                 <p class="text-[11px] text-gray-400">הצעת מחיר אינה מוצגת כמחיר הנכס; הסכום נשמר כשדה Cost &amp; Tax Bid מהמסמך.</p>
@@ -279,13 +269,13 @@
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div><span class="text-gray-400 block">סוג שימוש</span><strong id="modal-county-use" class="text-white">-</strong></div>
-                    <div><span class="text-gray-400 block">מספר חדרים</span><strong id="modal-county-rooms" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">מספר חדרים כללי</span><strong id="modal-county-rooms" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">חדרי שינה לפי המחוז</span><strong id="modal-county-beds" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">חדרי רחצה לפי המחוז</span><strong id="modal-county-baths" class="text-white">-</strong></div>
-                    <div><span class="text-gray-400 block">שטח מגורים לפי המחוז</span><strong id="modal-county-sqft" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">שטח מגורים (SqFt)</span><strong id="modal-county-sqft" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">שנת בנייה</span><strong id="modal-county-year" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">סגנון</span><strong id="modal-county-style" class="text-white">-</strong></div>
-                    <div><span class="text-gray-400 block">מצב לפי המחוז</span><strong id="modal-county-condition" class="text-white">-</strong></div>
+                    <div><span class="text-gray-400 block">מצב פיזי</span><strong id="modal-county-condition" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">קומות</span><strong id="modal-county-stories" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">מרתף</span><strong id="modal-county-basement" class="text-white">-</strong></div>
                     <div><span class="text-gray-400 block">חימום / קירור</span><strong id="modal-county-hvac" class="text-white">-</strong></div>
@@ -293,7 +283,7 @@
                 <p class="text-[11px] text-gray-400">הנתונים הם רישומי הערכת המחוז, לא בדיקת מצב עדכנית או מדידה בשטח. יש לאמת לפני רכישה.</p>
             </section>
 
-            <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תיאור מקורי:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
+            <div class="space-y-1.5"><h4 class="text-xs font-black text-blue-400 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> תיאור מהמקור:</h4><div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-sm text-white" id="modal-summary"></div></div>
             <div class="pt-3.5 border-t border-gray-800 flex justify-between items-center gap-3">
                 <button onclick="copyPropertyAddress()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i><span id="copy-btn-text">העתק כתובת</span></button>
                 <div class="flex gap-2.5" id="modal-action-buttons"></div>
@@ -384,8 +374,8 @@
             </div>
             
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-xs border-t border-gray-800 pt-3">
-                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="50,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
-                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="190,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
+                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מינימום ($)</label><input type="text" id="setting-min-price" oninput="handlePriceInput(this)" value="15,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
+                <div><label class="block font-bold text-emerald-400 mb-1">מחיר מקסימום ($)</label><input type="text" id="setting-max-price" oninput="handlePriceInput(this)" value="250,000" class="w-full bg-gray-950 border border-emerald-500/50 rounded-lg px-2.5 py-1.5 text-emerald-400 font-mono font-black text-center text-sm"></div>
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מינ' (SqFt)</label><input type="text" id="setting-min-sqft" oninput="handlePriceInput(this)" value="1,200" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
                 <div><label class="block font-bold text-gray-300 mb-1">שטח מקס' (SqFt)</label><input type="text" id="setting-max-sqft" oninput="handlePriceInput(this)" placeholder="ללא הגבלה" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-center text-sm"></div>
                 <div><label class="block font-bold text-gray-300 mb-1">חדרי שינה מינ'</label><select id="setting-min-beds" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2.5 py-2 text-white font-bold"><option value="all">הכל</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select></div>
@@ -726,6 +716,11 @@
 
     <!-- Script Logic -->
     <script>
+        // Supabase Initialization
+        const SUPABASE_URL = 'https://rccncvnybybastdgdoqe.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_-OFzsbOGfsPATYLeD5Grnw_GpHYDAAC';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         let rawProperties = [];
         let activeCategory = 'all';
         let watchlistFilterActive = false;
@@ -734,16 +729,12 @@
         let currentSelectedProperty = null;
         let currentViewMode = 'table';
         let isAutoScanEnabled = true;
-        
         let viewedDeals = new Set();
         let archiveDeals = {}; 
-        
         let scanTimerInterval = null;
         let scanStartTime = null;
         let lastKnownScanId = null;
-
-        // V8.4: משתנים לסינון ערים רב-ברירה
-        let selectedCitiesFilter = null; // null means no geographic filter
+        let selectedCitiesFilter = null;
         let allAvailableCities = [];
 
         function handlePriceInput(input) { let raw = String(input.value||'').replace(/\D/g, ''); input.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : ''; }
@@ -754,7 +745,6 @@
             if (scanTimerInterval) clearInterval(scanTimerInterval);
         }
 
-        // סגירת חלון העיר בלחיצה בחוץ
         document.addEventListener('click', function(e) {
             const wrapper = document.getElementById('city-filter-wrapper');
             const list = document.getElementById('city-dropdown-list');
@@ -765,9 +755,9 @@
 
         async function init() {
             lucide.createIcons();
-            loadPipelineFromStorage(); 
-            loadWatchlistFromStorage();
-            loadViewedAndArchive(); 
+            
+            // 1. טעינת נתונים מענן (Supabase)
+            await loadCloudData();
             
             const savedToken = localStorage.getItem('pa_github_token');
             if(savedToken) {
@@ -795,205 +785,61 @@
             await loadGeoCatalog();
         }
 
-        // --- מנגנוני ניהול קשב וארכיון ---
-        function loadViewedAndArchive() {
-            try { viewedDeals = new Set(JSON.parse(localStorage.getItem('pa_viewed_deals') || '[]')); } catch(e){}
-            try { archiveDeals = JSON.parse(localStorage.getItem('pa_archive_deals') || '{}'); } catch(e){}
-        }
-        function saveViewed() { localStorage.setItem('pa_viewed_deals', JSON.stringify(Array.from(viewedDeals))); }
-        function saveArchive() { localStorage.setItem('pa_archive_deals', JSON.stringify(archiveDeals)); }
+        async function loadCloudData() {
+            try {
+                // משיכת צנרת עסקאות
+                const { data: pData } = await supabaseClient.from('pipeline_deals').select('deal_data');
+                if (pData) pipelineDeals = pData.map(r => r.deal_data);
 
-        function archiveFromModal() {
+                // משיכת מעקבים
+                const { data: wData } = await supabaseClient.from('user_watchlist').select('property_id');
+                if (wData) userWatchlist = new Set(wData.map(r => r.property_id));
+
+                // משיכת ארכיון
+                const { data: aData } = await supabaseClient.from('archive_deals').select('property_id, archive_data');
+                if (aData) {
+                    archiveDeals = {};
+                    aData.forEach(r => { archiveDeals[r.property_id] = r.archive_data; });
+                }
+                
+                // נכסים שנצפו (נשאר לוקאלי כדי לא להכביד)
+                try { viewedDeals = new Set(JSON.parse(localStorage.getItem('pa_viewed_deals') || '[]')); } catch(e){}
+                
+                updateWatchlistCountDisplay();
+            } catch(e) { console.error("Cloud data load error", e); }
+        }
+
+        function saveViewed() { localStorage.setItem('pa_viewed_deals', JSON.stringify(Array.from(viewedDeals))); }
+
+        async function archiveFromModal() {
             if(!currentSelectedProperty) return;
             const idStr = String(currentSelectedProperty.id);
             const price = Number(currentSelectedProperty.price) || 0;
+            const archData = { price: price, date: new Date().toISOString() };
             
-            archiveDeals[idStr] = { price: price, date: new Date().toISOString() };
-            saveArchive();
+            archiveDeals[idStr] = archData;
+            supabaseClient.from('archive_deals').upsert({ property_id: idStr, archive_data: archData }).then();
             
-            if(userWatchlist.has(idStr)) {
-                userWatchlist.delete(idStr);
-                saveWatchlistToStorage();
+            if(userWatchlist.has(idStr)) { 
+                userWatchlist.delete(idStr); 
+                supabaseClient.from('user_watchlist').delete().eq('property_id', idStr).then();
             }
             
             alert(`הנכס הועבר לארכיון! הוא יקפוץ בחזרה ללוח רק אם נזהה ירידת מחיר.`);
-            closePropertyModal();
-            loadProperties(); 
+            closePropertyModal(); loadProperties(); 
         }
 
-        function restoreFromModal() {
+        async function restoreFromModal() {
             if(!currentSelectedProperty) return;
             const idStr = String(currentSelectedProperty.id);
             
             delete archiveDeals[idStr];
-            saveArchive();
+            supabaseClient.from('archive_deals').delete().eq('property_id', idStr).then();
             
             currentSelectedProperty.is_archived = false;
             alert('הנכס הוחזר בהצלחה ללוח הראשי!');
-            closePropertyModal();
-            loadProperties();
+            closePropertyModal(); loadProperties();
         }
-
-        function toggleAllCounties(prefix, state) {
-            document.querySelectorAll(`.${prefix}-county-box`).forEach(cb => {
-                cb.checked = state;
-                cb.indeterminate = false;
-            });
-            document.querySelectorAll(`.${prefix}-city-box, .${prefix}-hood-box`).forEach(cb => {
-                cb.checked = state;
-            });
-            if (prefix === 'setting') saveSettingsStateLocally();
-            else saveOnDemandStateLocally();
-        }
-
-        function handleCountyScopeChange(prefix, county, checked) {
-            const children = document.querySelectorAll(`.${prefix}-city-box[data-county="${county}"]`);
-            children.forEach(city => {
-                city.checked = checked;
-                document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                    if (hood.dataset.city === city.value) hood.checked = checked;
-                });
-            });
-            // Allegheny also has a county-wide source in the existing scan engine.
-            const legacy = document.querySelector(`.${prefix}-city-box[data-legacy-county="${county}"]`);
-            if (legacy) legacy.checked = checked;
-            document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                if (hood.dataset.city === county) hood.checked = checked;
-            });
-            if (prefix === 'setting') saveSettingsStateLocally(); else saveOnDemandStateLocally();
-        }
-
-        function syncCountySelection(prefix, cityName) {
-            const city = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county]`))
-                .find(cb => cb.value === cityName);
-            if (!city) return;
-            const county = document.querySelector(`.${prefix}-county-box[value="${city.dataset.county}"]`);
-            const siblings = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county="${city.dataset.county}"]`));
-            if (county) {
-                county.checked = siblings.every(cb => cb.checked);
-                county.indeterminate = !county.checked && siblings.some(cb => cb.checked);
-            }
-            const legacy = document.querySelector(`.${prefix}-city-box[data-legacy-county="${city.dataset.county}"]`);
-            if (legacy) legacy.checked = Boolean(county && county.checked);
-        }
-
-        function buildGeoAreas(prefix) {
-            const scopes = {};
-            document.querySelectorAll(`.${prefix}-city-box:checked`).forEach(city => {
-                const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
-                    .filter(hood => hood.dataset.city === city.value);
-                scopes[city.value] = {
-                    allLocations: locations.length === 0 || locations.every(hood => hood.checked),
-                    locations: [...new Set(locations.filter(hood => hood.checked).map(hood => hood.value))]
-                };
-            });
-            return scopes;
-        }
-
-        function restoreGeoAreas(prefix, saved) {
-            if (!saved || !saved.geoAreas) return;
-            document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                const scope = saved.geoAreas[hood.dataset.city];
-                if (scope) hood.checked = Boolean(scope.allLocations || scope.locations?.includes(hood.value));
-            });
-        }
-
-        function buildServerConfig(isManual = false) {
-            const prefix = isManual ? 'ondemand' : 'setting';
-            return {
-                minPrice: getRawPrice(document.getElementById(`${prefix}-min-price`)),
-                maxPrice: getRawPrice(document.getElementById(`${prefix}-max-price`)) || 190000,
-                minSqft: document.getElementById(`${prefix}-min-sqft`).value,
-                maxSqft: document.getElementById(`${prefix}-max-sqft`) ? document.getElementById(`${prefix}-max-sqft`).value : '',
-                minBeds: document.getElementById(`${prefix}-min-beds`).value,
-                maxBeds: document.getElementById(`${prefix}-max-beds`) ? document.getElementById(`${prefix}-max-beds`).value : 'all',
-                minBaths: document.getElementById(`${prefix}-min-baths`).value,
-                sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value),
-                propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
-                counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
-                cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
-                neighborhoods: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`)).map(cb => cb.value),
-                geoAreas: buildGeoAreas(prefix),
-                
-                autoScanEnabled: document.getElementById('autoscan-master-switch') ? document.getElementById('autoscan-master-switch').checked : true,
-                schedules: {
-                    mls: { day: document.getElementById('sched-day-mls') ? document.getElementById('sched-day-mls').value : 'Everyday', time: document.getElementById('sched-time-mls') ? document.getElementById('sched-time-mls').value : '08:00' },
-                    reo: { day: document.getElementById('sched-day-reo') ? document.getElementById('sched-day-reo').value : 'Wednesday', time: document.getElementById('sched-time-reo') ? document.getElementById('sched-time-reo').value : '08:00' },
-                    sheriff: { day: document.getElementById('sched-day-sheriff') ? document.getElementById('sched-day-sheriff').value : 'Wednesday', time: document.getElementById('sched-time-sheriff') ? document.getElementById('sched-time-sheriff').value : '08:00' },
-                    tax: { day: document.getElementById('sched-day-tax') ? document.getElementById('sched-day-tax').value : 'Wednesday', time: document.getElementById('sched-time-tax') ? document.getElementById('sched-time-tax').value : '08:00' },
-                    "06_probate_estates": { day: document.getElementById('sched-day-probate') ? document.getElementById('sched-day-probate').value : 'Wednesday', time: document.getElementById('sched-time-probate') ? document.getElementById('sched-time-probate').value : '08:00' }
-                },
-                
-                updatedAt: new Date().toISOString(),
-                is_manual_scan: isManual
-            };
-        }
-
-        function saveSettingsStateLocally() {
-            localStorage.setItem('pa_settings_state_v7', JSON.stringify(buildServerConfig(false)));
-        }
-
-        function loadSettingsState() {
-            try {
-                const saved = localStorage.getItem('pa_settings_state_v7');
-                if (saved) {
-                    const st = JSON.parse(saved);
-                    if(document.getElementById('setting-min-price') && st.minPrice) document.getElementById('setting-min-price').value = st.minPrice.toLocaleString('en-US');
-                    if(document.getElementById('setting-max-price') && st.maxPrice) document.getElementById('setting-max-price').value = st.maxPrice.toLocaleString('en-US');
-                    if(document.getElementById('setting-min-sqft') && st.minSqft) document.getElementById('setting-min-sqft').value = st.minSqft;
-                    if(document.getElementById('setting-max-sqft') && st.maxSqft !== undefined) document.getElementById('setting-max-sqft').value = st.maxSqft;
-                    if(document.getElementById('setting-min-beds') && st.minBeds) document.getElementById('setting-min-beds').value = st.minBeds;
-                    if(document.getElementById('setting-max-beds') && st.maxBeds !== undefined) document.getElementById('setting-max-beds').value = st.maxBeds;
-                    if(document.getElementById('setting-min-baths') && st.minBaths) document.getElementById('setting-min-baths').value = st.minBaths;
-                    
-                    if(st.sectors) document.querySelectorAll('.setting-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
-                    if(st.propertyTypes) document.querySelectorAll('.setting-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
-                    if(st.counties) document.querySelectorAll('.setting-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
-                    if(st.cities) document.querySelectorAll('.setting-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
-                    if(st.neighborhoods) document.querySelectorAll('.setting-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
-                    restoreGeoAreas('setting', st);
-                }
-            } catch(e) {}
-        }
-
-        function saveOnDemandStateLocally() {
-            localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(buildServerConfig(true)));
-        }
-
-        function loadOnDemandState() {
-            try {
-                const saved = localStorage.getItem('pa_ondemand_state_v7');
-                if (saved) {
-                    const st = JSON.parse(saved);
-                    if(document.getElementById('ondemand-min-price') && st.minPrice) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
-                    if(document.getElementById('ondemand-max-price') && st.maxPrice) document.getElementById('ondemand-max-price').value = st.maxPrice.toLocaleString('en-US');
-                    if(document.getElementById('ondemand-min-sqft') && st.minSqft) document.getElementById('ondemand-min-sqft').value = st.minSqft;
-                    if(document.getElementById('ondemand-max-sqft') && st.maxSqft !== undefined) document.getElementById('ondemand-max-sqft').value = st.maxSqft;
-                    if(document.getElementById('ondemand-min-beds') && st.minBeds) document.getElementById('ondemand-min-beds').value = st.minBeds;
-                    if(document.getElementById('ondemand-max-beds') && st.maxBeds !== undefined) document.getElementById('ondemand-max-beds').value = st.maxBeds;
-                    if(document.getElementById('ondemand-min-baths') && st.minBaths) document.getElementById('ondemand-min-baths').value = st.minBaths;
-                    
-                    if(st.sectors) document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
-                    if(st.propertyTypes) document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
-                    if(st.counties) document.querySelectorAll('.ondemand-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
-                    if(st.cities) document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
-                    if(st.neighborhoods) document.querySelectorAll('.ondemand-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
-                    restoreGeoAreas('ondemand', st);
-                }
-            } catch(e) {}
-        }
-
-        function setViewMode(mode) {
-            currentViewMode = mode;
-            document.getElementById('btn-view-table').className = mode === 'table' ? "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-blue-600 text-white" : "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 text-gray-400 hover:text-white";
-            document.getElementById('btn-view-grid').className = mode === 'grid' ? "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-blue-600 text-white" : "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 text-gray-400 hover:text-white";
-            renderCards();
-        }
-
-        function loadPipelineFromStorage() { try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals') || '[]'); } catch(e) { pipelineDeals = []; } }
-        function savePipelineToStorage() { localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals)); }
-        function loadWatchlistFromStorage() { try { userWatchlist = new Set(JSON.parse(localStorage.getItem('pa_watchlist_ids') || '[]')); } catch(e) { userWatchlist = new Set(); } updateWatchlistCountDisplay(); }
-        function saveWatchlistToStorage() { localStorage.setItem('pa_watchlist_ids', JSON.stringify(Array.from(userWatchlist))); updateWatchlistCountDisplay(); }
 
         function updateWatchlistCountDisplay() {
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
@@ -1002,23 +848,34 @@
             if(el) el.textContent = count;
         }
 
-        function moveToPipelineFromModal() {
+        async function moveToPipelineFromModal() {
             if (!currentSelectedProperty) return;
             const idStr = String(currentSelectedProperty.id);
             if (!pipelineDeals.some(d => String(d.id) === idStr)) {
-                pipelineDeals.push({...currentSelectedProperty, pipeline_stage: 'due_diligence', added_to_pipeline_at: new Date().toLocaleDateString('he-IL')});
-                savePipelineToStorage();
+                const dealData = {...currentSelectedProperty, pipeline_stage: 'due_diligence', added_to_pipeline_at: new Date().toLocaleDateString('he-IL')};
+                pipelineDeals.push(dealData);
+                // עדכון הענן
+                supabaseClient.from('pipeline_deals').upsert({ property_id: idStr, deal_data: dealData }).then();
             }
-            if (userWatchlist.has(idStr)) { userWatchlist.delete(idStr); saveWatchlistToStorage(); }
+            if (userWatchlist.has(idStr)) { 
+                userWatchlist.delete(idStr); 
+                supabaseClient.from('user_watchlist').delete().eq('property_id', idStr).then();
+            }
             alert(`הנכס "${currentSelectedProperty.address}" הועבר בהצלחה לחדר העסקאות!`);
             closePropertyModal(); populateCityDropdown(); renderCards(); updateCounts(); updateWatchlistCountDisplay();
         }
 
-        function toggleWatchlist(propId, event) {
+        async function toggleWatchlist(propId, event) {
             if (event) event.stopPropagation();
             const idStr = String(propId);
-            if (userWatchlist.has(idStr)) userWatchlist.delete(idStr); else userWatchlist.add(idStr);
-            saveWatchlistToStorage(); renderCards(); updateModalWatchlistState();
+            if (userWatchlist.has(idStr)) {
+                userWatchlist.delete(idStr);
+                supabaseClient.from('user_watchlist').delete().eq('property_id', idStr).then();
+            } else {
+                userWatchlist.add(idStr);
+                supabaseClient.from('user_watchlist').upsert({ property_id: idStr }).then();
+            }
+            updateWatchlistCountDisplay(); renderCards(); updateModalWatchlistState();
         }
 
         function toggleWatchlistFromModal() { if (currentSelectedProperty) toggleWatchlist(currentSelectedProperty.id); }
@@ -1040,7 +897,6 @@
                 if (!response.ok) return null;
                 scannerReport = await response.json();
                 
-                // Track last known scan ID for auto-refresh logic
                 if (scannerReport.last_scan && scannerReport.last_scan.scan_id) {
                     lastKnownScanId = scannerReport.last_scan.scan_id;
                 }
@@ -1073,19 +929,16 @@
             await loadScannerStatus();
             try {
                 const res = await fetch('properties.json?t=' + Date.now());
-                
                 const lastModified = res.headers.get('Last-Modified');
                 if (lastModified) {
                     const dateObj = new Date(lastModified);
-                    const formattedDate = dateObj.toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit'}) + " " + dateObj.toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'});
-                    document.getElementById('last-scan-time').textContent = formattedDate;
+                    document.getElementById('last-scan-time').textContent = dateObj.toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit'}) + " " + dateObj.toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'});
                 } else {
                     document.getElementById('last-scan-time').textContent = "מוכן";
                 }
 
                 const rawList = await res.json();
                 
-                // Add Sheriff List if available
                 try {
                     const sheriffResponse = await fetch('sheriff_listings.json?t=' + Date.now());
                     if (sheriffResponse.ok) {
@@ -1106,64 +959,46 @@
                 
                 const seenKeys = new Set(); 
                 let activeProps = [];
-                let archiveChanged = false;
-                
                 const NOW = Date.now();
                 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
                 rawList.forEach(p => {
-                    const normKey = (p.source_type === 'sheriff' ? 'sheriff:' + p.id :
-                        p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id));
+                    const normKey = (p.source_type === 'sheriff' ? 'sheriff:' + p.id : p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id));
                     
                     if (!seenKeys.has(normKey)) { 
                         seenKeys.add(normKey); 
                         if (!p.listed_date) p.listed_date = '05/09/2026'; 
 
-                        // Normalize Sheriff Deals (Fixing empty prices & messy addresses)
                         if ((p.source === 'allegheny_sheriff' || p.source_type === 'sheriff_sale' || (p.deal_type||'').toLowerCase().includes('sheriff'))) {
-                            p.deal_type = p.deal_type || 'sheriff'; // Ensure deal_type exists for filters
-                            
-                            // Map opening_bid to price if price is missing
-                            if (!p.price && p.opening_bid) {
-                                // Extract numbers only from opening_bid like "$5,000.00" -> 5000
-                                const cleanBid = String(p.opening_bid).replace(/[^0-9.-]+/g, "");
-                                p.price = parseFloat(cleanBid);
-                            }
-
-                            // Clean generic addresses
-                            if (String(p.address).includes("Address in comments / verify parcel") || String(p.address).trim() === "") {
-                                p.address = p.parcel_id ? "נכס שריף (חלקה " + p.parcel_id + ")" : "נכס שריף (חסר מספר חלקה)";
-                            }
+                            p.deal_type = p.deal_type || 'sheriff';
+                            if (!p.price && p.opening_bid) { p.price = parseFloat(String(p.opening_bid).replace(/[^0-9.-]+/g, "")); }
+                            if (String(p.address).includes("Address in comments") || String(p.address).trim() === "") { p.address = p.parcel_id ? "נכס שריף (חלקה " + p.parcel_id + ")" : "נכס שריף (חסר מספר חלקה)"; }
                         }
                         
                         const idStr = String(p.id);
                         const currentPrice = Number(p.price) || 0;
                         
+                        // Cloud Sync Archive Logic
                         if (archiveDeals[idStr]) {
                             if (currentPrice > 0 && currentPrice < archiveDeals[idStr].price) {
                                 delete archiveDeals[idStr];
-                                archiveChanged = true;
+                                supabaseClient.from('archive_deals').delete().eq('property_id', idStr).then();
                                 p.price_dropped = true; 
                                 p.is_archived = false;
-                            } else {
-                                p.is_archived = true;
-                            }
+                            } else { p.is_archived = true; }
                         } else {
                             const listTime = parseDate(p.listed_date);
                             if (listTime > 0 && (NOW - listTime) > NINETY_DAYS_MS && !p.price_dropped) {
-                                archiveDeals[idStr] = { price: currentPrice, date: new Date().toISOString() };
-                                archiveChanged = true;
+                                const archData = { price: currentPrice, date: new Date().toISOString() };
+                                archiveDeals[idStr] = archData;
+                                supabaseClient.from('archive_deals').upsert({ property_id: idStr, archive_data: archData }).then();
                                 p.is_archived = true;
-                            } else {
-                                p.is_archived = false;
-                            }
+                            } else { p.is_archived = false; }
                         }
-                        
                         activeProps.push(p); 
                     }
                 });
                 
-                if (archiveChanged) saveArchive();
                 rawProperties = activeProps;
                 
                 populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
@@ -1175,7 +1010,6 @@
 
         async function loadGeoCatalog() {
             const areas = {};
-            // Previously retained results let the picker work before the next scan.
             for (const prop of rawProperties) {
                 const area = String(prop.source_scan_area || prop.city || '').trim();
                 const location = String(prop.source_location || '').trim();
@@ -1193,7 +1027,7 @@
                         }
                     }
                 }
-            } catch (err) { console.info('קטלוג אזורים טרם זמין; משתמש בנתוני הנכסים הקיימים.'); }
+            } catch (err) {}
             for (const prefix of ['setting', 'ondemand']) renderGeoCatalog(prefix, areas);
         }
 
@@ -1203,8 +1037,7 @@
             container.replaceChildren();
             const saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
             const oldSelections = new Set(saved.neighborhoods || []);
-            const staticInputs = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
-                .filter(input => !input.closest(`#${prefix}-dynamic-neighborhoods`));
+            const staticInputs = Array.from(document.querySelectorAll(`.${prefix}-hood-box`)).filter(input => !input.closest(`#${prefix}-dynamic-neighborhoods`));
             const staticGrid = staticInputs[0]?.closest('.grid');
             if (staticGrid) staticGrid.classList.add('hidden');
             const byArea = {};
@@ -1212,9 +1045,7 @@
             const names = new Set([...Object.keys(areas), ...Object.keys(byArea)]);
             for (const area of Array.from(names).sort((a,b) => a.localeCompare(b))) {
                 const countyArea = area === 'Allegheny';
-                const parent = document.querySelector(countyArea
-                    ? `.${prefix}-county-box[value="Allegheny"]`
-                    : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
+                const parent = document.querySelector(countyArea ? `.${prefix}-county-box[value="Allegheny"]` : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
                 if (!parent) continue;
                 const fromSource = Array.from(areas[area] || []).sort((a,b) => a.localeCompare(b));
                 const sourceNames = new Set(fromSource.map(v => v.toLowerCase()));
@@ -1232,23 +1063,14 @@
                 for (const input of oldInputs) {
                     const label = input.closest('label');
                     if (!label) continue;
-                    if (!sourceNames.has(input.value.toLowerCase())) {
-                        label.title = 'שם מהרשימה הישנה; טרם נמצא בשם זהה בנתוני המקור';
-                        label.classList.add('border-amber-700/50');
-                    }
+                    if (!sourceNames.has(input.value.toLowerCase())) { label.title = 'שם מהרשימה הישנה; טרם נמצא בשם זהה בנתוני המקור'; label.classList.add('border-amber-700/50'); }
                     grid.append(label);
                 }
                 for (const location of newLocations) {
-                    const label = document.createElement('label');
-                    label.dir = 'ltr';
-                    label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
-                    const input = document.createElement('input');
-                    input.type = 'checkbox'; input.value = location;
-                    input.className = `${prefix}-hood-box accent-emerald-500`;
-                    input.dataset.city = area;
+                    const label = document.createElement('label'); label.dir = 'ltr'; label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
+                    const input = document.createElement('input'); input.type = 'checkbox'; input.value = location; input.className = `${prefix}-hood-box accent-emerald-500`; input.dataset.city = area;
                     const scope = saved.geoAreas?.[area];
-                    input.checked = scope ? Boolean(scope.allLocations || scope.locations?.includes(location))
-                        : (parent.checked || oldSelections.has(location));
+                    input.checked = scope ? Boolean(scope.allLocations || scope.locations?.includes(location)) : (parent.checked || oldSelections.has(location));
                     input.addEventListener('change', prefix === 'setting' ? saveSettingsStateLocally : saveOnDemandStateLocally);
                     const name = document.createElement('span'); name.textContent = location;
                     label.append(input, name); grid.append(label);
@@ -1258,48 +1080,30 @@
             if (!container.children.length) container.textContent = 'אין עדיין אזורים זמינים עבור הערים האלה.';
         }
 
-        // סינון לוח קיים לפי מחוז, עיר וערך LOCATION מהנכסים השמורים.
-        const MAIN_COUNTY_BY_CITY = {
-            Pittsburgh: 'Allegheny', Philadelphia: 'Philadelphia', Allentown: 'Lehigh',
-            Reading: 'Berks', Erie: 'Erie', Scranton: 'Lackawanna', Lancaster: 'Lancaster'
-        };
+        const MAIN_COUNTY_BY_CITY = { Pittsburgh: 'Allegheny', Philadelphia: 'Philadelphia', Allentown: 'Lehigh', Reading: 'Berks', Erie: 'Erie', Scranton: 'Lackawanna', Lancaster: 'Lancaster' };
         function mainGeoParts(p) {
             const city = String(p.city || 'עיר לא ידועה').trim();
             const scanArea = String(p.source_scan_area || '').trim();
-            const county = String(p.county || '').trim()
-                || (scanArea === 'Allegheny' ? 'Allegheny' : MAIN_COUNTY_BY_CITY[city])
-                || 'מחוז לא מזוהה';
+            const county = String(p.county || '').trim() || (scanArea === 'Allegheny' ? 'Allegheny' : MAIN_COUNTY_BY_CITY[city]) || 'מחוז לא מזוהה';
             return [county, city, String(p.source_location || '').trim()];
         }
         function mainGeoKey(p) { return JSON.stringify(mainGeoParts(p)); }
-        function toggleCityDropdown(e) {
-            e.stopPropagation();
-            document.getElementById('city-dropdown-list').classList.toggle('hidden');
-        }
+        function toggleCityDropdown(e) { e.stopPropagation(); document.getElementById('city-dropdown-list').classList.toggle('hidden'); }
         function mainGeoToggle(keys, checked) {
             if (selectedCitiesFilter === null) selectedCitiesFilter = new Set(allAvailableCities);
             keys.forEach(key => checked ? selectedCitiesFilter.add(key) : selectedCitiesFilter.delete(key));
             if (selectedCitiesFilter.size === allAvailableCities.length) selectedCitiesFilter = null;
-            populateCityDropdown();
-            renderCards();
+            populateCityDropdown(); renderCards();
         }
         function mainGeoRow(labelText, count, keys, depth = 0) {
-            const label = document.createElement('label');
-            label.className = 'flex items-center gap-2 cursor-pointer hover:bg-gray-800 px-2 py-1 rounded-lg';
-            label.style.paddingRight = `${8 + depth * 14}px`;
-            label.addEventListener('click', e => e.stopPropagation());
-            const cb = document.createElement('input');
-            cb.type = 'checkbox'; cb.className = 'accent-blue-500 w-3.5 h-3.5';
+            const label = document.createElement('label'); label.className = 'flex items-center gap-2 cursor-pointer hover:bg-gray-800 px-2 py-1 rounded-lg'; label.style.paddingRight = `${8 + depth * 14}px`; label.addEventListener('click', e => e.stopPropagation());
+            const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'accent-blue-500 w-3.5 h-3.5';
             const picked = keys.filter(key => selectedCitiesFilter === null || selectedCitiesFilter.has(key)).length;
-            cb.checked = picked === keys.length && keys.length > 0;
-            cb.indeterminate = picked > 0 && picked < keys.length;
+            cb.checked = picked === keys.length && keys.length > 0; cb.indeterminate = picked > 0 && picked < keys.length;
             cb.addEventListener('change', () => mainGeoToggle(keys, cb.checked));
-            const name = document.createElement('span'); name.textContent = labelText;
-            name.className = 'flex-1 truncate'; name.dir = 'ltr';
-            const badge = document.createElement('span'); badge.textContent = count;
-            badge.className = 'text-blue-300 font-mono';
-            label.append(cb, name, badge);
-            return label;
+            const name = document.createElement('span'); name.textContent = labelText; name.className = 'flex-1 truncate'; name.dir = 'ltr';
+            const badge = document.createElement('span'); badge.textContent = count; badge.className = 'text-blue-300 font-mono';
+            label.append(cb, name, badge); return label;
         }
         function populateCityDropdown() {
             const container = document.getElementById('city-checkbox-container');
@@ -1316,8 +1120,7 @@
                 const cityNode = countyNode.cities.get(city); cityNode.count++; cityNode.keys.add(key);
                 const loc = location || 'ללא אזור מקור';
                 if (!cityNode.locations.has(loc)) cityNode.locations.set(loc, {count: 0, keys: new Set()});
-                cityNode.locations.get(loc).count++;
-                cityNode.locations.get(loc).keys.add(key);
+                cityNode.locations.get(loc).count++; cityNode.locations.get(loc).keys.add(key);
             }
             allAvailableCities = Array.from(keys);
             if (selectedCitiesFilter !== null) {
@@ -1329,26 +1132,17 @@
             let shown = 0;
             for (const [county, countyNode] of sorted(tree)) {
                 const countyMatch = county.toLowerCase().includes(query);
-                const countyDetails = document.createElement('details');
-                countyDetails.className = 'border border-gray-800 rounded-lg bg-gray-950';
-                countyDetails.open = Boolean(query);
-                const countySummary = document.createElement('summary');
-                countySummary.className = 'cursor-pointer list-none';
-                countySummary.append(mainGeoRow(county, countyNode.count, [...countyNode.keys]));
+                const countyDetails = document.createElement('details'); countyDetails.className = 'border border-gray-800 rounded-lg bg-gray-950'; countyDetails.open = Boolean(query);
+                const countySummary = document.createElement('summary'); countySummary.className = 'cursor-pointer list-none'; countySummary.append(mainGeoRow(county, countyNode.count, [...countyNode.keys]));
                 let visibleCities = 0;
                 for (const [city, cityNode] of sorted(countyNode.cities)) {
                     const cityMatch = countyMatch || city.toLowerCase().includes(query);
-                    const cityDetails = document.createElement('details');
-                    cityDetails.className = 'border-t border-gray-800';
-                    cityDetails.open = Boolean(query);
-                    const citySummary = document.createElement('summary');
-                    citySummary.className = 'cursor-pointer list-none';
-                    citySummary.append(mainGeoRow(city, cityNode.count, [...cityNode.keys], 1));
+                    const cityDetails = document.createElement('details'); cityDetails.className = 'border-t border-gray-800'; cityDetails.open = Boolean(query);
+                    const citySummary = document.createElement('summary'); citySummary.className = 'cursor-pointer list-none'; citySummary.append(mainGeoRow(city, cityNode.count, [...cityNode.keys], 1));
                     let visibleLocations = 0;
                     for (const [location, locNode] of sorted(cityNode.locations)) {
                         if (!cityMatch && !location.toLowerCase().includes(query)) continue;
-                        cityDetails.append(mainGeoRow(location, locNode.count, [...locNode.keys], 2));
-                        visibleLocations++;
+                        cityDetails.append(mainGeoRow(location, locNode.count, [...locNode.keys], 2)); visibleLocations++;
                     }
                     if (!visibleLocations && !cityMatch) continue;
                     cityDetails.prepend(citySummary); countyDetails.append(cityDetails); visibleCities++;
@@ -1356,19 +1150,10 @@
                 if (!visibleCities && !countyMatch) continue;
                 countyDetails.prepend(countySummary); container.append(countyDetails); shown++;
             }
-            if (!shown) {
-                const empty = document.createElement('p');
-                empty.className = 'text-gray-400 p-3 text-center';
-                empty.textContent = query ? 'לא נמצאו אזורים תואמים לחיפוש.' : 'אין נכסים זמינים לסינון.';
-                container.append(empty);
-            }
+            if (!shown) { const empty = document.createElement('p'); empty.className = 'text-gray-400 p-3 text-center'; empty.textContent = query ? 'לא נמצאו אזורים תואמים לחיפוש.' : 'אין נכסים זמינים לסינון.'; container.append(empty); }
             updateCityDropdownLabel();
         }
-        function setAllCityFilters(state, e) {
-            if (e) e.stopPropagation();
-            selectedCitiesFilter = state ? null : new Set();
-            populateCityDropdown(); renderCards();
-        }
+        function setAllCityFilters(state, e) { if (e) e.stopPropagation(); selectedCitiesFilter = state ? null : new Set(); populateCityDropdown(); renderCards(); }
         function updateCityDropdownLabel() {
             const label = document.getElementById('city-dropdown-text');
             if (selectedCitiesFilter === null) label.textContent = 'כל האזורים';
@@ -1376,38 +1161,31 @@
             else label.textContent = `${selectedCitiesFilter.size} אזורים נבחרו`;
         }
 
-        // V8.6: Off Market status helper.
         function isOffMarketProperty(p) {
-            const status = String((p && (p.status || p.listing_status || p.market_status)) || '')
-                .trim().toLowerCase().replace(/[\s-]+/g, '_');
+            const status = String((p && (p.status || p.listing_status || p.market_status)) || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
             return status === 'off_market' || status === 'off_market_candidate' || status === 'offmarket';
         }
 
         function updateCounts() {
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
-            
             const nonArchived = available.filter(p => !p.is_archived);
             
             document.getElementById('count-all').textContent = nonArchived.length;
             document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
             document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped).length;
             document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
-            
-            // Fixed sheriff counter to capture source properly
             document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
-            
             document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
-            document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
             document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
-            
             document.getElementById('count-archive').textContent = available.filter(p => p.is_archived).length;
         }
 
         function setCategory(cat) {
+            if(cat === 'probate') return; 
             activeCategory = cat;
-            ['all', 'mls', 'price_drop', 'distressed', 'sheriff', 'tax', 'probate', 'offmarket', 'archive'].forEach(c => {
-                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-price_drop', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate', 'kpi-active-offmarket', 'kpi-active-archive');
+            ['all', 'mls', 'price_drop', 'distressed', 'sheriff', 'tax', 'offmarket', 'archive'].forEach(c => {
+                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-price_drop', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-offmarket', 'kpi-active-archive');
                 if (c === cat) document.getElementById(`btn-cat-${c}`)?.classList.add(`kpi-active-${c}`);
             });
             renderCards();
@@ -1420,6 +1198,9 @@
             if (Number.isFinite(price) && price > 0) {
                 return '$' + price.toLocaleString();
             }
+            if (p.source_type === 'tax' && p.minimum_bid) {
+                return `<span class="block text-purple-300 text-sm">הצעת מינימום: $${Number(p.minimum_bid).toLocaleString()}</span>`;
+            }
             const caseCostTaxBid = Number(p.case_cost_tax_bid);
             if (p.source_type === 'sheriff' && Number.isFinite(caseCostTaxBid) && caseCostTaxBid > 0) {
                 return `<span class="block text-amber-300">$${caseCostTaxBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans font-semibold">Cost &amp; Tax Bid · סכום תיק, לא מחיר מכירה</span>`;
@@ -1427,10 +1208,15 @@
             return 'ללא הצעת פתיחה';
         }
 
+        function featureDisplayHtml(p) {
+            if (p.source_type === 'tax' && !p.beds && !p.sqft) {
+                 return `<div class="text-[11px] text-gray-400">ממתין למיפוי במחוז</div>`;
+            }
+            return `🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}`;
+        }
+
         function renderCards() {
             const container = document.getElementById('properties-container');
-            // Assign one stable sequence across every category. Changing the
-            // Sheriff/Off Market/Bank filter must not restart numbering at 1.
             const displayNumberById = new Map(rawProperties.map((p, index) => [String(p.id), index + 1]));
             const stratF = document.getElementById('filter-strategy').value;
             const typeF = document.getElementById('filter-type').value, priceF = document.getElementById('filter-price').value;
@@ -1446,17 +1232,12 @@
                     if (!p.is_archived) return false;
                 } else {
                     if (p.is_archived) return false;
-                    
                     const dt = (p.deal_type || '').toLowerCase();
                     if (activeCategory === 'mls' && !dt.includes('mls')) return false;
                     if (activeCategory === 'price_drop' && !p.price_dropped) return false;
                     if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
-                    
-                    // Fixed sheriff filtering logic
                     if (activeCategory === 'sheriff' && !dt.includes('sheriff') && !(p.source || '').toLowerCase().includes('sheriff') && !(p.source_type || '').toLowerCase().includes('sheriff')) return false;
-                    
                     if (activeCategory === 'tax' && !dt.includes('tax')) return false;
-                    if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
                     if (activeCategory === 'offmarket' && !isOffMarketProperty(p)) return false;
                 }
 
@@ -1464,15 +1245,8 @@
                 if (typeF !== 'all' && p.type && p.type !== typeF) return false;
                 if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
                 if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
-                
-                // המסנן הראשי חל על המאגר המוצג, ללא הפעלת סריקה נוספת.
                 if (selectedCitiesFilter !== null && !selectedCitiesFilter.has(mainGeoKey(p))) return false;
-
-                // סינון AI מתחת ל-MAO
-                if (onlyGoodDeals) {
-                    if (!p.price || !p.mao_flip || (Number(p.price) > Number(p.mao_flip))) return false;
-                }
-
+                if (onlyGoodDeals) { if (!p.price || !p.mao_flip || (Number(p.price) > Number(p.mao_flip))) return false; }
                 return true;
             });
 
@@ -1500,13 +1274,13 @@
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
                         </td>
                         <td class="p-3 font-mono font-black text-emerald-400 text-sm">${propertyPriceDisplayHtml(p)}</td>
-                        <td class="p-3 font-bold text-gray-300 whitespace-nowrap">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
+                        <td class="p-3 font-bold text-gray-300 whitespace-nowrap">${featureDisplayHtml(p)}</td>
                         <td class="p-3"><div class="text-emerald-300 font-mono whitespace-nowrap">💰 ${p.projected_rent||'חסר נתון'}</div><div class="text-amber-300 text-[11px] whitespace-nowrap">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'--')}</div></td>
                         <td class="p-3 font-mono text-amber-300 whitespace-nowrap">📅 ${p.listed_date||'-'}</td>
                         <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score ?? '—'}</span></td>
                         <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
-                } else {
+            } else {
                 container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">` + filtered.map((p, index) => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
@@ -1531,7 +1305,6 @@
                             <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
                             <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'---'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'--')}</strong></span></div>
                         
-                            <!-- הבלוק הכחול של ה-AI במסך הראשי -->
                             <div class="bg-blue-950/20 p-2.5 rounded-xl border border-blue-500/30 mt-3 mb-1 space-y-1.5">
                                 <div class="flex justify-between items-center border-b border-gray-800/60 pb-1">
                                     <span class="font-black text-blue-300 flex items-center gap-1 text-[11px]"><i data-lucide="brain-circuit" class="w-3 h-3"></i> ניתוח AI</span>
@@ -1564,7 +1337,13 @@
             document.getElementById('modal-address').textContent = p.address;
             document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
             document.getElementById('modal-listed-date').textContent = p.listed_date;
-            document.getElementById('modal-price').textContent = p.price ? `$${Number(p.price).toLocaleString()}` : 'ללא הצעת פתיחה';
+            
+            let priceHtml = p.price ? `$${Number(p.price).toLocaleString()}` : 'ללא הצעת פתיחה';
+            if (!p.price && p.source_type === 'tax' && p.minimum_bid) {
+                priceHtml = `<span class="text-purple-300 text-lg">הצעת מינימום: $${Number(p.minimum_bid).toLocaleString()}</span>`;
+            }
+            document.getElementById('modal-price').innerHTML = priceHtml;
+            
             const countyData = p.county_property_data || null;
             document.getElementById('modal-beds').textContent = p.beds || countyData?.beds || '-';
             document.getElementById('modal-baths').textContent = p.baths || countyData?.baths || '-';
@@ -1600,9 +1379,7 @@
                         fallbackPin = `${String(parseInt(ward, 10)).padStart(4, '0')}${section.toUpperCase()}${String(parseInt(lot, 10)).padStart(5, '0')}000000`;
                     }
                 }
-                const setCounty = (id, value) => {
-                    document.getElementById(id).textContent = value === 0 ? '0' : (value || 'לא נמצא במאגר');
-                };
+                const setCounty = (id, value) => { document.getElementById(id).textContent = value === 0 ? '0' : (value || 'לא נמצא במאגר'); };
                 setCounty('modal-county-use', countyData?.use_code);
                 setCounty('modal-county-rooms', countyData?.total_rooms);
                 setCounty('modal-county-beds', countyData?.beds);
@@ -1624,9 +1401,7 @@
                 countyLink.href = countyData?.source_url || (pin ? `https://realestate.alleghenycounty.us/BuildingInfo?${countyQuery.toString()}` : 'https://realestate.alleghenycounty.us/search');
             }
             if (p.source_type === 'sheriff') {
-                const setSheriff = (id, value, fallback='לא צוין במסמך') => {
-                    document.getElementById(id).textContent = value === 0 ? '0' : (value || fallback);
-                };
+                const setSheriff = (id, value, fallback='לא צוין במסמך') => { document.getElementById(id).textContent = value === 0 ? '0' : (value || fallback); };
                 setSheriff('modal-sheriff-status', p.sheriff_status);
                 setSheriff('modal-sheriff-sale-date', p.sale_date);
                 setSheriff('modal-sheriff-parcel', p.parcel_id);
@@ -1639,7 +1414,6 @@
                 setSheriff('modal-sheriff-sale-type', p.source_sale_type);
             }
             
-            // עדכון חלונית AI ב-Modal
             document.getElementById('modal-ai-class').innerHTML = p.neighborhood_class ? `<span class="px-2 py-0.5 rounded text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-xs text-gray-500">חסר נתון שרת</span>';
             document.getElementById('modal-ai-arv').textContent = `$${(p.arv||0).toLocaleString()}`;
             document.getElementById('modal-ai-rent').textContent = `$${(p.monthly_rent_est||0).toLocaleString()}`;
@@ -1919,14 +1693,12 @@
                 checking = true;
                 try {
                     const report = await loadScannerStatus();
-                    // Auto-close if the scan_id changed since we started waiting
                     if (report?.last_scan?.scan_id && lastKnownScanId && report.last_scan.scan_id !== lastKnownScanId) {
                         clearInterval(scanTimerInterval);
                         await loadProperties();
                         await loadGeoCatalog();
                         closeScanToast();
                     }
-                    // Legacy fallback
                     else if (report?.last_scan?.request_id === requestId && ['success','partial','failed'].includes(report.last_scan.status)) {
                         clearInterval(scanTimerInterval);
                         await loadProperties();
