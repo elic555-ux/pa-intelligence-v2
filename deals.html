@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- PA UI PATCH 2026-10-02: Cloud Sync Integration via Supabase (Optimistic UI) -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -12,6 +13,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- PDF.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Supabase Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Leaflet CSS & JS for Dynamic Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -26,7 +29,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
 
-        /* הסרת חיצי העלאה והורדה משדות מספרים (Spinners) */
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -55,9 +57,9 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         חדר עסקאות וניהול צנרת (Deal Room)
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">מנוע אנליסט פעיל</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Cloud Synced ☁️</span>
                     </h1>
-                    <p class="text-xs text-gray-300">מעקב, מפות, ניתוחי MAO חכמים והערכות שיפוץ</p>
+                    <p class="text-xs text-gray-300">מעקב, מפות, ניתוחי MAO חכמים והערכות שיפוץ מבוסס ענן</p>
                 </div>
             </div>
 
@@ -78,7 +80,6 @@
                     <span id="archive-badge-count" class="px-2 py-0.5 bg-gray-950 rounded-full text-amber-400 font-mono text-[10px] font-black border border-gray-600">0</span>
                 </button>
 
-                <!-- הקישור לסורק -->
                 <a href="index.html" target="scanner_window" class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
                     <i data-lucide="scan" class="w-4 h-4"></i>
                     <span>לסורק הראשי</span>
@@ -90,9 +91,7 @@
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
-        <!-- Top Metrics / Smart Filters -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <!-- כפתור סינון עסקאות פעילות (מאפס סינון) -->
             <div onclick="setFilter('all'); showActiveDeals();" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition shadow-lg hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות פעילות בצנרת</span>
@@ -101,7 +100,6 @@
                 <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400"><i data-lucide="building-2" class="w-6 h-6"></i></div>
             </div>
 
-            <!-- כפתור סינון הצעות מחיר -->
             <div onclick="setFilter('offered')" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-blue-500/40 transition shadow-lg hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">הוגשו הצעות מחיר</span>
@@ -110,7 +108,6 @@
                 <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400"><i data-lucide="send" class="w-6 h-6"></i></div>
             </div>
 
-            <!-- כפתור סינון עסקאות סגורות -->
             <div onclick="setFilter('closed')" class="bg-gray-900/80 border border-gray-800 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-purple-500/40 transition shadow-lg hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-400 block mb-1">עסקאות שנסגרו</span>
@@ -119,7 +116,6 @@
                 <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
             </div>
 
-            <!-- דוחות שמורים -->
             <div onclick="openSavedReportsModal()" class="bg-gray-900/80 border border-emerald-500/30 hover:border-emerald-400 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition shadow-lg hover:shadow-emerald-950/40 hover:bg-gray-900">
                 <div>
                     <span class="text-xs font-bold text-gray-300 block mb-1 flex items-center gap-1">
@@ -144,7 +140,12 @@
         <div id="deals-map-container" class="hidden w-full h-[550px] rounded-2xl border border-gray-800 z-10 shadow-2xl overflow-hidden mb-6"></div>
 
         <!-- Pipeline Cards Grid -->
-        <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></section>
+        <section id="pipeline-deals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full text-center py-16 text-gray-400 font-bold">
+                <i data-lucide="loader-2" class="w-8 h-8 mx-auto animate-spin mb-3 text-blue-500"></i>
+                מושך נתונים מ-Supabase...
+            </div>
+        </section>
 
     </main>
 
@@ -154,7 +155,7 @@
             <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
                 <h3 class="text-base font-extrabold text-white flex items-center gap-2">
                     <i data-lucide="file-check-2" class="w-5 h-5 text-emerald-400"></i>
-                    דוחות בודק מפורטים שנשמרו
+                    דוחות בודק מפורטים שנשמרו בענן
                 </h3>
                 <div class="flex items-center gap-3">
                     <button onclick="clearSavedReports()" class="text-xs text-gray-500 hover:text-rose-400 transition">נקה היסטוריה</button>
@@ -290,12 +291,17 @@
 
     <!-- Script Logic -->
     <script>
+        // Supabase Initialization
+        const SUPABASE_URL = 'https://rccncvnybybastdgdoqe.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_-OFzsbOGfsPATYLeD5Grnw_GpHYDAAC';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         let pipelineDeals = [];
         let savedInspectionReports = [];
         let mapInstance = null;
         let isMapView = false;
         let isArchiveView = false;
-        let currentFilter = 'all'; // משתנה לסינון הנכסים במסך
+        let currentFilter = 'all';
 
         const CITY_COST_MULTIPLIER = { "Pittsburgh": 1.15, "Homestead": 1.15, "Philadelphia": 1.25, "Allentown": 1.12 };
         const REHAB_PRICE_CATALOG = {
@@ -306,12 +312,93 @@
         };
 
         async function init() {
-            loadSavedReports();
-            loadPipelineDeals();
+            lucide.createIcons();
+            await loadSavedReports();
+            await loadPipelineDeals();
             updateItemPricingDetails();
         }
 
-        // --- פונקציות ארכיון וסינון ---
+        // --- Supabase Cloud Sync Operations ---
+        async function loadPipelineDeals() {
+            try {
+                const { data, error } = await supabaseClient.from('pipeline_deals').select('*');
+                if (data && !error) {
+                    pipelineDeals = data.map(row => row.deal_data);
+                } else {
+                    pipelineDeals = [];
+                }
+            } catch(e) {
+                console.error("Failed to load from Supabase:", e);
+                pipelineDeals = []; 
+            }
+            updateDashboardCounters();
+            renderDeals();
+        }
+
+        function syncDealToDB(deal) {
+            // Optimistic sync: Updates the UI instantly, sends to Supabase in background
+            supabaseClient.from('pipeline_deals').upsert({ 
+                property_id: String(deal.id), 
+                deal_data: deal 
+            }).then(({error}) => {
+                if (error) console.error("Sync error:", error);
+            });
+        }
+
+        async function loadSavedReports() {
+            try {
+                const { data, error } = await supabaseClient.from('saved_reports').select('*').order('created_at', { ascending: false });
+                savedInspectionReports = data || [];
+                
+                const counter = document.getElementById('reports-saved-count');
+                if (counter) counter.textContent = savedInspectionReports.length;
+                
+                const grid = document.getElementById('saved-reports-modal-grid');
+                if (!grid) return;
+                
+                if (savedInspectionReports.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-6 text-center">אין עדיין דוחות שמורים. שמור דוחות מהדו"ח המורחב (report.html) כדי שיופיעו כאן להשוואה.</div>`;
+                    return;
+                }
+
+                grid.innerHTML = savedInspectionReports.map((dbRow) => {
+                    const rep = dbRow.report_data;
+                    const match = pipelineDeals.find(d => d.address === rep.address);
+                    const dealIdParam = match ? match.id : '';
+                    return `
+                        <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2 flex flex-col justify-between">
+                            <div>
+                                <strong class="text-white text-base block">${rep.address || dbRow.address}</strong>
+                                <span class="text-gray-400 text-xs">${rep.city || ''}, PA</span>
+                                <div class="text-xs text-emerald-400 font-mono mt-1">אומדן: ${rep.analysis?.rangeStr || 'לא צוין'}</div>
+                            </div>
+                            <div class="flex justify-between items-center pt-3 border-t border-gray-900 mt-2">
+                                <button onclick="window.open('report.html?id=${dealIdParam}', '_blank')" class="px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-lg text-xs font-bold transition flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> צפה בדוח</button>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] text-gray-500">${rep.date || ''}</span>
+                                    <button onclick="deleteSavedReport('${dbRow.id}')" class="text-rose-400 text-xs hover:underline">מחק</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                lucide.createIcons();
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteSavedReport(dbId) {
+            await supabaseClient.from('saved_reports').delete().eq('id', dbId);
+            await loadSavedReports();
+        }
+
+        async function clearSavedReports() {
+            if (confirm("למחוק את כל הדוחות השמורים מהענן לצמיתות?")) {
+                await supabaseClient.from('saved_reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                await loadSavedReports();
+            }
+        }
+
+        // --- פונקציות מסננים וארכיון ---
         function setFilter(filterType) {
             currentFilter = filterType;
             const title = document.getElementById('view-title');
@@ -331,7 +418,7 @@
 
         function toggleArchiveView() {
             isArchiveView = !isArchiveView;
-            currentFilter = 'all'; // איפוס סינון בכניסה/יציאה מארכיון
+            currentFilter = 'all';
             const btn = document.getElementById('btn-toggle-archive');
             const title = document.getElementById('view-title');
             
@@ -357,20 +444,16 @@
         }
 
         function showActiveDeals() {
-            if (isArchiveView) {
-                toggleArchiveView();
-            } else {
-                setFilter('all');
-            }
+            if (isArchiveView) { toggleArchiveView(); } else { setFilter('all'); }
         }
 
         function archiveDeal(id) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
                 deal.is_archived = true;
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -378,9 +461,18 @@
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
                 deal.is_archived = false;
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
+                syncDealToDB(deal);
+            }
+        }
+
+        function removeDealCompletely(id) {
+            if (confirm("האם להסיר את הנכס לצמיתות מהענן?")) {
+                pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
+                updateDashboardCounters();
+                renderDeals();
+                supabaseClient.from('pipeline_deals').delete().eq('property_id', String(id)).then();
             }
         }
 
@@ -396,55 +488,9 @@
             if(archiveBadge) archiveBadge.textContent = archived.length;
         }
 
-        function loadPipelineDeals() {
-            try { pipelineDeals = JSON.parse(localStorage.getItem('pa_pipeline_deals')) || []; } catch(e) { pipelineDeals = []; }
-            updateDashboardCounters();
-            renderDeals();
-        }
-
-        // --- פונקציות דוחות שמורים ---
-        function loadSavedReports() {
-            try {
-                savedInspectionReports = JSON.parse(localStorage.getItem('pa_saved_inspection_reports')) || [];
-            } catch(e) { savedInspectionReports = []; }
-            const counter = document.getElementById('reports-saved-count');
-            if (counter) counter.textContent = savedInspectionReports.length;
-            
-            const grid = document.getElementById('saved-reports-modal-grid');
-            if (!grid) return;
-            if (savedInspectionReports.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-6 text-center">אין עדיין דוחות שמורים. שמור דוחות מהדו"ח המורחב (report.html) כדי שיופיעו כאן להשוואה.</div>`;
-                return;
-            }
-            grid.innerHTML = savedInspectionReports.map((rep, idx) => {
-                const match = pipelineDeals.find(d => d.address === rep.address);
-                const dealIdParam = match ? match.id : '';
-                return `
-                    <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2 flex flex-col justify-between">
-                        <div>
-                            <strong class="text-white text-base block">${rep.address}</strong>
-                            <span class="text-gray-400 text-xs">${rep.city}, PA</span>
-                            <div class="text-xs text-emerald-400 font-mono mt-1">אומדן: ${rep.analysis?.rangeStr || 'לא צוין'}</div>
-                        </div>
-                        <div class="flex justify-between items-center pt-3 border-t border-gray-900 mt-2">
-                            <button onclick="window.open('report.html?id=${dealIdParam}', '_blank')" class="px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-lg text-xs font-bold transition flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> צפה בדוח</button>
-                            <div class="flex items-center gap-3">
-                                <span class="text-[10px] text-gray-500">${rep.date || ''}</span>
-                                <button onclick="deleteSavedReport(${idx})" class="text-rose-400 text-xs hover:underline">מחק</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            lucide.createIcons();
-        }
-
         function openSavedReportsModal() { loadSavedReports(); document.getElementById('saved-reports-modal').classList.remove('hidden'); }
         function closeSavedReportsModal() { document.getElementById('saved-reports-modal').classList.add('hidden'); }
-        function deleteSavedReport(idx) { savedInspectionReports.splice(idx, 1); localStorage.setItem('pa_saved_inspection_reports', JSON.stringify(savedInspectionReports)); loadSavedReports(); }
-        function clearSavedReports() { if (confirm("למחוק את כל הדוחות השמורים?")) { savedInspectionReports = []; localStorage.setItem('pa_saved_inspection_reports', JSON.stringify([])); loadSavedReports(); } }
 
-        // --- פונקציות בקרת שיפוצים ---
         function openGeneralPriceCatalogModal() { document.getElementById('general-price-catalog-modal').classList.remove('hidden'); switchGeneralModalTab('tab-gen-inspector'); }
         function closeGeneralPriceCatalogModal() { document.getElementById('general-price-catalog-modal').classList.add('hidden'); }
         function switchGeneralModalTab(tabId) {
@@ -528,15 +574,37 @@
 
         function renderV(isDone) { return isDone ? `<span class="indicator-done">✓</span>` : `<span class="indicator-pending"></span>`; }
 
-        // --- שדות הקלדה ואוטומציה ---
+        function propertyPriceDisplayHtml(p) {
+            const price = Number(p.price);
+            if (Number.isFinite(price) && price > 0) {
+                return '$' + price.toLocaleString();
+            }
+            if (p.source_type === 'tax' && p.minimum_bid) {
+                return `<span class="block text-purple-400 text-sm">הצעת מינימום: $${Number(p.minimum_bid).toLocaleString()}</span>`;
+            }
+            const caseCostTaxBid = Number(p.case_cost_tax_bid);
+            if (p.source_type === 'sheriff' && Number.isFinite(caseCostTaxBid) && caseCostTaxBid > 0) {
+                return `<span class="block text-amber-300 text-lg">$${caseCostTaxBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans font-semibold">Cost &amp; Tax Bid במסמך</span>`;
+            }
+            return '<span class="text-gray-500 text-sm">ללא מחיר / הצעת פתיחה</span>';
+        }
+
+        function featureDisplayHtml(p) {
+            if (p.source_type === 'tax' && !p.beds && !p.sqft) {
+                 return `<span class="text-gray-500 text-xs">ממתין למיפוי במחוז</span>`;
+            }
+            return `<span class="text-gray-300"><i data-lucide="bed-double" class="w-3.5 h-3.5 inline mr-1"></i>${p.beds||'-'} <i data-lucide="bath" class="w-3.5 h-3.5 inline ml-2 mr-1"></i>${p.baths||'-'}</span>`;
+        }
+
+        // --- Pipeline Optimistic UI Updates ---
         function updateField(id, key, value, redraw = false) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[key] = value;
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 if (redraw) renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -546,9 +614,9 @@
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[toggleKey] = value;
                 if (value === 'no') deal.tracker[amountKey] = ''; 
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -558,9 +626,9 @@
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[toggleKey] = value;
                 if(value === 'under_review') deal.tracker[amountKey] = '';
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -570,9 +638,9 @@
                 if (!deal.tracker) deal.tracker = {};
                 deal.tracker[toggleKey] = value;
                 if(value === 'not_closed' || value === '') deal.tracker[amountKey] = '';
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -584,13 +652,12 @@
                 if (!Array.isArray(currentVal)) { currentVal = (currentVal && currentVal !== 'none') ? [currentVal] : []; }
                 if (currentVal.includes(value)) { currentVal = currentVal.filter(v => v !== value); } else { currentVal.push(value); }
                 deal.tracker[key] = currentVal;
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
+                syncDealToDB(deal);
             }
         }
 
-        // --- הצעות מחיר מרובות מקבלנים ---
         function updateContractorStatus(id, value) {
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal) {
@@ -603,9 +670,9 @@
                 } else {
                     deal.tracker.contractors = []; 
                 }
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -613,9 +680,9 @@
             const deal = pipelineDeals.find(d => String(d.id) === String(id));
             if (deal && deal.tracker && deal.tracker.contractors) {
                 deal.tracker.contractors[index][key] = value;
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 updateDashboardCounters();
                 if (redraw) renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -625,8 +692,8 @@
                 if (!deal.tracker.contractors) deal.tracker.contractors = [];
                 if (deal.tracker.contractors.length < 3) {
                     deal.tracker.contractors.push({name: '', amount: ''});
-                    localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                     renderDeals();
+                    syncDealToDB(deal);
                 }
             }
         }
@@ -638,8 +705,8 @@
                 if(deal.tracker.contractors.length === 0) {
                     deal.tracker.contractor_quote_status = 'no';
                 }
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
                 renderDeals();
+                syncDealToDB(deal);
             }
         }
 
@@ -653,7 +720,7 @@
                     <div class="flex gap-1.5 items-center">
                         <input type="text" placeholder="שם קבלן" value="${c.name || ''}" oninput="updateContractor('${dealId}', ${idx}, 'name', this.value, false)" onblur="renderDeals()" class="w-1/2 bg-gray-900 border border-gray-700 text-white rounded-lg px-2 py-1 text-xs font-bold focus:border-amber-400 focus:outline-none">
                         <input type="number" placeholder="סכום ($)" value="${c.amount || ''}" oninput="updateContractor('${dealId}', ${idx}, 'amount', this.value, false)" onblur="renderDeals()" class="w-1/2 bg-gray-900 border border-gray-700 text-amber-400 rounded-lg px-2 py-1 text-xs font-bold focus:border-amber-400 focus:outline-none">
-                        ${contractors.length > 1 ? `<button onclick="removeContractor('${dealId}', ${idx})" class="text-rose-400 hover:text-rose-300 p-1" title="הסר קבלן"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>` : `<div class="w-6"></div>`}
+                        ${contractors.length > 1 ? `<button onclick="removeContractor('${dealId}',${idx})" class="text-rose-400 hover:text-rose-300 p-1" title="הסר קבלן"><i data-lucide="minus-circle" class="w-4 h-4"></i></button>` : `<div class="w-6"></div>`}
                     </div>
                 `;
             });
@@ -668,15 +735,6 @@
             }
             html += '</div>';
             return html;
-        }
-
-        function removeDealCompletely(id) {
-            if (confirm("האם להסיר את הנכס לצמיתות?")) {
-                pipelineDeals = pipelineDeals.filter(d => String(d.id) !== String(id));
-                localStorage.setItem('pa_pipeline_deals', JSON.stringify(pipelineDeals));
-                updateDashboardCounters();
-                renderDeals();
-            }
         }
 
         function openExpandedReport(dealId) {
@@ -699,7 +757,6 @@
             const container = document.getElementById('pipeline-deals-grid');
             if (!container) return;
             
-            // סינון חכם לפי הכפתור שנלחץ למעלה
             let baseList = pipelineDeals.filter(d => isArchiveView ? d.is_archived : !d.is_archived);
             let displayList = baseList;
 
@@ -753,7 +810,7 @@
                                     <button onclick="${isArchiveView ? `unarchiveDeal('${d.id}')` : `archiveDeal('${d.id}')`}" class="text-gray-500 hover:text-amber-400 p-2 bg-gray-950 rounded-lg border border-gray-800 transition" title="${isArchiveView ? 'החזר לצנרת' : 'העבר לארכיון'}">
                                         <i data-lucide="${isArchiveView ? 'upload' : 'archive'}" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2 bg-gray-950 rounded-lg border border-gray-800 transition" title="מחק נכס">
+                                    <button onclick="removeDealCompletely('${d.id}')" class="text-gray-500 hover:text-rose-400 p-2 bg-gray-950 rounded-lg border border-gray-800 transition" title="מחק נכס לצמיתות מ-Supabase">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -765,7 +822,7 @@
                                     <span class="px-2.5 py-0.5 rounded-md text-xs font-black uppercase border border-amber-500/30 text-amber-300 bg-amber-500/10">${d.deal_type || 'Active'}</span>
                                 </div>
                                 <p class="text-xs font-bold text-gray-300 flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i> ${d.city}, PA ${d.zip || ''}</p>
-                                <div class="text-2xl font-black text-emerald-400 my-2">$${(Number(d.price) || 0).toLocaleString()}</div>
+                                <div class="text-2xl font-black text-emerald-400 my-2">${propertyPriceDisplayHtml(d)}</div>
                             </div>
                             
                             <button onclick="openExpandedReport('${d.id}')" class="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
@@ -890,17 +947,60 @@
                 `;
             }).join('');
             lucide.createIcons();
+
+            if (isMapView) updateMapMarkers();
         }
 
         function toggleMapView() {
             isMapView = !isMapView;
-            document.getElementById('pipeline-deals-grid').classList.toggle('hidden');
-            document.getElementById('deals-map-container').classList.toggle('hidden');
-            if(isMapView && !mapInstance) {
-                mapInstance = L.map('deals-map-container').setView([40.4406, -79.9959], 11);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapInstance);
-                setTimeout(() => mapInstance.invalidateSize(), 100);
+            document.getElementById('pipeline-deals-grid').classList.toggle('hidden', isMapView);
+            document.getElementById('deals-map-container').classList.toggle('hidden', !isMapView);
+            
+            const btn = document.getElementById('btn-toggle-map');
+            if(isMapView) {
+                btn.className = "flex items-center gap-1.5 px-3.5 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition";
+                document.getElementById('map-btn-text').textContent = "חזור לתצוגת רשימה";
+                if(!mapInstance) {
+                    mapInstance = L.map('deals-map-container').setView([40.4406, -79.9959], 11);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapInstance);
+                }
+                setTimeout(() => { mapInstance.invalidateSize(); updateMapMarkers(); }, 100);
+            } else {
+                btn.className = "flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition";
+                document.getElementById('map-btn-text').textContent = "מפת עסקאות";
             }
+        }
+
+        let mapMarkers = [];
+        function updateMapMarkers() {
+            if(!mapInstance) return;
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapMarkers = [];
+            
+            let displayList = pipelineDeals.filter(d => isArchiveView ? d.is_archived : !d.is_archived);
+            if (currentFilter === 'offered') displayList = displayList.filter(d => d.tracker?.offer_made === 'yes');
+            if (currentFilter === 'closed') displayList = displayList.filter(d => d.tracker?.deal_closed === 'closed');
+
+            const validCoords = displayList.filter(d => d.latitude && d.longitude);
+            if(validCoords.length === 0) return;
+
+            validCoords.forEach(p => {
+                const marker = L.circleMarker([p.latitude, p.longitude], {
+                    radius: 8, fillColor: p.price_dropped ? '#f43f5e' : '#10b981',
+                    color: '#ffffff', weight: 2, opacity: 1, fillOpacity: 0.8
+                }).addTo(mapInstance);
+
+                marker.bindPopup(`
+                    <div class="text-right p-1" dir="rtl">
+                        <strong class="block text-white mb-1">${p.address}</strong>
+                        <span class="text-emerald-400 font-black">${propertyPriceDisplayHtml(p)}</span>
+                        <div class="mt-2 text-xs text-blue-300"><a href="#" onclick="openExpandedReport('${p.id}')" class="hover:underline">לדוח מפורט</a></div>
+                    </div>
+                `);
+                mapMarkers.push(marker);
+            });
+            const group = new L.featureGroup(mapMarkers);
+            mapInstance.fitBounds(group.getBounds().pad(0.1));
         }
 
         window.onload = init;
