@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.4-report-audit-20261002"
+ORCHESTRATOR_VERSION = "3.6.5-source-details-20261002"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -47,6 +47,77 @@ BANK_OF_AMERICA_REO_URL = "https://foreclosures.bankofamerica.com/pennsylvania"
 HUD_HOME_STORE_SEARCH_URL = "https://www.hudhomestore.gov/searchresult"
 LEHIGH_TAX_SALE_PAGE = "https://www.lehighcountytaxclaim.com/"
 ERIE_TAX_SALE_PAGE = "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/"
+ERIE_PROPERTY_SEARCH_URL = "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search.aspx"
+ALLEGHENY_PROPERTY_SEARCH_URL = "https://realestate.alleghenycounty.us/search"
+ALLEGHENY_PROPERTY_INFO_URL = "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search"
+ALLEGHENY_PROBATE_URL = "https://dcr.alleghenycounty.us/wills/login.aspx"
+ALLEGHENY_PROBATE_INFO_URL = "https://www.alleghenycounty.us/Government/Court-Related/Wills-and-Orphans/Resources"
+ERIE_PROBATE_URL = "https://courtpro.eriecountypa.gov/Row/v/search/case"
+LEHIGH_PROBATE_URL = "https://publicaccess.lehighcounty.org/Search.aspx"
+
+
+def normalize_county_name(value):
+    name = re.sub(r"\s+", " ", str(value or "")).strip()
+    name = re.sub(r"\s+County$", "", name, flags=re.I).strip()
+    return name.casefold()
+
+
+def selected_counties_from_config(cities, counties):
+    """Resolve only explicitly selected county names and mapped cities."""
+    known = {name.casefold(): name for name in PA_COUNTIES}
+    selected = set()
+    for value in counties or []:
+        name = normalize_county_name(value)
+        if name in known:
+            selected.add(known[name])
+    for city in cities or []:
+        parent = CITY_COUNTY.get(str(city).strip())
+        if parent:
+            selected.add(parent)
+    return selected
+
+
+def selected_manual_sources(cities, counties, source_kind):
+    """Build official, county-scoped links; these are links, never scraped data."""
+    selected = selected_counties_from_config(cities, counties)
+    sources = []
+    if source_kind == "tax":
+        definitions = {
+            "Allegheny": [
+                ("allegheny_property_search", "Allegheny — חיפוש רשומות נכס ומידע מס", ALLEGHENY_PROPERTY_INFO_URL),
+                ("allegheny_real_estate_portal", "Allegheny — פורטל רשומות מקרקעין", ALLEGHENY_PROPERTY_SEARCH_URL),
+            ],
+            "Erie": [
+                ("erie_tax_sales", "Erie — רשימות מכירות חוב מס", ERIE_TAX_SALE_PAGE),
+                ("erie_property_search", "Erie — חיפוש נכס לפי כתובת/חלקה", ERIE_PROPERTY_SEARCH_URL),
+            ],
+            "Lehigh": [
+                ("lehigh_tax_claim", "Lehigh — Tax Claim וחיפוש נכסים", LEHIGH_TAX_SALE_PAGE),
+            ],
+        }
+    elif source_kind == "probate":
+        definitions = {
+            "Allegheny": [
+                ("allegheny_probate_login", "Allegheny — חיפוש Wills/Orphans (דורש התחברות)", ALLEGHENY_PROBATE_URL),
+                ("allegheny_probate_info", "Allegheny — מידע וטפסי עיזבונות", ALLEGHENY_PROBATE_INFO_URL),
+            ],
+            "Erie": [
+                ("erie_probate_search", "Erie — חיפוש Register of Wills / Orphans", ERIE_PROBATE_URL),
+            ],
+            "Lehigh": [
+                ("lehigh_probate_search", "Lehigh — Odyssey Public Access", LEHIGH_PROBATE_URL),
+            ],
+        }
+    else:
+        return sources
+
+    for county in ("Allegheny", "Erie", "Lehigh"):
+        if county not in selected:
+            continue
+        for source_id, label, url in definitions.get(county, []):
+            sources.append({"id": source_id, "county": county, "label": label,
+                            "url": url, "status": "manual_link_only"})
+    return sources
 
 
 def _xlsx_cell_text(cell, shared_strings, ns):
@@ -141,7 +212,11 @@ def parse_erie_repository_xlsx(content, source_url):
             "source_type": "tax", "deal_type": "Tax Repository Candidate",
             "market_status": "repository_bid_candidate", "tax_sale_type": "repository",
             "opening_bid": None, "minimum_bid": 250.0, "price": None,
-            "source_url": source_url, "source_text_quality": "official_county_xlsx",
+            "source": "Erie County Tax Claim", "source_amount_type": "repository_minimum_bid",
+            "source_url": source_url, "url": source_url,
+            "tax_claim_url": ERIE_TAX_SALE_PAGE,
+            "property_record_url": ERIE_PROPERTY_SEARCH_URL,
+            "source_text_quality": "official_county_xlsx",
             "repository_status": status or "לא מצוין בקובץ",
             "description": ("מועמד לרשימת Repository של Erie County; הצעה מינימלית שמצוינת בכותרת המקור: $250, "
                             "אינה מחיר נכס או הצעת רכישה. הרשימה משתנה ויש לאמת זמינות ישירות מול לשכת המס.")
@@ -284,7 +359,11 @@ def parse_lehigh_judicial_sale_tsv(tsv, source_url, sale_date):
             "source_type": "tax", "deal_type": "Tax Sale Candidate",
             "market_status": "scheduled_tax_sale", "tax_sale_type": "judicial",
             "sale_date": sale_date.isoformat(), "opening_bid": float(bid_match.group(1).replace(",", "")),
-            "price": None, "source_url": source_url,
+            "price": None, "source": "Lehigh County Tax Claim",
+            "source_amount_type": "document_opening_bid",
+            "source_url": source_url, "url": source_url,
+            "tax_claim_url": LEHIGH_TAX_SALE_PAGE,
+            "property_record_url": LEHIGH_TAX_SALE_PAGE,
             "source_text_quality": "ocr_from_official_scanned_pdf",
             "description": "מועמד למכירה שיפוטית; מחיר הפתיחה אינו מחיר רכישה סופי. יש לאמת מול המסמך הרשמי ולבדוק שעבודים, מיסים, מצב הנכס ועלויות נוספות.",
         })
@@ -667,6 +746,10 @@ def parse_sheriff_text(body, source_url, imported=False):
         raise ValueError(f"תאריך מכירה אינו בטווח עתידי: {sale_day}")
     if not 0 <= (today - printed_day).days <= 21:
         raise ValueError(f"המסמך אינו עדכני מספיק: הופק ב-{printed_day}")
+    # A checked-in PDF path is not a usable link for dashboard users. Imported
+    # copies point to the official sheriff page; retain the filename for audit.
+    official_source_url = source_url if valid_sheriff_pdf_url(source_url) else SHERIFF_PAGE
+    source_document = os.path.basename(str(source_url)) if imported and official_source_url != source_url else None
     # pdftotext's -raw order is "Tracts / Status / 1" (not "Status / Tracts").
     # Split on each tract header so every sale remains one record.
     blocks = re.split(r"(?m)^\s*Tracts\s*$", body, flags=re.I)[1:]
@@ -733,6 +816,11 @@ def parse_sheriff_text(body, source_url, imported=False):
         case_detail = case_line.group(1).strip() if case_line else ""
         bid_match = re.search(r"\$\s*([\d,]+\.\d{2})", case_detail)
         cost_tax_bid = bid_match.group(1).replace(',', '') if bid_match else None
+        attorney_match = re.search(
+            r"Attorney for the Plaintiff:\s*\n?(.*?)(?:\n\s*Svs\b|\n\s*Parcel/Tax ID:)",
+            facts, re.I | re.S,
+        )
+        attorney = re.sub(r"\s+", " ", attorney_match.group(1)).strip() if attorney_match else None
         sale_id_match = re.search(r"(?m)^\s*(\d{1,4}[A-Z]{3}\d{2})\s*$", facts, re.I)
         tract_match = re.search(r"(?m)^\s*(\d{1,4})\s*$", block)
         property_line = re.search(
@@ -750,7 +838,9 @@ def parse_sheriff_text(body, source_url, imported=False):
             "sheriff_tract": tract_match.group(1) if tract_match else None,
             "plaintiff": plaintiff,
             "defendant": defendant,
+            "attorney": attorney or None,
             "case_cost_tax_bid": cost_tax_bid,
+            "source_amount_type": "case_cost_tax_bid" if cost_tax_bid else None,
             "sale_id": sale_id_match.group(1).upper() if sale_id_match else None,
             "parcel_id": parcel_match.group(1) if parcel_match else None,
             "municipality": municipality or None,
@@ -758,8 +848,10 @@ def parse_sheriff_text(body, source_url, imported=False):
             "market_status": "scheduled_sheriff_sale", "sheriff_status": "Active",
             "sale_date": sale_day.isoformat(), "source_published_date": printed_day.isoformat(),
             "listed_date": printed_day.strftime("%d/%m/%Y"),
+            "source_document": source_document,
             "summary": f"ברשימת השריף מ-{printed_day}: סטטוס Active למכירה ב-{sale_day}. {type_text}. מחיר, שטח וסוג נכס לא אומתו; יש לבדוק עדכון סטטוס במקור.",
-            "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
+            "url": official_source_url, "source_url": official_source_url,
+            "last_source_check": iso_now_est(), "deal_score": None,
             "filter_status": "investment_fields_unavailable",
         })
     if skipped_active or recognized < int(len(blocks) * 0.95) or not rows:
@@ -788,7 +880,7 @@ def fetch_allegheny_sheriff_listings():
             with open(SHERIFF_LOCAL_PDF, "rb") as f:
                 body = extract_sheriff_pdf(f.read(20_000_001))
             rows, audit = parse_sheriff_text(body, SHERIFF_LOCAL_PDF, imported=True)
-            return rows, SHERIFF_LOCAL_PDF, audit
+            return rows, SHERIFF_PAGE, audit
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
             local_errors.append(f"{SHERIFF_LOCAL_PDF}: {exc}")
             print(f"ℹ️ PDF מקומי בנתיב המקור לא נטען: {exc}")
@@ -845,7 +937,7 @@ def fetch_allegheny_sheriff_listings():
             rows, audit = parse_sheriff_text(body, SHERIFF_BUNDLED_PDF, imported=True)
             audit["fallback_reason"] = "; ".join(download_errors or local_errors) or "live source unavailable"
             print(f"✅ שימוש ב־PDF הרשמי המצורף: {len(rows)} רשומות פעילות")
-            return rows, SHERIFF_BUNDLED_PDF, audit
+            return rows, SHERIFF_PAGE, audit
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
             local_errors.append(f"{SHERIFF_BUNDLED_PDF}: {exc}")
 
@@ -957,6 +1049,7 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
             "source_address_raw": " | ".join(address_lines),
             "address_quality": "verified_zip" if zip_code else "invalid_or_missing_zip",
             "price": None, "judgment_amount": judgment_amount,
+            "source_amount_type": "judgment_amount" if judgment_amount is not None else None,
             "judgment_text": judgment_text or None,
             "sqft": None, "beds": None, "baths": None,
             "deal_type": "Sheriff Sale", "source_type": "sheriff",
@@ -968,7 +1061,8 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
             "summary": (f"רישום שריף פעיל במחוז Erie. סכום פסק הדין במסמך: "
                         f"{judgment_text or 'לא צוין'}; אין לראות בו מחיר נכס או הצעת פתיחה."
                         + (f" המיקוד במקור אינו תקין ({raw_city_zip}); יש לאמת ידנית." if not zip_code else "")),
-            "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
+            "url": source_url, "source_url": source_url,
+            "last_source_check": iso_now_est(), "deal_score": None,
         })
     return rows, {"parsed_rows": len(parser.rows) - header_index - 1,
                   "active_rows": len(rows), "skipped_active_addresses": skipped,
@@ -1088,7 +1182,7 @@ def parse_lehigh_sheriff_html(page_html, source_url=LEHIGH_SHERIFF_URL, today=No
         rows.append({
             "id": uid, "docket_id": sheriff_no, "address": street.title(),
             "city": city.title(), "county": "Lehigh", "zip": zip_code,
-            "price": None, "judgment_amount": None, "sqft": None,
+            "price": None, "judgment_amount": None, "source_amount_type": None, "sqft": None,
             "beds": None, "baths": None, "deal_type": "Sheriff Sale",
             "source_type": "sheriff", "source": "Lehigh County Sheriff Sales Listing",
             "sheriff_status": "Scheduled", "market_status": "scheduled_sheriff_sale",
@@ -1098,7 +1192,8 @@ def parse_lehigh_sheriff_html(page_html, source_url=LEHIGH_SHERIFF_URL, today=No
             "data_status": "live", "filter_status": "investment_fields_unavailable",
             "summary": (f"מכירת שריף מתוכננת במחוז Lehigh ל-{sale_day.isoformat()}. "
                         "מחיר, מצב הנכס ותוצאת המכירה לא אומתו; יש לבדוק עדכון במקור."),
-            "url": source_url, "last_source_check": iso_now_est(), "deal_score": None,
+            "url": source_url, "source_url": source_url,
+            "last_source_check": iso_now_est(), "deal_score": None,
         })
     if not rows:
         raise ValueError("Lehigh sheriff portal returned no validated upcoming sale rows")
@@ -1832,6 +1927,10 @@ def comparable_changed(old, new):
         "price", "deal_type", "beds", "baths", "sqft", "year_built",
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
         "type", "property_type", "source_property_type", "source_location",
+        "source_url", "source_amount_type", "case_cost_tax_bid", "judgment_amount",
+        "opening_bid", "minimum_bid", "sale_date", "sale_number", "docket_id",
+        "parcel_id", "attorney", "participants", "plaintiff", "defendant",
+        "source_published_date", "sheriff_status", "repository_status",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
 
@@ -2219,9 +2318,20 @@ def run_orchestrator():
                            "status": "pending" if sector in ("mls", "sheriff", "reo", "tax") else "not_connected",
                            "rows": 0}
     log_entry["sources"] = sources
-    # Probate remains disabled until a verified feed is mapped. Tax is connected below for Lehigh.
+    # Probate remains manual-only until a verified, permitted bulk feed exists.
+    # Never create placeholder property rows to make the section appear populated.
     sources.setdefault("tax", {"label": SOURCE_LABELS["tax"], "status": "not_connected", "rows": 0})
     sources.setdefault("06_probate_estates", {"label": SOURCE_LABELS["06_probate_estates"], "status": "not_connected", "rows": 0})
+    if "06_probate_estates" in active_sectors_now:
+        probate_links = selected_manual_sources(cities_list, counties_list, "probate")
+        sources["06_probate_estates"].update({
+            "status": "not_connected", "rows": 0,
+            "scope": "selected_counties_only",
+            "manual_sources": probate_links,
+            "note": ("לא נוסף מקור חי לרשומות. הקישורים הרשמיים מאפשרים בדיקה ידנית בלבד; "
+                     "Allegheny מחייב התחברות, ולא נמצא פיד/API מאומת שמותר לייבא ממנו רשומות אוטומטית. "
+                     "לא נוצרו נכסי עיזבון מדומים."),
+        })
 
     sheriff_rows = []
     sheriff_county_results = {}
@@ -2351,6 +2461,7 @@ def run_orchestrator():
                     county_audits[county_name] = {
                         "status": "not_connected", "rows": 0,
                         "reason": "no verified current tax feed connected for this county",
+                        "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים.",
                     }
             except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
                 response = getattr(exc, "response", None)
@@ -2369,7 +2480,13 @@ def run_orchestrator():
             tax_status = "partial"
         else:
             tax_status = "failed"
-        sources["tax"].update({"status": tax_status, "rows": len(tax_rows), "counties": county_audits})
+        sources["tax"].update({
+            "status": tax_status, "rows": len(tax_rows), "counties": county_audits,
+            "scope": "selected_counties_only",
+            "manual_sources": selected_manual_sources(cities_list, counties_list, "tax"),
+            "note": ("Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; "
+                     "Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת."),
+        })
 
     reo_rows = []
     if "reo" in active_sectors_now:
@@ -2754,18 +2871,16 @@ def run_orchestrator():
         print("::warning::One or more selected sources did not complete. See scanner_status.json.")
 
 
-def repository_analysis_cleanup_needed(properties):
-    """Return whether repository records still carry analyzer estimates or OSM coordinates."""
+def source_record_analysis_cleanup_needed(properties):
+    """Return whether court/tax records still carry unsupported analyzer estimates."""
     if not isinstance(properties, list):
         return False
     metrics = ("arv", "flip_rehab", "rental_rehab", "mao_flip", "monthly_rent_est",
                "mao_rental", "neighborhood_class", "ai_summary")
     return any(
         isinstance(prop, dict)
-        and prop.get("source_type") == "tax"
-        and prop.get("tax_sale_type") == "repository"
+        and (prop.get("source_type") in {"tax", "sheriff", "sheriff_sale"})
         and (prop.get("analysis_mode") != "source_record_only"
-             or prop.get("geocode_source") == "OpenStreetMap Nominatim"
              or any(prop.get(field) is not None for field in metrics))
         for prop in properties
     )
@@ -2777,8 +2892,8 @@ if __name__ == "__main__":
     if os.environ.get("GITHUB_OUTPUT"):
         latest = load_json_file(SCANNER_STATUS_FILE, {}).get("last_event", {})
         stored_properties = load_json_file(PROPERTIES_FILE, [])
-        repository_cleanup_needed = repository_analysis_cleanup_needed(stored_properties)
+        source_cleanup_needed = source_record_analysis_cleanup_needed(stored_properties)
         analyze = bool(latest.get("status") in ("success", "partial") and
-                       ((latest.get("new", 0) or latest.get("updated", 0)) or repository_cleanup_needed))
+                       ((latest.get("new", 0) or latest.get("updated", 0)) or source_cleanup_needed))
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             output.write(f"analyze={'true' if analyze else 'false'}\n")
