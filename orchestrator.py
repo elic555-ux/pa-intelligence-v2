@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.1-erie-repository-analyzer-cleanup-20261001"
+ORCHESTRATOR_VERSION = "3.6.2-official-reo-portals-20261002"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -42,6 +42,8 @@ SHERIFF_KNOWN_PDF = "https://sheriffalleghenycounty.com/wp-content/uploads/2026/
 ERIE_SHERIFF_URL = "https://public.eriecountypa.gov/sheriffsalelisting/"
 LEHIGH_SHERIFF_URL = "https://salesweb.civilview.com/Sales/SalesSearch?countyId=51"
 HOMESTEPS_SEARCH_URL = "https://www.homesteps.com/listing/search?search=Pennsylvania"
+FANNIE_HOME_PATH_URL = "https://homepath.fanniemae.com/property-finder"
+BANK_OF_AMERICA_REO_URL = "https://foreclosures.bankofamerica.com/pennsylvania"
 HUD_HOME_STORE_SEARCH_URL = "https://www.hudhomestore.gov/searchresult"
 LEHIGH_TAX_SALE_PAGE = "https://www.lehighcountytaxclaim.com/"
 ERIE_TAX_SALE_PAGE = "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/"
@@ -2394,13 +2396,28 @@ def run_orchestrator():
         success_count = sum(audit.get("status") in {"success", "partial"}
                             for audit in reo_provider_audits.values())
         aggregate_status = "partial" if success_count else "failed"
+        manual_reo_portals = [
+            {
+                "id": "fannie_mae_homepath",
+                "label": "Fannie Mae HomePath (בדיקה ידנית)",
+                "url": FANNIE_HOME_PATH_URL,
+                "status": "manual_link_only",
+            },
+            {
+                "id": "bank_of_america_reo",
+                "label": "Bank of America REO בפנסילבניה (בדיקה ידנית)",
+                "url": BANK_OF_AMERICA_REO_URL,
+                "status": "manual_link_only",
+            },
+        ]
         sources["reo"].update({
             "status": aggregate_status, "rows": len(reo_rows),
             "providers": reo_provider_audits,
             "provider_count": len(reo_provider_audits),
             "coverage": "partial_multi_provider",
             "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
-            "note": "המקור כולל Freddie Mac HomeSteps ונכסי HUD REO; אינו כולל את כלל הבנקים. HUD הוא מקור ממשלתי נפרד.",
+            "manual_sources": manual_reo_portals,
+            "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
         })
 
     live_results = []
