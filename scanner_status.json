@@ -1,10 +1,10 @@
 {
-  "version": "3.6.4-report-audit-20261002",
+  "version": "3.6.5-source-details-20261002",
   "last_event": {
-    "scan_id": "SCAN-20261002-091148",
-    "started_at": "2026-10-02T09:11:48-04:00",
+    "scan_id": "SCAN-20261002-102341",
+    "started_at": "2026-10-02T10:23:41-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.6.4-report-audit-20261002",
+    "orchestrator_version": "3.6.5-source-details-20261002",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -18,14 +18,14 @@
       "Allegheny"
     ],
     "source_results": 634,
-    "after_filters": 424,
+    "after_filters": 425,
     "new": 1,
-    "updated": 218,
-    "unchanged": 205,
+    "updated": 282,
+    "unchanged": 142,
     "off_market_candidates": 0,
     "errors": [],
-    "code_sha256": "2df22dbf2789",
-    "github_sha": "1df35a5808eb52ebec95dd5fce3d79b3dbb083be",
+    "code_sha256": "23e482a398b1",
+    "github_sha": "34944172304aac67ac5f09d9c250549b4a194b54",
     "request_id": null,
     "counties": [
       "Allegheny"
@@ -177,7 +177,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "success",
         "rows": 349,
         "areas": [
@@ -190,11 +190,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 144
+        "passed_filters": 145
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "partial",
         "rows": 4,
         "providers": {
@@ -259,7 +259,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "success",
         "rows": 281,
         "counties": {
@@ -277,7 +277,7 @@
             "county_property_pending": 0,
             "county_property_lookup_failed": 14,
             "county_property_no_data": 3,
-            "source_url": "/home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf"
+            "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
           }
         },
         "investment_filters": "unavailable",
@@ -285,29 +285,66 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "not_connected",
         "rows": 0,
         "counties": {
           "Allegheny": {
             "status": "not_connected",
             "rows": 0,
-            "reason": "no verified current tax feed connected for this county"
+            "reason": "no verified current tax feed connected for this county",
+            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
           }
         },
+        "scope": "selected_counties_only",
+        "manual_sources": [
+          {
+            "id": "allegheny_property_search",
+            "county": "Allegheny",
+            "label": "Allegheny — חיפוש רשומות נכס ומידע מס",
+            "url": "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "allegheny_real_estate_portal",
+            "county": "Allegheny",
+            "label": "Allegheny — פורטל רשומות מקרקעין",
+            "url": "https://realestate.alleghenycounty.us/search",
+            "status": "manual_link_only"
+          }
+        ],
+        "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
         "passed_filters": 0
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "not_connected",
         "rows": 0,
+        "scope": "selected_counties_only",
+        "manual_sources": [
+          {
+            "id": "allegheny_probate_login",
+            "county": "Allegheny",
+            "label": "Allegheny — חיפוש Wills/Orphans (דורש התחברות)",
+            "url": "https://dcr.alleghenycounty.us/wills/login.aspx",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "allegheny_probate_info",
+            "county": "Allegheny",
+            "label": "Allegheny — מידע וטפסי עיזבונות",
+            "url": "https://www.alleghenycounty.us/Government/Court-Related/Wills-and-Orphans/Resources",
+            "status": "manual_link_only"
+          }
+        ],
+        "note": "לא נוסף מקור חי לרשומות. הקישורים הרשמיים מאפשרים בדיקה ידנית בלבד; Allegheny מחייב התחברות, ולא נמצא פיד/API מאומת שמותר לייבא ממנו רשומות אוטומטית. לא נוצרו נכסי עיזבון מדומים.",
         "passed_filters": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-02T09:11:51-04:00",
+        "checked_at": "2026-10-02T10:23:44-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -327,7 +364,7 @@
         "county_property_pending": 0,
         "county_property_lookup_failed": 14,
         "county_property_no_data": 3,
-        "source_url": "/home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf"
+        "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
       }
     },
     "geography_qa": {
@@ -336,7 +373,7 @@
         "rows": 349,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Pittsburgh": 168,
+          "Pittsburgh": 169,
           "West Mifflin": 15,
           "Mc Kees Rocks": 14,
           "Cheswick": 4,
@@ -354,7 +391,7 @@
           "Springdale": 3,
           "Tarentum": 7,
           "Oakdale": 2,
-          "Clairton": 10,
+          "Clairton": 9,
           "Millvale": 1,
           "North Versailles": 6,
           "Bloomfield": 1,
@@ -425,7 +462,7 @@
           "McCandless": 1,
           "Castle Shannon": 2,
           "Springdale Twp": 2,
-          "ALLEGHENY": 1,
+          "ALLEGHENY": 2,
           "North Fayette": 1,
           "South Side": 4,
           "Clairton": 6,
@@ -440,7 +477,6 @@
           "Hazelwood": 5,
           "Braddock Hills": 2,
           "Whitehall": 2,
-          "Jefferson Hills": 5,
           "East Liberty": 1,
           "Elizabeth Twp/Boro": 5,
           "Liberty Boro": 1,
@@ -466,6 +502,7 @@
           "Turtle Creek": 3,
           "Bon Air": 1,
           "Pittsburgh": 1,
+          "Jefferson Hills": 4,
           "E Pittsburgh": 2,
           "Wilkins Twp": 3,
           "Downtown Pgh": 1,
@@ -516,16 +553,16 @@
       "sqft": 183,
       "beds": 11,
       "baths": 0,
-      "property_type": 13,
+      "property_type": 12,
       "property_type_unknown": 0,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 276,
+      "Single Family Residential": 277,
       "Condo/Co-op": 20,
       "Multi-Family (2-4 Unit)": 23,
-      "Townhouse": 15,
+      "Townhouse": 14,
       "Vacant Land": 13,
       "Ranch": 1,
       "Multi-Family (5+ Unit)": 1,
@@ -533,7 +570,7 @@
       "Single-Family": 1
     },
     "source_passed_filters": {
-      "mls": 144,
+      "mls": 145,
       "reo": 0,
       "sheriff": 280,
       "tax": 0,
@@ -558,24 +595,24 @@
       "Duquesne": 5,
       "Elizabeth Twp/Boro": 5,
       "Hazelwood": 5,
-      "Jefferson Hills": 5,
       "Millvale": 5,
       "Moon/Crescent Twp": 5,
       "Mt Washington": 5,
       "Natrona Hts/Harrison Twp.": 5,
       "Stowe Twp": 5,
-      "Beechview": 4
+      "Beechview": 4,
+      "Carnegie": 4
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 0,
-    "price_drop_properties": 0,
-    "total_properties": 3267,
-    "finished_at": "2026-10-02T09:11:51-04:00"
+    "price_drop_events": 1,
+    "price_drop_properties": 1,
+    "total_properties": 3268,
+    "finished_at": "2026-10-02T10:23:45-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-02T09:11:48-04:00",
+      "checked_at": "2026-10-02T10:23:41-04:00",
       "status": "success",
       "rows": 349,
       "areas": [
@@ -588,11 +625,11 @@
         }
       ],
       "coverage": "not_proven_complete",
-      "passed_filters": 144
+      "passed_filters": 145
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-02T09:11:48-04:00",
+      "checked_at": "2026-10-02T10:23:41-04:00",
       "status": "partial",
       "rows": 4,
       "providers": {
@@ -657,34 +694,71 @@
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-02T09:11:48-04:00",
+      "checked_at": "2026-10-02T10:23:41-04:00",
       "status": "not_connected",
       "rows": 0,
       "counties": {
         "Allegheny": {
           "status": "not_connected",
           "rows": 0,
-          "reason": "no verified current tax feed connected for this county"
+          "reason": "no verified current tax feed connected for this county",
+          "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
         }
       },
+      "scope": "selected_counties_only",
+      "manual_sources": [
+        {
+          "id": "allegheny_property_search",
+          "county": "Allegheny",
+          "label": "Allegheny — חיפוש רשומות נכס ומידע מס",
+          "url": "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search",
+          "status": "manual_link_only"
+        },
+        {
+          "id": "allegheny_real_estate_portal",
+          "county": "Allegheny",
+          "label": "Allegheny — פורטל רשומות מקרקעין",
+          "url": "https://realestate.alleghenycounty.us/search",
+          "status": "manual_link_only"
+        }
+      ],
+      "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
       "passed_filters": 0
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-02T09:11:48-04:00",
+      "checked_at": "2026-10-02T10:23:41-04:00",
       "status": "not_connected",
       "rows": 0,
+      "scope": "selected_counties_only",
+      "manual_sources": [
+        {
+          "id": "allegheny_probate_login",
+          "county": "Allegheny",
+          "label": "Allegheny — חיפוש Wills/Orphans (דורש התחברות)",
+          "url": "https://dcr.alleghenycounty.us/wills/login.aspx",
+          "status": "manual_link_only"
+        },
+        {
+          "id": "allegheny_probate_info",
+          "county": "Allegheny",
+          "label": "Allegheny — מידע וטפסי עיזבונות",
+          "url": "https://www.alleghenycounty.us/Government/Court-Related/Wills-and-Orphans/Resources",
+          "status": "manual_link_only"
+        }
+      ],
+      "note": "לא נוסף מקור חי לרשומות. הקישורים הרשמיים מאפשרים בדיקה ידנית בלבד; Allegheny מחייב התחברות, ולא נמצא פיד/API מאומת שמותר לייבא ממנו רשומות אוטומטית. לא נוצרו נכסי עיזבון מדומים.",
       "passed_filters": 0
     },
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-02T09:11:51-04:00",
+      "checked_at": "2026-10-02T10:23:44-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-02T09:11:48-04:00",
+      "checked_at": "2026-10-02T10:23:41-04:00",
       "status": "success",
       "rows": 281,
       "counties": {
@@ -702,7 +776,7 @@
           "county_property_pending": 0,
           "county_property_lookup_failed": 14,
           "county_property_no_data": 3,
-          "source_url": "/home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf"
+          "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
         }
       },
       "investment_filters": "unavailable",
@@ -710,10 +784,10 @@
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261002-091148",
-    "started_at": "2026-10-02T09:11:48-04:00",
+    "scan_id": "SCAN-20261002-102341",
+    "started_at": "2026-10-02T10:23:41-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.6.4-report-audit-20261002",
+    "orchestrator_version": "3.6.5-source-details-20261002",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -727,14 +801,14 @@
       "Allegheny"
     ],
     "source_results": 634,
-    "after_filters": 424,
+    "after_filters": 425,
     "new": 1,
-    "updated": 218,
-    "unchanged": 205,
+    "updated": 282,
+    "unchanged": 142,
     "off_market_candidates": 0,
     "errors": [],
-    "code_sha256": "2df22dbf2789",
-    "github_sha": "1df35a5808eb52ebec95dd5fce3d79b3dbb083be",
+    "code_sha256": "23e482a398b1",
+    "github_sha": "34944172304aac67ac5f09d9c250549b4a194b54",
     "request_id": null,
     "counties": [
       "Allegheny"
@@ -886,7 +960,7 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "success",
         "rows": 349,
         "areas": [
@@ -899,11 +973,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 144
+        "passed_filters": 145
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "partial",
         "rows": 4,
         "providers": {
@@ -968,7 +1042,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "success",
         "rows": 281,
         "counties": {
@@ -986,7 +1060,7 @@
             "county_property_pending": 0,
             "county_property_lookup_failed": 14,
             "county_property_no_data": 3,
-            "source_url": "/home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf"
+            "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
           }
         },
         "investment_filters": "unavailable",
@@ -994,29 +1068,66 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "not_connected",
         "rows": 0,
         "counties": {
           "Allegheny": {
             "status": "not_connected",
             "rows": 0,
-            "reason": "no verified current tax feed connected for this county"
+            "reason": "no verified current tax feed connected for this county",
+            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
           }
         },
+        "scope": "selected_counties_only",
+        "manual_sources": [
+          {
+            "id": "allegheny_property_search",
+            "county": "Allegheny",
+            "label": "Allegheny — חיפוש רשומות נכס ומידע מס",
+            "url": "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "allegheny_real_estate_portal",
+            "county": "Allegheny",
+            "label": "Allegheny — פורטל רשומות מקרקעין",
+            "url": "https://realestate.alleghenycounty.us/search",
+            "status": "manual_link_only"
+          }
+        ],
+        "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
         "passed_filters": 0
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-02T09:11:48-04:00",
+        "checked_at": "2026-10-02T10:23:41-04:00",
         "status": "not_connected",
         "rows": 0,
+        "scope": "selected_counties_only",
+        "manual_sources": [
+          {
+            "id": "allegheny_probate_login",
+            "county": "Allegheny",
+            "label": "Allegheny — חיפוש Wills/Orphans (דורש התחברות)",
+            "url": "https://dcr.alleghenycounty.us/wills/login.aspx",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "allegheny_probate_info",
+            "county": "Allegheny",
+            "label": "Allegheny — מידע וטפסי עיזבונות",
+            "url": "https://www.alleghenycounty.us/Government/Court-Related/Wills-and-Orphans/Resources",
+            "status": "manual_link_only"
+          }
+        ],
+        "note": "לא נוסף מקור חי לרשומות. הקישורים הרשמיים מאפשרים בדיקה ידנית בלבד; Allegheny מחייב התחברות, ולא נמצא פיד/API מאומת שמותר לייבא ממנו רשומות אוטומטית. לא נוצרו נכסי עיזבון מדומים.",
         "passed_filters": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-02T09:11:51-04:00",
+        "checked_at": "2026-10-02T10:23:44-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -1036,7 +1147,7 @@
         "county_property_pending": 0,
         "county_property_lookup_failed": 14,
         "county_property_no_data": 3,
-        "source_url": "/home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf"
+        "source_url": "https://sheriffalleghenycounty.com/sheriffs-sales/"
       }
     },
     "geography_qa": {
@@ -1045,7 +1156,7 @@
         "rows": 349,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Pittsburgh": 168,
+          "Pittsburgh": 169,
           "West Mifflin": 15,
           "Mc Kees Rocks": 14,
           "Cheswick": 4,
@@ -1063,7 +1174,7 @@
           "Springdale": 3,
           "Tarentum": 7,
           "Oakdale": 2,
-          "Clairton": 10,
+          "Clairton": 9,
           "Millvale": 1,
           "North Versailles": 6,
           "Bloomfield": 1,
@@ -1134,7 +1245,7 @@
           "McCandless": 1,
           "Castle Shannon": 2,
           "Springdale Twp": 2,
-          "ALLEGHENY": 1,
+          "ALLEGHENY": 2,
           "North Fayette": 1,
           "South Side": 4,
           "Clairton": 6,
@@ -1149,7 +1260,6 @@
           "Hazelwood": 5,
           "Braddock Hills": 2,
           "Whitehall": 2,
-          "Jefferson Hills": 5,
           "East Liberty": 1,
           "Elizabeth Twp/Boro": 5,
           "Liberty Boro": 1,
@@ -1175,6 +1285,7 @@
           "Turtle Creek": 3,
           "Bon Air": 1,
           "Pittsburgh": 1,
+          "Jefferson Hills": 4,
           "E Pittsburgh": 2,
           "Wilkins Twp": 3,
           "Downtown Pgh": 1,
@@ -1225,16 +1336,16 @@
       "sqft": 183,
       "beds": 11,
       "baths": 0,
-      "property_type": 13,
+      "property_type": 12,
       "property_type_unknown": 0,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 276,
+      "Single Family Residential": 277,
       "Condo/Co-op": 20,
       "Multi-Family (2-4 Unit)": 23,
-      "Townhouse": 15,
+      "Townhouse": 14,
       "Vacant Land": 13,
       "Ranch": 1,
       "Multi-Family (5+ Unit)": 1,
@@ -1242,7 +1353,7 @@
       "Single-Family": 1
     },
     "source_passed_filters": {
-      "mls": 144,
+      "mls": 145,
       "reo": 0,
       "sheriff": 280,
       "tax": 0,
@@ -1267,19 +1378,19 @@
       "Duquesne": 5,
       "Elizabeth Twp/Boro": 5,
       "Hazelwood": 5,
-      "Jefferson Hills": 5,
       "Millvale": 5,
       "Moon/Crescent Twp": 5,
       "Mt Washington": 5,
       "Natrona Hts/Harrison Twp.": 5,
       "Stowe Twp": 5,
-      "Beechview": 4
+      "Beechview": 4,
+      "Carnegie": 4
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 0,
-    "price_drop_properties": 0,
-    "total_properties": 3267,
-    "finished_at": "2026-10-02T09:11:51-04:00"
+    "price_drop_events": 1,
+    "price_drop_properties": 1,
+    "total_properties": 3268,
+    "finished_at": "2026-10-02T10:23:45-04:00"
   },
   "sheriff": {
     "status": "עודכן",
