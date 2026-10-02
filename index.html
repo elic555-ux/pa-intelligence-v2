@@ -213,7 +213,7 @@
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
-                <div><span class="text-xs font-bold text-gray-400 block mb-0.5" id="modal-price-label">מחיר מבוקש</span><strong class="text-2xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
+                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">מחיר</span><strong class="text-2xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">חדרי שינה</span><strong class="text-xl font-extrabold text-white" id="modal-beds"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">רחצה</span><strong class="text-xl font-extrabold text-white" id="modal-baths"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
@@ -265,35 +265,11 @@
                     <div><span class="text-gray-400 block">תובע</span><strong id="modal-sheriff-plaintiff" class="text-white"></strong></div>
                     <div><span class="text-gray-400 block">נתבע</span><strong id="modal-sheriff-defendant" class="text-white"></strong></div>
                     <div><span class="text-gray-400 block">Cost &amp; Tax Bid במסמך</span><strong id="modal-sheriff-bid" class="text-amber-300 font-mono"></strong></div>
-                    <div><span class="text-gray-400 block">סכום פסק דין (Erie)</span><strong id="modal-sheriff-judgment" class="text-amber-200 font-mono"></strong></div>
-                    <div><span class="text-gray-400 block">עורך דין</span><strong id="modal-sheriff-attorney" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">צדדים כפי שפורסמו (Erie)</span><strong id="modal-sheriff-participants" class="text-white"></strong></div>
                     <div><span class="text-gray-400 block">Sale ID / Tract</span><strong id="modal-sheriff-sale-tract" class="text-white font-mono"></strong></div>
                     <div><span class="text-gray-400 block">תאריך פרסום הרשימה</span><strong id="modal-sheriff-published" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">מספר תיק בית משפט</span><strong id="modal-sheriff-court-case" class="text-white font-mono"></strong></div>
-                    <div><span class="text-gray-400 block">UPI כפי שפורסם (Erie)</span><strong id="modal-sheriff-upi" class="text-white font-mono"></strong></div>
                     <div class="col-span-2 sm:col-span-3"><span class="text-gray-400 block">סוג מכירה כפי שמופיע במסמך</span><strong id="modal-sheriff-sale-type" class="text-white"></strong></div>
                 </div>
-                <p id="modal-sheriff-amount-note" class="text-[11px] text-gray-400">Cost &amp; Tax Bid וסכום פסק דין מוצגים כסכומי מקור בלבד. הם אינם מחיר מבוקש, הצעת פתיחה או מחיר שוק.</p>
-            </section>
-
-            <section id="modal-tax-details" class="hidden space-y-2 bg-amber-950/20 p-4 rounded-xl border border-amber-500/30">
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <h4 class="text-sm font-black text-amber-300">פרטים מתוך רשומת חוב המס הרשמית</h4>
-                    <a id="modal-tax-record-link" href="#" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-amber-200 underline">פתיחת מקור המס</a>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                    <div><span class="text-gray-400 block">סוג מכירת מס</span><strong id="modal-tax-type" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">סטטוס ברשומה</span><strong id="modal-tax-status" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">תאריך מכירה</span><strong id="modal-tax-sale-date" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">חלקה / Parcel</span><strong id="modal-tax-parcel" class="text-white font-mono"></strong></div>
-                    <div><span class="text-gray-400 block">מספר מכירה / תיק</span><strong id="modal-tax-docket" class="text-white font-mono"></strong></div>
-                    <div><span class="text-gray-400 block">עירייה</span><strong id="modal-tax-municipality" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block">בעלים כפי שפורסם</span><strong id="modal-tax-owner" class="text-white"></strong></div>
-                    <div><span class="text-gray-400 block" id="modal-tax-amount-label">סכום במקור</span><strong id="modal-tax-amount" class="text-amber-200 font-mono"></strong></div>
-                    <div><span class="text-gray-400 block">איכות טקסט המקור</span><strong id="modal-tax-quality" class="text-white"></strong></div>
-                </div>
-                <p id="modal-tax-note" class="text-[11px] text-gray-300"></p>
+                <p class="text-[11px] text-gray-400">הצעת מחיר אינה מוצגת כמחיר הנכס; הסכום נשמר כשדה Cost &amp; Tax Bid מהמסמך.</p>
             </section>
 
             <section id="modal-county-property-details" class="hidden space-y-3 bg-cyan-950/20 p-4 rounded-xl border border-cyan-500/30">
@@ -1057,125 +1033,6 @@
 
         function parseDate(d) { const p = (d||'').split('/'); return p.length===3 ? new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() : 0; }
 
-        function displayPropertyDate(p) {
-            if (p?.listed_date) return p.listed_date;
-            if (p?.sale_date) {
-                const parsed = new Date(`${p.sale_date}T12:00:00`);
-                if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString('he-IL');
-            }
-            return 'לא צוין במקור';
-        }
-
-        function propertyDateSortValue(p) {
-            return parseDate(p?.listed_date) || (p?.sale_date ? Date.parse(`${p.sale_date}T12:00:00`) || 0 : 0);
-        }
-
-        function isSheriffRecord(p) {
-            const sourceType = String(p?.source_type || '').toLowerCase();
-            const dealType = String(p?.deal_type || '').toLowerCase();
-            const source = String(p?.source || '').toLowerCase();
-            return sourceType.includes('sheriff') || dealType.includes('sheriff') || source.includes('sheriff');
-        }
-
-        function isTaxRecord(p) {
-            const sourceType = String(p?.source_type || '').toLowerCase();
-            const dealType = String(p?.deal_type || '').toLowerCase();
-            return sourceType === 'tax' || dealType.includes('tax') || dealType.includes('מס');
-        }
-
-        function isPublicCourtRecord(p) {
-            return isSheriffRecord(p) || isTaxRecord(p);
-        }
-
-        function asPositiveAmount(value) {
-            if (value === null || value === undefined || value === '') return null;
-            const amount = Number(String(value).replace(/[,$\s]/g, ''));
-            return Number.isFinite(amount) && amount > 0 ? amount : null;
-        }
-
-        function formatAmount(amount) {
-            return '$' + Number(amount).toLocaleString('en-US', { maximumFractionDigits: 2 });
-        }
-
-        function sourceAmountInfo(p) {
-            if (isTaxRecord(p)) {
-                if (String(p.tax_sale_type || '').toLowerCase() === 'repository' || asPositiveAmount(p.minimum_bid)) {
-                    const minimum = asPositiveAmount(p.minimum_bid);
-                    return {
-                        value: minimum ? formatAmount(minimum) : 'לא צוין',
-                        label: 'מינימום Repository כללי*',
-                        note: '* סכום מינימום כללי לפי דף המחוז; אינו סכום ייחודי לחלקה ואינו מחיר נכס. יש לאמת מול Erie County.'
-                    };
-                }
-                const openingBid = asPositiveAmount(p.opening_bid);
-                if (openingBid) return {
-                    value: formatAmount(openingBid), label: 'הצעת פתיחה במסמך',
-                    note: 'הצעת פתיחה מתוך מסמך המכירה; אינה מחיר מכירה סופי.'
-                };
-                const legacyPrice = asPositiveAmount(p.price);
-                if (legacyPrice) return {
-                    value: formatAmount(legacyPrice), label: 'סכום ברשומה ישנה',
-                    note: 'לא זוהה שדה סכום רשמי ברשומת המס החדשה; יש לאמת מול המקור.'
-                };
-                return { value: 'לא פורסם במקור', label: 'אין סכום זמין ברשומה', note: 'המקור לא סיפק סכום לחלקה זו.' };
-            }
-
-            if (isSheriffRecord(p)) {
-                const costTaxBid = asPositiveAmount(p.case_cost_tax_bid);
-                if (costTaxBid) return {
-                    value: formatAmount(costTaxBid), label: 'Cost & Tax Bid במסמך',
-                    note: 'Cost & Tax Bid הוא סכום במסמך השריף, לא מחיר שוק או הצעת רכישה.'
-                };
-                const judgment = asPositiveAmount(p.judgment_amount);
-                if (judgment) return {
-                    value: formatAmount(judgment), label: 'סכום פסק דין במסמך',
-                    note: 'סכום פסק הדין אינו מחיר נכס ואינו הצעת פתיחה.'
-                };
-                const oldBid = asPositiveAmount(p.opening_bid);
-                if (oldBid) return {
-                    value: formatAmount(oldBid), label: 'הצעת פתיחה מרשומה ישנה · לא מאומתת',
-                    note: 'הסכום הגיע מרשומה היסטורית; יש לבדוק אם הוא עדיין תקף מול משרד השריף.'
-                };
-                return { value: 'לא פורסם במקור', label: 'אין מחיר/הצעה במקור', note: 'הפורטאל הציבורי לא מפרסם סכום הצעה עבור רשומה זו.' };
-            }
-
-            const marketPrice = asPositiveAmount(p.price);
-            if (marketPrice) return {
-                value: formatAmount(marketPrice),
-                label: p.source_type === 'reo' ? 'מחיר רשום במקור' : 'מחיר מבוקש',
-                note: ''
-            };
-            return { value: 'לא צוין', label: 'אין מחיר במקור', note: '' };
-        }
-
-        function safeOfficialUrl(url) {
-            try {
-                const parsed = new URL(String(url || ''));
-                return parsed.protocol === 'https:' ? parsed.href : '';
-            } catch (_) { return ''; }
-        }
-
-        function officialSourceUrl(p) {
-            const stored = safeOfficialUrl(p?.source_url) || safeOfficialUrl(p?.url);
-            if (stored) return stored;
-            const county = String(p?.county || '').replace(/\s+County$/i, '').toLowerCase();
-            if (isSheriffRecord(p)) {
-                if (county === 'allegheny') return 'https://sheriffalleghenycounty.com/sheriffs-sales/';
-                if (county === 'erie') return 'https://public.eriecountypa.gov/sheriffsalelisting/';
-                if (county === 'lehigh') return 'https://salesweb.civilview.com/Sales/SalesSearch?countyId=51';
-            }
-            if (isTaxRecord(p)) {
-                if (county === 'allegheny') return 'https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search';
-                if (county === 'erie') return 'https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/';
-                if (county === 'lehigh') return 'https://www.lehighcountytaxclaim.com/';
-            }
-            return '';
-        }
-
-        function sourceOnlyValue(value) {
-            return value === null || value === undefined || value === '' || value === 0 ? 'לא מחושב' : '$' + Number(value).toLocaleString();
-        }
-
         let scannerReport = null;
         async function loadScannerStatus() {
             try {
@@ -1207,22 +1064,6 @@
                     const note = item.note ? ` | ${item.note}` : '';
                     line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${passedFilters}${provider}${coverage}${countyMatches}${note}${checked}`;
                     panel.appendChild(line);
-                    if (Array.isArray(item.manual_sources) && item.manual_sources.length) {
-                        const manualLine = document.createElement('p');
-                        manualLine.appendChild(document.createTextNode('קישורים רשמיים לבדיקה ידנית (לא נסרקו): '));
-                        item.manual_sources.forEach((source, index) => {
-                            if (!source || typeof source.url !== 'string' || !/^https:\/\//i.test(source.url)) return;
-                            if (index) manualLine.appendChild(document.createTextNode(' | '));
-                            const link = document.createElement('a');
-                            link.href = source.url;
-                            link.target = '_blank';
-                            link.rel = 'noopener noreferrer';
-                            link.textContent = source.label || source.id || 'מקור רשמי';
-                            link.className = 'text-cyan-300 underline hover:text-cyan-200';
-                            manualLine.appendChild(link);
-                        });
-                        panel.appendChild(manualLine);
-                    }
                 }
                 return scannerReport;
             } catch (e) { return null; }
@@ -1276,10 +1117,19 @@
                     
                     if (!seenKeys.has(normKey)) { 
                         seenKeys.add(normKey); 
-                        // Do not invent a posted date or copy auction/debt amounts
-                        // into price: only p.price is a market asking price.
-                        if (isSheriffRecord(p)) {
-                            p.deal_type = p.deal_type || 'Sheriff Sale';
+                        if (!p.listed_date) p.listed_date = '05/09/2026'; 
+
+                        // Normalize Sheriff Deals (Fixing empty prices & messy addresses)
+                        if ((p.source === 'allegheny_sheriff' || p.source_type === 'sheriff_sale' || (p.deal_type||'').toLowerCase().includes('sheriff'))) {
+                            p.deal_type = p.deal_type || 'sheriff'; // Ensure deal_type exists for filters
+                            
+                            // Map opening_bid to price if price is missing
+                            if (!p.price && p.opening_bid) {
+                                // Extract numbers only from opening_bid like "$5,000.00" -> 5000
+                                const cleanBid = String(p.opening_bid).replace(/[^0-9.-]+/g, "");
+                                p.price = parseFloat(cleanBid);
+                            }
+
                             // Clean generic addresses
                             if (String(p.address).includes("Address in comments / verify parcel") || String(p.address).trim() === "") {
                                 p.address = p.parcel_id ? "נכס שריף (חלקה " + p.parcel_id + ")" : "נכס שריף (חסר מספר חלקה)";
@@ -1288,14 +1138,8 @@
                         
                         const idStr = String(p.id);
                         const currentPrice = Number(p.price) || 0;
-
-                        if (isPublicCourtRecord(p)) {
-                            // Auction bids, judgments and tax repository minimums
-                            // are not MLS price drops and should not auto-archive.
-                            p.price_dropped = false;
-                            if (archiveDeals[idStr]) { delete archiveDeals[idStr]; archiveChanged = true; }
-                            p.is_archived = false;
-                        } else if (archiveDeals[idStr]) {
+                        
+                        if (archiveDeals[idStr]) {
                             if (currentPrice > 0 && currentPrice < archiveDeals[idStr].price) {
                                 delete archiveDeals[idStr];
                                 archiveChanged = true;
@@ -1547,13 +1391,13 @@
             
             document.getElementById('count-all').textContent = nonArchived.length;
             document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
-            document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped && !isPublicCourtRecord(p)).length;
+            document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped).length;
             document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
             
             // Fixed sheriff counter to capture source properly
-            document.getElementById('count-sheriff').textContent = nonArchived.filter(isSheriffRecord).length;
+            document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
             
-            document.getElementById('count-tax').textContent = nonArchived.filter(isTaxRecord).length;
+            document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
             document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
             document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
             
@@ -1570,6 +1414,18 @@
         }
 
         function applyFilters() { renderCards(); }
+
+        function propertyPriceDisplayHtml(p) {
+            const price = Number(p.price);
+            if (Number.isFinite(price) && price > 0) {
+                return '$' + price.toLocaleString();
+            }
+            const caseCostTaxBid = Number(p.case_cost_tax_bid);
+            if (p.source_type === 'sheriff' && Number.isFinite(caseCostTaxBid) && caseCostTaxBid > 0) {
+                return `<span class="block text-amber-300">$${caseCostTaxBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans font-semibold">Cost &amp; Tax Bid · סכום תיק, לא מחיר מכירה</span>`;
+            }
+            return 'ללא הצעת פתיחה';
+        }
 
         function renderCards() {
             const container = document.getElementById('properties-container');
@@ -1592,24 +1448,22 @@
                     if (p.is_archived) return false;
                     
                     const dt = (p.deal_type || '').toLowerCase();
-                    if (activeCategory === 'mls' && p.source_type !== 'mls' && !dt.includes('mls')) return false;
-                    if (activeCategory === 'price_drop' && (!p.price_dropped || isPublicCourtRecord(p))) return false;
+                    if (activeCategory === 'mls' && !dt.includes('mls')) return false;
+                    if (activeCategory === 'price_drop' && !p.price_dropped) return false;
                     if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
                     
                     // Fixed sheriff filtering logic
-                    if (activeCategory === 'sheriff' && !isSheriffRecord(p)) return false;
+                    if (activeCategory === 'sheriff' && !dt.includes('sheriff') && !(p.source || '').toLowerCase().includes('sheriff') && !(p.source_type || '').toLowerCase().includes('sheriff')) return false;
                     
-                    if (activeCategory === 'tax' && !isTaxRecord(p)) return false;
-                    if (activeCategory === 'probate' && p.source_type !== 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
+                    if (activeCategory === 'tax' && !dt.includes('tax')) return false;
+                    if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
                     if (activeCategory === 'offmarket' && !isOffMarketProperty(p)) return false;
                 }
 
                 if (stratF !== 'all' && p.strategy !== stratF) return false;
                 if (typeF !== 'all' && p.type && p.type !== typeF) return false;
-                if (!isPublicCourtRecord(p)) {
-                    if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
-                    if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
-                }
+                if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
+                if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
                 
                 // המסנן הראשי חל על המאגר המוצג, ללא הפעלת סריקה נוספת.
                 if (selectedCitiesFilter !== null && !selectedCitiesFilter.has(mainGeoKey(p))) return false;
@@ -1623,20 +1477,18 @@
             });
 
             if (sortBy === 'score_desc') filtered.sort((a,b) => (b.deal_score||0) - (a.deal_score||0));
-            else if (sortBy === 'date_desc') filtered.sort((a,b) => propertyDateSortValue(b) - propertyDateSortValue(a));
+            else if (sortBy === 'date_desc') filtered.sort((a,b) => parseDate(b.listed_date) - parseDate(a.listed_date));
             else if (sortBy === 'price_asc') filtered.sort((a,b) => (a.price||0) - (b.price||0));
 
             if (!filtered.length) { container.innerHTML = selectedCitiesFilter !== null && !selectedCitiesFilter.size ? '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">בחר מחוז, עיר או אזור מהרשימה, או לחץ ״הצג את כל הנכסים״.</div>' : '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
 
             if (currentViewMode === 'table') {
-                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר / סכום מקור</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">תשואה/שיפוץ</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
+                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">תשואה/שיפוץ</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
                 ${filtered.map((p, index) => {
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
                     const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
-                    const amount = sourceAmountInfo(p);
-                    const priceDrop = p.price_dropped && !isPublicCourtRecord(p);
-                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${priceDrop ? 'bg-rose-950/50 border-r-4 border-r-rose-400 shadow-[inset_-4px_0_0_rgba(251,113,133,0.35)]' : ''} ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
+                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${p.price_dropped ? 'bg-rose-950/50 border-r-4 border-r-rose-400 shadow-[inset_-4px_0_0_rgba(251,113,133,0.35)]' : ''} ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
                                 <span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span>
@@ -1644,13 +1496,13 @@
                                 <div class="font-black text-white text-sm truncate" title="${p.address}">${p.address}</div>
                             </div>
                             <div class="text-[11px] text-gray-400 truncate" title="${p.city}">${p.city}</div>
-                            ${priceDrop ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
+                            ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
                         </td>
-                        <td class="p-3"><div class="font-mono font-black text-emerald-300 text-sm">${amount.value}</div><div class="text-[10px] text-gray-400">${amount.label}</div></td>
+                        <td class="p-3 font-mono font-black text-emerald-400 text-sm">${propertyPriceDisplayHtml(p)}</td>
                         <td class="p-3 font-bold text-gray-300 whitespace-nowrap">🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}</td>
                         <td class="p-3"><div class="text-emerald-300 font-mono whitespace-nowrap">💰 ${p.projected_rent||'חסר נתון'}</div><div class="text-amber-300 text-[11px] whitespace-nowrap">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'--')}</div></td>
-                        <td class="p-3 font-mono text-amber-300 whitespace-nowrap">📅 ${displayPropertyDate(p)}</td>
+                        <td class="p-3 font-mono text-amber-300 whitespace-nowrap">📅 ${p.listed_date||'-'}</td>
                         <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score ?? '—'}</span></td>
                         <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
@@ -1659,10 +1511,8 @@
                     const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(String(p.id));
                     const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
-                    const amount = sourceAmountInfo(p);
-                    const priceDrop = p.price_dropped && !isPublicCourtRecord(p);
 
-                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${priceDrop ? 'border-rose-500/70 bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.16)]' : (isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800'))} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
+                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${p.price_dropped ? 'border-rose-500/70 bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.16)]' : (isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800'))} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         
                         ${isGoodDeal ? '<span class="absolute -top-3 -right-3 bg-emerald-600 text-white font-black text-[10px] px-2 py-1 rounded-md shadow-lg rotate-12 z-20">DEAL!</span>' : ''}
 
@@ -1670,13 +1520,13 @@
                             <div class="absolute top-3 left-3 flex items-center gap-1.5 z-10">
                                 ${isV && activeCategory !== 'archive' ? '<span class="bg-gray-950/80 text-gray-400 text-[10px] px-1.5 py-1 rounded-md border border-gray-800 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> נצפה</span>' : ''}
                                 ${isH && !p.price_dropped ? `<span class="bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-md">🔥 ציון ${p.deal_score}</span>` : ''}
-                                ${priceDrop ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px] px-2 py-1 rounded-md">📉 ירד מחיר!</span>` : ''}
+                                ${p.price_dropped ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px] px-2 py-1 rounded-md">📉 ירד מחיר!</span>` : ''}
                             </div>
 
                             <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
                             
                             <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${p.address}"><span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span><span class="truncate">${p.address}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${p.city}, PA">${p.city}, PA</p>
-                            <div class="text-2xl font-black text-emerald-300 font-mono">${amount.value}</div><div class="text-[10px] text-gray-400 mb-2">${amount.label}</div>
+                            <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${propertyPriceDisplayHtml(p)}</div>
                             
                             <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
                             <div class="bg-gray-950/70 p-2 rounded-lg text-xs flex justify-between"><span class="text-gray-400">שכירות: <strong class="text-emerald-300 font-mono">${p.projected_rent||'---'}</strong></span><span class="text-gray-400"><strong class="text-amber-300">${isT?(p.gross_yield||'-'):(p.rehab_scope||'--')}</strong></span></div>
@@ -1688,10 +1538,10 @@
                                     ${p.neighborhood_class ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-[9px] text-gray-500">ממתין...</span>'}
                                 </div>
                                 <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
-                                    <div><span class="text-gray-400 block">ARV משוער</span><strong class="text-white">${sourceOnlyValue(p.arv)}</strong></div>
-                                    <div><span class="text-gray-400 block">צפי שכירות</span><strong class="text-white">${sourceOnlyValue(p.monthly_rent_est)}</strong></div>
-                                    <div><span class="text-gray-400 block">MAO שכירות</span><strong class="text-emerald-400 font-black">${sourceOnlyValue(p.mao_rental)}</strong></div>
-                                    <div><span class="text-gray-400 block">MAO פליפ</span><strong class="text-amber-400 font-black">${sourceOnlyValue(p.mao_flip)}</strong></div>
+                                    <div><span class="text-gray-400 block">ARV משוער</span><strong class="text-white">$${(p.arv||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block">צפי שכירות</span><strong class="text-white">$${(p.monthly_rent_est||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block">MAO שכירות</span><strong class="text-emerald-400 font-black">$${(p.mao_rental||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block">MAO פליפ</span><strong class="text-amber-400 font-black">$${(p.mao_flip||0).toLocaleString()}</strong></div>
                                 </div>
                             </div>
                         </div>
@@ -1712,12 +1562,9 @@
             }
 
             document.getElementById('modal-address').textContent = p.address;
-            document.getElementById('modal-location').textContent = `${p.city || ''}, PA ${p.zip || ''}`;
-            document.getElementById('modal-listed-date').textContent = displayPropertyDate(p);
-            const amount = sourceAmountInfo(p);
-            document.getElementById('modal-price-label').textContent = amount.label;
-            document.getElementById('modal-price').textContent = amount.value;
-            document.getElementById('modal-price').title = amount.note || '';
+            document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
+            document.getElementById('modal-listed-date').textContent = p.listed_date;
+            document.getElementById('modal-price').textContent = p.price ? `$${Number(p.price).toLocaleString()}` : 'ללא הצעת פתיחה';
             const countyData = p.county_property_data || null;
             document.getElementById('modal-beds').textContent = p.beds || countyData?.beds || '-';
             document.getElementById('modal-baths').textContent = p.baths || countyData?.baths || '-';
@@ -1736,10 +1583,10 @@
             document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
             const sheriffDetails = document.getElementById('modal-sheriff-details');
-            sheriffDetails.classList.toggle('hidden', !isSheriffRecord(p));
+            sheriffDetails.classList.toggle('hidden', p.source_type !== 'sheriff');
             const countyDetails = document.getElementById('modal-county-property-details');
-            countyDetails.classList.toggle('hidden', !(isSheriffRecord(p) && (countyData || p.parcel_id)));
-            if (isSheriffRecord(p) && (countyData || p.parcel_id)) {
+            countyDetails.classList.toggle('hidden', !(p.source_type === 'sheriff' && (countyData || p.parcel_id)));
+            if (p.source_type === 'sheriff' && (countyData || p.parcel_id)) {
                 const parcelParts = String(p.parcel_id || '').match(/[A-Za-z]+|\d+/g) || [];
                 let fallbackPin = '';
                 if (parcelParts.length >= 3) {
@@ -1776,7 +1623,7 @@
                 const countyQuery = new URLSearchParams({ID: pin || '', SearchType: '2', CurrRow: '0', SearchName: '', SearchStreet: streetName, SearchNum: houseNumber, SearchMuni: municipality, SearchParcel: '', pin: pin || ''});
                 countyLink.href = countyData?.source_url || (pin ? `https://realestate.alleghenycounty.us/BuildingInfo?${countyQuery.toString()}` : 'https://realestate.alleghenycounty.us/search');
             }
-            if (isSheriffRecord(p)) {
+            if (p.source_type === 'sheriff') {
                 const setSheriff = (id, value, fallback='לא צוין במסמך') => {
                     document.getElementById(id).textContent = value === 0 ? '0' : (value || fallback);
                 };
@@ -1787,48 +1634,18 @@
                 setSheriff('modal-sheriff-plaintiff', p.plaintiff);
                 setSheriff('modal-sheriff-defendant', p.defendant);
                 setSheriff('modal-sheriff-bid', p.case_cost_tax_bid ? `$${Number(p.case_cost_tax_bid).toLocaleString()}` : null);
-                setSheriff('modal-sheriff-judgment', p.judgment_amount ? `$${Number(p.judgment_amount).toLocaleString()}` : (p.judgment_text || null));
-                setSheriff('modal-sheriff-attorney', p.attorney);
-                setSheriff('modal-sheriff-participants', p.participants);
                 setSheriff('modal-sheriff-sale-tract', [p.sale_id, p.sheriff_tract ? `Tract ${p.sheriff_tract}` : null].filter(Boolean).join(' / '));
                 setSheriff('modal-sheriff-published', p.source_published_date);
-                setSheriff('modal-sheriff-court-case', p.court_case);
-                setSheriff('modal-sheriff-upi', p.erie_upi_raw);
                 setSheriff('modal-sheriff-sale-type', p.source_sale_type);
-                document.getElementById('modal-sheriff-amount-note').textContent = amount.note || 'הסכום מוצג כפי שנרשם במקור, ואינו מחיר שוק.';
-            }
-
-            const taxDetails = document.getElementById('modal-tax-details');
-            taxDetails.classList.toggle('hidden', !isTaxRecord(p));
-            if (isTaxRecord(p)) {
-                const setTax = (id, value, fallback='לא צוין ברשומה') => {
-                    document.getElementById(id).textContent = value === 0 ? '0' : (value || fallback);
-                };
-                setTax('modal-tax-type', p.tax_sale_type === 'repository' ? 'Repository' : (p.tax_sale_type === 'judicial' ? 'Judicial Sale' : p.deal_type));
-                setTax('modal-tax-status', p.repository_status || p.market_status || p.status);
-                setTax('modal-tax-sale-date', p.sale_date);
-                setTax('modal-tax-parcel', p.parcel_id);
-                setTax('modal-tax-docket', p.sale_number || p.docket_id);
-                setTax('modal-tax-municipality', p.municipality || p.city);
-                setTax('modal-tax-owner', p.owner_name);
-                document.getElementById('modal-tax-amount-label').textContent = amount.label;
-                document.getElementById('modal-tax-amount').textContent = amount.value;
-                setTax('modal-tax-quality', p.source_text_quality === 'official_county_xlsx' ? 'קובץ XLSX רשמי' :
-                    p.source_text_quality === 'ocr_from_official_scanned_pdf' ? 'OCR מתוך PDF רשמי' : p.source_text_quality);
-                document.getElementById('modal-tax-note').textContent = [amount.note, p.description].filter(Boolean).join(' ');
-                const taxLink = document.getElementById('modal-tax-record-link');
-                const taxSource = officialSourceUrl(p);
-                taxLink.href = taxSource || '#';
-                taxLink.classList.toggle('hidden', !taxSource);
             }
             
             // עדכון חלונית AI ב-Modal
             document.getElementById('modal-ai-class').innerHTML = p.neighborhood_class ? `<span class="px-2 py-0.5 rounded text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-xs text-gray-500">חסר נתון שרת</span>';
-            document.getElementById('modal-ai-arv').textContent = sourceOnlyValue(p.arv);
-            document.getElementById('modal-ai-rent').textContent = sourceOnlyValue(p.monthly_rent_est);
-            document.getElementById('modal-ai-mao-rent').textContent = sourceOnlyValue(p.mao_rental);
-            document.getElementById('modal-ai-mao-flip').textContent = sourceOnlyValue(p.mao_flip);
-            document.getElementById('modal-ai-summary').textContent = p.analysis_disclaimer || p.ai_summary || 'לא קיים תקציר ניתוח מוכן לנכס זה.';
+            document.getElementById('modal-ai-arv').textContent = `$${(p.arv||0).toLocaleString()}`;
+            document.getElementById('modal-ai-rent').textContent = `$${(p.monthly_rent_est||0).toLocaleString()}`;
+            document.getElementById('modal-ai-mao-rent').textContent = `$${(p.mao_rental||0).toLocaleString()}`;
+            document.getElementById('modal-ai-mao-flip').textContent = `$${(p.mao_flip||0).toLocaleString()}`;
+            document.getElementById('modal-ai-summary').textContent = p.ai_summary || 'לא קיים תקציר AI מוכן לנכס זה.';
 
             updateModalWatchlistState();
             
@@ -1840,17 +1657,10 @@
             }
             
             const q = encodeURIComponent(`${p.address}, ${p.city}, PA`);
-            const escapeAttribute = value => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-            const sourceUrl = officialSourceUrl(p);
-            const propertySearchUrl = safeOfficialUrl(p.property_record_url) || (isTaxRecord(p) ?
-                (String(p.county || '').toLowerCase().startsWith('erie') ? 'https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search.aspx' :
-                 String(p.county || '').toLowerCase().startsWith('allegheny') ? 'https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search' :
-                 String(p.county || '').toLowerCase().startsWith('lehigh') ? 'https://www.lehighcountytaxclaim.com/' : '') : '');
             document.getElementById('modal-action-buttons').innerHTML = `
-                <a href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-gray-800 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i> רשת</a>
-                <a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-gray-800 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="map" class="w-3.5 h-3.5"></i> מפה</a>
-                ${sourceUrl ? `<a href="${escapeAttribute(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> מקור רשמי</a>` : ''}
-                ${propertySearchUrl ? `<a href="${escapeAttribute(propertySearchUrl)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-gray-800 text-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="landmark" class="w-3.5 h-3.5"></i> בדיקת חלקה</a>` : ''}
+                <a href="https://www.google.com/search?q=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i> רשת</a>
+                <a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="map" class="w-3.5 h-3.5"></i> מפה</a>
+                <a href="${p.url||'#'}" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> מקור</a>
             `;
             document.getElementById('property-modal').classList.remove('hidden');
             lucide.createIcons();
