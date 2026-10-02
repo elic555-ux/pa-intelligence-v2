@@ -1064,6 +1064,22 @@
                     const note = item.note ? ` | ${item.note}` : '';
                     line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${passedFilters}${provider}${coverage}${countyMatches}${note}${checked}`;
                     panel.appendChild(line);
+                    if (Array.isArray(item.manual_sources) && item.manual_sources.length) {
+                        const manualLine = document.createElement('p');
+                        manualLine.appendChild(document.createTextNode('קישורים רשמיים לבדיקה ידנית (לא נסרקו): '));
+                        item.manual_sources.forEach((source, index) => {
+                            if (!source || typeof source.url !== 'string' || !/^https:\/\//i.test(source.url)) return;
+                            if (index) manualLine.appendChild(document.createTextNode(' | '));
+                            const link = document.createElement('a');
+                            link.href = source.url;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            link.textContent = source.label || source.id || 'מקור רשמי';
+                            link.className = 'text-cyan-300 underline hover:text-cyan-200';
+                            manualLine.appendChild(link);
+                        });
+                        panel.appendChild(manualLine);
+                    }
                 }
                 return scannerReport;
             } catch (e) { return null; }
