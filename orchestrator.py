@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.2-official-reo-portals-20261002"
+ORCHESTRATOR_VERSION = "3.6.3-reo-empty-scope-guard-20261002"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -2348,54 +2348,8 @@ def run_orchestrator():
             parent_county = CITY_COUNTY.get(str(area).strip())
             if parent_county:
                 selected_county_names.add(parent_county)
-        if not selected_county_names:
-            selected_county_names = set(PA_COUNTIES)
-        selected_county_keys = {name.casefold() for name in selected_county_names}
-        all_counties_selected = {name.casefold() for name in PA_COUNTIES}.issubset(selected_county_keys)
-        reo_provider_audits = {}
-
-        # Freddie Mac HomeSteps: keep only results whose county can be verified
-        # against the user's selected geography.
-        try:
-            homesteps_rows, homesteps_audit = fetch_homesteps_reo()
-            geo_dropped = 0
-            scoped_homesteps_rows = []
-            for row in homesteps_rows:
-                county_name = str(row.get("county") or "").removesuffix(" County").strip().casefold()
-                if county_name and county_name in selected_county_keys:
-                    scoped_homesteps_rows.append(row)
-                else:
-                    geo_dropped += 1
-            reo_rows.extend(scoped_homesteps_rows)
-            reo_provider_audits["freddie_mac_homesteps"] = {
-                **homesteps_audit, "status": "success", "rows": len(scoped_homesteps_rows),
-                "geography_dropped": geo_dropped,
-                "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
-            }
-            print(f"🏦 HomeSteps/Freddie Mac: {len(scoped_homesteps_rows)} נכסים במחוזות שנבחרו")
-        except (requests.RequestException, OSError, ValueError) as exc:
-            reo_provider_audits["freddie_mac_homesteps"] = {
-                "provider": "freddie_mac_homesteps", "status": "failed", "rows": 0,
-                "source_url": HOMESTEPS_SEARCH_URL, "error": str(exc),
-            }
-            log_entry["errors"].append(f"REO HomeSteps source unavailable: {exc}")
-            print(f"⚠️ HomeSteps/Freddie Mac לא עודכן: {exc}")
-
-        # HUD Home Store: query only selected counties and import the official
-        # current-price, bid-deadline and property-detail records.
-        hud_rows, hud_audit = fetch_hud_homestore_reo(selected_county_names)
-        reo_rows.extend(hud_rows)
-        reo_provider_audits["hud_home_store"] = hud_audit
-        for county_name, county_audit in hud_audit.get("counties", {}).items():
-            if county_audit.get("status") == "failed":
-                log_entry["errors"].append(
-                    f"REO HUD Home Store {county_name} unavailable: {county_audit.get('error', 'unknown error')}")
-        for county_name, county_audit in hud_audit.get("counties", {}).items():
-            print(f"🏛️ HUD Home Store {county_name}: {county_audit.get('active_rows', county_audit.get('rows', 0))} נכסים פעילים")
-
-        success_count = sum(audit.get("status") in {"success", "partial"}
-                            for audit in reo_provider_audits.values())
-        aggregate_status = "partial" if success_count else "failed"
+        # An empty selection is not permission to expand to statewide coverage.
+        # Leave this sector unscanned and preserve the manual portal links.
         manual_reo_portals = [
             {
                 "id": "fannie_mae_homepath",
@@ -2410,15 +2364,70 @@ def run_orchestrator():
                 "status": "manual_link_only",
             },
         ]
-        sources["reo"].update({
-            "status": aggregate_status, "rows": len(reo_rows),
-            "providers": reo_provider_audits,
-            "provider_count": len(reo_provider_audits),
-            "coverage": "partial_multi_provider",
-            "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
-            "manual_sources": manual_reo_portals,
-            "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
-        })
+        if not selected_county_names:
+            sources["reo"].update({
+                "status": "unsupported_area", "rows": 0, "providers": {},
+                "provider_count": 0, "coverage": "not_scanned_no_county_selected",
+                "scope": "no_county_selected", "manual_sources": manual_reo_portals,
+                "note": "לא נבחרו מחוזות או ערים מזוהים; לא בוצעה סריקת REO. יש לבחור מחוזות לפני הריצה. קישורי Fannie Mae ו-Bank of America הם לבדיקה ידנית בלבד.",
+            })
+            print("⚠️ לא נבחרו מחוזות לסריקת REO; דילוג ללא הרחבה לכל פנסילבניה")
+        else:
+            selected_county_keys = {name.casefold() for name in selected_county_names}
+            all_counties_selected = {name.casefold() for name in PA_COUNTIES}.issubset(selected_county_keys)
+            reo_provider_audits = {}
+
+            # Freddie Mac HomeSteps: keep only results whose county can be verified
+            # against the user's selected geography.
+            try:
+                homesteps_rows, homesteps_audit = fetch_homesteps_reo()
+                geo_dropped = 0
+                scoped_homesteps_rows = []
+                for row in homesteps_rows:
+                    county_name = str(row.get("county") or "").removesuffix(" County").strip().casefold()
+                    if county_name and county_name in selected_county_keys:
+                        scoped_homesteps_rows.append(row)
+                    else:
+                        geo_dropped += 1
+                reo_rows.extend(scoped_homesteps_rows)
+                reo_provider_audits["freddie_mac_homesteps"] = {
+                    **homesteps_audit, "status": "success", "rows": len(scoped_homesteps_rows),
+                    "geography_dropped": geo_dropped,
+                    "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
+                }
+                print(f"🏦 HomeSteps/Freddie Mac: {len(scoped_homesteps_rows)} נכסים במחוזות שנבחרו")
+            except (requests.RequestException, OSError, ValueError) as exc:
+                reo_provider_audits["freddie_mac_homesteps"] = {
+                    "provider": "freddie_mac_homesteps", "status": "failed", "rows": 0,
+                    "source_url": HOMESTEPS_SEARCH_URL, "error": str(exc),
+                }
+                log_entry["errors"].append(f"REO HomeSteps source unavailable: {exc}")
+                print(f"⚠️ HomeSteps/Freddie Mac לא עודכן: {exc}")
+
+            # HUD Home Store: query only selected counties and import the official
+            # current-price, bid-deadline and property-detail records.
+            hud_rows, hud_audit = fetch_hud_homestore_reo(selected_county_names)
+            reo_rows.extend(hud_rows)
+            reo_provider_audits["hud_home_store"] = hud_audit
+            for county_name, county_audit in hud_audit.get("counties", {}).items():
+                if county_audit.get("status") == "failed":
+                    log_entry["errors"].append(
+                        f"REO HUD Home Store {county_name} unavailable: {county_audit.get('error', 'unknown error')}")
+            for county_name, county_audit in hud_audit.get("counties", {}).items():
+                print(f"🏛️ HUD Home Store {county_name}: {county_audit.get('active_rows', county_audit.get('rows', 0))} נכסים פעילים")
+
+            success_count = sum(audit.get("status") in {"success", "partial"}
+                                for audit in reo_provider_audits.values())
+            aggregate_status = "partial" if success_count else "failed"
+            sources["reo"].update({
+                "status": aggregate_status, "rows": len(reo_rows),
+                "providers": reo_provider_audits,
+                "provider_count": len(reo_provider_audits),
+                "coverage": "partial_multi_provider",
+                "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
+                "manual_sources": manual_reo_portals,
+                "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
+            })
 
     live_results = []
     if "mls" in active_sectors_now:
