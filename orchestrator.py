@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.3-reo-empty-scope-guard-20261002"
+ORCHESTRATOR_VERSION = "3.6.4-report-audit-20261002"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי"}
@@ -1639,10 +1639,23 @@ def append_scan_log(entry):
     report = load_json_file(SCANNER_STATUS_FILE, {})
     if not isinstance(report, dict):
         report = {}
-    sources = report.get("sources", {})
-    if not isinstance(sources, dict):
-        sources = {}
-    sources.update(entry.get("sources", {}))
+    valid_source_keys = set(SOURCE_LABELS) | {"offmarket"}
+    previous_sources = report.get("sources", {})
+    if not isinstance(previous_sources, dict):
+        previous_sources = {}
+    # Keep only recognized source keys so stale legacy entries such as "None"
+    # cannot leak into the GitHub Actions summary. Preserve prior valid states
+    # for scheduled runs that do not execute every source.
+    sources = {
+        str(key): value for key, value in previous_sources.items()
+        if str(key) in valid_source_keys and isinstance(value, dict)
+    }
+    current_sources = entry.get("sources", {})
+    if isinstance(current_sources, dict):
+        for key, value in current_sources.items():
+            normalized_key = str(key)
+            if normalized_key in valid_source_keys and isinstance(value, dict):
+                sources[normalized_key] = value
     report.update({"version": ORCHESTRATOR_VERSION, "last_event": entry, "sources": sources})
     if entry.get("status") != "skipped":
         report["last_scan"] = entry
@@ -1976,6 +1989,24 @@ def merge_property(existing, incoming, scan_id):
     merged["status_history"] = append_status_event(status_history, "active", timestamp, scan_id, reason)
 
     return merged, "updated" if changed else "unchanged"
+
+
+def count_scan_price_drops(properties, scan_id):
+    """Count price-drop events created during this scan, not historical flags."""
+    event_count = 0
+    property_keys = set()
+    for index, prop in enumerate(properties if isinstance(properties, list) else []):
+        if not isinstance(prop, dict):
+            continue
+        history = prop.get("price_drop_history")
+        if not isinstance(history, list):
+            continue
+        for event in history:
+            if not isinstance(event, dict) or event.get("scan_id") != scan_id:
+                continue
+            event_count += 1
+            property_keys.add(str(prop.get("id") or property_key(prop) or index))
+    return event_count, len(property_keys)
 
 
 def mark_missing_mls_candidates(existing_props, raw_source_seen_keys, scanned_cities, scan_id):
@@ -2684,6 +2715,10 @@ def run_orchestrator():
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"}
 
     final_merged_list = list(existing_props_dict.values())
+    price_drop_events, price_drop_properties = count_scan_price_drops(final_merged_list, scan_id)
+    log_entry["price_drop_events"] = price_drop_events
+    log_entry["price_drop_properties"] = price_drop_properties
+    print(f"📉 PRICE DROP QA — ירידות חדשות בסריקה: {price_drop_events} אירועים ב-{price_drop_properties} נכסים")
     final_merged_list.sort(
         key=lambda x: (safe_number(x.get("deal_score"), 0, int), x.get("last_seen", "")),
         reverse=True,
