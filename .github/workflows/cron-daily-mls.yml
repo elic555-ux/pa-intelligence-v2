@@ -29,7 +29,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y poppler-utils tesseract-ocr
-          python -m pip install requests pytz
+          python -m pip install --upgrade pip
+          # מתקין את כל הספריות מקובץ הדרישות, ומוודא שגם pytz מותקן
+          python -m pip install -r requirements.txt pytz
       - name: Print code identity
         run: |
           git log -1 --format='%h %s'
