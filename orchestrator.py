@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.6-live-sheriff-pdf-20261002"
+ORCHESTRATOR_VERSION = "3.6.7-land-detection-patch"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -53,6 +53,13 @@ ALLEGHENY_PROBATE_URL = "https://dcr.alleghenycounty.us/wills/login.aspx"
 ALLEGHENY_PROBATE_INFO_URL = "https://www.alleghenycounty.us/Government/Court-Related/Wills-and-Orphans/Resources"
 ERIE_PROBATE_URL = "https://courtpro.eriecountypa.gov/Row/v/search/case"
 LEHIGH_PROBATE_URL = "https://publicaccess.lehighcounty.org/Search.aspx"
+
+
+def detect_land_from_address(address):
+    addr = str(address).upper()
+    if re.search(r'\b(LOT|TRI|TR|PARCEL|VACANT)\b', addr) or re.search(r'\d+\s*X\s*\d+', addr):
+        return True
+    return False
 
 
 def normalize_county_name(value):
@@ -198,14 +205,22 @@ def parse_erie_repository_xlsx(content, source_url):
         unavailable = unavailable or re.search(r"\(\s*HELD\b", location, re.I)
         if unavailable:
             continue
+        
         safe_parcel = re.sub(r"[^A-Za-z0-9]", "", parcel)
         docket = docket or f"Repository-{safe_parcel}"
+        is_land = detect_land_from_address(location)
+
         rows.append({
             "id": f"tax-erie-repository-{safe_parcel}", "county": "Erie",
             "city": "Erie County", "address": location, "zip": None,
             "parcel_id": parcel, "sale_number": docket, "owner_name": None,
             "source_type": "tax", "deal_type": "Tax Repository Candidate",
             "market_status": "repository_bid_candidate", "tax_sale_type": "repository",
+            "type": "Land / Lot" if is_land else None,
+            "property_type": "Land / Lot" if is_land else None,
+            "beds": 0 if is_land else None,
+            "baths": 0 if is_land else None,
+            "sqft": 0 if is_land else None,
             "opening_bid": None, "minimum_bid": 250.0, "price": None,
             "source": "Erie County Tax Claim", "source_amount_type": "repository_minimum_bid",
             "source_url": source_url, "url": source_url,
@@ -213,6 +228,7 @@ def parse_erie_repository_xlsx(content, source_url):
             "property_record_url": ERIE_PROPERTY_SEARCH_URL,
             "source_text_quality": "official_county_xlsx",
             "repository_status": status or "לא מצוין בקובץ",
+            "ai_summary": "🔥 **זיהוי אוטומטי:** שטח אדמה/מגרש ריק מרשימת העודפים (Repository). אין במקום מבנה מגורים." if is_land else None,
             "description": ("מועמד לרשימת Repository של Erie County; הצעה מינימלית שמצוינת בכותרת המקור: $250, "
                             "אינה מחיר נכס או הצעת רכישה. הרשימה משתנה ויש לאמת זמינות ישירות מול לשכת המס.")
         })
@@ -341,6 +357,9 @@ def parse_lehigh_judicial_sale_tsv(tsv, source_url, sale_date):
             city = municipality_clean[8:].strip().title()
         else:
             city = municipality_clean.title()
+            
+        is_land = detect_land_from_address(address)
+
         rows.append({
             "id": f"tax-lehigh-{sale_number}", "county": "Lehigh", "city": city,
             "municipality": municipality_clean, "address": address.title(), "zip": None,
@@ -348,6 +367,11 @@ def parse_lehigh_judicial_sale_tsv(tsv, source_url, sale_date):
             "owner_name": re.sub(r"\s+", " ", owner).strip(),
             "source_type": "tax", "deal_type": "Tax Sale Candidate",
             "market_status": "scheduled_tax_sale", "tax_sale_type": "judicial",
+            "type": "Land / Lot" if is_land else None,
+            "property_type": "Land / Lot" if is_land else None,
+            "beds": 0 if is_land else None,
+            "baths": 0 if is_land else None,
+            "sqft": 0 if is_land else None,
             "sale_date": sale_date.isoformat(), "opening_bid": float(bid_match.group(1).replace(",", "")),
             "price": None, "source": "Lehigh County Tax Claim",
             "source_amount_type": "document_opening_bid",
@@ -355,6 +379,7 @@ def parse_lehigh_judicial_sale_tsv(tsv, source_url, sale_date):
             "tax_claim_url": LEHIGH_TAX_SALE_PAGE,
             "property_record_url": LEHIGH_TAX_SALE_PAGE,
             "source_text_quality": "ocr_from_official_scanned_pdf",
+            "ai_summary": "🔥 **זיהוי אוטומטי:** מגרש/שטח אדמה המועמד למכירה שיפוטית. אין במקום מבנה פיזי." if is_land else None,
             "description": "מועמד למכירה שיפוטית; מחיר הפתיחה אינו מחיר רכישה סופי. יש לאמת מול המסמך הרשמי ולבדוק שעבודים, מיסים, מצב הנכס ועלויות נוספות.",
         })
     return rows
@@ -798,11 +823,19 @@ def parse_sheriff_text(body, source_url, imported=False):
         municipality_line = property_line.group(1).strip() if property_line else ""
         parcel_match = re.search(r"\b(\d{1,4}[A-Z]?-[A-Z0-9]+(?:-[A-Z0-9]+)?)\s*$", municipality_line, re.I)
         municipality = municipality_line[:parcel_match.start()].strip() if parcel_match else municipality_line
+        
+        is_land = detect_land_from_address(street)
+
         rows.append({
             "id": "PA-SHERIFF-" + hashlib.sha256(key.encode()).hexdigest()[:20],
             "docket_id": docket.group().upper(), "address": street.title(),
             "city": city.title(), "county": "Allegheny", "zip": zip_code,
-            "price": None, "sqft": None, "beds": None, "baths": None,
+            "type": "Land / Lot" if is_land else None,
+            "property_type": "Land / Lot" if is_land else None,
+            "beds": 0 if is_land else None,
+            "baths": 0 if is_land else None,
+            "sqft": 0 if is_land else None,
+            "price": None, 
             "deal_type": "Sheriff Sale", "source_type": "sheriff",
             "source": "Allegheny County Sheriff's Office", "source_sale_type": type_text,
             "sheriff_tract": tract_match.group(1) if tract_match else None,
@@ -819,6 +852,7 @@ def parse_sheriff_text(body, source_url, imported=False):
             "sale_date": sale_day.isoformat(), "source_published_date": printed_day.isoformat(),
             "listed_date": printed_day.strftime("%d/%m/%Y"),
             "source_document": source_document,
+            "ai_summary": "🔥 **זיהוי אוטומטי:** מגרש ריק/שטח פתוח. אין במקום מבנה מגורים." if is_land else None,
             "summary": f"ברשימת השריף מ-{printed_day}: סטטוס Active למכירה ב-{sale_day}. {type_text}. מחיר, שטח וסוג נכס לא אומתו; יש לבדוק עדכון סטטוס במקור.",
             "url": official_source_url, "source_url": official_source_url,
             "last_source_check": iso_now_est(), "deal_score": None,
@@ -1005,21 +1039,29 @@ def parse_erie_sheriff_html(page_html, source_url=ERIE_SHERIFF_URL):
         money = re.search(r"\$\s*([\d,]+(?:\.\d{1,2})?)", judgment_text)
         judgment_amount = float(money.group(1).replace(",", "")) if money else None
         uid = "ERIE-SHERIFF-" + hashlib.sha256(key.encode()).hexdigest()[:20]
+        
+        is_land = detect_land_from_address(street)
+
         rows.append({
             "id": uid, "docket_id": case_no, "address": street.title(),
             "city": city.title(), "county": "Erie", "zip": zip_code,
             "source_address_raw": " | ".join(address_lines),
             "address_quality": "verified_zip" if zip_code else "invalid_or_missing_zip",
+            "type": "Land / Lot" if is_land else None,
+            "property_type": "Land / Lot" if is_land else None,
+            "beds": 0 if is_land else None,
+            "baths": 0 if is_land else None,
+            "sqft": 0 if is_land else None,
             "price": None, "judgment_amount": judgment_amount,
             "source_amount_type": "judgment_amount" if judgment_amount is not None else None,
             "judgment_text": judgment_text or None,
-            "sqft": None, "beds": None, "baths": None,
             "deal_type": "Sheriff Sale", "source_type": "sheriff",
             "source": "Erie County Sheriff Sale Listing", "sheriff_status": status,
             "market_status": "scheduled_sheriff_sale", "participants": participants or None,
             "attorney": attorney or None, "municipality": municipality,
             "erie_upi_raw": upi, "data_status": "live",
             "filter_status": "investment_fields_unavailable",
+            "ai_summary": "🔥 **זיהוי אוטומטי:** נראה שמדובר במגרש או שטח אדמה (Land/Lot) ולא במבנה מגורים, לפי התיאור ברישום המחוזי." if is_land else None,
             "summary": (f"רישום שריף פעיל במחוז Erie. סכום פסק הדין במסמך: "
                         f"{judgment_text or 'לא צוין'}; אין לראות בו מחיר נכס או הצעת פתיחה."
                         + (f" המיקוד במקור אינו תקין ({raw_city_zip}); יש לאמת ידנית." if not zip_code else "")),
@@ -1100,7 +1142,7 @@ def parse_lehigh_sheriff_html(page_html, source_url=LEHIGH_SHERIFF_URL, today=No
             continue
         sheriff_no = re.sub(r"\s+", " ", cells[columns["sheriff #"]]).strip()
         plaintiff = re.sub(r"\s+", " ", cells[columns["plaintiff"]]).strip()
-        defendant = re.sub(r"\s+", " ", cells[columns["defendant"]]).strip()
+        defendant = re.sub(r"\s+", "defendant").strip()
         address = re.sub(r"\s+", " ", cells[columns["address"]]).strip()
         attorney = re.sub(r"\s+", " ", cells[columns["attorney name"]]).strip()
         parcel = re.sub(r"\s+", " ", cells[columns["parcel #"]]).strip()
@@ -1307,12 +1349,14 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
         cache = {}
     parcels_by_pin = {}
     for row in rows:
+        if row.get("county") != "Allegheny":
+            continue
         parcel = row.get("parcel_id")
         if parcel:
             key = county_pin_from_sheriff_parcel(parcel)
             if key:
                 parcels_by_pin[key] = parcel
-    row_by_pin = {county_pin_from_sheriff_parcel(row.get("parcel_id")): row for row in rows}
+    row_by_pin = {county_pin_from_sheriff_parcel(row.get("parcel_id")): row for row in rows if row.get("county") == "Allegheny"}
     cache_meta = cache.setdefault("_meta", {})
     backfill_complete = bool(cache_meta.get("initial_backfill_complete"))
     backfill = {pin: parcel for pin, parcel in parcels_by_pin.items() if pin not in cache}
@@ -1349,6 +1393,8 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
             except (requests.RequestException, ValueError, OSError) as exc:
                 cache[pin] = {"lookup_error": str(exc), "checked_at": iso_now_est()}
     for row in rows:
+        if row.get("county") != "Allegheny":
+            continue
         pin = county_pin_from_sheriff_parcel(row.get("parcel_id"))
         data = cache.get(pin) if pin else None
         if isinstance(data, dict) and data.get("source"):
@@ -1920,12 +1966,12 @@ def merge_property(existing, incoming, scan_id):
     merged = deepcopy(existing)
     merged.update(incoming)
 
-    # שמירה על תיוג העיזבונות של סוכן ה-NLP כדי שלא יידרסו בעדכון הבא
     if existing.get("deal_type") == "probate_fsbo":
         merged["deal_type"] = "probate_fsbo"
         merged["strategy"] = existing.get("strategy", merged.get("strategy"))
         merged["deal_score"] = existing.get("deal_score", merged.get("deal_score"))
-        merged["ai_summary"] = existing.get("ai_summary", merged.get("ai_summary"))
+        if existing.get("ai_summary"):
+             merged["ai_summary"] = existing["ai_summary"]
 
     merged["first_seen"] = existing.get("first_seen") or timestamp
     merged["last_seen"] = timestamp
@@ -2529,7 +2575,7 @@ def run_orchestrator():
     if areas:
         try:
             atomic_write_json(GEO_CATALOG_FILE, {"version": 1, "areas": areas})
-            print(f"🗺️ קטלוג אזורים עודכן: {sum(len(v['locations']) for v in areas.values())} שמות מהמקור")
+            print(f"🗺️️ קטלוג אזורים עודכן: {sum(len(v['locations']) for v in areas.values())} שמות מהמקור")
         except OSError as exc:
             log_entry["errors"].append(f"geo catalog write failed: {exc}")
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
@@ -2626,7 +2672,7 @@ def run_orchestrator():
     top_locations = sorted(location_counts.items(), key=lambda x: (-x[1], x[0]))[:25]
     log_entry["redfin_location_top25"] = dict(top_locations)
     print(f"📍 GEO QA — ערכי LOCATION מובילים מ-Redfin: {dict(top_locations)}")
-    print(f"👁️ MLS MARKET STATE — נצפו במקור LIVE לפני מסננים: {len(raw_mls_seen_keys)}")
+    print(f"👁️️ MLS MARKET STATE — נצפו במקור LIVE לפני מסננים: {len(raw_mls_seen_keys)}")
     print(f"🧪 MLS QA — דחיות לפי מסנן: {filter_rejections}")
     print(f"🏷️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
