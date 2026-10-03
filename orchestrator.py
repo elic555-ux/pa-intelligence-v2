@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.7.0-required-property-data-gate"
+ORCHESTRATOR_VERSION = "3.7.1-mls-estate-keywords-source-audit-20261003"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -1552,6 +1552,48 @@ DISTRESS_KEYWORDS = [
     "rehab", "contractor special", "needs work", "estate sale", "foreclosure",
 ]
 
+# Search listing remarks only when the live MLS payload actually contains a
+# remarks/description field. These terms identify review candidates; they do
+# not prove probate status or seller authority.
+PROBATE_REMARK_TERMS = (
+    "estate sale", "probate", "executor", "executrix",
+    "personal representative", "administrator of the estate",
+    "inherited property", "estate owned", "estate-owned", "heirs sale",
+)
+MLS_REMARK_FIELD_NAMES = {
+    "remarks", "publicremarks", "mlsremarks", "listingremarks",
+    "marketingremarks", "description", "propertydescription",
+    "listingdescription", "publicdescription", "remarksdescription",
+}
+
+
+def extract_mls_remarks(row):
+    """Return remarks only from recognizable text columns in a source row."""
+    if not isinstance(row, dict):
+        return None, None
+    for field, value in row.items():
+        normalized = re.sub(r"[^a-z0-9]", "", str(field).casefold())
+        if normalized not in MLS_REMARK_FIELD_NAMES:
+            continue
+        text = re.sub(r"\s+", " ", str(value or "")).strip()
+        if text:
+            return text[:8000], str(field)
+    return None, None
+
+
+def find_probate_remark_terms(remarks):
+    """Find explicit estate/probate phrases; avoid generic 'real estate sale'."""
+    text = re.sub(r"\s+", " ", str(remarks or "")).casefold()
+    matches = []
+    for term in PROBATE_REMARK_TERMS:
+        pattern = r"(?<![a-z0-9])" + re.escape(term).replace(r"\ ", r"\s+") + r"(?![a-z0-9])"
+        for match in re.finditer(pattern, text):
+            if term == "estate sale" and re.search(r"\breal\s+$", text[:match.start()]):
+                continue
+            matches.append(term)
+            break
+    return matches
+
 STREET_SUFFIXES = {
     "street": "st", "st.": "st", "avenue": "ave", "ave.": "ave",
     "road": "rd", "rd.": "rd", "boulevard": "blvd", "blvd.": "blvd",
@@ -1780,6 +1822,9 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
     }
 
     discovered = []
+    remarks_text_rows = 0
+    probate_keyword_matches = 0
+    matched_terms = {}
     try:
         print(f"📡 סורק נתונים חיים עבור אזור: {clean_city}...")
         resp = requests.get(url, params=params, headers=headers, timeout=20)
@@ -1793,6 +1838,10 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
         if not {"ADDRESS", "PRICE", "CITY"}.issubset(set(reader.fieldnames or [])):
             audit["error"] = "unexpected CSV schema"
             return []
+        remarks_columns = [
+            field for field in (reader.fieldnames or [])
+            if re.sub(r"[^a-z0-9]", "", str(field).casefold()) in MLS_REMARK_FIELD_NAMES
+        ]
         for row in reader:
             addr = row.get("ADDRESS")
             raw_price = row.get("PRICE")
@@ -1822,6 +1871,16 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
             if home_url and not home_url.startswith("http"):
                 home_url = f"https://www.redfin.com{home_url}"
 
+            remarks, remarks_field = extract_mls_remarks(row)
+            if remarks:
+                remarks_text_rows += 1
+            probate_terms = find_probate_remark_terms(remarks)
+            is_probate_candidate = bool(probate_terms)
+            if is_probate_candidate:
+                probate_keyword_matches += 1
+                for term in probate_terms:
+                    matched_terms[term] = matched_terms.get(term, 0) + 1
+
             strategy_data = classify_strategy("MLS", price, beds)
             mls_number = row.get("MLS#") or normalize_addr_key(addr, row_city, zip_code)
             discovered.append({
@@ -1832,7 +1891,8 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 "county": target.get("county_name") or CITY_COUNTY.get(clean_city) or "",
                 "zip": zip_code,
                 "price": price,
-                "deal_type": "MLS (Realtor / Redfin)",
+                "deal_type": ("MLS (Probate Keyword Candidate)" if is_probate_candidate
+                              else "MLS (Realtor / Redfin)"),
                 "source": "Redfin",
                 "source_type": "mls",
                 "data_status": "live",
@@ -1852,7 +1912,15 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 "year_built": safe_number(row.get("YEAR BUILT"), 0, int) or None,
                 "lot_size": row.get("LOT SIZE") or "",
                 "projected_rent": strategy_data["projected_rent"],
-                "summary": f"עסקה פעילה ב-{row_city} ({dom} ימים בשוק). מחיר מבוקש ${price:,}.",
+                "summary": (
+                    f"עסקה פעילה ב-{row_city} ({dom} ימים בשוק). מחיר מבוקש ${price:,}."
+                    + (f" מילות התאמה בתיאור MLS (מועמד בלבד, לא אימות עיזבון): {', '.join(probate_terms)}."
+                       if is_probate_candidate else "")
+                ),
+                "probate_keyword_candidate": is_probate_candidate,
+                "probate_keyword_hits": probate_terms,
+                "remarks_source_field": remarks_field,
+                "source_listing_description": remarks[:2000] if is_probate_candidate else None,
                 "url": home_url,
                 "listed_date": listed_date_str,
                 "days_on_market": dom,
@@ -1866,6 +1934,13 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
         audit["error"] = str(exc)
         print(f"⚠️ שגיאה לא צפויה בסריקת {clean_city}: {exc}")
 
+    audit.update({
+        "remarks_fields_available": remarks_columns if "remarks_columns" in locals() else [],
+        "remarks_search_status": ("searched" if remarks_columns else "remarks_field_unavailable"),
+        "remarks_text_rows": remarks_text_rows,
+        "probate_keyword_candidates": probate_keyword_matches,
+        "probate_keyword_hits": matched_terms,
+    })
     if "error" not in audit:
         audit.update({"status": "success", "rows": len(discovered),
                       "limit_reached": len(discovered) >= 350})
@@ -1887,6 +1962,8 @@ def comparable_changed(old, new):
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
         "type", "property_type", "source_property_type", "source_location",
         "source_url", "source_amount_type", "case_cost_tax_bid", "judgment_amount",
+        "probate_keyword_candidate", "probate_keyword_hits", "source_listing_description",
+        "remarks_source_field",
         "opening_bid", "minimum_bid", "sale_date", "sale_number", "docket_id",
         "parcel_id", "attorney", "participants", "plaintiff", "defendant",
         "source_published_date", "sheriff_status", "repository_status",
@@ -2313,10 +2390,11 @@ def run_orchestrator():
     if "06_probate_estates" in active_sectors_now:
         probate_links = selected_manual_sources(cities_list, counties_list, "probate")
         sources["06_probate_estates"].update({
-            "status": "success", "rows": 0,
+            "status": "not_connected", "rows": 0,
             "scope": "selected_counties_only",
             "manual_sources": probate_links,
-            "note": "מנוע ה-NLP שואב ומסווג נתוני עיזבונות (Probate) ו-FSBO מתוך תיאורי הנכסים במאגר.",
+            "note": ("אין חיבור חי למאגר תיקי עיזבונות. סריקת MLS תבדוק מילות התאמה רק אם תיאור המודעה "
+                     "נכלל בפועל בנתוני המקור; התאמה היא מועמד לבדיקה ולא הוכחה משפטית."),
         })
 
     sheriff_rows = []
@@ -2530,7 +2608,12 @@ def run_orchestrator():
                         geo_dropped += 1
                 reo_rows.extend(scoped_homesteps_rows)
                 reo_provider_audits["freddie_mac_homesteps"] = {
-                    **homesteps_audit, "status": "success", "rows": len(scoped_homesteps_rows),
+                    **homesteps_audit,
+                    # Preserve the fetcher's actual status. A valid empty/partial
+                    # response must not be reported as a full success merely
+                    # because the request itself did not raise an exception.
+                    "status": homesteps_audit.get("status", "failed"),
+                    "rows": len(scoped_homesteps_rows),
                     "geography_dropped": geo_dropped,
                     "scope": "all_selected_pa_counties" if all_counties_selected else "selected_counties_only",
                 }
@@ -2577,7 +2660,16 @@ def run_orchestrator():
         usable = sum(a.get("status") in ("success", "partial") for a in mls_audits)
         sources["mls"].update({"status": "success" if good == len(mls_audits) and good else "partial" if usable else "failed",
                                  "rows": len(live_results), "areas": mls_audits,
-                                 "coverage": "not_proven_complete"})
+                                 "coverage": "not_proven_complete",
+                                 "probate_keyword_candidates": sum(a.get("probate_keyword_candidates", 0) for a in mls_audits),
+                                 "remarks_search_status": ("searched" if any(a.get("remarks_search_status") == "searched" for a in mls_audits)
+                                                           else "remarks_field_unavailable" if mls_audits else "not_scanned")})
+        if "06_probate_estates" in sources:
+            sources["06_probate_estates"]["mls_keyword_detection"] = {
+                "status": sources["mls"].get("remarks_search_status", "not_scanned"),
+                "candidate_rows": sources["mls"].get("probate_keyword_candidates", 0),
+                "note": "מועמדים מתויגים בתוך MLS; אין בכך אישור שהתיק הוא עיזבון.",
+            }
         for item in mls_audits:
             if item.get("error"):
                 log_entry["errors"].append(f"MLS {item['area']}: {item['error']}")
@@ -2668,12 +2760,15 @@ def run_orchestrator():
         "city_mismatch": 0, "location": 0, "incomplete_required_data": 0,
     }
     incomplete_field_rejections = {}
+    incomplete_rejections_by_source = {}
     source_type_counts = {}
 
     for prop in combined:
         missing_required = required_property_data_failures(prop)
         if missing_required:
             filter_rejections["incomplete_required_data"] += 1
+            source_type = str(prop.get("source_type") or "unknown")
+            incomplete_rejections_by_source[source_type] = incomplete_rejections_by_source.get(source_type, 0) + 1
             for field in missing_required:
                 incomplete_field_rejections[field] = incomplete_field_rejections.get(field, 0) + 1
             continue
@@ -2738,10 +2833,19 @@ def run_orchestrator():
     log_entry["after_filters"] = len(final_filtered)
     log_entry["filter_rejections"] = filter_rejections
     log_entry["required_data_rejections_by_field"] = incomplete_field_rejections
+    log_entry["required_data_rejections_by_source"] = incomplete_rejections_by_source
     log_entry["source_property_type_counts"] = source_type_counts
     for sector, source in sources.items():
         if sector in {"mls", "reo", "sheriff", "tax", "06_probate_estates"}:
             source["passed_filters"] = sum(1 for prop in final_filtered if prop.get("source_type") == sector)
+            rejected = incomplete_rejections_by_source.get(sector, 0)
+            source["minimum_data_rejected"] = rejected
+            if sector in {"sheriff", "tax"} and rejected and source.get("rows", 0):
+                source["status"] = "partial"
+                source["status_detail"] = (
+                    f"המקור החזיר {source.get('rows', 0)} מועמדים; {rejected} נפסלו כי חסרו "
+                    "כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
+                )
     log_entry["source_passed_filters"] = {
         sector: source.get("passed_filters", 0) for sector, source in sources.items()
     }
