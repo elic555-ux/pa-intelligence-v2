@@ -318,6 +318,32 @@
                 <p class="text-[11px] text-gray-400">הצעת מחיר אינה מוצגת כמחיר הנכס; הסכום נשמר כשדה Cost &amp; Tax Bid מהמסמך.</p>
             </section>
 
+            <section id="modal-tax-details" class="hidden space-y-3 bg-purple-950/20 p-4 rounded-xl border border-purple-500/30">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <h4 class="text-sm font-black text-purple-300">פרטי מכירת מס מתוך המקור</h4>
+                    <div class="flex gap-3 flex-wrap">
+                        <a id="modal-tax-source-link" href="#" target="_blank" rel="noopener noreferrer" class="hidden text-xs font-bold text-purple-200 underline">פתיחת רשימת המקור</a>
+                        <a id="modal-tax-claim-link" href="#" target="_blank" rel="noopener noreferrer" class="hidden text-xs font-bold text-purple-200 underline">אתר Tax Claim</a>
+                        <a id="modal-tax-record-link" href="#" target="_blank" rel="noopener noreferrer" class="hidden text-xs font-bold text-purple-200 underline">חיפוש רשומת נכס</a>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div><span class="text-gray-400 block">סוג הליך</span><strong id="modal-tax-type" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">יישוב</span><strong id="modal-tax-municipality" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">בעלים כפי שפורסם</span><strong id="modal-tax-owner" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">מספר חלקה</span><strong id="modal-tax-parcel" class="text-white font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">מספר מכירה / תיק</span><strong id="modal-tax-sale-number" class="text-white font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">סטטוס במקור</span><strong id="modal-tax-status" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">מועד מכירה</span><strong id="modal-tax-sale-date" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">שנת חוב</span><strong id="modal-tax-year" class="text-white"></strong></div>
+                    <div><span class="text-gray-400 block">חוב מס פרטני</span><strong id="modal-tax-amount" class="text-amber-300 font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">סכום פסק דין</span><strong id="modal-tax-judgment" class="text-white font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">הצעת פתיחה במסמך</span><strong id="modal-tax-opening-bid" class="text-white font-mono"></strong></div>
+                    <div><span class="text-gray-400 block">רף מינימום כללי</span><strong id="modal-tax-minimum-bid" class="text-white font-mono"></strong></div>
+                </div>
+                <p id="modal-tax-note" class="text-[11px] text-gray-300 bg-gray-950/60 p-3 rounded-lg"></p>
+            </section>
+
             <section id="modal-county-property-details" class="hidden space-y-3 bg-cyan-950/20 p-4 rounded-xl border border-cyan-500/30">
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <h4 class="text-sm font-black text-cyan-300">נתוני מבנה ממאגר Allegheny County</h4>
@@ -1176,7 +1202,7 @@
                 if(!panel) return;
                 panel.replaceChildren();
                 const states = {success:'עודכן', partial:'עודכן חלקית', failed:'נכשל', blocked:'המקור חסם גישה',
-                    not_connected:'טרם חובר למקור חי', unsupported_area:'האזור אינו נתמך במקור זה',
+                    not_connected:'לא מחובר למקור חי', unsupported_area:'האזור אינו נתמך במקור זה',
                     imported:'נטען ממסמך שהועלה', needs_verification:'דורש אימות'};
                 const heading = document.createElement('p');
                 const scan = scannerReport.last_scan;
@@ -1187,6 +1213,43 @@
                     const checked = item.checked_at ? ' | ' + new Date(item.checked_at).toLocaleString('he-IL') : '';
                     line.textContent = `${item.label}: ${states[item.status] || item.status}${item.rows !== undefined ? ' | ' + item.rows + ' רשומות מהמקור' : ''}${checked}`;
                     panel.appendChild(line);
+                    if (item.note) {
+                        const note = document.createElement('p');
+                        note.className = 'text-xs text-gray-400 pr-3';
+                        note.textContent = item.note;
+                        panel.appendChild(note);
+                    }
+                    if (item.counties && typeof item.counties === 'object') {
+                        const countyDetails = document.createElement('details');
+                        countyDetails.className = 'text-xs pr-3';
+                        const summary = document.createElement('summary');
+                        summary.className = 'cursor-pointer text-gray-400';
+                        summary.textContent = `פירוט לפי מחוז (${Object.keys(item.counties).length})`;
+                        countyDetails.appendChild(summary);
+                        for (const [county, result] of Object.entries(item.counties)) {
+                            const countyLine = document.createElement('p');
+                            countyLine.className = 'text-gray-400 pr-3';
+                            countyLine.textContent = `${county}: ${states[result?.status] || result?.status || 'לא ידוע'} | ${result?.rows ?? 0} רשומות`;
+                            countyDetails.appendChild(countyLine);
+                        }
+                        panel.appendChild(countyDetails);
+                    }
+                    if (Array.isArray(item.manual_sources) && item.manual_sources.length) {
+                        const links = document.createElement('div');
+                        links.className = 'flex flex-wrap gap-x-3 gap-y-1 text-xs pr-3';
+                        for (const source of item.manual_sources) {
+                            const href = safeExternalUrl(source?.url);
+                            if (!href) continue;
+                            const anchor = document.createElement('a');
+                            anchor.href = href;
+                            anchor.target = '_blank';
+                            anchor.rel = 'noopener noreferrer';
+                            anchor.className = 'text-blue-300 underline';
+                            anchor.textContent = `${source?.county || ''} ${source?.label || 'מקור רשמי'}`.trim();
+                            links.appendChild(anchor);
+                        }
+                        if (links.childElementCount) panel.appendChild(links);
+                    }
                 }
                 return scannerReport;
             } catch (e) { return null; }
@@ -1441,6 +1504,30 @@
             return status === 'off_market' || status === 'off_market_candidate' || status === 'offmarket';
         }
 
+        function isTaxProperty(p) {
+            return p?.source_type === 'tax' || String(p?.deal_type || '').toLowerCase().includes('tax');
+        }
+
+        function propertyCityDisplay(p) {
+            const city = String(p?.city || '').trim();
+            const county = String(p?.county || '').trim();
+            if (p?.source_type === 'tax' && county && !p?.municipality && city.toLowerCase() === `${county} county`.toLowerCase()) {
+                return `${county} County · יישוב לא צוין במקור`;
+            }
+            return city ? `${city}, PA` : (county ? `${county} County` : 'מיקום לא צוין');
+        }
+
+        function safeExternalUrl(value) {
+            try {
+                const parsed = new URL(String(value || ''), window.location.href);
+                return parsed.protocol === 'https:' ? parsed.href : null;
+            } catch (_) { return null; }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+        }
+
         function updateCounts() {
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
@@ -1451,7 +1538,7 @@
             if(document.getElementById('count-price-drop')) document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped).length;
             if(document.getElementById('count-distressed')) document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
             if(document.getElementById('count-sheriff')) document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
-            if(document.getElementById('count-tax')) document.getElementById('count-tax').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('tax')).length;
+            if(document.getElementById('count-tax')) document.getElementById('count-tax').textContent = nonArchived.filter(isTaxProperty).length;
             if(document.getElementById('count-probate')) document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
             if(document.getElementById('count-offmarket')) document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
             if(document.getElementById('count-archive')) document.getElementById('count-archive').textContent = available.filter(p => p.is_archived).length;
@@ -1473,8 +1560,17 @@
             if (Number.isFinite(price) && price > 0) {
                 return '$' + price.toLocaleString();
             }
-            if (p.source_type === 'tax' && p.minimum_bid) {
-                return `<span class="block text-purple-300 text-sm">הצעת מינימום: $${Number(p.minimum_bid).toLocaleString()}</span>`;
+            if (p.source_type === 'tax') {
+                const openingBid = Number(p.opening_bid);
+                if (p.source_amount_type === 'document_opening_bid' && Number.isFinite(openingBid) && openingBid > 0) {
+                    return `<span class="block text-purple-300 text-sm">הצעת פתיחה: $${openingBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans">לפי מסמך המקור · לא חוב המס</span>`;
+                }
+                const minimumBid = Number(p.minimum_bid);
+                if (Number.isFinite(minimumBid) && minimumBid > 0) {
+                    const label = p.source_amount_type === 'repository_minimum_bid' ? 'רף מינימום כללי' : 'הצעת מינימום';
+                    return `<span class="block text-purple-300 text-sm">${label}: $${minimumBid.toLocaleString()}</span>`;
+                }
+                return '<span class="text-purple-200">המחיר והחוב לא פורסמו</span>';
             }
             const caseCostTaxBid = Number(p.case_cost_tax_bid);
             if (p.source_type === 'sheriff' && Number.isFinite(caseCostTaxBid) && caseCostTaxBid > 0) {
@@ -1484,8 +1580,11 @@
         }
 
         function featureDisplayHtml(p) {
-            if (p.source_type === 'tax' && !p.beds && !p.sqft) {
-                 return `<div class="text-[11px] text-gray-400">ממתין למיפוי במחוז</div>`;
+            if (p.source_type === 'tax') {
+                 const parcel = p.parcel_id ? `חלקה: ${escapeHtml(p.parcel_id)}` : 'חלקה לא פורסמה';
+                 const sale = p.sale_number ? `מכירה: ${escapeHtml(p.sale_number)}` : '';
+                 const date = p.sale_date ? `תאריך: ${escapeHtml(p.sale_date)}` : '';
+                 return `<div class="text-[11px] text-purple-200">${[parcel, sale, date].filter(Boolean).join(' · ')}</div>`;
             }
             return `🛏️ ${p.beds||'-'} | 🛁 ${p.baths||'-'}`;
         }
@@ -1514,15 +1613,16 @@
                     if (activeCategory === 'price_drop' && !p.price_dropped) return false;
                     if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
                     if (activeCategory === 'sheriff' && !dt.includes('sheriff') && !(p.source || '').toLowerCase().includes('sheriff') && !(p.source_type || '').toLowerCase().includes('sheriff')) return false;
-                    if (activeCategory === 'tax' && !dt.includes('tax')) return false;
+                    if (activeCategory === 'tax' && !isTaxProperty(p)) return false;
                     if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
                     if (activeCategory === 'offmarket' && !isOffMarketProperty(p)) return false;
                 }
 
                 if (stratF !== 'all' && p.strategy !== stratF) return false;
                 if (typeF !== 'all' && p.type && p.type !== typeF) return false;
-                if (minPrice > 0 && (Number(p.price)||0) < minPrice) return false;
-                if (priceF !== 'all' && (Number(p.price)||0) > parseInt(priceF)) return false;
+                const hasMarketPrice = Number.isFinite(Number(p.price)) && Number(p.price) > 0;
+                if (hasMarketPrice && minPrice > 0 && Number(p.price) < minPrice) return false;
+                if (hasMarketPrice && priceF !== 'all' && Number(p.price) > parseInt(priceF, 10)) return false;
                 if (selectedCitiesFilter !== null && !selectedCitiesFilter.has(mainGeoKey(p))) return false;
                 if (onlyGoodDeals) { if (!p.price || !p.mao_flip || (Number(p.price) > Number(p.mao_flip))) return false; }
                 return true;
@@ -1545,9 +1645,9 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span>
                                 ${isV && activeCategory !== 'archive' ? '<span title="נצפה"><i data-lucide="eye" class="w-3.5 h-3.5 text-gray-500"></i></span>' : ''}
-                                <div class="font-black text-white text-sm truncate" title="${p.address}">${p.address}</div>
+                                <div class="font-black text-white text-sm truncate" title="${escapeHtml(p.address)}">${escapeHtml(p.address)}</div>
                             </div>
-                            <div class="text-[11px] text-gray-400 truncate" title="${p.city}">${p.city}</div>
+                            <div class="text-[11px] text-gray-400 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</div>
                             ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
                         </td>
@@ -1577,7 +1677,7 @@
 
                             <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
                             
-                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${p.address}"><span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span><span class="truncate">${p.address}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${p.city}, PA">${p.city}, PA</p>
+                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${escapeHtml(p.address)}"><span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span><span class="truncate">${escapeHtml(p.address)}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</p>
                             <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${propertyPriceDisplayHtml(p)}</div>
                             
                             <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
@@ -1613,14 +1713,10 @@
             }
 
             document.getElementById('modal-address').textContent = p.address;
-            document.getElementById('modal-location').innerHTML = `${p.city}, PA ${p.zip||''}`;
+            document.getElementById('modal-location').textContent = `${propertyCityDisplay(p)} ${p.zip || ''}`.trim();
             document.getElementById('modal-listed-date').textContent = p.listed_date;
             
-            let priceHtml = p.price ? `$${Number(p.price).toLocaleString()}` : 'ללא הצעת פתיחה';
-            if (!p.price && p.source_type === 'tax' && p.minimum_bid) {
-                priceHtml = `<span class="text-purple-300 text-lg">הצעת מינימום: $${Number(p.minimum_bid).toLocaleString()}</span>`;
-            }
-            document.getElementById('modal-price').innerHTML = priceHtml;
+            document.getElementById('modal-price').innerHTML = propertyPriceDisplayHtml(p);
             
             const countyData = p.county_property_data || null;
             document.getElementById('modal-beds').textContent = p.beds || countyData?.beds || '-';
@@ -1630,7 +1726,7 @@
             document.getElementById('modal-rent').textContent = p.projected_rent||'-';
             document.getElementById('modal-yield').textContent = p.gross_yield||'-';
             document.getElementById('modal-rehab').textContent = p.rehab_scope||'-';
-            document.getElementById('modal-summary').textContent = p.summary||'אין תיאור נוסף';
+            document.getElementById('modal-summary').textContent = p.summary || p.description || 'אין תיאור נוסף';
             document.getElementById('modal-occupancy').textContent = p.occupancy||'לא ידוע';
             document.getElementById('modal-roof').textContent = p.roof_condition||'לא ידוע';
             document.getElementById('modal-hvac').textContent = p.hvac_type||'לא ידוע';
@@ -1641,6 +1737,52 @@
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
             const sheriffDetails = document.getElementById('modal-sheriff-details');
             sheriffDetails.classList.toggle('hidden', p.source_type !== 'sheriff');
+            const taxDetails = document.getElementById('modal-tax-details');
+            taxDetails.classList.toggle('hidden', p.source_type !== 'tax');
+            if (p.source_type === 'tax') {
+                const setTax = (id, value, fallback='לא פורסם ברשימת המקור') => {
+                    document.getElementById(id).textContent = value === 0 ? '0' : (value || fallback);
+                };
+                const formatMoney = value => {
+                    if (value === null || value === undefined || value === '') return null;
+                    const number = Number(value);
+                    return Number.isFinite(number) ? `$${number.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : null;
+                };
+                const saleType = p.tax_sale_type === 'repository' ? 'Repository — נכס שלא נמכר במכרז קודם' :
+                    p.tax_sale_type === 'judicial' ? 'מכירה שיפוטית' : (p.tax_sale_type || p.deal_type);
+                setTax('modal-tax-type', saleType);
+                setTax('modal-tax-municipality', p.municipality || (p.city && p.city !== `${p.county} County` ? p.city : null));
+                setTax('modal-tax-owner', p.owner_name);
+                setTax('modal-tax-parcel', p.parcel_id);
+                setTax('modal-tax-sale-number', p.sale_number || p.docket_id);
+                setTax('modal-tax-status', p.repository_status || p.source_status || p.tax_status, 'לא צוין במסמך הרשמי');
+                setTax('modal-tax-sale-date', p.sale_date);
+                setTax('modal-tax-year', p.tax_year);
+                setTax('modal-tax-amount', formatMoney(p.tax_amount), 'המקור אינו מפרסם חוב פרטני');
+                setTax('modal-tax-judgment', formatMoney(p.judgment_amount));
+                setTax('modal-tax-opening-bid', formatMoney(p.opening_bid));
+                setTax('modal-tax-minimum-bid', formatMoney(p.minimum_bid));
+
+                const setTaxLink = (id, value, label) => {
+                    const link = document.getElementById(id);
+                    const href = safeExternalUrl(value);
+                    link.classList.toggle('hidden', !href);
+                    link.href = href || '#';
+                    link.textContent = label;
+                };
+                setTaxLink('modal-tax-source-link', p.source_url || p.url, 'פתיחת רשימת המקור');
+                setTaxLink('modal-tax-claim-link', p.tax_claim_url, 'אתר Tax Claim');
+                setTaxLink('modal-tax-record-link', p.property_record_url, 'חיפוש רשומת נכס');
+
+                let taxNote = p.description || 'הנתונים מוצגים כפי שפורסמו במקור; יש לאמת מול משרד Tax Claim.';
+                if (p.source_amount_type === 'repository_minimum_bid') {
+                    taxNote += ' הסכום $250 הוא רף מינימום כללי להגשת הצעת Repository, לא חוב המס ולא מחיר של החלקה הזו.';
+                }
+                if (p.source_text_quality === 'ocr_from_official_scanned_pdf') {
+                    taxNote += ' הנתונים חולצו ב-OCR ממסמך סרוק; יש להשוות למסמך הרשמי לפני פעולה.';
+                }
+                document.getElementById('modal-tax-note').textContent = taxNote;
+            }
             const countyDetails = document.getElementById('modal-county-property-details');
             countyDetails.classList.toggle('hidden', !(p.source_type === 'sheriff' && (countyData || p.parcel_id)));
             if (p.source_type === 'sheriff' && (countyData || p.parcel_id)) {
@@ -1712,8 +1854,12 @@
             document.getElementById('modal-action-buttons').innerHTML = `
                 <a href="https://www.google.com/search?q=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i> רשת</a>
                 <a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="map" class="w-3.5 h-3.5"></i> מפה</a>
-                <a href="${p.url||'#'}" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> מקור</a>
+                <a id="modal-generic-source-link" href="#" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> מקור</a>
             `;
+            const genericSourceLink = document.getElementById('modal-generic-source-link');
+            const safeSourceUrl = safeExternalUrl(p.url || p.source_url);
+            genericSourceLink.href = safeSourceUrl || '#';
+            genericSourceLink.classList.toggle('hidden', !safeSourceUrl);
             document.getElementById('property-modal').classList.remove('hidden');
             lucide.createIcons();
         }
