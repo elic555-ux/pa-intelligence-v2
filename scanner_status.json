@@ -1,10 +1,10 @@
 {
-  "version": "3.6.8-lehigh-fix",
+  "version": "3.6.9-tax-probate-clarity-20261003",
   "last_event": {
-    "scan_id": "SCAN-20261003-105235",
-    "started_at": "2026-10-03T10:52:35-04:00",
+    "scan_id": "SCAN-20261003-123132",
+    "started_at": "2026-10-03T12:31:32-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.6.8-lehigh-fix",
+    "orchestrator_version": "3.6.9-tax-probate-clarity-20261003",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -15,18 +15,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2691,
-    "after_filters": 1954,
-    "new": 4,
-    "updated": 147,
-    "unchanged": 1803,
+    "source_results": 2685,
+    "after_filters": 1948,
+    "new": 3,
+    "updated": 5,
+    "unchanged": 1940,
     "off_market_candidates": 0,
     "errors": [
-      "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete",
-      "MLS Erie County: Redfin result cap reached (350); coverage may be incomplete"
+      "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
-    "code_sha256": "327ebf1e6ba8",
-    "github_sha": "8a1575e4a2fa7fa3d4863e9f6b836bbdec8ae2fa",
+    "code_sha256": "58ec55c0afeb",
+    "github_sha": "d8c1363b0b9c60e54ce323309056fac355b23660",
     "request_id": null,
     "counties": [
       "Allegheny",
@@ -60,9 +59,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
-        "rows": 2136,
+        "rows": 2130,
         "areas": [
           {
             "area": "Allegheny County",
@@ -75,17 +74,16 @@
           {
             "area": "Berks County",
             "status": "success",
-            "rows": 284,
+            "rows": 283,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
           {
             "area": "Erie County",
-            "status": "partial",
-            "rows": 350,
+            "status": "success",
+            "rows": 348,
             "coverage": "not_proven_complete",
-            "limit_reached": true,
-            "error": "Redfin result cap reached (350); coverage may be incomplete"
+            "limit_reached": false
           },
           {
             "area": "Lackawanna County",
@@ -104,14 +102,14 @@
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 162,
+            "rows": 160,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
           {
             "area": "Northampton County",
             "status": "success",
-            "rows": 104,
+            "rows": 103,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -124,11 +122,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 1407
+        "passed_filters": 1401
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -291,7 +289,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
         "rows": 374,
         "counties": {
@@ -365,7 +363,7 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
         "rows": 173,
         "counties": {
@@ -388,7 +386,8 @@
             "page_url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
             "list_label": "Repository List",
             "excluded_unavailable": true,
-            "note": "Repository candidates only; availability must be confirmed with Erie County."
+            "repository_minimum_bid": 250.0,
+            "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."
           },
           "Lackawanna": {
             "status": "not_connected",
@@ -467,8 +466,8 @@
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-03T10:52:35-04:00",
-        "status": "success",
+        "checked_at": "2026-10-03T12:31:32-04:00",
+        "status": "not_connected",
         "rows": 0,
         "scope": "selected_counties_only",
         "manual_sources": [
@@ -501,19 +500,20 @@
             "status": "manual_link_only"
           }
         ],
-        "note": "מנוע ה-NLP שואב ומסווג נתוני עיזבונות (Probate) ו-FSBO מתוך תיאורי הנכסים במאגר.",
+        "reason": "no_verified_live_probate_feed",
+        "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
         "passed_filters": 0
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-03T10:52:53-04:00",
+        "checked_at": "2026-10-03T12:31:52-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -763,10 +763,10 @@
       },
       "Berks County": {
         "region_type": "5",
-        "rows": 284,
+        "rows": 283,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Reading": 162,
+          "Reading": 161,
           "Boyertown": 5,
           "Kutztown": 17,
           "Richland": 1,
@@ -801,7 +801,7 @@
           "Ppp5cl Macungie": 1
         },
         "source_locations": {
-          "Reading": 90,
+          "Reading": 89,
           "Boyertown": 5,
           "GREEN ACRES": 1,
           "Heritage Hills Estate": 1,
@@ -890,12 +890,12 @@
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 350,
+        "rows": 348,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Erie": 226,
+          "Erie": 224,
           "North East": 27,
-          "Waterford": 5,
+          "Waterford": 6,
           "Albion": 9,
           "Lake City": 10,
           "Girard": 5,
@@ -903,7 +903,7 @@
           "Mc Kean": 4,
           "Harborcreek": 7,
           "Wattsburg": 4,
-          "Corry": 7,
+          "Corry": 6,
           "Mckean": 5,
           "East Springfield": 3,
           "Union City": 4,
@@ -922,7 +922,7 @@
           "Saegertown": 1
         },
         "source_locations": {
-          "Erie": 205,
+          "Erie": 203,
           "North East": 26,
           "Summit Heights": 3,
           "Rainbow Valley": 1,
@@ -937,12 +937,12 @@
           "McKean Boro": 1,
           "Harborcreek": 6,
           "Wattsburg Boro": 5,
-          "Corry": 7,
+          "Corry": 6,
           "McKean": 6,
           "East Springfield": 3,
           "Lakecliff": 1,
           "Fairview": 5,
-          "Waterford": 5,
+          "Waterford": 6,
           "Country Club Estate": 1,
           "Lawrence Park": 1,
           "Erie City": 3,
@@ -1098,9 +1098,9 @@
         "rows": 197,
         "city_mismatch_count": 0,
         "actual_cities": {
+          "Marietta": 4,
           "Lancaster": 72,
           "Lititz": 13,
-          "Marietta": 3,
           "Wrightsville": 4,
           "Elizabethtown": 12,
           "Ephrata": 12,
@@ -1125,7 +1125,7 @@
           "Peach Bottom": 2,
           "Holtwood": 1,
           "Conestoga": 3,
-          "Reinholds": 2,
+          "Reinholds": 1,
           "Delta": 1,
           "Mountville": 1,
           "Kirkwood": 1,
@@ -1135,9 +1135,9 @@
           "Manheim Township": 3
         },
         "source_locations": {
+          "MARIETTA BOROUGH": 2,
           "DOWNTOWN LANCASTER": 1,
           "Lititz": 4,
-          "MARIETTA BOROUGH": 1,
           "Wrightsville": 2,
           "Elizabethtown": 7,
           "CITY OF LANCASTER": 2,
@@ -1227,7 +1227,6 @@
           "FOUR WAY MANOR": 1,
           "Pequea": 1,
           "Wherley Park Airville": 3,
-          "Reinholds": 1,
           "N/A MOBILE HOME ONLY FOR SALE/NO LAND/NO PARK": 1,
           "ROTHSVILLE": 1,
           "FARM ON QUARRY ROAD": 4,
@@ -1243,10 +1242,10 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 162,
+        "rows": 160,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Allentown": 89,
+          "Allentown": 87,
           "Trexlertown": 3,
           "Whitehall": 7,
           "Center Valley": 2,
@@ -1270,7 +1269,7 @@
           "Jordan Park": 1,
           "Mayo Mhp": 3,
           "Whitehall Twp": 6,
-          "Allentown City": 58,
+          "Allentown City": 56,
           "Allentown": 4,
           "Red Maple Acres Mhp": 2,
           "Old Frgrnds Historic": 3,
@@ -1334,12 +1333,12 @@
       },
       "Northampton County": {
         "region_type": "5",
-        "rows": 104,
+        "rows": 103,
         "city_mismatch_count": 0,
         "actual_cities": {
           "Walnutport": 12,
           "Bath": 9,
-          "Bethlehem": 18,
+          "Bethlehem": 17,
           "Bangor": 8,
           "Pen Argyl": 3,
           "Fountain Hill": 2,
@@ -1364,7 +1363,7 @@
         "source_locations": {
           "Lehigh Twp": 10,
           "Chapman Boro": 1,
-          "Bethlehem City": 15,
+          "Bethlehem City": 14,
           "Bangor Boro": 4,
           "Heritage Village Community": 1,
           "Estates at Colony Park": 1,
@@ -1419,7 +1418,7 @@
         "source_locations": {
           "Strawberry Mansion": 1,
           "Washington Square West": 1,
-          "OVERBROOK": 5,
+          "OVERBROOK": 4,
           "WEST OAK LANE": 9,
           "Stanton Area": 1,
           "Overbrook": 1,
@@ -1430,6 +1429,7 @@
           "Philadelphia": 56,
           "BREWERYTOWN": 6,
           "MILL CREEK": 7,
+          "PASCHALL": 1,
           "ROXBOROUGH": 2,
           "HOLMESBURG": 4,
           "LAWNDALE": 3,
@@ -1509,7 +1509,7 @@
         }
       }
     },
-    "raw_mls_seen": 2132,
+    "raw_mls_seen": 2126,
     "duplicates_removed": 7,
     "filter_rejections": {
       "price": 1,
@@ -1522,21 +1522,21 @@
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 861,
+      "Single Family Residential": 858,
       "Condo/Co-op": 71,
       "Multi-Family (2-4 Unit)": 110,
-      "Townhouse": 572,
+      "Townhouse": 569,
       "Vacant Land": 415,
-      "Mobile/Manufactured Home": 87,
+      "Mobile/Manufactured Home": 86,
       "Parking": 2,
-      "Unknown": 18,
+      "Unknown": 19,
       "Multi-Family (5+ Unit)": 1,
       "UNKNOWN": 551,
       "Single-Family": 2,
       "Townhome": 1
     },
     "source_passed_filters": {
-      "mls": 1407,
+      "mls": 1401,
       "reo": 6,
       "sheriff": 369,
       "tax": 172,
@@ -1544,10 +1544,10 @@
       "fsbo": 0
     },
     "redfin_location_top25": {
-      "Erie": 205,
+      "Erie": 203,
       "Scranton": 118,
-      "Reading": 90,
-      "Allentown City": 58,
+      "Reading": 89,
+      "Allentown City": 56,
       "Philadelphia": 56,
       "Lancaster": 27,
       "READING": 27,
@@ -1556,7 +1556,7 @@
       "Penn Hills": 22,
       "Dunmore": 19,
       "Covington Twp": 18,
-      "Bethlehem City": 17,
+      "Bethlehem City": 16,
       "Monroeville": 15,
       "Archbald": 13,
       "Eagle Lake": 12,
@@ -1571,17 +1571,17 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 0,
-    "price_drop_properties": 0,
-    "total_properties": 4433,
-    "finished_at": "2026-10-03T10:52:53-04:00"
+    "price_drop_events": 1,
+    "price_drop_properties": 1,
+    "total_properties": 4436,
+    "finished_at": "2026-10-03T12:31:53-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-03T10:52:35-04:00",
+      "checked_at": "2026-10-03T12:31:32-04:00",
       "status": "partial",
-      "rows": 2136,
+      "rows": 2130,
       "areas": [
         {
           "area": "Allegheny County",
@@ -1594,17 +1594,16 @@
         {
           "area": "Berks County",
           "status": "success",
-          "rows": 284,
+          "rows": 283,
           "coverage": "not_proven_complete",
           "limit_reached": false
         },
         {
           "area": "Erie County",
-          "status": "partial",
-          "rows": 350,
+          "status": "success",
+          "rows": 348,
           "coverage": "not_proven_complete",
-          "limit_reached": true,
-          "error": "Redfin result cap reached (350); coverage may be incomplete"
+          "limit_reached": false
         },
         {
           "area": "Lackawanna County",
@@ -1623,14 +1622,14 @@
         {
           "area": "Lehigh County",
           "status": "success",
-          "rows": 162,
+          "rows": 160,
           "coverage": "not_proven_complete",
           "limit_reached": false
         },
         {
           "area": "Northampton County",
           "status": "success",
-          "rows": 104,
+          "rows": 103,
           "coverage": "not_proven_complete",
           "limit_reached": false
         },
@@ -1643,11 +1642,11 @@
         }
       ],
       "coverage": "not_proven_complete",
-      "passed_filters": 1407
+      "passed_filters": 1401
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-03T10:52:35-04:00",
+      "checked_at": "2026-10-03T12:31:32-04:00",
       "status": "partial",
       "rows": 8,
       "providers": {
@@ -1810,7 +1809,7 @@
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-03T10:52:35-04:00",
+      "checked_at": "2026-10-03T12:31:32-04:00",
       "status": "partial",
       "rows": 173,
       "counties": {
@@ -1833,7 +1832,8 @@
           "page_url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
           "list_label": "Repository List",
           "excluded_unavailable": true,
-          "note": "Repository candidates only; availability must be confirmed with Erie County."
+          "repository_minimum_bid": 250.0,
+          "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."
         },
         "Lackawanna": {
           "status": "not_connected",
@@ -1912,8 +1912,8 @@
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-03T10:52:35-04:00",
-      "status": "success",
+      "checked_at": "2026-10-03T12:31:32-04:00",
+      "status": "not_connected",
       "rows": 0,
       "scope": "selected_counties_only",
       "manual_sources": [
@@ -1946,18 +1946,19 @@
           "status": "manual_link_only"
         }
       ],
-      "note": "מנוע ה-NLP שואב ומסווג נתוני עיזבונות (Probate) ו-FSBO מתוך תיאורי הנכסים במאגר.",
+      "reason": "no_verified_live_probate_feed",
+      "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
       "passed_filters": 0
     },
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-03T10:52:53-04:00",
+      "checked_at": "2026-10-03T12:31:52-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-03T10:52:35-04:00",
+      "checked_at": "2026-10-03T12:31:32-04:00",
       "status": "partial",
       "rows": 374,
       "counties": {
@@ -2031,16 +2032,16 @@
     },
     "fsbo": {
       "label": "FSBO",
-      "checked_at": "2026-10-03T10:52:35-04:00",
+      "checked_at": "2026-10-03T12:31:32-04:00",
       "status": "not_connected",
       "rows": 0
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261003-105235",
-    "started_at": "2026-10-03T10:52:35-04:00",
+    "scan_id": "SCAN-20261003-123132",
+    "started_at": "2026-10-03T12:31:32-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.6.8-lehigh-fix",
+    "orchestrator_version": "3.6.9-tax-probate-clarity-20261003",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -2051,18 +2052,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2691,
-    "after_filters": 1954,
-    "new": 4,
-    "updated": 147,
-    "unchanged": 1803,
+    "source_results": 2685,
+    "after_filters": 1948,
+    "new": 3,
+    "updated": 5,
+    "unchanged": 1940,
     "off_market_candidates": 0,
     "errors": [
-      "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete",
-      "MLS Erie County: Redfin result cap reached (350); coverage may be incomplete"
+      "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
-    "code_sha256": "327ebf1e6ba8",
-    "github_sha": "8a1575e4a2fa7fa3d4863e9f6b836bbdec8ae2fa",
+    "code_sha256": "58ec55c0afeb",
+    "github_sha": "d8c1363b0b9c60e54ce323309056fac355b23660",
     "request_id": null,
     "counties": [
       "Allegheny",
@@ -2096,9 +2096,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
-        "rows": 2136,
+        "rows": 2130,
         "areas": [
           {
             "area": "Allegheny County",
@@ -2111,17 +2111,16 @@
           {
             "area": "Berks County",
             "status": "success",
-            "rows": 284,
+            "rows": 283,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
           {
             "area": "Erie County",
-            "status": "partial",
-            "rows": 350,
+            "status": "success",
+            "rows": 348,
             "coverage": "not_proven_complete",
-            "limit_reached": true,
-            "error": "Redfin result cap reached (350); coverage may be incomplete"
+            "limit_reached": false
           },
           {
             "area": "Lackawanna County",
@@ -2140,14 +2139,14 @@
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 162,
+            "rows": 160,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
           {
             "area": "Northampton County",
             "status": "success",
-            "rows": 104,
+            "rows": 103,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -2160,11 +2159,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 1407
+        "passed_filters": 1401
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -2327,7 +2326,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
         "rows": 374,
         "counties": {
@@ -2401,7 +2400,7 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "partial",
         "rows": 173,
         "counties": {
@@ -2424,7 +2423,8 @@
             "page_url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
             "list_label": "Repository List",
             "excluded_unavailable": true,
-            "note": "Repository candidates only; availability must be confirmed with Erie County."
+            "repository_minimum_bid": 250.0,
+            "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."
           },
           "Lackawanna": {
             "status": "not_connected",
@@ -2503,8 +2503,8 @@
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-03T10:52:35-04:00",
-        "status": "success",
+        "checked_at": "2026-10-03T12:31:32-04:00",
+        "status": "not_connected",
         "rows": 0,
         "scope": "selected_counties_only",
         "manual_sources": [
@@ -2537,19 +2537,20 @@
             "status": "manual_link_only"
           }
         ],
-        "note": "מנוע ה-NLP שואב ומסווג נתוני עיזבונות (Probate) ו-FSBO מתוך תיאורי הנכסים במאגר.",
+        "reason": "no_verified_live_probate_feed",
+        "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
         "passed_filters": 0
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-03T10:52:35-04:00",
+        "checked_at": "2026-10-03T12:31:32-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-03T10:52:53-04:00",
+        "checked_at": "2026-10-03T12:31:52-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -2799,10 +2800,10 @@
       },
       "Berks County": {
         "region_type": "5",
-        "rows": 284,
+        "rows": 283,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Reading": 162,
+          "Reading": 161,
           "Boyertown": 5,
           "Kutztown": 17,
           "Richland": 1,
@@ -2837,7 +2838,7 @@
           "Ppp5cl Macungie": 1
         },
         "source_locations": {
-          "Reading": 90,
+          "Reading": 89,
           "Boyertown": 5,
           "GREEN ACRES": 1,
           "Heritage Hills Estate": 1,
@@ -2926,12 +2927,12 @@
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 350,
+        "rows": 348,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Erie": 226,
+          "Erie": 224,
           "North East": 27,
-          "Waterford": 5,
+          "Waterford": 6,
           "Albion": 9,
           "Lake City": 10,
           "Girard": 5,
@@ -2939,7 +2940,7 @@
           "Mc Kean": 4,
           "Harborcreek": 7,
           "Wattsburg": 4,
-          "Corry": 7,
+          "Corry": 6,
           "Mckean": 5,
           "East Springfield": 3,
           "Union City": 4,
@@ -2958,7 +2959,7 @@
           "Saegertown": 1
         },
         "source_locations": {
-          "Erie": 205,
+          "Erie": 203,
           "North East": 26,
           "Summit Heights": 3,
           "Rainbow Valley": 1,
@@ -2973,12 +2974,12 @@
           "McKean Boro": 1,
           "Harborcreek": 6,
           "Wattsburg Boro": 5,
-          "Corry": 7,
+          "Corry": 6,
           "McKean": 6,
           "East Springfield": 3,
           "Lakecliff": 1,
           "Fairview": 5,
-          "Waterford": 5,
+          "Waterford": 6,
           "Country Club Estate": 1,
           "Lawrence Park": 1,
           "Erie City": 3,
@@ -3134,9 +3135,9 @@
         "rows": 197,
         "city_mismatch_count": 0,
         "actual_cities": {
+          "Marietta": 4,
           "Lancaster": 72,
           "Lititz": 13,
-          "Marietta": 3,
           "Wrightsville": 4,
           "Elizabethtown": 12,
           "Ephrata": 12,
@@ -3161,7 +3162,7 @@
           "Peach Bottom": 2,
           "Holtwood": 1,
           "Conestoga": 3,
-          "Reinholds": 2,
+          "Reinholds": 1,
           "Delta": 1,
           "Mountville": 1,
           "Kirkwood": 1,
@@ -3171,9 +3172,9 @@
           "Manheim Township": 3
         },
         "source_locations": {
+          "MARIETTA BOROUGH": 2,
           "DOWNTOWN LANCASTER": 1,
           "Lititz": 4,
-          "MARIETTA BOROUGH": 1,
           "Wrightsville": 2,
           "Elizabethtown": 7,
           "CITY OF LANCASTER": 2,
@@ -3263,7 +3264,6 @@
           "FOUR WAY MANOR": 1,
           "Pequea": 1,
           "Wherley Park Airville": 3,
-          "Reinholds": 1,
           "N/A MOBILE HOME ONLY FOR SALE/NO LAND/NO PARK": 1,
           "ROTHSVILLE": 1,
           "FARM ON QUARRY ROAD": 4,
@@ -3279,10 +3279,10 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 162,
+        "rows": 160,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Allentown": 89,
+          "Allentown": 87,
           "Trexlertown": 3,
           "Whitehall": 7,
           "Center Valley": 2,
@@ -3306,7 +3306,7 @@
           "Jordan Park": 1,
           "Mayo Mhp": 3,
           "Whitehall Twp": 6,
-          "Allentown City": 58,
+          "Allentown City": 56,
           "Allentown": 4,
           "Red Maple Acres Mhp": 2,
           "Old Frgrnds Historic": 3,
@@ -3370,12 +3370,12 @@
       },
       "Northampton County": {
         "region_type": "5",
-        "rows": 104,
+        "rows": 103,
         "city_mismatch_count": 0,
         "actual_cities": {
           "Walnutport": 12,
           "Bath": 9,
-          "Bethlehem": 18,
+          "Bethlehem": 17,
           "Bangor": 8,
           "Pen Argyl": 3,
           "Fountain Hill": 2,
@@ -3400,7 +3400,7 @@
         "source_locations": {
           "Lehigh Twp": 10,
           "Chapman Boro": 1,
-          "Bethlehem City": 15,
+          "Bethlehem City": 14,
           "Bangor Boro": 4,
           "Heritage Village Community": 1,
           "Estates at Colony Park": 1,
@@ -3455,7 +3455,7 @@
         "source_locations": {
           "Strawberry Mansion": 1,
           "Washington Square West": 1,
-          "OVERBROOK": 5,
+          "OVERBROOK": 4,
           "WEST OAK LANE": 9,
           "Stanton Area": 1,
           "Overbrook": 1,
@@ -3466,6 +3466,7 @@
           "Philadelphia": 56,
           "BREWERYTOWN": 6,
           "MILL CREEK": 7,
+          "PASCHALL": 1,
           "ROXBOROUGH": 2,
           "HOLMESBURG": 4,
           "LAWNDALE": 3,
@@ -3545,7 +3546,7 @@
         }
       }
     },
-    "raw_mls_seen": 2132,
+    "raw_mls_seen": 2126,
     "duplicates_removed": 7,
     "filter_rejections": {
       "price": 1,
@@ -3558,21 +3559,21 @@
       "location": 0
     },
     "source_property_type_counts": {
-      "Single Family Residential": 861,
+      "Single Family Residential": 858,
       "Condo/Co-op": 71,
       "Multi-Family (2-4 Unit)": 110,
-      "Townhouse": 572,
+      "Townhouse": 569,
       "Vacant Land": 415,
-      "Mobile/Manufactured Home": 87,
+      "Mobile/Manufactured Home": 86,
       "Parking": 2,
-      "Unknown": 18,
+      "Unknown": 19,
       "Multi-Family (5+ Unit)": 1,
       "UNKNOWN": 551,
       "Single-Family": 2,
       "Townhome": 1
     },
     "source_passed_filters": {
-      "mls": 1407,
+      "mls": 1401,
       "reo": 6,
       "sheriff": 369,
       "tax": 172,
@@ -3580,10 +3581,10 @@
       "fsbo": 0
     },
     "redfin_location_top25": {
-      "Erie": 205,
+      "Erie": 203,
       "Scranton": 118,
-      "Reading": 90,
-      "Allentown City": 58,
+      "Reading": 89,
+      "Allentown City": 56,
       "Philadelphia": 56,
       "Lancaster": 27,
       "READING": 27,
@@ -3592,7 +3593,7 @@
       "Penn Hills": 22,
       "Dunmore": 19,
       "Covington Twp": 18,
-      "Bethlehem City": 17,
+      "Bethlehem City": 16,
       "Monroeville": 15,
       "Archbald": 13,
       "Eagle Lake": 12,
@@ -3607,10 +3608,10 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 0,
-    "price_drop_properties": 0,
-    "total_properties": 4433,
-    "finished_at": "2026-10-03T10:52:53-04:00"
+    "price_drop_events": 1,
+    "price_drop_properties": 1,
+    "total_properties": 4436,
+    "finished_at": "2026-10-03T12:31:53-04:00"
   },
   "sheriff": {
     "status": "עודכן",
