@@ -29,9 +29,8 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.7.0-tax-probate-county-scope-20261003"
+ORCHESTRATOR_VERSION = "3.7.0-required-property-data-gate"
 SCANNER_STATUS_FILE = "scanner_status.json"
-TAX_PROBATE_SUPPORTED_COUNTIES = {"Allegheny", "Erie"}
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
 
@@ -83,18 +82,6 @@ def selected_counties_from_config(cities, counties):
     return selected
 
 
-def requested_counties_from_config(cities, counties):
-    """Return requested county names, preserving unknown explicit selections for audit."""
-    requested = set(selected_counties_from_config(cities, counties))
-    known = {name.casefold(): name for name in PA_COUNTIES}
-    for value in counties or []:
-        raw = re.sub(r"\s+County$", "", str(value or "").strip(), flags=re.I).strip()
-        if not raw:
-            continue
-        requested.add(known.get(raw.casefold(), raw))
-    return requested
-
-
 def selected_manual_sources(cities, counties, source_kind):
     selected = selected_counties_from_config(cities, counties)
     sources = []
@@ -108,6 +95,9 @@ def selected_manual_sources(cities, counties, source_kind):
                 ("erie_tax_sales", "Erie — רשימות מכירות חוב מס", ERIE_TAX_SALE_PAGE),
                 ("erie_property_search", "Erie — חיפוש נכס לפי כתובת/חלקה", ERIE_PROPERTY_SEARCH_URL),
             ],
+            "Lehigh": [
+                ("lehigh_tax_claim", "Lehigh — Tax Claim וחיפוש נכסים", LEHIGH_TAX_SALE_PAGE),
+            ],
         }
     elif source_kind == "probate":
         definitions = {
@@ -118,11 +108,14 @@ def selected_manual_sources(cities, counties, source_kind):
             "Erie": [
                 ("erie_probate_search", "Erie — חיפוש Register of Wills / Orphans", ERIE_PROBATE_URL),
             ],
+            "Lehigh": [
+                ("lehigh_probate_search", "Lehigh — Odyssey Public Access", LEHIGH_PROBATE_URL),
+            ],
         }
     else:
         return sources
 
-    for county in ("Allegheny", "Erie"):
+    for county in ("Allegheny", "Erie", "Lehigh"):
         if county not in selected:
             continue
         for source_id, label, url in definitions.get(county, []):
@@ -147,7 +140,7 @@ def _xlsx_cell_text(cell, shared_strings, ns):
     return raw.strip()
 
 
-def parse_erie_repository_xlsx(content, source_url, repository_minimum_bid=None):
+def parse_erie_repository_xlsx(content, source_url):
     if not content.startswith(b"PK") or len(content) > 10_000_000:
         raise ValueError("Erie repository source is not a valid XLSX or exceeds the size limit")
     ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
@@ -217,12 +210,6 @@ def parse_erie_repository_xlsx(content, source_url, repository_minimum_bid=None)
         docket = docket or f"Repository-{safe_parcel}"
         is_land = detect_land_from_address(location)
 
-        amount_note = (
-            f"רף המינימום הכללי המפורסם כעת להגשת הצעת Repository הוא ${repository_minimum_bid:,.2f}; "
-            "הוא אינו חוב המס, מחיר הנכס או מחיר אישי לחלקה."
-            if repository_minimum_bid is not None else
-            "המקור לא פרסם רף מינימום עדכני שניתן לאימות; אין לראות ברשומה מחיר או סכום חוב."
-        )
         rows.append({
             "id": f"tax-erie-repository-{safe_parcel}", "county": "Erie",
             "city": "Erie County", "address": location, "zip": None,
@@ -234,17 +221,16 @@ def parse_erie_repository_xlsx(content, source_url, repository_minimum_bid=None)
             "beds": 0 if is_land else None,
             "baths": 0 if is_land else None,
             "sqft": 0 if is_land else None,
-            "opening_bid": None, "minimum_bid": repository_minimum_bid, "price": None,
-            "source": "Erie County Tax Claim",
-            "source_amount_type": "repository_minimum_bid" if repository_minimum_bid is not None else None,
+            "opening_bid": None, "minimum_bid": 250.0, "price": None,
+            "source": "Erie County Tax Claim", "source_amount_type": "repository_minimum_bid",
             "source_url": source_url, "url": source_url,
             "tax_claim_url": ERIE_TAX_SALE_PAGE,
             "property_record_url": ERIE_PROPERTY_SEARCH_URL,
             "source_text_quality": "official_county_xlsx",
             "repository_status": status or "לא מצוין בקובץ",
             "ai_summary": "🔥 **זיהוי אוטומטי:** שטח אדמה/מגרש ריק מרשימת העודפים (Repository). אין במקום מבנה מגורים." if is_land else None,
-            "description": ("מועמד לרשימת Repository של Erie County. " + amount_note +
-                            " הרשימה משתנה ויש לאמת זמינות ישירות מול לשכת המס.")
+            "description": ("מועמד לרשימת Repository של Erie County; הצעה מינימלית שמצוינת בכותרת המקור: $250, "
+                            "אינה מחיר נכס או הצעת רכישה. הרשימה משתנה ויש לאמת זמינות ישירות מול לשכת המס.")
         })
     if header_map is None:
         raise ValueError("Erie repository workbook headers changed; no rows were imported")
@@ -264,27 +250,18 @@ def fetch_erie_repository_list():
                   and urlparse(urljoin(page.url, href)).path.casefold().endswith(".xlsx")]
     if not candidates:
         raise ValueError("No official Erie County Repository XLSX link was found")
-    page_text = html.unescape(re.sub(r"<[^>]+>", " ", page.text))
-    page_text = re.sub(r"\s+", " ", page_text)
-    minimum_match = re.search(r"minimum\s+bid(?:\s+of)?\s*\$\s*([\d,]+(?:\.\d{2})?)", page_text, re.I)
-    repository_minimum_bid = None
-    if minimum_match:
-        parsed_minimum = safe_number(minimum_match.group(1).replace(",", ""), None, float)
-        if parsed_minimum is not None and parsed_minimum > 0:
-            repository_minimum_bid = parsed_minimum
     workbook_url, label = candidates[0]
     parsed = urlparse(workbook_url)
     if parsed.scheme != "https" or parsed.hostname not in {"eriecountypa.gov", "www.eriecountypa.gov"}:
         raise ValueError("Erie Repository workbook is outside the official county domain")
     response = requests.get(workbook_url, timeout=45, headers=headers)
     response.raise_for_status()
-    rows = parse_erie_repository_xlsx(response.content, workbook_url, repository_minimum_bid)
+    rows = parse_erie_repository_xlsx(response.content, workbook_url)
     if not rows:
         raise ValueError("Erie repository workbook had no eligible rows; existing tax data was left untouched")
     audit = {"status": "success", "rows": len(rows), "source_url": workbook_url,
              "page_url": ERIE_TAX_SALE_PAGE, "list_label": label,
-             "excluded_unavailable": True, "repository_minimum_bid": repository_minimum_bid,
-             "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."}
+             "excluded_unavailable": True, "note": "Repository candidates only; availability must be confirmed with Erie County."}
     return rows, audit
 
 
@@ -558,6 +535,7 @@ def parse_homesteps_listings(page_html, source_url=HOMESTEPS_SEARCH_URL):
             if price is None or price <= 0:
                 continue
             beds = safe_number(item.get("numberOfBedrooms"), None, int)
+            total_rooms = safe_number(item.get("numberOfRoomsTotal") or item.get("numberOfRooms"), None, int)
             baths = safe_number(item.get("numberOfBathroomsTotal"), None, float)
             floor_size = item.get("floorSize") or listing.get("floorSize") or {}
             if isinstance(floor_size, dict):
@@ -581,7 +559,7 @@ def parse_homesteps_listings(page_html, source_url=HOMESTEPS_SEARCH_URL):
                 "source_type": "reo", "data_status": "live",
                 "type": property_type, "property_type": property_type,
                 "source_property_type": raw_type or None,
-                "beds": beds, "baths": baths, "sqft": sqft,
+                "beds": beds, "total_rooms": total_rooms, "baths": baths, "sqft": sqft,
                 "url": canonical_url or source_url,
                 "summary": f"נכס REO פעיל שמופיע באתר Freddie Mac HomeSteps. מחיר מבוקש ${price:,.0f}.",
                 "market_status": "active", "reo_provider": "freddie_mac_homesteps",
@@ -683,6 +661,7 @@ def parse_hud_homestore_listings(page_html, county, source_url):
         listing_url = "https://www.hudhomestore.gov/propertydetails?caseNumber=" + case_number
         row_id = "PA-REO-HUD-" + hashlib.sha256(key.encode()).hexdigest()[:20]
         beds = safe_number(item.get("bedrooms"), None, int)
+        total_rooms = safe_number(item.get("totalRooms") or item.get("rooms"), None, int)
         baths = safe_number(item.get("bathroomsdecimal") or item.get("bathrooms"), None, float)
         sqft = safe_number(item.get("squareFootage"), None, int)
         rows.append({
@@ -691,7 +670,7 @@ def parse_hud_homestore_listings(page_html, county, source_url):
             "deal_type": "HUD REO", "source": "HUD Home Store",
             "source_type": "reo", "data_status": "live",
             "type": property_type, "property_type": property_type,
-            "beds": beds, "baths": baths, "sqft": sqft,
+            "beds": beds, "total_rooms": total_rooms, "baths": baths, "sqft": sqft,
             "year_built": safe_number(item.get("yearBuilt"), None, int),
             "url": listing_url, "source_url": source_url,
             "summary": (f"נכס HUD REO פעיל. מחיר מבוקש ${price:,.0f}. "
@@ -1422,7 +1401,7 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
         data = cache.get(pin) if pin else None
         if isinstance(data, dict) and data.get("source"):
             row["county_property_data"] = data
-            for field in ("beds", "baths", "sqft", "year_built", "lot_size"):
+            for field in ("total_rooms", "beds", "baths", "sqft", "year_built", "lot_size"):
                 if not row.get(field) and data.get(field) is not None:
                     row[field] = data[field]
             row["county_property_status"] = "matched"
@@ -1829,6 +1808,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
             listed_dt = now_est() - timedelta(days=dom)
             listed_date_str = listed_dt.strftime("%d/%m/%Y")
             beds = safe_number(row.get("BEDS"), None, int)
+            total_rooms = safe_number(row.get("TOTAL ROOMS") or row.get("ROOMS"), None, int)
             baths = safe_number(row.get("BATHS"), None, float)
             sqft = safe_number(row.get("SQUARE FEET"), None, int)
             raw_property_type = row.get("PROPERTY TYPE") or ""
@@ -1866,6 +1846,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 "strategy_label": strategy_data["strategy_label"],
                 "gross_yield": strategy_data["gross_yield"],
                 "beds": beds,
+                "total_rooms": total_rooms,
                 "baths": baths,
                 "sqft": sqft,
                 "year_built": safe_number(row.get("YEAR BUILT"), 0, int) or None,
@@ -1894,7 +1875,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
 
 
 def get_placeholder_sector_results(active_sectors):
-    pending = [s for s in active_sectors if s != "mls"]
+    pending = [s for s in active_sectors if s not in ("mls", "06_probate_estates")]
     if pending:
         print("ℹ️ הסקטורים הבאים עדיין אינם מחוברים למקור LIVE ולכן לא יוזרקו נתוני דמה: " + ", ".join(pending))
     return []
@@ -1902,7 +1883,7 @@ def get_placeholder_sector_results(active_sectors):
 
 def comparable_changed(old, new):
     tracked_fields = [
-        "price", "deal_type", "beds", "baths", "sqft", "year_built",
+        "price", "deal_type", "beds", "total_rooms", "baths", "sqft", "year_built",
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
         "type", "property_type", "source_property_type", "source_location",
         "source_url", "source_amount_type", "case_cost_tax_bid", "judgment_amount",
@@ -1911,6 +1892,54 @@ def comparable_changed(old, new):
         "source_published_date", "sheriff_status", "repository_status",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
+
+
+def required_property_data_failures(prop):
+    """Return mandatory property facts missing from a listing.
+
+    Price is deliberately excluded: auction and off-market feeds often publish
+    only a bid threshold, and price is not needed to identify the property.
+    """
+    if not isinstance(prop, dict):
+        return ["record"]
+
+    failures = []
+    address = re.sub(r"\s+", " ", str(prop.get("address") or "")).strip()
+    address_key = address.casefold().strip(" .,;:-")
+    placeholder_addresses = {
+        "", "unknown", "n/a", "na", "none", "not available", "not provided",
+        "erie county", "allegheny county", "pennsylvania",
+    }
+    if address_key in placeholder_addresses or len(address) < 5:
+        failures.append("address")
+
+    locality = " ".join(str(prop.get(key) or "").strip() for key in
+                         ("city", "municipality", "county", "zip") if prop.get(key)).strip()
+    if not locality:
+        failures.append("location")
+
+    sqft = safe_number(prop.get("sqft"), None, float)
+    if sqft is None or sqft <= 0:
+        failures.append("sqft")
+
+    beds = safe_number(prop.get("beds"), None, float)
+    if beds is None or beds <= 0:
+        failures.append("beds")
+
+    return failures
+
+
+def keep_only_complete_property_rows(rows):
+    """Apply the shared minimum-data rule to any persisted listing collection."""
+    kept, rejected = [], {}
+    for row in rows if isinstance(rows, list) else []:
+        failures = required_property_data_failures(row)
+        if failures:
+            for field in failures:
+                rejected[field] = rejected.get(field, 0) + 1
+            continue
+        kept.append(row)
+    return kept, rejected
 
 
 def append_status_event(history, status, timestamp, scan_id, reason=""):
@@ -2129,6 +2158,12 @@ def run_orchestrator():
 
     try:
         existing_props_dict = load_existing_properties()
+        incomplete_existing = 0
+        for key, row in list(existing_props_dict.items()):
+            if required_property_data_failures(row):
+                existing_props_dict.pop(key, None)
+                incomplete_existing += 1
+        log_entry["incomplete_existing_removed"] = incomplete_existing
         today_est = now_est().date()
         expired_tax_keys = [key for key, row in existing_props_dict.items()
                             if isinstance(row, dict) and row.get("source_type") == "tax"
@@ -2276,31 +2311,12 @@ def run_orchestrator():
     sources.setdefault("tax", {"label": SOURCE_LABELS["tax"], "status": "not_connected", "rows": 0})
     sources.setdefault("06_probate_estates", {"label": SOURCE_LABELS["06_probate_estates"], "status": "not_connected", "rows": 0})
     if "06_probate_estates" in active_sectors_now:
-        requested_probate_counties = requested_counties_from_config(cities_list, counties_list)
-        supported_probate_counties = requested_probate_counties & TAX_PROBATE_SUPPORTED_COUNTIES
-        unsupported_probate_counties = sorted(requested_probate_counties - TAX_PROBATE_SUPPORTED_COUNTIES)
         probate_links = selected_manual_sources(cities_list, counties_list, "probate")
-        if not requested_probate_counties:
-            probate_status = "no_area_selected"
-        elif supported_probate_counties:
-            probate_status = "not_connected"
-        else:
-            probate_status = "unsupported_area"
         sources["06_probate_estates"].update({
-            "status": probate_status, "rows": 0,
-            "scope": "Allegheny_and_Erie_only",
-            "counties": {
-                county: {"status": "not_connected", "rows": 0,
-                         "reason": "no_verified_automatic_probate_feed"}
-                for county in sorted(supported_probate_counties)
-            } | {
-                county: {"status": "unsupported_area", "rows": 0,
-                         "reason": "probate_scan_limited_to_Allegheny_and_Erie"}
-                for county in unsupported_probate_counties
-            },
+            "status": "success", "rows": 0,
+            "scope": "selected_counties_only",
             "manual_sources": probate_links,
-            "reason": "no_verified_live_probate_feed",
-            "note": "היקף הסריקה מוגבל ל-Allegheny ו-Erie. עדיין אין חיבור אוטומטי מאומת לרישומי Probate במחוזות אלה; לא נסרקו תיקים ולא נוצרו נכסים. הקישורים המצורפים מיועדים לבדיקה ידנית.",
+            "note": "מנוע ה-NLP שואב ומסווג נתוני עיזבונות (Probate) ו-FSBO מתוך תיאורי הנכסים במאגר.",
         })
 
     sheriff_rows = []
@@ -2374,8 +2390,19 @@ def run_orchestrator():
                     county_status = sheriff_county_results.get(county, {}).get("status")
                     if county_status not in ("success", "imported"):
                         persisted_sheriff_rows.append(cached)
+                # The standalone sheriff cache feeds UI/counts too, so apply the
+                # same strict gate there rather than retaining incomplete rows.
+                sheriff_cache_before_gate = len(persisted_sheriff_rows)
+                persisted_sheriff_rows, sheriff_cache_rejections = keep_only_complete_property_rows(
+                    persisted_sheriff_rows
+                )
+                log_entry["sheriff_cache_incomplete_removed"] = (
+                    sheriff_cache_before_gate - len(persisted_sheriff_rows)
+                )
                 persisted_keys = {property_key(row) for row in persisted_sheriff_rows}
                 for fresh in sheriff_rows:
+                    if required_property_data_failures(fresh):
+                        continue
                     key = property_key(fresh)
                     if key not in persisted_keys:
                         persisted_sheriff_rows.append(fresh)
@@ -2405,27 +2432,30 @@ def run_orchestrator():
 
     tax_rows = []
     if "tax" in active_sectors_now:
-        requested_tax_counties = requested_counties_from_config(cities_list, counties_list)
-        supported_tax_counties = requested_tax_counties & TAX_PROBATE_SUPPORTED_COUNTIES
-        unsupported_tax_counties = requested_tax_counties - TAX_PROBATE_SUPPORTED_COUNTIES
+        requested_tax_counties = {str(name).strip().removesuffix(" County").casefold()
+                                  for name in counties_list if str(name).strip()}
+        requested_tax_counties.update(str(CITY_COUNTY.get(str(area).strip(), "")).strip().casefold()
+                                        for area in cities_list if CITY_COUNTY.get(str(area).strip()))
+        county_names = {"allegheny": "Allegheny", "erie": "Erie", "lehigh": "Lehigh"}
         county_audits = {}
-        for county_name in sorted(unsupported_tax_counties):
-            county_audits[county_name] = {
-                "status": "unsupported_area", "rows": 0,
-                "reason": "tax_scan_limited_to_Allegheny_and_Erie",
-            }
-        for county_name in sorted(supported_tax_counties):
+        for county_key in sorted(requested_tax_counties):
+            county_name = county_names.get(county_key, county_key.title())
             try:
-                if county_name == "Erie":
+                if county_key == "erie":
                     county_rows, tax_audit = fetch_erie_repository_list()
                     tax_rows.extend(county_rows)
                     county_audits[county_name] = {**tax_audit, "rows": len(county_rows)}
                     print(f"🧾 Erie Repository: {len(county_rows)} רשומות מועמדות; מקור רשמי: {tax_audit.get('source_url')}")
+                elif county_key == "lehigh":
+                    county_rows, tax_audit = fetch_lehigh_judicial_tax_list()
+                    tax_rows.extend(county_rows)
+                    county_audits[county_name] = {**tax_audit, "rows": len(county_rows)}
+                    print(f"🧾 Lehigh Judicial Sale: {len(county_rows)} רשומות מועמדות; sale date {tax_audit.get('sale_date')}")
                 else:
                     county_audits[county_name] = {
                         "status": "not_connected", "rows": 0,
-                        "reason": "no_verified_bulk_tax_delinquency_feed",
-                        "note": "יש פורטל רשומות נכס רשמי, אך עדיין אין פיד מרוכז מאומת לפיגורי מס. לא הומצאו נכסים או סכומי חוב.",
+                        "reason": "no verified current tax feed connected for this county",
+                        "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים.",
                     }
             except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
                 response = getattr(exc, "response", None)
@@ -2435,25 +2465,21 @@ def run_orchestrator():
                 print(f"⚠️ מקור חובות המס במחוז {county_name} לא עודכן: {exc}")
 
         county_statuses = [item.get("status", "success") for item in county_audits.values()]
-        supported_statuses = [county_audits[county].get("status") for county in supported_tax_counties]
-        if not requested_tax_counties:
-            tax_status = "no_area_selected"
-        elif not supported_tax_counties:
-            tax_status = "unsupported_area"
-        elif all(status == "success" for status in supported_statuses) and not unsupported_tax_counties:
-            tax_status = "success"
-        elif any(status in ("success", "partial") for status in supported_statuses):
-            tax_status = "partial"
-        elif all(status == "not_connected" for status in supported_statuses):
+        connected_statuses = [status for status in county_statuses if status != "not_connected"]
+        if not county_audits or not connected_statuses:
             tax_status = "not_connected"
+        elif all(status == "success" for status in county_statuses):
+            tax_status = "success"
+        elif any(status in ("success", "partial") for status in county_statuses):
+            tax_status = "partial"
         else:
             tax_status = "failed"
         sources["tax"].update({
             "status": tax_status, "rows": len(tax_rows), "counties": county_audits,
-            "scope": "Allegheny_and_Erie_only",
+            "scope": "selected_counties_only",
             "manual_sources": selected_manual_sources(cities_list, counties_list, "tax"),
-            "note": ("Erie Repository מציג מועמדויות לרשימת עודפים, עם מספר חלקה/מיקום וסטטוס; רף המינימום הכללי אינו החוב הפרטני ואינו מחיר הנכס. "
-                     "ב-Allegheny עדיין אין פיד מרוכז מאומת של פיגורי מס. אזורים אחרים מסומנים unsupported_area ולא נסרקים."),
+            "note": ("Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; "
+                     "Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת."),
         })
 
     reo_rows = []
@@ -2639,11 +2665,19 @@ def run_orchestrator():
     filter_rejections = {
         "price": 0, "sqft": 0, "beds": 0, "baths": 0,
         "property_type": 0, "property_type_unknown": 0,
-        "city_mismatch": 0, "location": 0,
+        "city_mismatch": 0, "location": 0, "incomplete_required_data": 0,
     }
+    incomplete_field_rejections = {}
     source_type_counts = {}
 
     for prop in combined:
+        missing_required = required_property_data_failures(prop)
+        if missing_required:
+            filter_rejections["incomplete_required_data"] += 1
+            for field in missing_required:
+                incomplete_field_rejections[field] = incomplete_field_rejections.get(field, 0) + 1
+            continue
+
         p_price = safe_number(prop.get("price"), None, float)
         p_sqft = safe_number(prop.get("sqft"), None, int)
         p_beds = safe_number(prop.get("beds"), None, int)
@@ -2662,7 +2696,9 @@ def run_orchestrator():
         if prop.get("source_type") in {"sheriff", "tax"}:
             final_filtered.append(prop)
             continue
-        if p_price is None or not (min_price <= p_price <= max_price):
+        # Missing price does not make an otherwise complete property unusable.
+        # Apply the configured range only when a source supplied a price.
+        if p_price is not None and not (min_price <= p_price <= max_price):
             filter_rejections["price"] += 1
             continue
         if min_sqft > 0 and (p_sqft is None or p_sqft < min_sqft):
@@ -2701,6 +2737,7 @@ def run_orchestrator():
     final_filtered = list(unique_results.values())
     log_entry["after_filters"] = len(final_filtered)
     log_entry["filter_rejections"] = filter_rejections
+    log_entry["required_data_rejections_by_field"] = incomplete_field_rejections
     log_entry["source_property_type_counts"] = source_type_counts
     for sector, source in sources.items():
         if sector in {"mls", "reo", "sheriff", "tax", "06_probate_estates"}:
@@ -2788,6 +2825,15 @@ def run_orchestrator():
     )
 
     try:
+        # Last persistence guard: no incomplete row can enter properties.json,
+        # including an old row missed by an earlier source-specific path.
+        persistence_rows_before_gate = len(final_merged_list)
+        final_merged_list, final_persistence_rejections = keep_only_complete_property_rows(
+            final_merged_list
+        )
+        log_entry["persistence_guard_removed"] = (
+            persistence_rows_before_gate - len(final_merged_list)
+        )
         atomic_write_json(PROPERTIES_FILE, final_merged_list)
         source_states = [sources[s].get("status") for s in active_sectors_now if s in sources]
         bad = {"failed", "blocked", "partial", "not_connected", "unsupported_area"}
