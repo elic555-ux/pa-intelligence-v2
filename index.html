@@ -1203,7 +1203,7 @@
                 panel.replaceChildren();
                 const states = {success:'עודכן', partial:'עודכן חלקית', failed:'נכשל', blocked:'המקור חסם גישה',
                     not_connected:'לא מחובר למקור חי', unsupported_area:'האזור אינו נתמך במקור זה',
-                    imported:'נטען ממסמך שהועלה', needs_verification:'דורש אימות'};
+                    no_area_selected:'לא נבחר אזור', imported:'נטען ממסמך שהועלה', needs_verification:'דורש אימות'};
                 const heading = document.createElement('p');
                 const scan = scannerReport.last_scan;
                 heading.textContent = scan ? `גרסה ${scannerReport.version} | ריצה ${scan.scan_id} | ${scan.status === 'success' ? 'הושלם' : scan.status === 'partial' ? 'הושלם חלקית' : 'נכשל'}` : 'טרם הושלמה סריקה';
@@ -1776,7 +1776,9 @@
 
                 let taxNote = p.description || 'הנתונים מוצגים כפי שפורסמו במקור; יש לאמת מול משרד Tax Claim.';
                 if (p.source_amount_type === 'repository_minimum_bid') {
-                    taxNote += ' הסכום $250 הוא רף מינימום כללי להגשת הצעת Repository, לא חוב המס ולא מחיר של החלקה הזו.';
+                    const minimumBid = Number(p.minimum_bid);
+                    const amountText = Number.isFinite(minimumBid) && minimumBid > 0 ? `$${minimumBid.toLocaleString()}` : 'המינימום הכללי שפורסם';
+                    taxNote += ` ${amountText} הוא רף מינימום כללי להגשת הצעת Repository, לא חוב המס ולא מחיר של החלקה הזו.`;
                 }
                 if (p.source_text_quality === 'ocr_from_official_scanned_pdf') {
                     taxNote += ' הנתונים חולצו ב-OCR ממסמך סרוק; יש להשוות למסמך הרשמי לפני פעולה.';
