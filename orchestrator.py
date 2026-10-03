@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.7-land-detection-patch"
+ORCHESTRATOR_VERSION = "3.6.8-lehigh-fix"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -1142,7 +1142,7 @@ def parse_lehigh_sheriff_html(page_html, source_url=LEHIGH_SHERIFF_URL, today=No
             continue
         sheriff_no = re.sub(r"\s+", " ", cells[columns["sheriff #"]]).strip()
         plaintiff = re.sub(r"\s+", " ", cells[columns["plaintiff"]]).strip()
-        defendant = re.sub(r"\s+", "defendant").strip()
+        defendant = re.sub(r"\s+", " ", cells[columns["defendant"]]).strip()
         address = re.sub(r"\s+", " ", cells[columns["address"]]).strip()
         attorney = re.sub(r"\s+", " ", cells[columns["attorney name"]]).strip()
         parcel = re.sub(r"\s+", " ", cells[columns["parcel #"]]).strip()
@@ -2575,7 +2575,7 @@ def run_orchestrator():
     if areas:
         try:
             atomic_write_json(GEO_CATALOG_FILE, {"version": 1, "areas": areas})
-            print(f"🗺️️ קטלוג אזורים עודכן: {sum(len(v['locations']) for v in areas.values())} שמות מהמקור")
+            print(f"🗺 קטלוג אזורים עודכן: {sum(len(v['locations']) for v in areas.values())} שמות מהמקור")
         except OSError as exc:
             log_entry["errors"].append(f"geo catalog write failed: {exc}")
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
@@ -2672,9 +2672,9 @@ def run_orchestrator():
     top_locations = sorted(location_counts.items(), key=lambda x: (-x[1], x[0]))[:25]
     log_entry["redfin_location_top25"] = dict(top_locations)
     print(f"📍 GEO QA — ערכי LOCATION מובילים מ-Redfin: {dict(top_locations)}")
-    print(f"👁️️ MLS MARKET STATE — נצפו במקור LIVE לפני מסננים: {len(raw_mls_seen_keys)}")
+    print(f"👁 MLS MARKET STATE — נצפו במקור LIVE לפני מסננים: {len(raw_mls_seen_keys)}")
     print(f"🧪 MLS QA — דחיות לפי מסנן: {filter_rejections}")
-    print(f"🏷️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
+    print(f"🏷️️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
 
     seen_keys = set()
