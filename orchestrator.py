@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.7.2-tax-probate-county-scope-guard-20261003"
+ORCHESTRATOR_VERSION = "3.8.0-erie-parcel-profile-tax-sheriff-20261003"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -48,6 +48,8 @@ HUD_HOME_STORE_SEARCH_URL = "https://www.hudhomestore.gov/searchresult"
 LEHIGH_TAX_SALE_PAGE = "https://www.lehighcountytaxclaim.com/"
 ERIE_TAX_SALE_PAGE = "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/"
 ERIE_PROPERTY_SEARCH_URL = "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search.aspx"
+ERIE_PARCEL_PROFILE_URL = "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search/parcel-profile/print-view.aspx"
+ERIE_PARCEL_GIS_QUERY_URL = "https://gis.eriecountypa.gov/server/rest/services/Hosted/ErieCountyParcels_Dec2025/FeatureServer/16/query"
 ALLEGHENY_PROPERTY_SEARCH_URL = "https://realestate.alleghenycounty.us/search"
 ALLEGHENY_PROPERTY_INFO_URL = "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search"
 ALLEGHENY_PROBATE_URL = "https://dcr.alleghenycounty.us/wills/login.aspx"
@@ -287,6 +289,310 @@ class OfficialSaleLinks(HTMLParser):
             self.links.append((self._href, re.sub(r"\s+", " ", " ".join(self._parts)).strip()))
             self._href = None
             self._parts = []
+
+
+class ErieParcelProfileParser(HTMLParser):
+    """Read public parcel-profile table rows without touching the paid owner tab."""
+
+    def __init__(self):
+        super().__init__()
+        self.rows = {}
+        self.text_parts = []
+        self._in_row = False
+        self._in_cell = False
+        self._cells = []
+        self._cell_parts = []
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if tag == "tr":
+            self._in_row = True
+            self._cells = []
+        elif tag in ("td", "th") and self._in_row:
+            self._in_cell = True
+            self._cell_parts = []
+
+    def handle_data(self, data):
+        self.text_parts.append(data)
+        if self._in_cell:
+            self._cell_parts.append(data)
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in ("td", "th") and self._in_cell:
+            self._cells.append(re.sub(r"\s+", " ", " ".join(self._cell_parts)).strip())
+            self._in_cell = False
+            self._cell_parts = []
+        elif tag == "tr" and self._in_row:
+            cells = [cell for cell in self._cells if cell]
+            if len(cells) >= 2:
+                label = re.sub(r"\s+", " ", cells[0]).strip().rstrip(":").casefold()
+                value = re.sub(r"\s+", " ", " ".join(cells[1:])).strip()
+                if label and value:
+                    self.rows[label] = value
+            self._in_row = False
+            self._cells = []
+
+
+def normalize_erie_parcel_id(value):
+    digits = re.sub(r"\D", "", str(value or ""))
+    return digits if len(digits) == 14 else ""
+
+
+def _profile_number(value, integer=False):
+    match = re.search(r"-?\d[\d,]*(?:\.\d+)?", str(value or ""))
+    if not match:
+        return None
+    try:
+        number = float(match.group(0).replace(",", ""))
+        return int(number) if integer else number
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_erie_parcel_profile(html_text, requested_parcel_id):
+    parcel_digits = normalize_erie_parcel_id(requested_parcel_id)
+    if not parcel_digits:
+        raise ValueError("Erie parcel identifier is not exactly 14 digits")
+    parser = ErieParcelProfileParser()
+    parser.feed(str(html_text or ""))
+    text = re.sub(r"\s+", " ", html.unescape(" ".join(parser.text_parts))).replace("\xa0", " ").strip()
+    header = re.search(r"\bParcel\s*:\s*(\d{14})\b", text, re.I)
+    if not header or header.group(1) != parcel_digits:
+        raise ValueError("Erie parcel profile did not confirm the requested parcel number")
+
+    address = parser.rows.get("address")
+    if not address:
+        address_match = re.search(r"\bAddress\s*:\s*(.*?)\s*(?:\|\s*)+Parcel\s*:", text, re.I)
+        address = address_match.group(1).strip(" |") if address_match else None
+    if address:
+        address = re.sub(r"\s*\|\s*", " ", address).strip()
+
+    sqft = _profile_number(parser.rows.get("square feet"), integer=True)
+    if not sqft or sqft <= 0:
+        sqft = _profile_number(parser.rows.get("total living area"), integer=True)
+    beds = _profile_number(parser.rows.get("total bedrooms"), integer=True)
+    full_baths = _profile_number(parser.rows.get("full baths"))
+    half_baths = _profile_number(parser.rows.get("half baths"))
+    baths = (full_baths or 0) + (half_baths or 0) * 0.5
+    if not baths:
+        baths = _profile_number(parser.rows.get("bathrooms"))
+
+    acreage = _profile_number(parser.rows.get("acreage"))
+    data = {
+        "address": address,
+        "sqft": sqft if sqft and sqft > 0 else None,
+        "beds": beds if beds and beds > 0 else None,
+        "baths": baths if baths > 0 else None,
+        "total_rooms": _profile_number(parser.rows.get("total rooms"), integer=True),
+        "year_built": _profile_number(parser.rows.get("year built"), integer=True),
+        "lot_size": f"{acreage:g} acres" if acreage and acreage > 0 else None,
+        "municipality": parser.rows.get("municipality") or parser.rows.get("municipality name"),
+        "source_property_type": parser.rows.get("land use code"),
+    }
+    land_use = re.sub(r"\s+", " ", str(data["source_property_type"] or "")).strip().casefold()
+    if land_use in {"single family", "single-family", "single family residential"}:
+        data["type"] = "Single Family"
+        data["property_type"] = "Single Family"
+    elif land_use in {"duplex", "two family", "two-family", "triplex", "three family", "three-family"}:
+        data["type"] = "Duplex / Triplex"
+        data["property_type"] = "Duplex / Triplex"
+
+    status = "success" if data["address"] and data["sqft"] and data["beds"] else "partial"
+    return {"status": status, "data": data}
+
+
+def _erie_profile_cache_fresh(entry, now=None):
+    if not isinstance(entry, dict) or not isinstance(entry.get("data"), dict):
+        return False
+    try:
+        checked = datetime.fromisoformat(str(entry.get("checked_at") or ""))
+        if checked.tzinfo is None:
+            checked = EST_TZ.localize(checked)
+        current = now or now_est()
+        ttl_days = 45 if entry.get("status") == "success" else 7
+        return timedelta(0) <= current - checked <= timedelta(days=ttl_days)
+    except (TypeError, ValueError):
+        return False
+
+
+def _erie_geo_taxpin_variants(parcel_digits):
+    digits = normalize_erie_parcel_id(parcel_digits)
+    if not digits:
+        return []
+    formatted = f"{digits[:2]}-{digits[2:5]}-{digits[5:8]}.{digits[8]}-{digits[9:12]}.{digits[12:14]}"
+    return [digits, formatted]
+
+
+def fetch_erie_parcel_geo(parcel_ids):
+    """Fetch only public parcel address/municipality fields from Erie County GIS."""
+    parcel_ids = sorted({normalize_erie_parcel_id(value) for value in parcel_ids} - {""})
+    if not parcel_ids:
+        return {}
+    headers = {"User-Agent": "PA-Property-Research/1.0", "Accept": "application/json"}
+    found = {}
+    for offset in range(0, len(parcel_ids), 60):
+        batch = parcel_ids[offset:offset + 60]
+        variants = [variant for parcel in batch for variant in _erie_geo_taxpin_variants(parcel)]
+        quoted = ",".join("'" + value + "'" for value in variants)
+        response = requests.get(
+            ERIE_PARCEL_GIS_QUERY_URL,
+            params={"where": f"taxpin IN ({quoted})", "outFields": "taxpin,municipali,fullstreet",
+                    "returnGeometry": "false", "f": "json"},
+            headers=headers, timeout=25,
+        )
+        response.raise_for_status()
+        if urlparse(response.url).hostname != "gis.eriecountypa.gov":
+            raise ValueError("Erie GIS query redirected away from the official county GIS host")
+        payload = response.json()
+        if not isinstance(payload, dict) or payload.get("error"):
+            raise ValueError("Erie GIS parcel query returned an invalid response")
+        for feature in payload.get("features", []):
+            attributes = feature.get("attributes") if isinstance(feature, dict) else None
+            if not isinstance(attributes, dict):
+                continue
+            parcel = normalize_erie_parcel_id(attributes.get("taxpin"))
+            if parcel and parcel in batch:
+                found[parcel] = {
+                    "municipality": re.sub(r"\s+", " ", str(attributes.get("municipali") or "")).strip() or None,
+                    "gis_address": re.sub(r"\s+", " ", str(attributes.get("fullstreet") or "")).strip() or None,
+                }
+    return found
+
+
+def fetch_erie_parcel_profile(parcel_id):
+    parcel_digits = normalize_erie_parcel_id(parcel_id)
+    if not parcel_digits:
+        raise ValueError("Erie parcel identifier is not exactly 14 digits")
+    url = ERIE_PARCEL_PROFILE_URL
+    response = requests.get(
+        url, params={"parcelid": parcel_digits},
+        headers={"User-Agent": "PA-Property-Research/1.0", "Accept": "text/html"},
+        timeout=25,
+    )
+    response.raise_for_status()
+    if urlparse(response.url).hostname not in {"public.eriecountypa.gov", "eriecountypa.gov"}:
+        raise ValueError("Erie parcel profile redirected away from the official county site")
+    return parse_erie_parcel_profile(response.text, parcel_digits)
+
+
+def enrich_erie_repository_rows(rows, profile_cache=None):
+    """Add verified public parcel facts; incomplete candidates remain rejected downstream."""
+    cache = dict(profile_cache) if isinstance(profile_cache, dict) else {}
+    rows = [dict(row) for row in rows if isinstance(row, dict)]
+    residential = {}
+    for row in rows:
+        parcel = normalize_erie_parcel_id(row.get("parcel_id"))
+        if parcel and not detect_land_from_address(row.get("address")):
+            residential[parcel] = row
+
+    geo_needed = [parcel for parcel, row in residential.items()
+                  if not (cache.get(parcel, {}).get("data", {}).get("municipality")
+                          if isinstance(cache.get(parcel), dict) else None)]
+    geo_data, geo_status = {}, "not_needed"
+    if geo_needed:
+        try:
+            geo_data = fetch_erie_parcel_geo(geo_needed)
+            geo_status = "success" if geo_data else "partial"
+        except (requests.RequestException, ValueError) as exc:
+            geo_status = "failed"
+            print(f"⚠️ Erie GIS לא החזיר יישובים: {exc}")
+
+    now = now_est()
+    need_profiles = [parcel for parcel in residential
+                     if not _erie_profile_cache_fresh(cache.get(parcel), now)]
+    fetched = {}
+    if need_profiles:
+        def _fetch_one(parcel):
+            try:
+                return fetch_erie_parcel_profile(parcel)
+            except (requests.RequestException, ValueError) as exc:
+                return {"status": "failed", "data": {}, "error": str(exc)[:300]}
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            for parcel, result in zip(need_profiles, executor.map(_fetch_one, need_profiles)):
+                fetched[parcel] = result
+
+    enriched = 0
+    from_cache = 0
+    failures = 0
+    for parcel, row in residential.items():
+        entry = cache.get(parcel)
+        if _erie_profile_cache_fresh(entry, now):
+            profile_data = dict(entry.get("data") or {})
+            profile_status = entry.get("status")
+            from_cache += 1
+        else:
+            result = fetched.get(parcel, {"status": "failed", "data": {}})
+            profile_data = dict(result.get("data") or {})
+            profile_status = result.get("status", "failed")
+            entry = {"checked_at": now.isoformat(timespec="seconds"),
+                     "status": profile_status, "data": profile_data}
+            if result.get("error"):
+                entry["error"] = result["error"]
+            cache[parcel] = entry
+
+        parcel_geo = geo_data.get(parcel) or {}
+        municipality = (profile_data.get("municipality") or parcel_geo.get("municipality")
+                        or row.get("municipality"))
+        address = profile_data.get("address") or parcel_geo.get("gis_address")
+        if address:
+            row["address"] = address
+        if municipality:
+            row["municipality"] = municipality
+            row["city"] = municipality
+        elif not row.get("city"):
+            row["city"] = "Erie County"
+        for field in ("sqft", "beds", "baths", "total_rooms", "year_built", "lot_size",
+                      "type", "property_type", "source_property_type"):
+            value = profile_data.get(field)
+            if value is not None:
+                row[field] = value
+        profile_url = f"{ERIE_PARCEL_PROFILE_URL}?parcelid={parcel}"
+        row["property_record_url"] = profile_url
+        row["parcel_profile_url"] = profile_url
+        row["profile_enrichment_source"] = "Erie County public parcel profile and GIS"
+        row["profile_checked_at"] = entry.get("checked_at") if isinstance(entry, dict) else now.isoformat(timespec="seconds")
+        if not required_property_data_failures(row):
+            enriched += 1
+        if profile_status == "failed":
+            failures += 1
+
+    return rows, cache, {
+        "candidates": len(rows), "residential_parcels": len(residential),
+        "profiles_fetched": len(need_profiles), "cache_hits": from_cache,
+        "profile_failures": failures, "eligible_after_required_data_gate": enriched,
+        "gis_status": geo_status, "gis_matches": len(geo_data),
+        "source_url": ERIE_PARCEL_PROFILE_URL,
+    }
+
+
+def erie_profile_cache_from_properties(properties):
+    """Reuse only already-saved, previously verified Erie profile facts."""
+    if isinstance(properties, dict):
+        rows = properties.values()
+    elif isinstance(properties, (list, tuple)):
+        rows = properties
+    else:
+        rows = ()
+    cache = {}
+    for row in rows:
+        if not isinstance(row, dict) or row.get("source_type") != "tax":
+            continue
+        if normalize_county_name(row.get("county")) != "erie" or not row.get("profile_enrichment_source"):
+            continue
+        parcel = normalize_erie_parcel_id(row.get("parcel_id"))
+        if not parcel:
+            continue
+        data = {field: row.get(field) for field in (
+            "address", "sqft", "beds", "baths", "total_rooms", "year_built", "lot_size",
+            "municipality", "type", "property_type", "source_property_type")}
+        cache[parcel] = {
+            "checked_at": row.get("profile_checked_at") or row.get("last_seen"),
+            "status": "success" if data.get("sqft") and data.get("beds") and data.get("address") else "partial",
+            "data": data,
+        }
+    return cache
 
 
 def _lehigh_ocr_row_text(words, anchor_y, x_min, x_max, tolerance):
@@ -802,6 +1108,7 @@ def parse_sheriff_text(body, source_url, imported=False):
         seen.add(key)
         sale_type = re.search(r"Sale Type\s*\n([^\n]+)", facts, re.I)
         type_text = sale_type.group(1).strip() if sale_type else ""
+        is_tax_lien_sale = is_explicit_tax_sheriff_sale(type_text)
         plaintiff_defendant = re.search(
             r"Plaintiff\(s\):\s*Defendant\(s\):\s*\n(.*?)\nCase Number\b", facts, re.I | re.S)
         plaintiff = defendant = None
@@ -839,7 +1146,9 @@ def parse_sheriff_text(body, source_url, imported=False):
             "baths": 0 if is_land else None,
             "sqft": 0 if is_land else None,
             "price": None, 
-            "deal_type": "Sheriff Sale", "source_type": "sheriff",
+            "deal_type": "Sheriff Sale — Tax Lien" if is_tax_lien_sale else "Sheriff Sale",
+            "tax_sale_type": "sheriff_tax_lien" if is_tax_lien_sale else None,
+            "source_type": "sheriff",
             "source": "Allegheny County Sheriff's Office", "source_sale_type": type_text,
             "sheriff_tract": tract_match.group(1) if tract_match else None,
             "plaintiff": plaintiff,
@@ -867,6 +1176,16 @@ def parse_sheriff_text(body, source_url, imported=False):
                   "parsed_blocks": len(blocks), "skipped_active_addresses": skipped_active,
                   "unrecognized_blocks": unrecognized_blocks,
                   "mode": "imported" if imported else "live"}
+
+
+def is_explicit_tax_sheriff_sale(sale_type):
+    """Only classify a sheriff listing as tax-related when its Sale Type says so."""
+    text = re.sub(r"[^a-z0-9]+", " ", str(sale_type or "").casefold()).strip()
+    return bool(re.search(
+        r"\b(?:tax\s+(?:lien|claim|sale|foreclosure|delinquen\w*)|"
+        r"sci\s+fa\s+sur\s+tax(?:\s+lien)?)\b",
+        text,
+    ))
 
 
 def extract_sheriff_pdf(content):
@@ -1966,15 +2285,16 @@ def get_placeholder_sector_results(active_sectors):
 
 def comparable_changed(old, new):
     tracked_fields = [
-        "price", "deal_type", "beds", "total_rooms", "baths", "sqft", "year_built",
+        "price", "deal_type", "city", "municipality", "beds", "total_rooms", "baths", "sqft", "year_built",
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
         "type", "property_type", "source_property_type", "source_location",
         "source_url", "source_amount_type", "case_cost_tax_bid", "judgment_amount",
         "probate_keyword_candidate", "probate_keyword_hits", "source_listing_description",
         "remarks_source_field",
         "opening_bid", "minimum_bid", "sale_date", "sale_number", "docket_id",
-        "parcel_id", "attorney", "participants", "plaintiff", "defendant",
+        "parcel_id", "attorney", "participants", "plaintiff", "defendant", "tax_sale_type",
         "source_published_date", "sheriff_status", "repository_status",
+        "property_record_url", "profile_enrichment_source", "profile_checked_at",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
 
@@ -2572,6 +2892,9 @@ def run_orchestrator():
         excluded_by_scope = sorted(requested_tax_counties - TAX_PROBATE_SCOPE_COUNTIES)
         county_names = {"allegheny": "Allegheny", "erie": "Erie"}
         county_audits = {}
+        allegheny_sheriff_tax_rows = [row for row in sheriff_rows
+                                      if normalize_county_name(row.get("county")) == "allegheny"
+                                      and row.get("tax_sale_type") == "sheriff_tax_lien"]
         if excluded_by_scope:
             print("🔒 חובות מס מוגבלים ל-Allegheny ו-Erie; דילוג על: "
                   + ", ".join(name.title() for name in excluded_by_scope))
@@ -2580,14 +2903,25 @@ def run_orchestrator():
             try:
                 if county_key == "erie":
                     county_rows, tax_audit = fetch_erie_repository_list()
+                    prior_profile_cache = erie_profile_cache_from_properties(existing_props_dict)
+                    county_rows, _, profile_audit = enrich_erie_repository_rows(county_rows, prior_profile_cache)
+                    tax_audit["property_enrichment"] = profile_audit
                     tax_rows.extend(county_rows)
                     county_audits[county_name] = {**tax_audit, "rows": len(county_rows)}
-                    print(f"🧾 Erie Repository: {len(county_rows)} רשומות מועמדות; מקור רשמי: {tax_audit.get('source_url')}")
+                    print(
+                        f"🧾 Erie Repository: {len(county_rows)} מועמדים; "
+                        f"{profile_audit['eligible_after_required_data_gate']} עברו העשרת פרטים "
+                        f"({profile_audit['cache_hits']} מהמטמון, {profile_audit['profile_failures']} כשלונות); "
+                        f"מקור: {tax_audit.get('source_url')}"
+                    )
                 else:
                     county_audits[county_name] = {
                         "status": "not_connected", "rows": 0,
                         "reason": "no verified current tax feed connected for this county",
-                        "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים.",
+                        "sheriff_tax_lien_rows": len(allegheny_sheriff_tax_rows),
+                        "note": ("אין פיד עצמאי מאומת לחובות מס. מספר מכירות השריף שסוג המכירה "
+                                 "שלהן מציין במפורש Tax Lien: "
+                                 f"{len(allegheny_sheriff_tax_rows)}. זו סיווגת מכירה, לא סכום חוב."),
                     }
             except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
                 response = getattr(exc, "response", None)
@@ -2615,7 +2949,9 @@ def run_orchestrator():
             "manual_sources": selected_manual_sources(
                 [], [county_names[key] for key in sorted(requested_in_scope)], "tax"),
             "note": ("המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות "
-                     "ורף מינימום כללי, לא מחיר נכס; ל-Allegheny אין פיד חוב מס מאומת. "
+                     "ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי "
+                     "הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש "
+                     "מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. "
                      "רשומות חסרות פרטי נכס לא נשמרות."),
         })
 
