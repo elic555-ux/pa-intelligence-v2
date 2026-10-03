@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.8-lehigh-fix"
+ORCHESTRATOR_VERSION = "3.6.9-tax-probate-clarity-20261003"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -140,7 +140,7 @@ def _xlsx_cell_text(cell, shared_strings, ns):
     return raw.strip()
 
 
-def parse_erie_repository_xlsx(content, source_url):
+def parse_erie_repository_xlsx(content, source_url, repository_minimum_bid=None):
     if not content.startswith(b"PK") or len(content) > 10_000_000:
         raise ValueError("Erie repository source is not a valid XLSX or exceeds the size limit")
     ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
@@ -210,6 +210,12 @@ def parse_erie_repository_xlsx(content, source_url):
         docket = docket or f"Repository-{safe_parcel}"
         is_land = detect_land_from_address(location)
 
+        amount_note = (
+            f"רף המינימום הכללי המפורסם כעת להגשת הצעת Repository הוא ${repository_minimum_bid:,.2f}; "
+            "הוא אינו חוב המס, מחיר הנכס או מחיר אישי לחלקה."
+            if repository_minimum_bid is not None else
+            "המקור לא פרסם רף מינימום עדכני שניתן לאימות; אין לראות ברשומה מחיר או סכום חוב."
+        )
         rows.append({
             "id": f"tax-erie-repository-{safe_parcel}", "county": "Erie",
             "city": "Erie County", "address": location, "zip": None,
@@ -221,16 +227,17 @@ def parse_erie_repository_xlsx(content, source_url):
             "beds": 0 if is_land else None,
             "baths": 0 if is_land else None,
             "sqft": 0 if is_land else None,
-            "opening_bid": None, "minimum_bid": 250.0, "price": None,
-            "source": "Erie County Tax Claim", "source_amount_type": "repository_minimum_bid",
+            "opening_bid": None, "minimum_bid": repository_minimum_bid, "price": None,
+            "source": "Erie County Tax Claim",
+            "source_amount_type": "repository_minimum_bid" if repository_minimum_bid is not None else None,
             "source_url": source_url, "url": source_url,
             "tax_claim_url": ERIE_TAX_SALE_PAGE,
             "property_record_url": ERIE_PROPERTY_SEARCH_URL,
             "source_text_quality": "official_county_xlsx",
             "repository_status": status or "לא מצוין בקובץ",
             "ai_summary": "🔥 **זיהוי אוטומטי:** שטח אדמה/מגרש ריק מרשימת העודפים (Repository). אין במקום מבנה מגורים." if is_land else None,
-            "description": ("מועמד לרשימת Repository של Erie County; הצעה מינימלית שמצוינת בכותרת המקור: $250, "
-                            "אינה מחיר נכס או הצעת רכישה. הרשימה משתנה ויש לאמת זמינות ישירות מול לשכת המס.")
+            "description": ("מועמד לרשימת Repository של Erie County. " + amount_note +
+                            " הרשימה משתנה ויש לאמת זמינות ישירות מול לשכת המס.")
         })
     if header_map is None:
         raise ValueError("Erie repository workbook headers changed; no rows were imported")
@@ -250,18 +257,27 @@ def fetch_erie_repository_list():
                   and urlparse(urljoin(page.url, href)).path.casefold().endswith(".xlsx")]
     if not candidates:
         raise ValueError("No official Erie County Repository XLSX link was found")
+    page_text = html.unescape(re.sub(r"<[^>]+>", " ", page.text))
+    page_text = re.sub(r"\s+", " ", page_text)
+    minimum_match = re.search(r"minimum\s+bid(?:\s+of)?\s*\$\s*([\d,]+(?:\.\d{2})?)", page_text, re.I)
+    repository_minimum_bid = None
+    if minimum_match:
+        parsed_minimum = safe_number(minimum_match.group(1).replace(",", ""), None, float)
+        if parsed_minimum is not None and parsed_minimum > 0:
+            repository_minimum_bid = parsed_minimum
     workbook_url, label = candidates[0]
     parsed = urlparse(workbook_url)
     if parsed.scheme != "https" or parsed.hostname not in {"eriecountypa.gov", "www.eriecountypa.gov"}:
         raise ValueError("Erie Repository workbook is outside the official county domain")
     response = requests.get(workbook_url, timeout=45, headers=headers)
     response.raise_for_status()
-    rows = parse_erie_repository_xlsx(response.content, workbook_url)
+    rows = parse_erie_repository_xlsx(response.content, workbook_url, repository_minimum_bid)
     if not rows:
         raise ValueError("Erie repository workbook had no eligible rows; existing tax data was left untouched")
     audit = {"status": "success", "rows": len(rows), "source_url": workbook_url,
              "page_url": ERIE_TAX_SALE_PAGE, "list_label": label,
-             "excluded_unavailable": True, "note": "Repository candidates only; availability must be confirmed with Erie County."}
+             "excluded_unavailable": True, "repository_minimum_bid": repository_minimum_bid,
+             "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."}
     return rows, audit
 
 
@@ -1871,7 +1887,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
 
 
 def get_placeholder_sector_results(active_sectors):
-    pending = [s for s in active_sectors if s not in ("mls", "06_probate_estates")]
+    pending = [s for s in active_sectors if s != "mls"]
     if pending:
         print("ℹ️ הסקטורים הבאים עדיין אינם מחוברים למקור LIVE ולכן לא יוזרקו נתוני דמה: " + ", ".join(pending))
     return []
@@ -2255,10 +2271,11 @@ def run_orchestrator():
     if "06_probate_estates" in active_sectors_now:
         probate_links = selected_manual_sources(cities_list, counties_list, "probate")
         sources["06_probate_estates"].update({
-            "status": "success", "rows": 0,
+            "status": "not_connected", "rows": 0,
             "scope": "selected_counties_only",
             "manual_sources": probate_links,
-            "note": "מנוע ה-NLP שואב ומסווג נתוני עיזבונות (Probate) ו-FSBO מתוך תיאורי הנכסים במאגר.",
+            "reason": "no_verified_live_probate_feed",
+            "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
         })
 
     sheriff_rows = []
