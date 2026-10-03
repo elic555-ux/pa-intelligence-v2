@@ -1,10 +1,10 @@
 {
-  "version": "3.6.9-tax-probate-clarity-20261003",
+  "version": "3.7.0-tax-probate-county-scope-20261003",
   "last_event": {
-    "scan_id": "SCAN-20261003-123132",
-    "started_at": "2026-10-03T12:31:32-04:00",
+    "scan_id": "SCAN-20261003-131547",
+    "started_at": "2026-10-03T13:15:47-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.6.9-tax-probate-clarity-20261003",
+    "orchestrator_version": "3.7.0-tax-probate-county-scope-20261003",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -15,17 +15,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2685,
-    "after_filters": 1948,
-    "new": 3,
-    "updated": 5,
-    "unchanged": 1940,
+    "source_results": 2673,
+    "after_filters": 1937,
+    "new": 2,
+    "updated": 4,
+    "unchanged": 1931,
     "off_market_candidates": 0,
     "errors": [
       "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
-    "code_sha256": "58ec55c0afeb",
-    "github_sha": "d8c1363b0b9c60e54ce323309056fac355b23660",
+    "code_sha256": "74eb08e87668",
+    "github_sha": "221c894fc52cb86a31e1df39221dac020d84772d",
     "request_id": null,
     "counties": [
       "Allegheny",
@@ -59,9 +59,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
-        "rows": 2130,
+        "rows": 2127,
         "areas": [
           {
             "area": "Allegheny County",
@@ -81,7 +81,7 @@
           {
             "area": "Erie County",
             "status": "success",
-            "rows": 348,
+            "rows": 347,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -102,7 +102,7 @@
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 160,
+            "rows": 158,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -122,11 +122,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 1401
+        "passed_filters": 1399
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -289,7 +289,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
         "rows": 374,
         "counties": {
@@ -363,21 +363,45 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
-        "rows": 173,
+        "rows": 164,
         "counties": {
+          "Berks": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lackawanna": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lancaster": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lehigh": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Northampton": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Philadelphia": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
           "Allegheny": {
             "status": "not_connected",
             "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Berks": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
+            "reason": "no_verified_bulk_tax_delinquency_feed",
+            "note": "יש פורטל רשומות נכס רשמי, אך עדיין אין פיד מרוכז מאומת לפיגורי מס. לא הומצאו נכסים או סכומי חוב."
           },
           "Erie": {
             "status": "success",
@@ -388,42 +412,9 @@
             "excluded_unavailable": true,
             "repository_minimum_bid": 250.0,
             "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."
-          },
-          "Lackawanna": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Lancaster": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Lehigh": {
-            "status": "success",
-            "rows": 9,
-            "sale_date": "2026-10-21",
-            "list_label": "Judicial Sale List as of 9-18-26",
-            "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
-            "ocr": true,
-            "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
-          },
-          "Northampton": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Philadelphia": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
           }
         },
-        "scope": "selected_counties_only",
+        "scope": "Allegheny_and_Erie_only",
         "manual_sources": [
           {
             "id": "allegheny_property_search",
@@ -452,24 +443,59 @@
             "label": "Erie — חיפוש נכס לפי כתובת/חלקה",
             "url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search.aspx",
             "status": "manual_link_only"
-          },
-          {
-            "id": "lehigh_tax_claim",
-            "county": "Lehigh",
-            "label": "Lehigh — Tax Claim וחיפוש נכסים",
-            "url": "https://www.lehighcountytaxclaim.com/",
-            "status": "manual_link_only"
           }
         ],
-        "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
-        "passed_filters": 172
+        "note": "Erie Repository מציג מועמדויות לרשימת עודפים, עם מספר חלקה/מיקום וסטטוס; רף המינימום הכללי אינו החוב הפרטני ואינו מחיר הנכס. ב-Allegheny עדיין אין פיד מרוכז מאומת של פיגורי מס. אזורים אחרים מסומנים unsupported_area ולא נסרקים.",
+        "passed_filters": 163
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "not_connected",
         "rows": 0,
-        "scope": "selected_counties_only",
+        "scope": "Allegheny_and_Erie_only",
+        "counties": {
+          "Allegheny": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no_verified_automatic_probate_feed"
+          },
+          "Erie": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no_verified_automatic_probate_feed"
+          },
+          "Berks": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lackawanna": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lancaster": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lehigh": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Northampton": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Philadelphia": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          }
+        },
         "manual_sources": [
           {
             "id": "allegheny_probate_login",
@@ -491,29 +517,22 @@
             "label": "Erie — חיפוש Register of Wills / Orphans",
             "url": "https://courtpro.eriecountypa.gov/Row/v/search/case",
             "status": "manual_link_only"
-          },
-          {
-            "id": "lehigh_probate_search",
-            "county": "Lehigh",
-            "label": "Lehigh — Odyssey Public Access",
-            "url": "https://publicaccess.lehighcounty.org/Search.aspx",
-            "status": "manual_link_only"
           }
         ],
         "reason": "no_verified_live_probate_feed",
-        "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
+        "note": "היקף הסריקה מוגבל ל-Allegheny ו-Erie. עדיין אין חיבור אוטומטי מאומת לרישומי Probate במחוזות אלה; לא נסרקו תיקים ולא נוצרו נכסים. הקישורים המצורפים מיועדים לבדיקה ידנית.",
         "passed_filters": 0
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-03T12:31:52-04:00",
+        "checked_at": "2026-10-03T13:15:56-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -590,9 +609,9 @@
         "rows": 350,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Pittsburgh": 191,
+          "West Mifflin": 13,
+          "Pittsburgh": 190,
           "Brackenridge": 1,
-          "West Mifflin": 12,
           "Monroeville": 15,
           "Mc Kees Rocks": 10,
           "Cheswick": 3,
@@ -640,9 +659,9 @@
           "Wilkinsburg": 1
         },
         "source_locations": {
+          "West Mifflin": 13,
           "Brookline": 9,
           "Brackenridge": 1,
-          "West Mifflin": 12,
           "Monroeville": 15,
           "North Oakland": 1,
           "McKees Rocks": 7,
@@ -726,7 +745,7 @@
           "Hazelwood": 5,
           "Braddock Hills": 1,
           "Reserve": 1,
-          "Lincoln Place": 3,
+          "Lincoln Place": 2,
           "East Liberty": 1,
           "Point Breeze": 2,
           "Lincoln-Larimer": 3,
@@ -890,10 +909,10 @@
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 348,
+        "rows": 347,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Erie": 224,
+          "Erie": 223,
           "North East": 27,
           "Waterford": 6,
           "Albion": 9,
@@ -943,7 +962,6 @@
           "Lakecliff": 1,
           "Fairview": 5,
           "Waterford": 6,
-          "Country Club Estate": 1,
           "Lawrence Park": 1,
           "Erie City": 3,
           "Countryside": 2,
@@ -1242,10 +1260,10 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 160,
+        "rows": 158,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Allentown": 87,
+          "Allentown": 85,
           "Trexlertown": 3,
           "Whitehall": 7,
           "Center Valley": 2,
@@ -1269,7 +1287,7 @@
           "Jordan Park": 1,
           "Mayo Mhp": 3,
           "Whitehall Twp": 6,
-          "Allentown City": 56,
+          "Allentown City": 54,
           "Allentown": 4,
           "Red Maple Acres Mhp": 2,
           "Old Frgrnds Historic": 3,
@@ -1429,6 +1447,7 @@
           "Philadelphia": 56,
           "BREWERYTOWN": 6,
           "MILL CREEK": 7,
+          "WYNNEFIELD": 3,
           "PASCHALL": 1,
           "ROXBOROUGH": 2,
           "HOLMESBURG": 4,
@@ -1451,7 +1470,6 @@
           "GERMANTOWN (EAST)": 5,
           "BURHOLME": 1,
           "ELMWOOD PARK": 5,
-          "WYNNEFIELD": 2,
           "SHARSWOOD": 2,
           "PHILADELPHIA (NORTH)": 7,
           "OGONTZ": 2,
@@ -1471,7 +1489,7 @@
           "STRAWBERRY MANSION": 8,
           "PHILADELPHIA (SOUTHWEST)": 7,
           "TACONY": 5,
-          "HADDINGTON": 5,
+          "HADDINGTON": 4,
           "PHILADELPHIA": 6,
           "NORRIS SQUARE": 2,
           "BRIDESBURG": 3,
@@ -1509,37 +1527,37 @@
         }
       }
     },
-    "raw_mls_seen": 2126,
+    "raw_mls_seen": 2123,
     "duplicates_removed": 7,
     "filter_rejections": {
       "price": 1,
       "sqft": 0,
       "beds": 465,
       "baths": 5,
-      "property_type": 158,
+      "property_type": 157,
       "property_type_unknown": 101,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
       "Single Family Residential": 858,
-      "Condo/Co-op": 71,
+      "Condo/Co-op": 70,
       "Multi-Family (2-4 Unit)": 110,
-      "Townhouse": 569,
+      "Townhouse": 567,
       "Vacant Land": 415,
       "Mobile/Manufactured Home": 86,
       "Parking": 2,
       "Unknown": 19,
       "Multi-Family (5+ Unit)": 1,
-      "UNKNOWN": 551,
+      "UNKNOWN": 542,
       "Single-Family": 2,
       "Townhome": 1
     },
     "source_passed_filters": {
-      "mls": 1401,
+      "mls": 1399,
       "reo": 6,
       "sheriff": 369,
-      "tax": 172,
+      "tax": 163,
       "06_probate_estates": 0,
       "fsbo": 0
     },
@@ -1547,8 +1565,8 @@
       "Erie": 203,
       "Scranton": 118,
       "Reading": 89,
-      "Allentown City": 56,
       "Philadelphia": 56,
+      "Allentown City": 54,
       "Lancaster": 27,
       "READING": 27,
       "Carbondale": 26,
@@ -1559,10 +1577,10 @@
       "Bethlehem City": 16,
       "Monroeville": 15,
       "Archbald": 13,
+      "West Mifflin": 13,
       "Eagle Lake": 12,
       "Easton": 12,
       "FRANKFORD": 12,
-      "West Mifflin": 12,
       "Birdsboro": 11,
       "Edinboro": 11,
       "Kutztown": 10,
@@ -1571,17 +1589,17 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 1,
-    "price_drop_properties": 1,
-    "total_properties": 4436,
-    "finished_at": "2026-10-03T12:31:53-04:00"
+    "price_drop_events": 0,
+    "price_drop_properties": 0,
+    "total_properties": 4438,
+    "finished_at": "2026-10-03T13:15:56-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-03T12:31:32-04:00",
+      "checked_at": "2026-10-03T13:15:47-04:00",
       "status": "partial",
-      "rows": 2130,
+      "rows": 2127,
       "areas": [
         {
           "area": "Allegheny County",
@@ -1601,7 +1619,7 @@
         {
           "area": "Erie County",
           "status": "success",
-          "rows": 348,
+          "rows": 347,
           "coverage": "not_proven_complete",
           "limit_reached": false
         },
@@ -1622,7 +1640,7 @@
         {
           "area": "Lehigh County",
           "status": "success",
-          "rows": 160,
+          "rows": 158,
           "coverage": "not_proven_complete",
           "limit_reached": false
         },
@@ -1642,11 +1660,11 @@
         }
       ],
       "coverage": "not_proven_complete",
-      "passed_filters": 1401
+      "passed_filters": 1399
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-03T12:31:32-04:00",
+      "checked_at": "2026-10-03T13:15:47-04:00",
       "status": "partial",
       "rows": 8,
       "providers": {
@@ -1809,21 +1827,45 @@
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-03T12:31:32-04:00",
+      "checked_at": "2026-10-03T13:15:47-04:00",
       "status": "partial",
-      "rows": 173,
+      "rows": 164,
       "counties": {
+        "Berks": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Lackawanna": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Lancaster": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Lehigh": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Northampton": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Philadelphia": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+        },
         "Allegheny": {
           "status": "not_connected",
           "rows": 0,
-          "reason": "no verified current tax feed connected for this county",
-          "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-        },
-        "Berks": {
-          "status": "not_connected",
-          "rows": 0,
-          "reason": "no verified current tax feed connected for this county",
-          "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
+          "reason": "no_verified_bulk_tax_delinquency_feed",
+          "note": "יש פורטל רשומות נכס רשמי, אך עדיין אין פיד מרוכז מאומת לפיגורי מס. לא הומצאו נכסים או סכומי חוב."
         },
         "Erie": {
           "status": "success",
@@ -1834,42 +1876,9 @@
           "excluded_unavailable": true,
           "repository_minimum_bid": 250.0,
           "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."
-        },
-        "Lackawanna": {
-          "status": "not_connected",
-          "rows": 0,
-          "reason": "no verified current tax feed connected for this county",
-          "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-        },
-        "Lancaster": {
-          "status": "not_connected",
-          "rows": 0,
-          "reason": "no verified current tax feed connected for this county",
-          "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-        },
-        "Lehigh": {
-          "status": "success",
-          "rows": 9,
-          "sale_date": "2026-10-21",
-          "list_label": "Judicial Sale List as of 9-18-26",
-          "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
-          "ocr": true,
-          "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
-        },
-        "Northampton": {
-          "status": "not_connected",
-          "rows": 0,
-          "reason": "no verified current tax feed connected for this county",
-          "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-        },
-        "Philadelphia": {
-          "status": "not_connected",
-          "rows": 0,
-          "reason": "no verified current tax feed connected for this county",
-          "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
         }
       },
-      "scope": "selected_counties_only",
+      "scope": "Allegheny_and_Erie_only",
       "manual_sources": [
         {
           "id": "allegheny_property_search",
@@ -1898,24 +1907,59 @@
           "label": "Erie — חיפוש נכס לפי כתובת/חלקה",
           "url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search.aspx",
           "status": "manual_link_only"
-        },
-        {
-          "id": "lehigh_tax_claim",
-          "county": "Lehigh",
-          "label": "Lehigh — Tax Claim וחיפוש נכסים",
-          "url": "https://www.lehighcountytaxclaim.com/",
-          "status": "manual_link_only"
         }
       ],
-      "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
-      "passed_filters": 172
+      "note": "Erie Repository מציג מועמדויות לרשימת עודפים, עם מספר חלקה/מיקום וסטטוס; רף המינימום הכללי אינו החוב הפרטני ואינו מחיר הנכס. ב-Allegheny עדיין אין פיד מרוכז מאומת של פיגורי מס. אזורים אחרים מסומנים unsupported_area ולא נסרקים.",
+      "passed_filters": 163
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-03T12:31:32-04:00",
+      "checked_at": "2026-10-03T13:15:47-04:00",
       "status": "not_connected",
       "rows": 0,
-      "scope": "selected_counties_only",
+      "scope": "Allegheny_and_Erie_only",
+      "counties": {
+        "Allegheny": {
+          "status": "not_connected",
+          "rows": 0,
+          "reason": "no_verified_automatic_probate_feed"
+        },
+        "Erie": {
+          "status": "not_connected",
+          "rows": 0,
+          "reason": "no_verified_automatic_probate_feed"
+        },
+        "Berks": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Lackawanna": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Lancaster": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Lehigh": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Northampton": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+        },
+        "Philadelphia": {
+          "status": "unsupported_area",
+          "rows": 0,
+          "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+        }
+      },
       "manual_sources": [
         {
           "id": "allegheny_probate_login",
@@ -1937,28 +1981,21 @@
           "label": "Erie — חיפוש Register of Wills / Orphans",
           "url": "https://courtpro.eriecountypa.gov/Row/v/search/case",
           "status": "manual_link_only"
-        },
-        {
-          "id": "lehigh_probate_search",
-          "county": "Lehigh",
-          "label": "Lehigh — Odyssey Public Access",
-          "url": "https://publicaccess.lehighcounty.org/Search.aspx",
-          "status": "manual_link_only"
         }
       ],
       "reason": "no_verified_live_probate_feed",
-      "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
+      "note": "היקף הסריקה מוגבל ל-Allegheny ו-Erie. עדיין אין חיבור אוטומטי מאומת לרישומי Probate במחוזות אלה; לא נסרקו תיקים ולא נוצרו נכסים. הקישורים המצורפים מיועדים לבדיקה ידנית.",
       "passed_filters": 0
     },
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-03T12:31:52-04:00",
+      "checked_at": "2026-10-03T13:15:56-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-03T12:31:32-04:00",
+      "checked_at": "2026-10-03T13:15:47-04:00",
       "status": "partial",
       "rows": 374,
       "counties": {
@@ -2032,16 +2069,16 @@
     },
     "fsbo": {
       "label": "FSBO",
-      "checked_at": "2026-10-03T12:31:32-04:00",
+      "checked_at": "2026-10-03T13:15:47-04:00",
       "status": "not_connected",
       "rows": 0
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261003-123132",
-    "started_at": "2026-10-03T12:31:32-04:00",
+    "scan_id": "SCAN-20261003-131547",
+    "started_at": "2026-10-03T13:15:47-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.6.9-tax-probate-clarity-20261003",
+    "orchestrator_version": "3.7.0-tax-probate-county-scope-20261003",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -2052,17 +2089,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2685,
-    "after_filters": 1948,
-    "new": 3,
-    "updated": 5,
-    "unchanged": 1940,
+    "source_results": 2673,
+    "after_filters": 1937,
+    "new": 2,
+    "updated": 4,
+    "unchanged": 1931,
     "off_market_candidates": 0,
     "errors": [
       "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
-    "code_sha256": "58ec55c0afeb",
-    "github_sha": "d8c1363b0b9c60e54ce323309056fac355b23660",
+    "code_sha256": "74eb08e87668",
+    "github_sha": "221c894fc52cb86a31e1df39221dac020d84772d",
     "request_id": null,
     "counties": [
       "Allegheny",
@@ -2096,9 +2133,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
-        "rows": 2130,
+        "rows": 2127,
         "areas": [
           {
             "area": "Allegheny County",
@@ -2118,7 +2155,7 @@
           {
             "area": "Erie County",
             "status": "success",
-            "rows": 348,
+            "rows": 347,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -2139,7 +2176,7 @@
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 160,
+            "rows": 158,
             "coverage": "not_proven_complete",
             "limit_reached": false
           },
@@ -2159,11 +2196,11 @@
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 1401
+        "passed_filters": 1399
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -2326,7 +2363,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
         "rows": 374,
         "counties": {
@@ -2400,21 +2437,45 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "partial",
-        "rows": 173,
+        "rows": 164,
         "counties": {
+          "Berks": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lackawanna": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lancaster": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lehigh": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Northampton": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Philadelphia": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "tax_scan_limited_to_Allegheny_and_Erie"
+          },
           "Allegheny": {
             "status": "not_connected",
             "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Berks": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
+            "reason": "no_verified_bulk_tax_delinquency_feed",
+            "note": "יש פורטל רשומות נכס רשמי, אך עדיין אין פיד מרוכז מאומת לפיגורי מס. לא הומצאו נכסים או סכומי חוב."
           },
           "Erie": {
             "status": "success",
@@ -2425,42 +2486,9 @@
             "excluded_unavailable": true,
             "repository_minimum_bid": 250.0,
             "note": "Repository candidates only; availability must be confirmed with Erie County. The general minimum bid is shown only when read from the current official page."
-          },
-          "Lackawanna": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Lancaster": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Lehigh": {
-            "status": "success",
-            "rows": 9,
-            "sale_date": "2026-10-21",
-            "list_label": "Judicial Sale List as of 9-18-26",
-            "source_url": "https://www.lehighcountytaxclaim.com/images/Judicial_Sale_2026/2026_Judicial_Sale_List.pdf",
-            "ocr": true,
-            "note": "Opening bids only; OCR-derived fields require checking against the linked official PDF."
-          },
-          "Northampton": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
-          },
-          "Philadelphia": {
-            "status": "not_connected",
-            "rows": 0,
-            "reason": "no verified current tax feed connected for this county",
-            "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים."
           }
         },
-        "scope": "selected_counties_only",
+        "scope": "Allegheny_and_Erie_only",
         "manual_sources": [
           {
             "id": "allegheny_property_search",
@@ -2489,24 +2517,59 @@
             "label": "Erie — חיפוש נכס לפי כתובת/חלקה",
             "url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search.aspx",
             "status": "manual_link_only"
-          },
-          {
-            "id": "lehigh_tax_claim",
-            "county": "Lehigh",
-            "label": "Lehigh — Tax Claim וחיפוש נכסים",
-            "url": "https://www.lehighcountytaxclaim.com/",
-            "status": "manual_link_only"
           }
         ],
-        "note": "Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת.",
-        "passed_filters": 172
+        "note": "Erie Repository מציג מועמדויות לרשימת עודפים, עם מספר חלקה/מיקום וסטטוס; רף המינימום הכללי אינו החוב הפרטני ואינו מחיר הנכס. ב-Allegheny עדיין אין פיד מרוכז מאומת של פיגורי מס. אזורים אחרים מסומנים unsupported_area ולא נסרקים.",
+        "passed_filters": 163
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "not_connected",
         "rows": 0,
-        "scope": "selected_counties_only",
+        "scope": "Allegheny_and_Erie_only",
+        "counties": {
+          "Allegheny": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no_verified_automatic_probate_feed"
+          },
+          "Erie": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no_verified_automatic_probate_feed"
+          },
+          "Berks": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lackawanna": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lancaster": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Lehigh": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Northampton": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          },
+          "Philadelphia": {
+            "status": "unsupported_area",
+            "rows": 0,
+            "reason": "probate_scan_limited_to_Allegheny_and_Erie"
+          }
+        },
         "manual_sources": [
           {
             "id": "allegheny_probate_login",
@@ -2528,29 +2591,22 @@
             "label": "Erie — חיפוש Register of Wills / Orphans",
             "url": "https://courtpro.eriecountypa.gov/Row/v/search/case",
             "status": "manual_link_only"
-          },
-          {
-            "id": "lehigh_probate_search",
-            "county": "Lehigh",
-            "label": "Lehigh — Odyssey Public Access",
-            "url": "https://publicaccess.lehighcounty.org/Search.aspx",
-            "status": "manual_link_only"
           }
         ],
         "reason": "no_verified_live_probate_feed",
-        "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
+        "note": "היקף הסריקה מוגבל ל-Allegheny ו-Erie. עדיין אין חיבור אוטומטי מאומת לרישומי Probate במחוזות אלה; לא נסרקו תיקים ולא נוצרו נכסים. הקישורים המצורפים מיועדים לבדיקה ידנית.",
         "passed_filters": 0
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-03T12:31:32-04:00",
+        "checked_at": "2026-10-03T13:15:47-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-03T12:31:52-04:00",
+        "checked_at": "2026-10-03T13:15:56-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -2627,9 +2683,9 @@
         "rows": 350,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Pittsburgh": 191,
+          "West Mifflin": 13,
+          "Pittsburgh": 190,
           "Brackenridge": 1,
-          "West Mifflin": 12,
           "Monroeville": 15,
           "Mc Kees Rocks": 10,
           "Cheswick": 3,
@@ -2677,9 +2733,9 @@
           "Wilkinsburg": 1
         },
         "source_locations": {
+          "West Mifflin": 13,
           "Brookline": 9,
           "Brackenridge": 1,
-          "West Mifflin": 12,
           "Monroeville": 15,
           "North Oakland": 1,
           "McKees Rocks": 7,
@@ -2763,7 +2819,7 @@
           "Hazelwood": 5,
           "Braddock Hills": 1,
           "Reserve": 1,
-          "Lincoln Place": 3,
+          "Lincoln Place": 2,
           "East Liberty": 1,
           "Point Breeze": 2,
           "Lincoln-Larimer": 3,
@@ -2927,10 +2983,10 @@
       },
       "Erie County": {
         "region_type": "5",
-        "rows": 348,
+        "rows": 347,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Erie": 224,
+          "Erie": 223,
           "North East": 27,
           "Waterford": 6,
           "Albion": 9,
@@ -2980,7 +3036,6 @@
           "Lakecliff": 1,
           "Fairview": 5,
           "Waterford": 6,
-          "Country Club Estate": 1,
           "Lawrence Park": 1,
           "Erie City": 3,
           "Countryside": 2,
@@ -3279,10 +3334,10 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 160,
+        "rows": 158,
         "city_mismatch_count": 0,
         "actual_cities": {
-          "Allentown": 87,
+          "Allentown": 85,
           "Trexlertown": 3,
           "Whitehall": 7,
           "Center Valley": 2,
@@ -3306,7 +3361,7 @@
           "Jordan Park": 1,
           "Mayo Mhp": 3,
           "Whitehall Twp": 6,
-          "Allentown City": 56,
+          "Allentown City": 54,
           "Allentown": 4,
           "Red Maple Acres Mhp": 2,
           "Old Frgrnds Historic": 3,
@@ -3466,6 +3521,7 @@
           "Philadelphia": 56,
           "BREWERYTOWN": 6,
           "MILL CREEK": 7,
+          "WYNNEFIELD": 3,
           "PASCHALL": 1,
           "ROXBOROUGH": 2,
           "HOLMESBURG": 4,
@@ -3488,7 +3544,6 @@
           "GERMANTOWN (EAST)": 5,
           "BURHOLME": 1,
           "ELMWOOD PARK": 5,
-          "WYNNEFIELD": 2,
           "SHARSWOOD": 2,
           "PHILADELPHIA (NORTH)": 7,
           "OGONTZ": 2,
@@ -3508,7 +3563,7 @@
           "STRAWBERRY MANSION": 8,
           "PHILADELPHIA (SOUTHWEST)": 7,
           "TACONY": 5,
-          "HADDINGTON": 5,
+          "HADDINGTON": 4,
           "PHILADELPHIA": 6,
           "NORRIS SQUARE": 2,
           "BRIDESBURG": 3,
@@ -3546,37 +3601,37 @@
         }
       }
     },
-    "raw_mls_seen": 2126,
+    "raw_mls_seen": 2123,
     "duplicates_removed": 7,
     "filter_rejections": {
       "price": 1,
       "sqft": 0,
       "beds": 465,
       "baths": 5,
-      "property_type": 158,
+      "property_type": 157,
       "property_type_unknown": 101,
       "city_mismatch": 0,
       "location": 0
     },
     "source_property_type_counts": {
       "Single Family Residential": 858,
-      "Condo/Co-op": 71,
+      "Condo/Co-op": 70,
       "Multi-Family (2-4 Unit)": 110,
-      "Townhouse": 569,
+      "Townhouse": 567,
       "Vacant Land": 415,
       "Mobile/Manufactured Home": 86,
       "Parking": 2,
       "Unknown": 19,
       "Multi-Family (5+ Unit)": 1,
-      "UNKNOWN": 551,
+      "UNKNOWN": 542,
       "Single-Family": 2,
       "Townhome": 1
     },
     "source_passed_filters": {
-      "mls": 1401,
+      "mls": 1399,
       "reo": 6,
       "sheriff": 369,
-      "tax": 172,
+      "tax": 163,
       "06_probate_estates": 0,
       "fsbo": 0
     },
@@ -3584,8 +3639,8 @@
       "Erie": 203,
       "Scranton": 118,
       "Reading": 89,
-      "Allentown City": 56,
       "Philadelphia": 56,
+      "Allentown City": 54,
       "Lancaster": 27,
       "READING": 27,
       "Carbondale": 26,
@@ -3596,10 +3651,10 @@
       "Bethlehem City": 16,
       "Monroeville": 15,
       "Archbald": 13,
+      "West Mifflin": 13,
       "Eagle Lake": 12,
       "Easton": 12,
       "FRANKFORD": 12,
-      "West Mifflin": 12,
       "Birdsboro": 11,
       "Edinboro": 11,
       "Kutztown": 10,
@@ -3608,10 +3663,10 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 1,
-    "price_drop_properties": 1,
-    "total_properties": 4436,
-    "finished_at": "2026-10-03T12:31:53-04:00"
+    "price_drop_events": 0,
+    "price_drop_properties": 0,
+    "total_properties": 4438,
+    "finished_at": "2026-10-03T13:15:56-04:00"
   },
   "sheriff": {
     "status": "עודכן",
