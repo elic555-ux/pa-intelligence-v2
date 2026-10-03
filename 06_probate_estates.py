@@ -63,8 +63,8 @@ def run_probate_miner():
                 elif source_type == 'reo':
                     prop['deal_type'] = 'Bank REO'
                 
-                # מחיקת טקסט ה-AI שנוסף בטעות
-                if 'ai_summary' in prop:
+                # מחיקת טקסט ה-AI שנוסף בטעות - רק אם קיים טקסט חוקי (בדיקה בטוחה)
+                if isinstance(prop.get('ai_summary'), str):
                     prop['ai_summary'] = prop['ai_summary'].replace("🔥 **מודיעין AI:** הנכס זוהה בוודאות כעיזבון/נכס ליורשים/FSBO. המוכרים לרוב מחפשים נזילות מהירה, יש כאן פוטנציאל גבוה ל-Lowball Offer (הצעה מתחת למחיר שוק). ", "")
                 fixed_count += 1
             continue # דילוג! לא מבצעים חיפוש מילות מפתח על נכסי שריף/מס
@@ -102,7 +102,10 @@ def run_probate_miner():
 
                 prop['strategy'] = 'value_add'
 
+                # הבטחה שהערך קיים כמחרוזת לפני שרשור
                 existing_ai_summary = prop.get('ai_summary', '')
+                if not isinstance(existing_ai_summary, str):
+                    existing_ai_summary = ''
                 prop['ai_summary'] = f"🔥 **מודיעין AI:** הנכס זוהה בוודאות כעיזבון/נכס ליורשים/FSBO. המוכרים לרוב מחפשים נזילות מהירה, יש כאן פוטנציאל גבוה ל-Lowball Offer (הצעה מתחת למחיר שוק). {existing_ai_summary}"
 
                 probate_count += 1
