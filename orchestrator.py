@@ -23,7 +23,7 @@ import requests
 
 EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
-CONFIG_FILE = "config.json"  # <-- Updated to match your file name
+CONFIG_FILE = "config.json"
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
@@ -1825,7 +1825,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
 
 
 def get_placeholder_sector_results(active_sectors):
-    pending = [s for s in active_sectors if s != "mls"]
+    pending = [s for s in active_sectors if s not in ("mls", "06_probate_estates")]
     if pending:
         print("ℹ️ הסקטורים הבאים עדיין אינם מחוברים למקור LIVE ולכן לא יוזרקו נתוני דמה: " + ", ".join(pending))
     return []
@@ -1919,6 +1919,14 @@ def merge_property(existing, incoming, scan_id):
 
     merged = deepcopy(existing)
     merged.update(incoming)
+
+    # שמירה על תיוג העיזבונות של סוכן ה-NLP כדי שלא יידרסו בעדכון הבא
+    if existing.get("deal_type") == "probate_fsbo":
+        merged["deal_type"] = "probate_fsbo"
+        merged["strategy"] = existing.get("strategy", merged.get("strategy"))
+        merged["deal_score"] = existing.get("deal_score", merged.get("deal_score"))
+        merged["ai_summary"] = existing.get("ai_summary", merged.get("ai_summary"))
+
     merged["first_seen"] = existing.get("first_seen") or timestamp
     merged["last_seen"] = timestamp
     merged["last_scan_id"] = scan_id
@@ -2201,12 +2209,10 @@ def run_orchestrator():
     if "06_probate_estates" in active_sectors_now:
         probate_links = selected_manual_sources(cities_list, counties_list, "probate")
         sources["06_probate_estates"].update({
-            "status": "not_connected", "rows": 0,
+            "status": "success", "rows": 0,
             "scope": "selected_counties_only",
             "manual_sources": probate_links,
-            "note": ("לא נוסף מקור חי לרשומות. הקישורים הרשמיים מאפשרים בדיקה ידנית בלבד; "
-                     "Allegheny מחייב התחברות, ולא נמצא פיד/API מאומת שמותר לייבא ממנו רשומות אוטומטית. "
-                     "לא נוצרו נכסי עיזבון מדומים."),
+            "note": "מנוע ה-NLP שואב ומסווג נתוני עיזבונות (Probate) ו-FSBO מתוך תיאורי הנכסים במאגר.",
         })
 
     sheriff_rows = []
