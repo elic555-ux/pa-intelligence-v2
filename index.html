@@ -1648,6 +1648,7 @@
                                 <div class="font-black text-white text-sm truncate" title="${escapeHtml(p.address)}">${escapeHtml(p.address)}</div>
                             </div>
                             <div class="text-[11px] text-gray-400 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</div>
+                            ${p.probate_keyword_candidate ? `<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">🧾 מועמד עיזבון לפי תיאור MLS · לבדיקה</span>` : ''}
                             ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
                         </td>
@@ -1673,6 +1674,7 @@
                                 ${isV && activeCategory !== 'archive' ? '<span class="bg-gray-950/80 text-gray-400 text-[10px] px-1.5 py-1 rounded-md border border-gray-800 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> נצפה</span>' : ''}
                                 ${isH && !p.price_dropped ? `<span class="bg-amber-600/90 text-gray-950 font-black text-xs px-2 py-1 rounded-md">🔥 ציון ${p.deal_score}</span>` : ''}
                                 ${p.price_dropped ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px] px-2 py-1 rounded-md">📉 ירד מחיר!</span>` : ''}
+                                ${p.probate_keyword_candidate ? `<span class="bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-black text-[10px] px-2 py-1 rounded-md">🧾 מועמד עיזבון</span>` : ''}
                             </div>
 
                             <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
@@ -1726,7 +1728,9 @@
             document.getElementById('modal-rent').textContent = p.projected_rent||'-';
             document.getElementById('modal-yield').textContent = p.gross_yield||'-';
             document.getElementById('modal-rehab').textContent = p.rehab_scope||'-';
-            document.getElementById('modal-summary').textContent = p.summary || p.description || 'אין תיאור נוסף';
+            document.getElementById('modal-summary').textContent = p.probate_keyword_candidate && p.source_listing_description
+                ? `${p.summary || ''}\n\nתיאור המקור (קטע): ${p.source_listing_description}`
+                : (p.summary || p.description || 'אין תיאור נוסף');
             document.getElementById('modal-occupancy').textContent = p.occupancy||'לא ידוע';
             document.getElementById('modal-roof').textContent = p.roof_condition||'לא ידוע';
             document.getElementById('modal-hvac').textContent = p.hvac_type||'לא ידוע';
