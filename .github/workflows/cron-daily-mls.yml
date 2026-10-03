@@ -43,6 +43,10 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           SHERIFF_PDF_URL: ${{ vars.SHERIFF_PDF_URL }}
         run: python orchestrator.py
+        
+      - name: Run Probate & FSBO Miner
+        run: python 06_probate_estates.py
+        
       - name: Analyze changed MLS properties
         if: steps.scanner.outputs.analyze == 'true'
         run: python analyzer.py
