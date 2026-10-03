@@ -29,8 +29,9 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.6.9-tax-probate-clarity-20261003"
+ORCHESTRATOR_VERSION = "3.7.0-tax-probate-county-scope-20261003"
 SCANNER_STATUS_FILE = "scanner_status.json"
+TAX_PROBATE_SUPPORTED_COUNTIES = {"Allegheny", "Erie"}
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
 
@@ -82,6 +83,18 @@ def selected_counties_from_config(cities, counties):
     return selected
 
 
+def requested_counties_from_config(cities, counties):
+    """Return requested county names, preserving unknown explicit selections for audit."""
+    requested = set(selected_counties_from_config(cities, counties))
+    known = {name.casefold(): name for name in PA_COUNTIES}
+    for value in counties or []:
+        raw = re.sub(r"\s+County$", "", str(value or "").strip(), flags=re.I).strip()
+        if not raw:
+            continue
+        requested.add(known.get(raw.casefold(), raw))
+    return requested
+
+
 def selected_manual_sources(cities, counties, source_kind):
     selected = selected_counties_from_config(cities, counties)
     sources = []
@@ -95,9 +108,6 @@ def selected_manual_sources(cities, counties, source_kind):
                 ("erie_tax_sales", "Erie — רשימות מכירות חוב מס", ERIE_TAX_SALE_PAGE),
                 ("erie_property_search", "Erie — חיפוש נכס לפי כתובת/חלקה", ERIE_PROPERTY_SEARCH_URL),
             ],
-            "Lehigh": [
-                ("lehigh_tax_claim", "Lehigh — Tax Claim וחיפוש נכסים", LEHIGH_TAX_SALE_PAGE),
-            ],
         }
     elif source_kind == "probate":
         definitions = {
@@ -108,14 +118,11 @@ def selected_manual_sources(cities, counties, source_kind):
             "Erie": [
                 ("erie_probate_search", "Erie — חיפוש Register of Wills / Orphans", ERIE_PROBATE_URL),
             ],
-            "Lehigh": [
-                ("lehigh_probate_search", "Lehigh — Odyssey Public Access", LEHIGH_PROBATE_URL),
-            ],
         }
     else:
         return sources
 
-    for county in ("Allegheny", "Erie", "Lehigh"):
+    for county in ("Allegheny", "Erie"):
         if county not in selected:
             continue
         for source_id, label, url in definitions.get(county, []):
@@ -2269,13 +2276,31 @@ def run_orchestrator():
     sources.setdefault("tax", {"label": SOURCE_LABELS["tax"], "status": "not_connected", "rows": 0})
     sources.setdefault("06_probate_estates", {"label": SOURCE_LABELS["06_probate_estates"], "status": "not_connected", "rows": 0})
     if "06_probate_estates" in active_sectors_now:
+        requested_probate_counties = requested_counties_from_config(cities_list, counties_list)
+        supported_probate_counties = requested_probate_counties & TAX_PROBATE_SUPPORTED_COUNTIES
+        unsupported_probate_counties = sorted(requested_probate_counties - TAX_PROBATE_SUPPORTED_COUNTIES)
         probate_links = selected_manual_sources(cities_list, counties_list, "probate")
+        if not requested_probate_counties:
+            probate_status = "no_area_selected"
+        elif supported_probate_counties:
+            probate_status = "not_connected"
+        else:
+            probate_status = "unsupported_area"
         sources["06_probate_estates"].update({
-            "status": "not_connected", "rows": 0,
-            "scope": "selected_counties_only",
+            "status": probate_status, "rows": 0,
+            "scope": "Allegheny_and_Erie_only",
+            "counties": {
+                county: {"status": "not_connected", "rows": 0,
+                         "reason": "no_verified_automatic_probate_feed"}
+                for county in sorted(supported_probate_counties)
+            } | {
+                county: {"status": "unsupported_area", "rows": 0,
+                         "reason": "probate_scan_limited_to_Allegheny_and_Erie"}
+                for county in unsupported_probate_counties
+            },
             "manual_sources": probate_links,
             "reason": "no_verified_live_probate_feed",
-            "note": "אין כרגע חיבור אוטומטי מאומת לרישומי Probate. לא נסרקו תיקים ולא נוצרו נכסים; הקישורים המצורפים מיועדים לבדיקה ידנית במקורות המחוז.",
+            "note": "היקף הסריקה מוגבל ל-Allegheny ו-Erie. עדיין אין חיבור אוטומטי מאומת לרישומי Probate במחוזות אלה; לא נסרקו תיקים ולא נוצרו נכסים. הקישורים המצורפים מיועדים לבדיקה ידנית.",
         })
 
     sheriff_rows = []
@@ -2380,30 +2405,27 @@ def run_orchestrator():
 
     tax_rows = []
     if "tax" in active_sectors_now:
-        requested_tax_counties = {str(name).strip().removesuffix(" County").casefold()
-                                  for name in counties_list if str(name).strip()}
-        requested_tax_counties.update(str(CITY_COUNTY.get(str(area).strip(), "")).strip().casefold()
-                                        for area in cities_list if CITY_COUNTY.get(str(area).strip()))
-        county_names = {"allegheny": "Allegheny", "erie": "Erie", "lehigh": "Lehigh"}
+        requested_tax_counties = requested_counties_from_config(cities_list, counties_list)
+        supported_tax_counties = requested_tax_counties & TAX_PROBATE_SUPPORTED_COUNTIES
+        unsupported_tax_counties = requested_tax_counties - TAX_PROBATE_SUPPORTED_COUNTIES
         county_audits = {}
-        for county_key in sorted(requested_tax_counties):
-            county_name = county_names.get(county_key, county_key.title())
+        for county_name in sorted(unsupported_tax_counties):
+            county_audits[county_name] = {
+                "status": "unsupported_area", "rows": 0,
+                "reason": "tax_scan_limited_to_Allegheny_and_Erie",
+            }
+        for county_name in sorted(supported_tax_counties):
             try:
-                if county_key == "erie":
+                if county_name == "Erie":
                     county_rows, tax_audit = fetch_erie_repository_list()
                     tax_rows.extend(county_rows)
                     county_audits[county_name] = {**tax_audit, "rows": len(county_rows)}
                     print(f"🧾 Erie Repository: {len(county_rows)} רשומות מועמדות; מקור רשמי: {tax_audit.get('source_url')}")
-                elif county_key == "lehigh":
-                    county_rows, tax_audit = fetch_lehigh_judicial_tax_list()
-                    tax_rows.extend(county_rows)
-                    county_audits[county_name] = {**tax_audit, "rows": len(county_rows)}
-                    print(f"🧾 Lehigh Judicial Sale: {len(county_rows)} רשומות מועמדות; sale date {tax_audit.get('sale_date')}")
                 else:
                     county_audits[county_name] = {
                         "status": "not_connected", "rows": 0,
-                        "reason": "no verified current tax feed connected for this county",
-                        "note": "מוצג קישור רשמי לבדיקה ידנית; לא הומצאו נכסים או סכומים.",
+                        "reason": "no_verified_bulk_tax_delinquency_feed",
+                        "note": "יש פורטל רשומות נכס רשמי, אך עדיין אין פיד מרוכז מאומת לפיגורי מס. לא הומצאו נכסים או סכומי חוב.",
                     }
             except (requests.RequestException, OSError, ValueError, subprocess.SubprocessError) as exc:
                 response = getattr(exc, "response", None)
@@ -2413,21 +2435,25 @@ def run_orchestrator():
                 print(f"⚠️ מקור חובות המס במחוז {county_name} לא עודכן: {exc}")
 
         county_statuses = [item.get("status", "success") for item in county_audits.values()]
-        connected_statuses = [status for status in county_statuses if status != "not_connected"]
-        if not county_audits or not connected_statuses:
-            tax_status = "not_connected"
-        elif all(status == "success" for status in county_statuses):
+        supported_statuses = [county_audits[county].get("status") for county in supported_tax_counties]
+        if not requested_tax_counties:
+            tax_status = "no_area_selected"
+        elif not supported_tax_counties:
+            tax_status = "unsupported_area"
+        elif all(status == "success" for status in supported_statuses) and not unsupported_tax_counties:
             tax_status = "success"
-        elif any(status in ("success", "partial") for status in county_statuses):
+        elif any(status in ("success", "partial") for status in supported_statuses):
             tax_status = "partial"
+        elif all(status == "not_connected" for status in supported_statuses):
+            tax_status = "not_connected"
         else:
             tax_status = "failed"
         sources["tax"].update({
             "status": tax_status, "rows": len(tax_rows), "counties": county_audits,
-            "scope": "selected_counties_only",
+            "scope": "Allegheny_and_Erie_only",
             "manual_sources": selected_manual_sources(cities_list, counties_list, "tax"),
-            "note": ("Erie Repository מציג חלקות מועמדות ורף מינימום כללי, לא מחיר נכס; "
-                     "Lehigh Judicial מציג הצעת פתיחה מהמסמך. Allegheny עדיין ללא פיד חוב מס מאומת."),
+            "note": ("Erie Repository מציג מועמדויות לרשימת עודפים, עם מספר חלקה/מיקום וסטטוס; רף המינימום הכללי אינו החוב הפרטני ואינו מחיר הנכס. "
+                     "ב-Allegheny עדיין אין פיד מרוכז מאומת של פיגורי מס. אזורים אחרים מסומנים unsupported_area ולא נסרקים."),
         })
 
     reo_rows = []
