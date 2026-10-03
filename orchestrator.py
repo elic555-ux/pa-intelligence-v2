@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.0-erie-parcel-profile-tax-sheriff-20261003"
+ORCHESTRATOR_VERSION = "3.8.1-erie-profile-null-baths-guard-20261003"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -375,7 +375,7 @@ def parse_erie_parcel_profile(html_text, requested_parcel_id):
     full_baths = _profile_number(parser.rows.get("full baths"))
     half_baths = _profile_number(parser.rows.get("half baths"))
     baths = (full_baths or 0) + (half_baths or 0) * 0.5
-    if not baths:
+    if baths is None or baths <= 0:
         baths = _profile_number(parser.rows.get("bathrooms"))
 
     acreage = _profile_number(parser.rows.get("acreage"))
@@ -383,7 +383,7 @@ def parse_erie_parcel_profile(html_text, requested_parcel_id):
         "address": address,
         "sqft": sqft if sqft and sqft > 0 else None,
         "beds": beds if beds and beds > 0 else None,
-        "baths": baths if baths > 0 else None,
+        "baths": baths if baths is not None and baths > 0 else None,
         "total_rooms": _profile_number(parser.rows.get("total rooms"), integer=True),
         "year_built": _profile_number(parser.rows.get("year built"), integer=True),
         "lot_size": f"{acreage:g} acres" if acreage and acreage > 0 else None,
@@ -494,7 +494,7 @@ def enrich_erie_repository_rows(rows, profile_cache=None):
         try:
             geo_data = fetch_erie_parcel_geo(geo_needed)
             geo_status = "success" if geo_data else "partial"
-        except (requests.RequestException, ValueError) as exc:
+        except Exception as exc:
             geo_status = "failed"
             print(f"⚠️ Erie GIS לא החזיר יישובים: {exc}")
 
@@ -506,7 +506,7 @@ def enrich_erie_repository_rows(rows, profile_cache=None):
         def _fetch_one(parcel):
             try:
                 return fetch_erie_parcel_profile(parcel)
-            except (requests.RequestException, ValueError) as exc:
+            except Exception as exc:
                 return {"status": "failed", "data": {}, "error": str(exc)[:300]}
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
