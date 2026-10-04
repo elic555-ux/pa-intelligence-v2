@@ -1,10 +1,10 @@
 {
-  "version": "3.8.2-erie-tax-field-audit-20261004",
+  "version": "3.8.3-erie-mls-unique-address-enrichment-20261004",
   "last_event": {
-    "scan_id": "SCAN-20261004-120148",
-    "started_at": "2026-10-04T12:01:48-04:00",
+    "scan_id": "SCAN-20261004-124850",
+    "started_at": "2026-10-04T12:48:50-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.8.2-erie-tax-field-audit-20261004",
+    "orchestrator_version": "3.8.3-erie-mls-unique-address-enrichment-20261004",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -15,17 +15,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2670,
+    "source_results": 2671,
     "after_filters": 1534,
-    "new": 16,
-    "updated": 1342,
-    "unchanged": 176,
+    "new": 0,
+    "updated": 4,
+    "unchanged": 1530,
     "off_market_candidates": 0,
     "errors": [
       "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
-    "code_sha256": "304f4345ca20",
-    "github_sha": "b01e245457791d0b2aaa9b06897bf9fcd645ecce",
+    "code_sha256": "41c8230d8bc6",
+    "github_sha": "55ef781a85a6e34f23201d8dbc8aa3894d14b244",
     "request_id": null,
     "out_of_scope_tax_records_removed": 0,
     "out_of_scope_probate_labels_cleared": 0,
@@ -62,9 +62,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
-        "rows": 2124,
+        "rows": 2125,
         "areas": [
           {
             "area": "Allegheny County",
@@ -140,7 +140,7 @@
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 158,
+            "rows": 159,
             "coverage": "not_proven_complete",
             "remarks_fields_available": [],
             "remarks_search_status": "remarks_field_unavailable",
@@ -184,11 +184,11 @@
         "probate_keyword_candidates": 0,
         "remarks_search_status": "remarks_field_unavailable",
         "passed_filters": 1355,
-        "minimum_data_rejected": 489
+        "minimum_data_rejected": 490
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -352,7 +352,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
         "rows": 374,
         "counties": {
@@ -428,7 +428,7 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
         "rows": 164,
         "counties": {
@@ -483,6 +483,25 @@
               "gis_status": "success",
               "gis_matches": 6,
               "source_url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search/parcel-profile/print-view.aspx"
+            },
+            "mls_cross_source_enrichment": {
+              "status": "completed",
+              "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+              "price_copied": false,
+              "tax_candidates": 164,
+              "complete_before_match": 1,
+              "missing_required_data_candidates": 163,
+              "eligible_complete_erie_mls_rows": 255,
+              "unique_matches": 0,
+              "ambiguous_matches": 0,
+              "no_exact_match": 5,
+              "missing_address": 0,
+              "missing_municipality": 158,
+              "property_type_conflicts": 0,
+              "beds_filled": 0,
+              "sqft_filled": 0,
+              "passed_required_gate_after_match": 1,
+              "rejected_details_stored": 0
             }
           }
         },
@@ -539,14 +558,33 @@
             "status": "manual_link_only"
           }
         ],
-        "note": "המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. רשומות חסרות פרטי נכס לא נשמרות.",
+        "note": "המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. רשומות חסרות פרטי נכס לא נשמרות. הצלבת MLS מדויקת ל-Erie: 0 התאמות יחידות; 0 עמומות; 5 ללא התאמה. הושלמו רק שטח וחדרי שינה, בלי העתקת מחיר.",
+        "erie_mls_cross_source_enrichment": {
+          "status": "completed",
+          "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+          "price_copied": false,
+          "tax_candidates": 164,
+          "complete_before_match": 1,
+          "missing_required_data_candidates": 163,
+          "eligible_complete_erie_mls_rows": 255,
+          "unique_matches": 0,
+          "ambiguous_matches": 0,
+          "no_exact_match": 5,
+          "missing_address": 0,
+          "missing_municipality": 158,
+          "property_type_conflicts": 0,
+          "beds_filled": 0,
+          "sqft_filled": 0,
+          "passed_required_gate_after_match": 1,
+          "rejected_details_stored": 0
+        },
         "passed_filters": 1,
         "minimum_data_rejected": 163,
         "status_detail": "המקור החזיר 164 מועמדים; 163 נפסלו כי חסרו כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "not_connected",
         "rows": 0,
         "scope": "Allegheny_and_Erie_only",
@@ -588,14 +626,14 @@
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-04T12:02:04-04:00",
+        "checked_at": "2026-10-04T12:49:03-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -1318,7 +1356,7 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 158,
+        "rows": 159,
         "city_mismatch_count": 0,
         "actual_cities": {
           "Allentown": 85,
@@ -1335,7 +1373,7 @@
           "Catasauqua": 4,
           "Orefield": 6,
           "Coopersburg": 4,
-          "Germansville": 2,
+          "Germansville": 3,
           "New Tripoli": 2,
           "Coplay": 2,
           "Alburtis": 1,
@@ -1376,7 +1414,7 @@
           "Coopersburg": 1,
           "Catasauqua Boro": 3,
           "RED MAPLE ACRES MHP": 1,
-          "Heidelberg Twp": 1,
+          "Heidelberg Twp": 2,
           "Fountain": 1,
           "Upper Macungie Twp": 1,
           "South Whitehall Twp": 1,
@@ -1583,7 +1621,26 @@
         }
       }
     },
-    "raw_mls_seen": 2120,
+    "erie_tax_mls_cross_source_enrichment": {
+      "status": "completed",
+      "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+      "price_copied": false,
+      "tax_candidates": 164,
+      "complete_before_match": 1,
+      "missing_required_data_candidates": 163,
+      "eligible_complete_erie_mls_rows": 255,
+      "unique_matches": 0,
+      "ambiguous_matches": 0,
+      "no_exact_match": 5,
+      "missing_address": 0,
+      "missing_municipality": 158,
+      "property_type_conflicts": 0,
+      "beds_filled": 0,
+      "sqft_filled": 0,
+      "passed_required_gate_after_match": 1,
+      "rejected_details_stored": 0
+    },
+    "raw_mls_seen": 2121,
     "duplicates_removed": 2,
     "filter_rejections": {
       "price": 0,
@@ -1594,14 +1651,14 @@
       "property_type_unknown": 100,
       "city_mismatch": 0,
       "location": 0,
-      "incomplete_required_data": 854
+      "incomplete_required_data": 855
     },
     "required_data_rejections_by_field": {
-      "sqft": 783,
-      "beds": 777
+      "sqft": 784,
+      "beds": 778
     },
     "required_data_rejections_by_source": {
-      "mls": 489,
+      "mls": 490,
       "sheriff": 198,
       "tax": 163,
       "reo": 4
@@ -1654,18 +1711,18 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 5,
-    "price_drop_properties": 5,
+    "price_drop_events": 0,
+    "price_drop_properties": 0,
     "persistence_guard_removed": 0,
     "total_properties": 3691,
-    "finished_at": "2026-10-04T12:02:04-04:00"
+    "finished_at": "2026-10-04T12:49:04-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-04T12:01:48-04:00",
+      "checked_at": "2026-10-04T12:48:50-04:00",
       "status": "partial",
-      "rows": 2124,
+      "rows": 2125,
       "areas": [
         {
           "area": "Allegheny County",
@@ -1741,7 +1798,7 @@
         {
           "area": "Lehigh County",
           "status": "success",
-          "rows": 158,
+          "rows": 159,
           "coverage": "not_proven_complete",
           "remarks_fields_available": [],
           "remarks_search_status": "remarks_field_unavailable",
@@ -1785,11 +1842,11 @@
       "probate_keyword_candidates": 0,
       "remarks_search_status": "remarks_field_unavailable",
       "passed_filters": 1355,
-      "minimum_data_rejected": 489
+      "minimum_data_rejected": 490
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-04T12:01:48-04:00",
+      "checked_at": "2026-10-04T12:48:50-04:00",
       "status": "partial",
       "rows": 8,
       "providers": {
@@ -1953,7 +2010,7 @@
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-04T12:01:48-04:00",
+      "checked_at": "2026-10-04T12:48:50-04:00",
       "status": "partial",
       "rows": 164,
       "counties": {
@@ -2008,6 +2065,25 @@
             "gis_status": "success",
             "gis_matches": 6,
             "source_url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search/parcel-profile/print-view.aspx"
+          },
+          "mls_cross_source_enrichment": {
+            "status": "completed",
+            "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+            "price_copied": false,
+            "tax_candidates": 164,
+            "complete_before_match": 1,
+            "missing_required_data_candidates": 163,
+            "eligible_complete_erie_mls_rows": 255,
+            "unique_matches": 0,
+            "ambiguous_matches": 0,
+            "no_exact_match": 5,
+            "missing_address": 0,
+            "missing_municipality": 158,
+            "property_type_conflicts": 0,
+            "beds_filled": 0,
+            "sqft_filled": 0,
+            "passed_required_gate_after_match": 1,
+            "rejected_details_stored": 0
           }
         }
       },
@@ -2064,14 +2140,33 @@
           "status": "manual_link_only"
         }
       ],
-      "note": "המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. רשומות חסרות פרטי נכס לא נשמרות.",
+      "note": "המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. רשומות חסרות פרטי נכס לא נשמרות. הצלבת MLS מדויקת ל-Erie: 0 התאמות יחידות; 0 עמומות; 5 ללא התאמה. הושלמו רק שטח וחדרי שינה, בלי העתקת מחיר.",
+      "erie_mls_cross_source_enrichment": {
+        "status": "completed",
+        "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+        "price_copied": false,
+        "tax_candidates": 164,
+        "complete_before_match": 1,
+        "missing_required_data_candidates": 163,
+        "eligible_complete_erie_mls_rows": 255,
+        "unique_matches": 0,
+        "ambiguous_matches": 0,
+        "no_exact_match": 5,
+        "missing_address": 0,
+        "missing_municipality": 158,
+        "property_type_conflicts": 0,
+        "beds_filled": 0,
+        "sqft_filled": 0,
+        "passed_required_gate_after_match": 1,
+        "rejected_details_stored": 0
+      },
       "passed_filters": 1,
       "minimum_data_rejected": 163,
       "status_detail": "המקור החזיר 164 מועמדים; 163 נפסלו כי חסרו כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
     },
     "06_probate_estates": {
       "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-04T12:01:48-04:00",
+      "checked_at": "2026-10-04T12:48:50-04:00",
       "status": "not_connected",
       "rows": 0,
       "scope": "Allegheny_and_Erie_only",
@@ -2114,12 +2209,12 @@
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-04T12:02:04-04:00",
+      "checked_at": "2026-10-04T12:49:03-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-04T12:01:48-04:00",
+      "checked_at": "2026-10-04T12:48:50-04:00",
       "status": "partial",
       "rows": 374,
       "counties": {
@@ -2195,16 +2290,16 @@
     },
     "fsbo": {
       "label": "FSBO",
-      "checked_at": "2026-10-04T12:01:48-04:00",
+      "checked_at": "2026-10-04T12:48:50-04:00",
       "status": "not_connected",
       "rows": 0
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261004-120148",
-    "started_at": "2026-10-04T12:01:48-04:00",
+    "scan_id": "SCAN-20261004-124850",
+    "started_at": "2026-10-04T12:48:50-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.8.2-erie-tax-field-audit-20261004",
+    "orchestrator_version": "3.8.3-erie-mls-unique-address-enrichment-20261004",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -2215,17 +2310,17 @@
       "fsbo"
     ],
     "cities": [],
-    "source_results": 2670,
+    "source_results": 2671,
     "after_filters": 1534,
-    "new": 16,
-    "updated": 1342,
-    "unchanged": 176,
+    "new": 0,
+    "updated": 4,
+    "unchanged": 1530,
     "off_market_candidates": 0,
     "errors": [
       "MLS Allegheny County: Redfin result cap reached (350); coverage may be incomplete"
     ],
-    "code_sha256": "304f4345ca20",
-    "github_sha": "b01e245457791d0b2aaa9b06897bf9fcd645ecce",
+    "code_sha256": "41c8230d8bc6",
+    "github_sha": "55ef781a85a6e34f23201d8dbc8aa3894d14b244",
     "request_id": null,
     "out_of_scope_tax_records_removed": 0,
     "out_of_scope_probate_labels_cleared": 0,
@@ -2262,9 +2357,9 @@
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
-        "rows": 2124,
+        "rows": 2125,
         "areas": [
           {
             "area": "Allegheny County",
@@ -2340,7 +2435,7 @@
           {
             "area": "Lehigh County",
             "status": "success",
-            "rows": 158,
+            "rows": 159,
             "coverage": "not_proven_complete",
             "remarks_fields_available": [],
             "remarks_search_status": "remarks_field_unavailable",
@@ -2384,11 +2479,11 @@
         "probate_keyword_candidates": 0,
         "remarks_search_status": "remarks_field_unavailable",
         "passed_filters": 1355,
-        "minimum_data_rejected": 489
+        "minimum_data_rejected": 490
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
         "rows": 8,
         "providers": {
@@ -2552,7 +2647,7 @@
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
         "rows": 374,
         "counties": {
@@ -2628,7 +2723,7 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "partial",
         "rows": 164,
         "counties": {
@@ -2683,6 +2778,25 @@
               "gis_status": "success",
               "gis_matches": 6,
               "source_url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search/parcel-profile/print-view.aspx"
+            },
+            "mls_cross_source_enrichment": {
+              "status": "completed",
+              "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+              "price_copied": false,
+              "tax_candidates": 164,
+              "complete_before_match": 1,
+              "missing_required_data_candidates": 163,
+              "eligible_complete_erie_mls_rows": 255,
+              "unique_matches": 0,
+              "ambiguous_matches": 0,
+              "no_exact_match": 5,
+              "missing_address": 0,
+              "missing_municipality": 158,
+              "property_type_conflicts": 0,
+              "beds_filled": 0,
+              "sqft_filled": 0,
+              "passed_required_gate_after_match": 1,
+              "rejected_details_stored": 0
             }
           }
         },
@@ -2739,14 +2853,33 @@
             "status": "manual_link_only"
           }
         ],
-        "note": "המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. רשומות חסרות פרטי נכס לא נשמרות.",
+        "note": "המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. רשומות חסרות פרטי נכס לא נשמרות. הצלבת MLS מדויקת ל-Erie: 0 התאמות יחידות; 0 עמומות; 5 ללא התאמה. הושלמו רק שטח וחדרי שינה, בלי העתקת מחיר.",
+        "erie_mls_cross_source_enrichment": {
+          "status": "completed",
+          "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+          "price_copied": false,
+          "tax_candidates": 164,
+          "complete_before_match": 1,
+          "missing_required_data_candidates": 163,
+          "eligible_complete_erie_mls_rows": 255,
+          "unique_matches": 0,
+          "ambiguous_matches": 0,
+          "no_exact_match": 5,
+          "missing_address": 0,
+          "missing_municipality": 158,
+          "property_type_conflicts": 0,
+          "beds_filled": 0,
+          "sqft_filled": 0,
+          "passed_required_gate_after_match": 1,
+          "rejected_details_stored": 0
+        },
         "passed_filters": 1,
         "minimum_data_rejected": 163,
         "status_detail": "המקור החזיר 164 מועמדים; 163 נפסלו כי חסרו כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
       },
       "06_probate_estates": {
         "label": "עיזבונות ופרטי",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "not_connected",
         "rows": 0,
         "scope": "Allegheny_and_Erie_only",
@@ -2788,14 +2921,14 @@
       },
       "fsbo": {
         "label": "FSBO",
-        "checked_at": "2026-10-04T12:01:48-04:00",
+        "checked_at": "2026-10-04T12:48:50-04:00",
         "status": "not_connected",
         "rows": 0
       },
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-04T12:02:04-04:00",
+        "checked_at": "2026-10-04T12:49:03-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
@@ -3518,7 +3651,7 @@
       },
       "Lehigh County": {
         "region_type": "5",
-        "rows": 158,
+        "rows": 159,
         "city_mismatch_count": 0,
         "actual_cities": {
           "Allentown": 85,
@@ -3535,7 +3668,7 @@
           "Catasauqua": 4,
           "Orefield": 6,
           "Coopersburg": 4,
-          "Germansville": 2,
+          "Germansville": 3,
           "New Tripoli": 2,
           "Coplay": 2,
           "Alburtis": 1,
@@ -3576,7 +3709,7 @@
           "Coopersburg": 1,
           "Catasauqua Boro": 3,
           "RED MAPLE ACRES MHP": 1,
-          "Heidelberg Twp": 1,
+          "Heidelberg Twp": 2,
           "Fountain": 1,
           "Upper Macungie Twp": 1,
           "South Whitehall Twp": 1,
@@ -3783,7 +3916,26 @@
         }
       }
     },
-    "raw_mls_seen": 2120,
+    "erie_tax_mls_cross_source_enrichment": {
+      "status": "completed",
+      "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+      "price_copied": false,
+      "tax_candidates": 164,
+      "complete_before_match": 1,
+      "missing_required_data_candidates": 163,
+      "eligible_complete_erie_mls_rows": 255,
+      "unique_matches": 0,
+      "ambiguous_matches": 0,
+      "no_exact_match": 5,
+      "missing_address": 0,
+      "missing_municipality": 158,
+      "property_type_conflicts": 0,
+      "beds_filled": 0,
+      "sqft_filled": 0,
+      "passed_required_gate_after_match": 1,
+      "rejected_details_stored": 0
+    },
+    "raw_mls_seen": 2121,
     "duplicates_removed": 2,
     "filter_rejections": {
       "price": 0,
@@ -3794,14 +3946,14 @@
       "property_type_unknown": 100,
       "city_mismatch": 0,
       "location": 0,
-      "incomplete_required_data": 854
+      "incomplete_required_data": 855
     },
     "required_data_rejections_by_field": {
-      "sqft": 783,
-      "beds": 777
+      "sqft": 784,
+      "beds": 778
     },
     "required_data_rejections_by_source": {
-      "mls": 489,
+      "mls": 490,
       "sheriff": 198,
       "tax": 163,
       "reo": 4
@@ -3854,11 +4006,11 @@
       "NORTHEAST READING": 10
     },
     "off_market_detection": "disabled_without_verified_listing_status",
-    "price_drop_events": 5,
-    "price_drop_properties": 5,
+    "price_drop_events": 0,
+    "price_drop_properties": 0,
     "persistence_guard_removed": 0,
     "total_properties": 3691,
-    "finished_at": "2026-10-04T12:02:04-04:00"
+    "finished_at": "2026-10-04T12:49:04-04:00"
   },
   "sheriff": {
     "status": "עודכן",
