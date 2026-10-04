@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.2-erie-tax-field-audit-20261004"
+ORCHESTRATOR_VERSION = "3.8.3-erie-mls-unique-address-enrichment-20261004"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -2001,6 +2001,153 @@ def property_key(item):
     return str(item.get("id") or "").strip()
 
 
+def erie_cross_source_match_key(item):
+    """Build a strict same-county street-address + municipality join key."""
+    if not isinstance(item, dict) or normalize_county_name(item.get("county")) != "erie":
+        return ""
+
+    address = normalize_address(item.get("address"))
+    address_key = re.sub(r"[^a-z0-9]+", " ", address).strip()
+    if not address_key or len(address_key) < 5 or detect_land_from_address(address):
+        return ""
+
+    locality = item.get("municipality") or item.get("city")
+    locality_key = re.sub(r"[^a-z0-9]+", "", str(locality or "").casefold())
+    if not locality_key or locality_key in {"eriecounty", "countyoferie", "pennsylvania", "pa"}:
+        return ""
+    return f"{address_key}|{locality_key}"
+
+
+def erie_tax_property_type_conflicts(tax_row, mls_row):
+    """Flag only known, clearly different property categories."""
+    tax_type = normalize_property_type(
+        tax_row.get("property_type") or tax_row.get("type") or tax_row.get("source_property_type")
+    )
+    mls_type = normalize_property_type(
+        mls_row.get("property_type") or mls_row.get("type") or mls_row.get("source_property_type")
+    )
+    return bool(tax_type and mls_type and tax_type != mls_type)
+
+
+def enrich_erie_tax_rows_from_mls(tax_rows, mls_rows):
+    """Fill missing Erie tax beds/sqft only from one complete exact MLS match.
+
+    The join requires the same county, normalized full street address, and
+    municipality. Ambiguous matches and candidates lacking a usable locality
+    are left untouched. MLS price and other fields are never copied.
+    """
+    rows = [dict(row) for row in tax_rows if isinstance(row, dict)]
+    mls_index = {}
+    eligible_mls_rows = 0
+    for listing in mls_rows if isinstance(mls_rows, list) else []:
+        if not isinstance(listing, dict) or listing.get("source_type") != "mls":
+            continue
+        if normalize_county_name(listing.get("county")) != "erie":
+            continue
+        if required_property_data_failures(listing):
+            continue
+        key = erie_cross_source_match_key(listing)
+        if not key:
+            continue
+        eligible_mls_rows += 1
+        mls_index.setdefault(key, []).append(listing)
+
+    audit = {
+        "status": "completed",
+        "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+        "price_copied": False,
+        "tax_candidates": 0,
+        "complete_before_match": 0,
+        "missing_required_data_candidates": 0,
+        "eligible_complete_erie_mls_rows": eligible_mls_rows,
+        "unique_matches": 0,
+        "ambiguous_matches": 0,
+        "no_exact_match": 0,
+        "missing_address": 0,
+        "missing_municipality": 0,
+        "property_type_conflicts": 0,
+        "beds_filled": 0,
+        "sqft_filled": 0,
+        "passed_required_gate_after_match": 0,
+        "rejected_details_stored": 0,
+    }
+
+    for row in rows:
+        if row.get("source_type") != "tax" or normalize_county_name(row.get("county")) != "erie":
+            continue
+        audit["tax_candidates"] += 1
+        missing = required_property_data_failures(row)
+        if not missing:
+            audit["complete_before_match"] += 1
+            audit["passed_required_gate_after_match"] += 1
+            continue
+        audit["missing_required_data_candidates"] += 1
+        # This path enriches structural facts only. It cannot repair an
+        # unidentified address or location by borrowing those fields from MLS.
+        if any(field not in {"beds", "sqft"} for field in missing):
+            if "address" in missing:
+                audit["missing_address"] += 1
+            elif "location" in missing:
+                audit["missing_municipality"] += 1
+            else:
+                audit["no_exact_match"] += 1
+            continue
+
+        key = erie_cross_source_match_key(row)
+        if not key:
+            if not str(row.get("address") or "").strip() or len(str(row.get("address") or "").strip()) < 5:
+                audit["missing_address"] += 1
+            else:
+                audit["missing_municipality"] += 1
+            continue
+
+        matches = mls_index.get(key, [])
+        if not matches:
+            audit["no_exact_match"] += 1
+            continue
+        if len(matches) != 1:
+            audit["ambiguous_matches"] += 1
+            continue
+
+        listing = matches[0]
+        if erie_tax_property_type_conflicts(row, listing):
+            audit["property_type_conflicts"] += 1
+            continue
+
+        fields_filled = []
+        for field in ("beds", "sqft"):
+            current_value = safe_number(row.get(field), None, float)
+            source_value = safe_number(listing.get(field), None, float)
+            if (current_value is None or current_value <= 0) and source_value is not None and source_value > 0:
+                row[field] = int(source_value) if source_value.is_integer() else source_value
+                audit[f"{field}_filled"] += 1
+                fields_filled.append(field)
+
+        if fields_filled:
+            audit["unique_matches"] += 1
+            source_url = str(listing.get("url") or "").strip()
+            row["cross_source_enrichment"] = {
+                "source": "Redfin MLS",
+                "method": "exact_normalized_street_address_and_municipality_unique_match",
+                "fields": fields_filled,
+                "source_url": source_url or None,
+                "checked_at": iso_now_est(),
+            }
+            note = ("שטח וחדרי שינה הושלמו ממודעת MLS פעילה במחוז Erie, "
+                    "לאחר התאמה מדויקת ויחידה של הכתובת והיישוב. יש לאמת מול רישום המחוז.")
+            if source_url:
+                note += f" קישור MLS: {source_url}"
+            for field in ("description", "summary"):
+                existing_text = str(row.get(field) or "").strip()
+                if note not in existing_text:
+                    row[field] = f"{existing_text} {note}".strip()
+
+        if not required_property_data_failures(row):
+            audit["passed_required_gate_after_match"] += 1
+
+    return rows, audit
+
+
 def calculate_deal_score(deal_type, price, margin_est=25):
     score = 50
     dt = (deal_type or "").lower()
@@ -2329,6 +2476,7 @@ def comparable_changed(old, new):
         "parcel_id", "attorney", "participants", "plaintiff", "defendant", "tax_sale_type",
         "source_published_date", "sheriff_status", "repository_status",
         "property_record_url", "profile_enrichment_source", "profile_checked_at",
+        "cross_source_enrichment",
     ]
     return any(old.get(field) != new.get(field) for field in tracked_fields)
 
@@ -3181,6 +3329,44 @@ def run_orchestrator():
         except OSError as exc:
             log_entry["errors"].append(f"geo catalog write failed: {exc}")
             print(f"⚠️ שמירת קטלוג האזורים נכשלה: {exc}")
+
+    if "tax" in active_sectors_now:
+        if "mls" in active_sectors_now:
+            tax_rows, erie_mls_enrichment_audit = enrich_erie_tax_rows_from_mls(tax_rows, live_results)
+        else:
+            erie_mls_enrichment_audit = {
+                "status": "not_run_mls_not_selected",
+                "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+                "price_copied": False,
+                "tax_candidates": 0,
+                "unique_matches": 0,
+                "ambiguous_matches": 0,
+                "no_exact_match": 0,
+                "rejected_details_stored": 0,
+            }
+        log_entry["erie_tax_mls_cross_source_enrichment"] = erie_mls_enrichment_audit
+        sources["tax"]["erie_mls_cross_source_enrichment"] = erie_mls_enrichment_audit
+        erie_tax_audit = (sources["tax"].get("counties", {}).get("Erie")
+                          if isinstance(sources["tax"].get("counties"), dict) else None)
+        if isinstance(erie_tax_audit, dict):
+            erie_tax_audit["mls_cross_source_enrichment"] = erie_mls_enrichment_audit
+        if erie_mls_enrichment_audit.get("status") == "completed":
+            summary = (
+                " הצלבת MLS מדויקת ל-Erie: "
+                f"{erie_mls_enrichment_audit.get('unique_matches', 0)} התאמות יחידות; "
+                f"{erie_mls_enrichment_audit.get('ambiguous_matches', 0)} עמומות; "
+                f"{erie_mls_enrichment_audit.get('no_exact_match', 0)} ללא התאמה. "
+                "הושלמו רק שטח וחדרי שינה, בלי העתקת מחיר."
+            )
+            sources["tax"]["note"] = str(sources["tax"].get("note") or "").rstrip() + summary
+            print(
+                "🧩 הצלבת מס/MLS מדויקת ב-Erie — "
+                f"התאמות יחידות: {erie_mls_enrichment_audit.get('unique_matches', 0)} | "
+                f"עמומות: {erie_mls_enrichment_audit.get('ambiguous_matches', 0)} | "
+                f"ללא התאמה: {erie_mls_enrichment_audit.get('no_exact_match', 0)} | "
+                f"שטח/חדרי שינה שהושלמו: {erie_mls_enrichment_audit.get('sqft_filled', 0)}/"
+                f"{erie_mls_enrichment_audit.get('beds_filled', 0)}"
+            )
 
     combined = live_results + sheriff_rows + tax_rows + reo_rows + get_placeholder_sector_results(
         [s for s in active_sectors_now if s not in ("mls", "sheriff", "reo", "tax")]
