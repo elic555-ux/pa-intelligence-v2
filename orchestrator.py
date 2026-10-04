@@ -29,7 +29,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.1-erie-profile-null-baths-guard-20261003"
+ORCHESTRATOR_VERSION = "3.8.2-erie-tax-field-audit-20261004"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
@@ -516,6 +516,12 @@ def enrich_erie_repository_rows(rows, profile_cache=None):
     enriched = 0
     from_cache = 0
     failures = 0
+    profile_status_counts = {}
+    profile_field_presence = {field: 0 for field in (
+        "address", "sqft", "beds", "baths", "municipality", "source_property_type")}
+    gis_field_presence = {field: 0 for field in ("gis_address", "municipality")}
+    required_missing_counts = {}
+    missing_pattern_counts = {}
     for parcel, row in residential.items():
         entry = cache.get(parcel)
         if _erie_profile_cache_fresh(entry, now):
@@ -533,6 +539,20 @@ def enrich_erie_repository_rows(rows, profile_cache=None):
             cache[parcel] = entry
 
         parcel_geo = geo_data.get(parcel) or {}
+        profile_status = str(profile_status or "unknown")
+        profile_status_counts[profile_status] = profile_status_counts.get(profile_status, 0) + 1
+        for field in profile_field_presence:
+            value = profile_data.get(field)
+            if field in {"sqft", "beds", "baths"}:
+                present = safe_number(value, None, float)
+                has_value = present is not None and present > 0
+            else:
+                has_value = bool(str(value or "").strip())
+            if has_value:
+                profile_field_presence[field] += 1
+        for field in gis_field_presence:
+            if str(parcel_geo.get(field) or "").strip():
+                gis_field_presence[field] += 1
         municipality = (profile_data.get("municipality") or parcel_geo.get("municipality")
                         or row.get("municipality"))
         address = profile_data.get("address") or parcel_geo.get("gis_address")
@@ -553,8 +573,15 @@ def enrich_erie_repository_rows(rows, profile_cache=None):
         row["parcel_profile_url"] = profile_url
         row["profile_enrichment_source"] = "Erie County public parcel profile and GIS"
         row["profile_checked_at"] = entry.get("checked_at") if isinstance(entry, dict) else now.isoformat(timespec="seconds")
-        if not required_property_data_failures(row):
+        missing_fields = required_property_data_failures(row)
+        if not missing_fields:
             enriched += 1
+            pattern = "passed"
+        else:
+            for field in missing_fields:
+                required_missing_counts[field] = required_missing_counts.get(field, 0) + 1
+            pattern = "+".join(missing_fields)
+        missing_pattern_counts[pattern] = missing_pattern_counts.get(pattern, 0) + 1
         if profile_status == "failed":
             failures += 1
 
@@ -562,6 +589,13 @@ def enrich_erie_repository_rows(rows, profile_cache=None):
         "candidates": len(rows), "residential_parcels": len(residential),
         "profiles_fetched": len(need_profiles), "cache_hits": from_cache,
         "profile_failures": failures, "eligible_after_required_data_gate": enriched,
+        "rejected_by_required_data_gate": max(0, len(residential) - enriched),
+        "profile_status_counts": profile_status_counts,
+        "profile_field_presence_counts": profile_field_presence,
+        "gis_field_presence_counts": gis_field_presence,
+        "required_missing_field_counts": required_missing_counts,
+        "required_missing_pattern_counts": missing_pattern_counts,
+        "rejected_property_details_stored": 0,
         "gis_status": geo_status, "gis_matches": len(geo_data),
         "source_url": ERIE_PARCEL_PROFILE_URL,
     }
@@ -2913,6 +2947,18 @@ def run_orchestrator():
                         f"{profile_audit['eligible_after_required_data_gate']} עברו העשרת פרטים "
                         f"({profile_audit['cache_hits']} מהמטמון, {profile_audit['profile_failures']} כשלונות); "
                         f"מקור: {tax_audit.get('source_url')}"
+                    )
+                    print(
+                        "🧪 Erie profile diagnostics — סטטוסי פרופיל: "
+                        f"{json.dumps(profile_audit['profile_status_counts'], ensure_ascii=False, sort_keys=True)} | "
+                        "שדות חובה חסרים בתוצאה הסופית: "
+                        f"{json.dumps(profile_audit['required_missing_field_counts'], ensure_ascii=False, sort_keys=True)} | "
+                        "דפוסי חוסר: "
+                        f"{json.dumps(profile_audit['required_missing_pattern_counts'], ensure_ascii=False, sort_keys=True)} | "
+                        "שדות שהגיעו מפרופיל המחוז: "
+                        f"{json.dumps(profile_audit['profile_field_presence_counts'], ensure_ascii=False, sort_keys=True)} | "
+                        "התאמות GIS: "
+                        f"{json.dumps(profile_audit['gis_field_presence_counts'], ensure_ascii=False, sort_keys=True)}"
                     )
                 else:
                     county_audits[county_name] = {
