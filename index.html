@@ -143,26 +143,17 @@
         </section>
 
         <!-- Filters -->
-        <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3.5 shadow-lg">
-            <div>
-                <label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label>
-                <select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none">
-                    <option value="all">הכל</option>
-                    <option value="turnkey">🔑 מניב מיידי</option>
-                    <option value="value_add">🔨 השבחה</option>
-                </select>
-            </div>
-            
+        <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3.5 shadow-lg">
             <!-- מסנן גאוגרפי ללוח הנכסים הקיימים בלבד -->
             <div class="relative" id="city-filter-wrapper">
-                <label class="block text-xs font-bold text-gray-300 mb-1.5">מחוז / עיר / אזור מקור</label>
+                <label class="block text-xs font-bold text-gray-300 mb-1.5">מחוז / עיר / שכונה או אזור מקור</label>
                 <button type="button" class="w-full bg-gray-950 border border-gray-700 rounded-xl flex items-center justify-between px-2.5 py-2 text-right" onclick="toggleCityDropdown(event)">
                     <span id="city-dropdown-text" class="text-xs text-white font-bold truncate pr-1">כל האזורים</span>
                     <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
                 </button>
                 <div id="city-dropdown-list" class="hidden absolute top-full mt-1 right-0 md:w-[400px] w-[min(90vw,400px)] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-[420px] overflow-y-auto custom-scrollbar">
                     <div class="sticky top-0 bg-gray-900 border-b border-gray-800 p-2.5 z-10 space-y-2">
-                        <input id="main-geo-search" type="search" placeholder="חפש מחוז, עיר או אזור..." oninput="populateCityDropdown()" onclick="event.stopPropagation()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500">
+                        <input id="main-geo-search" type="search" placeholder="חפש מחוז, עיר, שכונה או אזור מקור..." oninput="populateCityDropdown()" onclick="event.stopPropagation()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500">
                         <div class="flex justify-between items-center">
                             <button type="button" onclick="setAllCityFilters(true, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">הצג את כל הנכסים</button>
                             <button type="button" onclick="setAllCityFilters(false, event)" class="text-[11px] font-bold text-gray-400 hover:text-white">בחר אזורים מאפס</button>
@@ -172,6 +163,16 @@
                 </div>
             </div>
 
+
+            <div>
+                <label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label>
+                <select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none">
+                    <option value="all">הכל</option>
+                    <option value="turnkey">🔑 מניב מיידי</option>
+                    <option value="value_add">🔨 השבחה</option>
+                </select>
+            </div>
+            
             <div>
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">סוג נכס</label>
                 <select id="filter-type" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
@@ -203,13 +204,7 @@
                     <option value="price_asc">מחיר (נמוך לגבוה)</option>
                 </select>
             </div>
-            
-            <div class="flex items-end pb-0.5">
-                <label class="flex items-center justify-center gap-2 cursor-pointer bg-blue-900/20 border border-blue-500/30 px-2 py-2 rounded-xl w-full hover:bg-blue-900/40 transition h-[36px]">
-                    <input type="checkbox" id="filter-good-deal" onchange="applyFilters()" class="w-4 h-4 rounded bg-gray-900 border-gray-700 text-blue-600 focus:ring-blue-600 focus:ring-offset-gray-900">
-                    <span class="text-xs font-bold text-blue-400">דיל מתחת ל-MAO</span>
-                </label>
-            </div>
+
         </section>
 
         <!-- Properties Container -->
@@ -1498,7 +1493,7 @@
                 const countyNode = tree.get(county); countyNode.count++; countyNode.keys.add(key);
                 if (!countyNode.cities.has(city)) countyNode.cities.set(city, {count: 0, locations: new Map(), keys: new Set()});
                 const cityNode = countyNode.cities.get(city); cityNode.count++; cityNode.keys.add(key);
-                const loc = location || 'ללא אזור מקור';
+                const loc = location || 'ללא שכונה / אזור מקור';
                 if (!cityNode.locations.has(loc)) cityNode.locations.set(loc, {count: 0, keys: new Set()});
                 cityNode.locations.get(loc).count++; cityNode.locations.get(loc).keys.add(key);
             }
@@ -1530,7 +1525,7 @@
                 if (!visibleCities && !countyMatch) continue;
                 countyDetails.prepend(countySummary); container.append(countyDetails); shown++;
             }
-            if (!shown) { const empty = document.createElement('p'); empty.className = 'text-gray-400 p-3 text-center'; empty.textContent = query ? 'לא נמצאו אזורים תואמים לחיפוש.' : 'אין נכסים זמינים לסינון.'; container.append(empty); }
+            if (!shown) { const empty = document.createElement('p'); empty.className = 'text-gray-400 p-3 text-center'; empty.textContent = query ? 'לא נמצאו מחוזות, ערים או שכונות תואמים.' : 'אין נכסים זמינים לסינון.'; container.append(empty); }
             updateCityDropdownLabel();
         }
         function setAllCityFilters(state, e) { if (e) e.stopPropagation(); selectedCitiesFilter = state ? null : new Set(); populateCityDropdown(); renderCards(); }
@@ -1712,8 +1707,7 @@
             const minPrice = document.getElementById('filter-min-price') ? getRawPrice(document.getElementById('filter-min-price')) : 0;
             const sortBy = document.getElementById('sort-by') ? document.getElementById('sort-by').value : 'date_desc';
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
-            const onlyGoodDeals = document.getElementById('filter-good-deal')?.checked;
-
+            
             let filtered = rawProperties.filter(p => {
                 if (pipelineIds.has(String(p.id))) return false;
                 if (watchlistFilterActive && !userWatchlist.has(String(p.id))) return false;
@@ -1737,7 +1731,6 @@
                 if (hasMarketPrice && minPrice > 0 && Number(p.price) < minPrice) return false;
                 if (hasMarketPrice && priceF !== 'all' && Number(p.price) > parseInt(priceF, 10)) return false;
                 if (selectedCitiesFilter !== null && !selectedCitiesFilter.has(mainGeoKey(p))) return false;
-                if (onlyGoodDeals) { if (!p.price || !p.mao_flip || (Number(p.price) > Number(p.mao_flip))) return false; }
                 return true;
             });
 
