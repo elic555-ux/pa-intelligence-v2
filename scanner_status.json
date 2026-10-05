@@ -1,10 +1,10 @@
 {
-  "version": "3.8.3-erie-mls-unique-address-enrichment-20261004",
+  "version": "3.8.4-probate-scan-closed-20261005",
   "last_event": {
-    "scan_id": "SCAN-20261005-114330",
-    "started_at": "2026-10-05T11:43:30-04:00",
+    "scan_id": "SCAN-20261005-182436",
+    "started_at": "2026-10-05T18:24:36-04:00",
     "trigger": "scheduled",
-    "orchestrator_version": "3.8.3-erie-mls-unique-address-enrichment-20261004",
+    "orchestrator_version": "3.8.4-probate-scan-closed-20261005",
     "status": "skipped",
     "active_sectors": [],
     "cities": [],
@@ -15,14 +15,13 @@
     "unchanged": 0,
     "off_market_candidates": 0,
     "errors": [],
-    "code_sha256": "41c8230d8bc6",
-    "github_sha": "e22409030ae1491e15263b933ad9d822984fd7da",
+    "code_sha256": "1043d4fecf71",
+    "github_sha": "acf27e910d30f1172c30a824789266ad1527f71d",
     "request_id": null,
     "out_of_scope_tax_records_removed": 0,
-    "out_of_scope_probate_labels_cleared": 0,
     "incomplete_existing_removed": 0,
     "skip_reason": "no sector scheduled for this hour",
-    "finished_at": "2026-10-05T11:43:30-04:00"
+    "finished_at": "2026-10-05T18:24:36-04:00"
   },
   "sources": {
     "mls": {
@@ -471,48 +470,6 @@
       "minimum_data_rejected": 163,
       "status_detail": "המקור החזיר 164 מועמדים; 163 נפסלו כי חסרו כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
     },
-    "06_probate_estates": {
-      "label": "עיזבונות ופרטי",
-      "checked_at": "2026-10-04T12:48:50-04:00",
-      "status": "not_connected",
-      "rows": 0,
-      "scope": "Allegheny_and_Erie_only",
-      "scanned_counties": [
-        "Allegheny",
-        "Erie"
-      ],
-      "manual_sources": [
-        {
-          "id": "allegheny_probate_login",
-          "county": "Allegheny",
-          "label": "Allegheny — חיפוש Wills/Orphans (דורש התחברות)",
-          "url": "https://dcr.alleghenycounty.us/wills/login.aspx",
-          "status": "manual_link_only"
-        },
-        {
-          "id": "allegheny_probate_info",
-          "county": "Allegheny",
-          "label": "Allegheny — מידע וטפסי עיזבונות",
-          "url": "https://www.alleghenycounty.us/Government/Court-Related/Wills-and-Orphans/Resources",
-          "status": "manual_link_only"
-        },
-        {
-          "id": "erie_probate_search",
-          "county": "Erie",
-          "label": "Erie — חיפוש Register of Wills / Orphans",
-          "url": "https://courtpro.eriecountypa.gov/Row/v/search/case",
-          "status": "manual_link_only"
-        }
-      ],
-      "note": "אין חיבור חי למאגר תיקי עיזבונות. סריקת MLS תבדוק מילות התאמה רק אם תיאור המודעה נכלל בפועל בנתוני המקור; התאמה היא מועמד לבדיקה ולא הוכחה משפטית.",
-      "mls_keyword_detection": {
-        "status": "remarks_field_unavailable",
-        "candidate_rows": 0,
-        "note": "מועמדים מתויגים בתוך MLS; אין בכך אישור שהתיק הוא עיזבון."
-      },
-      "passed_filters": 0,
-      "minimum_data_rejected": 0
-    },
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
@@ -594,12 +551,6 @@
       "passed_filters": 175,
       "minimum_data_rejected": 198,
       "status_detail": "המקור החזיר 374 מועמדים; 198 נפסלו כי חסרו כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
-    },
-    "fsbo": {
-      "label": "FSBO",
-      "checked_at": "2026-10-04T12:48:50-04:00",
-      "status": "not_connected",
-      "rows": 0
     }
   },
   "last_scan": {
