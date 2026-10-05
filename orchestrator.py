@@ -29,11 +29,12 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.3-erie-mls-unique-address-enrichment-20261004"
+ORCHESTRATOR_VERSION = "3.8.4-probate-scan-closed-20261005"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
-                 "tax": "חובות מס", "06_probate_estates": "עיזבונות ופרטי", "fsbo": "FSBO"}
-TAX_PROBATE_SCOPE_COUNTIES = frozenset({"allegheny", "erie"})
+                 "tax": "חובות מס"}
+TAX_SCAN_SCOPE_COUNTIES = frozenset({"allegheny", "erie"})
+DISABLED_SCAN_SECTORS = frozenset({"06_probate_estates", "probate", "fsbo"})
 
 SHERIFF_PAGE = "https://sheriffalleghenycounty.com/sheriffs-sales/"
 SHERIFF_LOCAL_PDF = "sources/allegheny_sheriff.pdf"
@@ -52,10 +53,6 @@ ERIE_PARCEL_PROFILE_URL = "https://public.eriecountypa.gov/property-tax-records/
 ERIE_PARCEL_GIS_QUERY_URL = "https://gis.eriecountypa.gov/server/rest/services/Hosted/ErieCountyParcels_Dec2025/FeatureServer/16/query"
 ALLEGHENY_PROPERTY_SEARCH_URL = "https://realestate.alleghenycounty.us/search"
 ALLEGHENY_PROPERTY_INFO_URL = "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search"
-ALLEGHENY_PROBATE_URL = "https://dcr.alleghenycounty.us/wills/login.aspx"
-ALLEGHENY_PROBATE_INFO_URL = "https://www.alleghenycounty.us/Government/Court-Related/Wills-and-Orphans/Resources"
-ERIE_PROBATE_URL = "https://courtpro.eriecountypa.gov/Row/v/search/case"
-LEHIGH_PROBATE_URL = "https://publicaccess.lehighcounty.org/Search.aspx"
 
 
 def detect_land_from_address(address):
@@ -100,19 +97,6 @@ def selected_manual_sources(cities, counties, source_kind):
             ],
             "Lehigh": [
                 ("lehigh_tax_claim", "Lehigh — Tax Claim וחיפוש נכסים", LEHIGH_TAX_SALE_PAGE),
-            ],
-        }
-    elif source_kind == "probate":
-        definitions = {
-            "Allegheny": [
-                ("allegheny_probate_login", "Allegheny — חיפוש Wills/Orphans (דורש התחברות)", ALLEGHENY_PROBATE_URL),
-                ("allegheny_probate_info", "Allegheny — מידע וטפסי עיזבונות", ALLEGHENY_PROBATE_INFO_URL),
-            ],
-            "Erie": [
-                ("erie_probate_search", "Erie — חיפוש Register of Wills / Orphans", ERIE_PROBATE_URL),
-            ],
-            "Lehigh": [
-                ("lehigh_probate_search", "Lehigh — Odyssey Public Access", LEHIGH_PROBATE_URL),
             ],
         }
     else:
@@ -1834,7 +1818,6 @@ SECTOR_LOOKBACK_DAYS = {
     "reo": 90,
     "sheriff": 45,
     "tax": 45,
-    "06_probate_estates": 180,
 }
 
 PA_COUNTIES = [
@@ -1903,50 +1886,8 @@ def build_mls_scan_areas(cities, counties):
 
 DISTRESS_KEYWORDS = [
     "as-is", "as is", "investor", "handyman", "fixer", "tlc", "cash only",
-    "rehab", "contractor special", "needs work", "estate sale", "foreclosure",
+    "rehab", "contractor special", "needs work", "foreclosure",
 ]
-
-# Search listing remarks only when the live MLS payload actually contains a
-# remarks/description field. These terms identify review candidates; they do
-# not prove probate status or seller authority.
-PROBATE_REMARK_TERMS = (
-    "estate sale", "probate", "executor", "executrix",
-    "personal representative", "administrator of the estate",
-    "inherited property", "estate owned", "estate-owned", "heirs sale",
-)
-MLS_REMARK_FIELD_NAMES = {
-    "remarks", "publicremarks", "mlsremarks", "listingremarks",
-    "marketingremarks", "description", "propertydescription",
-    "listingdescription", "publicdescription", "remarksdescription",
-}
-
-
-def extract_mls_remarks(row):
-    """Return remarks only from recognizable text columns in a source row."""
-    if not isinstance(row, dict):
-        return None, None
-    for field, value in row.items():
-        normalized = re.sub(r"[^a-z0-9]", "", str(field).casefold())
-        if normalized not in MLS_REMARK_FIELD_NAMES:
-            continue
-        text = re.sub(r"\s+", " ", str(value or "")).strip()
-        if text:
-            return text[:8000], str(field)
-    return None, None
-
-
-def find_probate_remark_terms(remarks):
-    """Find explicit estate/probate phrases; avoid generic 'real estate sale'."""
-    text = re.sub(r"\s+", " ", str(remarks or "")).casefold()
-    matches = []
-    for term in PROBATE_REMARK_TERMS:
-        pattern = r"(?<![a-z0-9])" + re.escape(term).replace(r"\ ", r"\s+") + r"(?![a-z0-9])"
-        for match in re.finditer(pattern, text):
-            if term == "estate sale" and re.search(r"\breal\s+$", text[:match.start()]):
-                continue
-            matches.append(term)
-            break
-    return matches
 
 STREET_SUFFIXES = {
     "street": "st", "st.": "st", "avenue": "ave", "ave.": "ave",
@@ -2156,8 +2097,6 @@ def calculate_deal_score(deal_type, price, margin_est=25):
         score += 15
     elif "tax" in dt:
         score += 12
-    elif "probate" in dt or "fsbo" in dt:
-        score += 10
     elif "foreclosure" in dt or "reo" in dt:
         score += 8
 
@@ -2267,7 +2206,7 @@ def classify_strategy(deal_type, price, beds, summary=""):
     dt = (deal_type or "").lower()
     text = f"{dt} {summary}".lower()
     is_distressed = any(kw in text for kw in DISTRESS_KEYWORDS) or any(
-        k in dt for k in ["sheriff", "tax", "probate", "foreclosure", "reo"]
+        k in dt for k in ["sheriff", "tax", "foreclosure", "reo"]
     )
     beds_num = safe_number(beds, None, int)
     projected_rent = None
@@ -2323,11 +2262,6 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
     }
 
     discovered = []
-    probate_scope_county = normalize_county_name(target.get("county_name"))
-    probate_scope_enabled = probate_scope_county in TAX_PROBATE_SCOPE_COUNTIES
-    remarks_text_rows = 0
-    probate_keyword_matches = 0
-    matched_terms = {}
     try:
         print(f"📡 סורק נתונים חיים עבור אזור: {clean_city}...")
         resp = requests.get(url, params=params, headers=headers, timeout=20)
@@ -2341,10 +2275,6 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
         if not {"ADDRESS", "PRICE", "CITY"}.issubset(set(reader.fieldnames or [])):
             audit["error"] = "unexpected CSV schema"
             return []
-        remarks_columns = [
-            field for field in (reader.fieldnames or [])
-            if re.sub(r"[^a-z0-9]", "", str(field).casefold()) in MLS_REMARK_FIELD_NAMES
-        ]
         for row in reader:
             addr = row.get("ADDRESS")
             raw_price = row.get("PRICE")
@@ -2374,19 +2304,6 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
             if home_url and not home_url.startswith("http"):
                 home_url = f"https://www.redfin.com{home_url}"
 
-            remarks, remarks_field = extract_mls_remarks(row)
-            if remarks:
-                remarks_text_rows += 1
-            # Probate keyword candidates stay within Allegheny and Erie even
-            # when MLS itself scans additional counties.
-            probate_terms = (find_probate_remark_terms(remarks)
-                            if probate_scope_enabled else [])
-            is_probate_candidate = bool(probate_terms)
-            if is_probate_candidate:
-                probate_keyword_matches += 1
-                for term in probate_terms:
-                    matched_terms[term] = matched_terms.get(term, 0) + 1
-
             strategy_data = classify_strategy("MLS", price, beds)
             mls_number = row.get("MLS#") or normalize_addr_key(addr, row_city, zip_code)
             discovered.append({
@@ -2397,8 +2314,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 "county": target.get("county_name") or CITY_COUNTY.get(clean_city) or "",
                 "zip": zip_code,
                 "price": price,
-                "deal_type": ("MLS (Probate Keyword Candidate)" if is_probate_candidate
-                              else "MLS (Realtor / Redfin)"),
+                "deal_type": "MLS (Realtor / Redfin)",
                 "source": "Redfin",
                 "source_type": "mls",
                 "data_status": "live",
@@ -2418,15 +2334,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 "year_built": safe_number(row.get("YEAR BUILT"), 0, int) or None,
                 "lot_size": row.get("LOT SIZE") or "",
                 "projected_rent": strategy_data["projected_rent"],
-                "summary": (
-                    f"עסקה פעילה ב-{row_city} ({dom} ימים בשוק). מחיר מבוקש ${price:,}."
-                    + (f" מילות התאמה בתיאור MLS (מועמד בלבד, לא אימות עיזבון): {', '.join(probate_terms)}."
-                       if is_probate_candidate else "")
-                ),
-                "probate_keyword_candidate": is_probate_candidate,
-                "probate_keyword_hits": probate_terms,
-                "remarks_source_field": remarks_field,
-                "source_listing_description": remarks[:2000] if is_probate_candidate else None,
+                "summary": f"עסקה פעילה ב-{row_city} ({dom} ימים בשוק). מחיר מבוקש ${price:,}.",
                 "url": home_url,
                 "listed_date": listed_date_str,
                 "days_on_market": dom,
@@ -2440,15 +2348,6 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
         audit["error"] = str(exc)
         print(f"⚠️ שגיאה לא צפויה בסריקת {clean_city}: {exc}")
 
-    audit.update({
-        "remarks_fields_available": remarks_columns if "remarks_columns" in locals() else [],
-        "remarks_search_status": ("searched" if remarks_columns else "remarks_field_unavailable"),
-        "probate_keyword_scope_county": target.get("county_name"),
-        "probate_keyword_scope_enabled": probate_scope_enabled,
-        "remarks_text_rows": remarks_text_rows,
-        "probate_keyword_candidates": probate_keyword_matches,
-        "probate_keyword_hits": matched_terms,
-    })
     if "error" not in audit:
         audit.update({"status": "success", "rows": len(discovered),
                       "limit_reached": len(discovered) >= 350})
@@ -2458,7 +2357,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
 
 
 def get_placeholder_sector_results(active_sectors):
-    pending = [s for s in active_sectors if s not in ("mls", "06_probate_estates")]
+    pending = [s for s in active_sectors if s != "mls"]
     if pending:
         print("ℹ️ הסקטורים הבאים עדיין אינם מחוברים למקור LIVE ולכן לא יוזרקו נתוני דמה: " + ", ".join(pending))
     return []
@@ -2470,8 +2369,6 @@ def comparable_changed(old, new):
         "lot_size", "url", "days_on_market", "listed_date", "source_type",
         "type", "property_type", "source_property_type", "source_location",
         "source_url", "source_amount_type", "case_cost_tax_bid", "judgment_amount",
-        "probate_keyword_candidate", "probate_keyword_hits", "source_listing_description",
-        "remarks_source_field",
         "opening_bid", "minimum_bid", "sale_date", "sale_number", "docket_id",
         "parcel_id", "attorney", "participants", "plaintiff", "defendant", "tax_sale_type",
         "source_published_date", "sheriff_status", "repository_status",
@@ -2529,31 +2426,18 @@ def keep_only_complete_property_rows(rows):
     return kept, rejected
 
 
-def enforce_tax_probate_county_scope(prop):
-    """Keep tax/probate classifications only in the two approved counties.
 
-    Tax candidates outside scope are removed; MLS listings remain in the
-    inventory but lose an out-of-scope probate-candidate label.
-    """
+
+def enforce_tax_county_scope(prop):
+    """Keep tax-sale candidates within verified county source coverage."""
     if not isinstance(prop, dict):
         return None
     county = normalize_county_name(
         prop.get("county") or CITY_COUNTY.get(str(prop.get("city") or "").strip(), "")
     )
     source_type = str(prop.get("source_type") or "").casefold()
-    if source_type == "tax" and county not in TAX_PROBATE_SCOPE_COUNTIES:
+    if source_type == "tax" and county not in TAX_SCAN_SCOPE_COUNTIES:
         return "remove_tax_out_of_scope"
-
-    deal_type = str(prop.get("deal_type") or "")
-    has_probate_candidate = bool(prop.get("probate_keyword_candidate")) or (
-        "probate keyword candidate" in deal_type.casefold()
-    )
-    if has_probate_candidate and county not in TAX_PROBATE_SCOPE_COUNTIES:
-        prop["probate_keyword_candidate"] = False
-        prop["probate_keyword_hits"] = []
-        if "probate keyword candidate" in deal_type.casefold():
-            prop["deal_type"] = "MLS (Realtor / Redfin)"
-        return "clear_probate_candidate_out_of_scope"
     return None
 
 
@@ -2632,13 +2516,6 @@ def merge_property(existing, incoming, scan_id):
 
     merged = deepcopy(existing)
     merged.update(incoming)
-
-    if existing.get("deal_type") == "probate_fsbo":
-        merged["deal_type"] = "probate_fsbo"
-        merged["strategy"] = existing.get("strategy", merged.get("strategy"))
-        merged["deal_score"] = existing.get("deal_score", merged.get("deal_score"))
-        if existing.get("ai_summary"):
-             merged["ai_summary"] = existing["ai_summary"]
 
     merged["first_seen"] = existing.get("first_seen") or timestamp
     merged["last_seen"] = timestamp
@@ -2775,20 +2652,16 @@ def run_orchestrator():
         existing_props_dict = load_existing_properties()
         incomplete_existing = 0
         out_of_scope_tax_removed = 0
-        out_of_scope_probate_labels_cleared = 0
         for key, row in list(existing_props_dict.items()):
-            scope_action = enforce_tax_probate_county_scope(row)
+            scope_action = enforce_tax_county_scope(row)
             if scope_action == "remove_tax_out_of_scope":
                 existing_props_dict.pop(key, None)
                 out_of_scope_tax_removed += 1
                 continue
-            if scope_action == "clear_probate_candidate_out_of_scope":
-                out_of_scope_probate_labels_cleared += 1
             if required_property_data_failures(row):
                 existing_props_dict.pop(key, None)
                 incomplete_existing += 1
         log_entry["out_of_scope_tax_records_removed"] = out_of_scope_tax_removed
-        log_entry["out_of_scope_probate_labels_cleared"] = out_of_scope_probate_labels_cleared
         log_entry["incomplete_existing_removed"] = incomplete_existing
         today_est = now_est().date()
         expired_tax_keys = [key for key, row in existing_props_dict.items()
@@ -2820,13 +2693,29 @@ def run_orchestrator():
         "MLS": "mls",
         "Foreclosure": "reo",
         "Sheriff Sale": "sheriff",
-        "Tax Delinquent": "tax",
-        "Probate": "06_probate_estates",
-        "FSBO": "fsbo"
+        "Tax Delinquent": "tax"
     }
-    user_selected_sectors = [sector_mapping.get(c, c) for c in raw_categories]
+    requested_sectors = [sector_mapping.get(c, c) for c in raw_categories]
+    disabled_sectors_requested = sorted({
+        str(sector) for sector in requested_sectors
+        if str(sector).casefold() in DISABLED_SCAN_SECTORS
+    })
+    user_selected_sectors = [
+        sector for sector in requested_sectors
+        if str(sector).casefold() not in DISABLED_SCAN_SECTORS
+    ]
+    if disabled_sectors_requested:
+        log_entry["disabled_sectors_ignored"] = disabled_sectors_requested
+        print("⏭️ עיזבונות ו-FSBO הושבתו; ההגדרות הישנות התעלמו.")
     if not user_selected_sectors:
-        user_selected_sectors = ["mls", "reo", "sheriff", "tax", "06_probate_estates"]
+        if raw_categories:
+            log_entry["status"] = "skipped"
+            log_entry["skip_reason"] = "only disabled sectors selected"
+            log_entry["finished_at"] = iso_now_est()
+            append_scan_log(log_entry)
+            print("💤 הסקטורים שנבחרו הושבתו; לא הופעלה סריקה אחרת במקומם.")
+            return
+        user_selected_sectors = ["mls", "reo", "sheriff", "tax"]
 
     active_sectors_now = []
 
@@ -2842,6 +2731,8 @@ def run_orchestrator():
         previous_sources = previous_report.get("sources", {}) if isinstance(previous_report, dict) else {}
 
         for sec, sched in schedules.items():
+            if str(sec).casefold() in DISABLED_SCAN_SECTORS:
+                continue
             s_day = sched.get("day", "Everyday")
             s_time = sched.get("time", "08:00")
             if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", s_time):
@@ -2856,7 +2747,9 @@ def run_orchestrator():
             if now_est() >= due and not already_attempted and (s_day == "Everyday" or s_day == current_day):
                 active_sectors_now.append(sec)
 
-        active_sectors_now = [s for s in active_sectors_now if s in user_selected_sectors]
+        active_sectors_now = [s for s in active_sectors_now
+                              if s in user_selected_sectors
+                              and str(s).casefold() not in DISABLED_SCAN_SECTORS]
         if not active_sectors_now:
             log_entry["status"] = "skipped"
             log_entry["skip_reason"] = "no sector scheduled for this hour"
@@ -2935,23 +2828,6 @@ def run_orchestrator():
     log_entry["sources"] = sources
 
     sources.setdefault("tax", {"label": SOURCE_LABELS["tax"], "status": "not_connected", "rows": 0})
-    sources.setdefault("06_probate_estates", {"label": SOURCE_LABELS["06_probate_estates"], "status": "not_connected", "rows": 0})
-    if "06_probate_estates" in active_sectors_now:
-        selected_source_counties = selected_counties_from_config(cities_list, counties_list)
-        probate_counties = sorted(
-            (name for name in selected_source_counties
-             if name.casefold() in TAX_PROBATE_SCOPE_COUNTIES),
-            key=str.casefold,
-        )
-        probate_links = selected_manual_sources([], probate_counties, "probate")
-        sources["06_probate_estates"].update({
-            "status": "not_connected", "rows": 0,
-            "scope": "Allegheny_and_Erie_only",
-            "scanned_counties": probate_counties,
-            "manual_sources": probate_links,
-            "note": ("אין חיבור חי למאגר תיקי עיזבונות. סריקת MLS תבדוק מילות התאמה רק אם תיאור המודעה "
-                     "נכלל בפועל בנתוני המקור; התאמה היא מועמד לבדיקה ולא הוכחה משפטית."),
-        })
 
     sheriff_rows = []
     sheriff_county_results = {}
@@ -3070,8 +2946,8 @@ def run_orchestrator():
                                   for name in counties_list if str(name).strip()}
         requested_tax_counties.update(str(CITY_COUNTY.get(str(area).strip(), "")).strip().casefold()
                                         for area in cities_list if CITY_COUNTY.get(str(area).strip()))
-        requested_in_scope = requested_tax_counties & TAX_PROBATE_SCOPE_COUNTIES
-        excluded_by_scope = sorted(requested_tax_counties - TAX_PROBATE_SCOPE_COUNTIES)
+        requested_in_scope = requested_tax_counties & TAX_SCAN_SCOPE_COUNTIES
+        excluded_by_scope = sorted(requested_tax_counties - TAX_SCAN_SCOPE_COUNTIES)
         county_names = {"allegheny": "Allegheny", "erie": "Erie"}
         county_audits = {}
         allegheny_sheriff_tax_rows = [row for row in sheriff_rows
@@ -3249,16 +3125,7 @@ def run_orchestrator():
         usable = sum(a.get("status") in ("success", "partial") for a in mls_audits)
         sources["mls"].update({"status": "success" if good == len(mls_audits) and good else "partial" if usable else "failed",
                                  "rows": len(live_results), "areas": mls_audits,
-                                 "coverage": "not_proven_complete",
-                                 "probate_keyword_candidates": sum(a.get("probate_keyword_candidates", 0) for a in mls_audits),
-                                 "remarks_search_status": ("searched" if any(a.get("remarks_search_status") == "searched" for a in mls_audits)
-                                                           else "remarks_field_unavailable" if mls_audits else "not_scanned")})
-        if "06_probate_estates" in sources:
-            sources["06_probate_estates"]["mls_keyword_detection"] = {
-                "status": sources["mls"].get("remarks_search_status", "not_scanned"),
-                "candidate_rows": sources["mls"].get("probate_keyword_candidates", 0),
-                "note": "מועמדים מתויגים בתוך MLS; אין בכך אישור שהתיק הוא עיזבון.",
-            }
+                                 "coverage": "not_proven_complete"})
         for item in mls_audits:
             if item.get("error"):
                 log_entry["errors"].append(f"MLS {item['area']}: {item['error']}")
@@ -3463,7 +3330,7 @@ def run_orchestrator():
     log_entry["required_data_rejections_by_source"] = incomplete_rejections_by_source
     log_entry["source_property_type_counts"] = source_type_counts
     for sector, source in sources.items():
-        if sector in {"mls", "reo", "sheriff", "tax", "06_probate_estates"}:
+        if sector in {"mls", "reo", "sheriff", "tax"}:
             source["passed_filters"] = sum(1 for prop in final_filtered if prop.get("source_type") == sector)
             rejected = incomplete_rejections_by_source.get(sector, 0)
             source["minimum_data_rejected"] = rejected
