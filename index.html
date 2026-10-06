@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.9.0 / 2026-10-06: previous prices and price history, one consistent financial model and input-aware recalculation -->
+<!-- PA UI 8.10.0 / 2026-10-06: persistent county/city/neighborhood intent, compact header and attributed technical facts -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -48,6 +48,24 @@
             font: 700 10px/1 'JetBrains Mono', monospace;
         }
         
+        /* Keep title and actions in one compact desktop row; wrap on smaller screens. */
+        .compact-header { max-width: 1600px; margin-inline: auto; padding: 8px 24px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; }
+        .compact-brand { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+        .compact-brand-icon { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; }
+        #app-title { margin: 0; font-size: 14px; font-weight: 800; line-height: 1.35; white-space: nowrap; }
+        #ui-version { display: block; font-size: 9px; font-weight: 600; line-height: 1.35; }
+        .compact-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .compact-action { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 9px; min-height: 34px; font-size: 12px; line-height: 1.2; white-space: nowrap; cursor: pointer; }
+        .compact-action svg, .compact-action i { flex-shrink: 0; }
+        .compact-header-status { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; padding-inline-start: 10px; border-inline-start: 1px solid #374151; }
+        .compact-last-scan { min-width: 112px; }
+        .compact-scan-line { display: flex; align-items: center; gap: 5px; }
+        .compact-scan-line span { font-size: 9px; line-height: 1.35; }
+        #last-scan-time { font-size: 11px; line-height: 1.4; }
+        #auto-scan-text { font-size: 10px; }
+        @media (min-width: 1200px) { .compact-header { flex-wrap: nowrap; } }
+        @media (max-width: 767px) { .compact-header { padding: 8px 12px; gap: 8px; } .compact-brand { flex-basis: 100%; } .compact-header-status { margin-inline-start: 0; padding-inline-start: 0; border: 0; flex-wrap: wrap; } #app-title { font-size: 13px; } }
+
         /* Table Structure Enhancements */
         .props-table { table-layout: fixed; width: 100%; min-width: 1000px; }
         .col-location { width: 30%; }
@@ -68,48 +86,27 @@
 <body class="min-h-screen flex flex-col antialiased">
 
     <!-- Header & Navigation -->
-    <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="p-2 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
-                    <i data-lucide="building-2" class="w-6 h-6"></i>
-                </div>
+    <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md" id="app-header">
+        <div class="compact-header" id="app-header-row">
+            <div class="compact-brand" title="מודיעין נדל״ן, עסקאות והשבחה בפנסילבניה">
+                <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                        PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20" id="ui-version">UI 8.9.0 · 06.10.2026</span>
-                    </h1>
-                    <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
+                    <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
+                    <span class="text-blue-400" id="ui-version">UI 8.10.0 · 06.10.2026</span>
                 </div>
             </div>
-
-            <div class="flex items-center gap-2.5 flex-wrap">
-                <a href="deals.html" target="deals_tab" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
-                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>📊 חדר עסקאות (Deal Room)</span>
-                </a>
-
-                <button onclick="openTelegramModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/40 rounded-xl text-xs font-bold transition">
-                    <i data-lucide="send" class="w-4 h-4"></i><span>התראות טלגרם</span><span id="telegram-status-dot" title="מצב ההתראות לא אומת" class="w-2 h-2 rounded-full bg-gray-500"></span>
-                </button>
-
-                <button onclick="openOnDemandScanModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
-                    <i data-lucide="play-circle" class="w-4 h-4"></i> הפעל סריקה יזומה
-                </button>
-
-                <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl text-xs font-bold transition">
-                    <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i> הגדרות סריקה
-                </button>
-
-                <div class="flex items-center gap-3 pr-2 border-r border-gray-700">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-[10px] text-gray-500 font-bold mb-0.5">סריקה אחרונה · זמן ישראל</span>
-                        <span class="text-xs font-mono font-black text-emerald-400" id="last-scan-time">בודק...</span><span id="last-scan-state" class="block text-[10px] text-gray-400" aria-live="polite"></span>
-                    </div>
-                    <button onclick="openAutoScanModal()" id="auto-scan-toggle-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition cursor-pointer" title="ניהול תזמונים וטייס אוטומטי">
-                        <span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span id="auto-scan-text" class="text-xs font-bold text-emerald-400">טייס אוטומטי</span>
-                    </button>
+            <nav class="compact-actions" aria-label="פעולות ראשיות">
+                <a href="deals.html" target="deals_tab" id="header-deal-room" title="חדר עסקאות (Deal Room)" class="compact-action bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-lg font-black transition"><i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>חדר עסקאות</span></a>
+                <button onclick="openTelegramModal()" title="התראות טלגרם" aria-label="התראות טלגרם" class="compact-action bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/40 rounded-lg font-bold transition"><i data-lucide="send" class="w-4 h-4"></i><span>טלגרם</span><span id="telegram-status-dot" title="מצב ההתראות לא אומת" class="w-2 h-2 rounded-full bg-gray-500"></span></button>
+                <button onclick="openOnDemandScanModal()" title="הפעל סריקה יזומה" class="compact-action bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-black transition"><i data-lucide="play-circle" class="w-4 h-4"></i><span>סריקה יזומה</span></button>
+                <button onclick="openSettingsModal()" class="compact-action bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-lg font-bold transition"><i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i><span>הגדרות סריקה</span></button>
+            </nav>
+            <div class="compact-header-status">
+                <div class="compact-last-scan" title="סריקה אחרונה · זמן ישראל">
+                    <div class="compact-scan-line"><span class="text-gray-500">סריקה אחרונה</span><span id="last-scan-state" class="text-gray-400" aria-live="polite"></span></div>
+                    <span class="font-mono font-black text-gray-200" id="last-scan-time">בודק...</span>
                 </div>
+                <button onclick="openAutoScanModal()" id="auto-scan-toggle-btn" class="compact-action bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition" title="ניהול תזמונים וטייס אוטומטי"><span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span id="auto-scan-text" class="font-bold text-emerald-400">טייס אוטומטי</span></button>
             </div>
         </div>
     </header>
@@ -158,12 +155,13 @@
                 <div id="city-dropdown-list" class="hidden absolute top-full mt-1 right-0 md:w-[400px] w-[min(90vw,400px)] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-[420px] overflow-y-auto custom-scrollbar">
                     <div class="sticky top-0 bg-gray-900 border-b border-gray-800 p-2.5 z-10 space-y-2">
                         <input id="main-geo-search" type="search" placeholder="חפש מחוז, עיר, שכונה או אזור מקור..." oninput="populateCityDropdown()" onclick="event.stopPropagation()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500">
-                        <p class="text-[10px] text-gray-400">פתח ▸ כדי לראות ערים ושכונות. לחץ „רק כאן” לבידוד מקום, או סמן כמה מקומות יחד. המספרים ברשימת האזורים כוללים גם נכסים בארכיון.</p>
+                        <p class="text-[10px] text-gray-400">פתח ▸ כדי לראות ערים ושכונות. לחץ „רק כאן” לבידוד מקום, או סמן כמה מקומות יחד. הבחירה נשמרת בדפדפן. המספרים כוללים גם נכסים בארכיון.</p>
                         <div class="flex justify-between items-center">
                             <button type="button" onclick="setAllCityFilters(true, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">הצג את כל הנכסים</button>
                             <button type="button" onclick="setAllCityFilters(false, event)" class="text-[11px] font-bold text-gray-400 hover:text-white">בחר אזורים מאפס</button>
                         </div>
                     </div>
+                    <p id="main-geo-save-status" hidden aria-live="polite" class="px-3 py-2 text-[11px] text-gray-400"></p>
                     <div id="city-checkbox-container" class="p-2 space-y-1 text-xs text-gray-200"></div>
                 </div>
             </div>
@@ -304,12 +302,12 @@
             <div class="space-y-2 bg-gray-950/70 p-4 rounded-xl border border-gray-800">
                 <h4 class="text-xs font-black text-amber-400 uppercase flex items-center gap-1.5"><i data-lucide="clipboard-check" class="w-4 h-4"></i> מפרט טכני:</h4>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs pt-1">
-                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">אכלוס</span><strong class="text-white text-sm" id="modal-occupancy"></strong></div>
-                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">גג</span><strong class="text-white text-sm" id="modal-roof"></strong></div>
-                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חימום</span><strong class="text-white text-sm" id="modal-hvac"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">אכלוס</span><strong class="text-white text-sm" id="modal-occupancy"></strong><span id="modal-occupancy-source" hidden class="block mt-1 text-[10px] text-gray-400 font-normal"></span></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">גג</span><strong class="text-white text-sm" id="modal-roof"></strong><span id="modal-roof-source" hidden class="block mt-1 text-[10px] text-gray-400 font-normal"></span></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חימום / קירור</span><strong class="text-white text-sm" id="modal-hvac"></strong><span id="modal-hvac-source" hidden class="block mt-1 text-[10px] text-gray-400 font-normal"></span></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">בנייה</span><strong class="text-white text-sm" id="modal-year-built"></strong></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">מגרש</span><strong class="text-white text-sm" id="modal-lot-size"></strong></div>
-                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חניה</span><strong class="text-white text-sm" id="modal-parking"></strong></div>
+                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חניה</span><strong class="text-white text-sm" id="modal-parking"></strong><span id="modal-parking-source" hidden class="block mt-1 text-[10px] text-gray-400 font-normal"></span></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">עסקה</span><span class="text-white text-sm" id="modal-deal-type"></span></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">תיק</span><span class="text-blue-300 font-mono" id="modal-docket"></span></div>
                 </div>
@@ -922,11 +920,13 @@
         let scanStartTime = null;
         let lastKnownScanId = null;
 
-        let selectedCitiesFilter = null; 
+        const MAIN_GEO_STORAGE_KEY = 'pa_main_geo_selection_v1';
+        let mainGeoSelection = readSavedMainGeoSelection();
+        let selectedCitiesFilter = null;
         let allAvailableCities = [];
-        let expandedMainGeoNodes = new Set();
+        let expandedMainGeoNodes = new Set(mainGeoSelection.expanded);
 
-        // UI 8.9.0: counts, identity and date information are separate from estimates.
+        // UI 8.10.0: counts, identity and date information are separate from estimates.
         let databaseProperties = [];
         let dataLoadSummary = {sourceRows: 0, duplicates: 0, incomplete: 0, ambiguous: 0, sheriffUnavailable: false};
         let cloudReady = {pipeline: false, watchlist: false, archive: false};
@@ -1984,6 +1984,128 @@
             }
         }
 
+        // Store geographic intent, so new listings in a selected county/city are included too.
+        function defaultMainGeoSelection() {
+            return {version: 1, defaultIncluded: true, rules: [], expanded: []};
+        }
+
+        function readSavedMainGeoSelection() {
+            try {
+                const text = localStorage.getItem(MAIN_GEO_STORAGE_KEY);
+                if (!text) return defaultMainGeoSelection();
+                const state = JSON.parse(text);
+                if (!state || state.version !== 1 || typeof state.defaultIncluded !== 'boolean' ||
+                    !Array.isArray(state.rules) || state.rules.length > 5000) return defaultMainGeoSelection();
+                const validScope = parts => Array.isArray(parts) && parts.length >= 1 && parts.length <= 3 &&
+                    parts.every((part, index) => typeof part === 'string' && part.length <= 200 && (index === 2 || part.trim()));
+                if (!state.rules.every(rule => rule && typeof rule.include === 'boolean' && validScope(rule.parts))) return defaultMainGeoSelection();
+                return {version: 1, defaultIncluded: state.defaultIncluded,
+                    rules: state.rules.map(rule => ({parts: rule.parts.map(part => part.trim()), include: rule.include})),
+                    expanded: Array.isArray(state.expanded) ? state.expanded.filter(key => typeof key === 'string').slice(0, 5000) : []};
+            } catch (error) { return defaultMainGeoSelection(); }
+        }
+
+        function saveMainGeoSelection(onlyExpansion = false) {
+            const status = document.getElementById('main-geo-save-status');
+            try {
+                const selection = onlyExpansion ? readSavedMainGeoSelection() : mainGeoSelection;
+                localStorage.setItem(MAIN_GEO_STORAGE_KEY, JSON.stringify({version: 1,
+                    defaultIncluded: selection.defaultIncluded, rules: selection.rules,
+                    expanded: [...expandedMainGeoNodes]}));
+                if (status) status.hidden = true;
+            } catch (error) {
+                if (status) {
+                    status.textContent = 'הדפדפן לא מאפשר לשמור את הבחירה; היא תקפה כרגע בלבד.';
+                    status.hidden = false;
+                }
+            }
+        }
+
+        function mainGeoScopeCovers(scope, parts) {
+            return scope.length <= parts.length && scope.every((part, index) => identityText(part) === identityText(parts[index]));
+        }
+
+        function mainGeoIntentIncludes(parts) {
+            let included = mainGeoSelection.defaultIncluded;
+            for (const rule of mainGeoSelection.rules) {
+                if (mainGeoScopeCovers(rule.parts, parts)) included = rule.include;
+            }
+            return included;
+        }
+
+        function projectMainGeoSelection(keys) {
+            selectedCitiesFilter = mainGeoSelection.defaultIncluded && !mainGeoSelection.rules.some(rule => !rule.include)
+                ? null : new Set([...keys].filter(key => mainGeoIntentIncludes(JSON.parse(key))));
+        }
+
+        function mainGeoScopeFromKeys(keys, depth = 2) {
+            try { return JSON.parse(keys[0]).slice(0, depth + 1); }
+            catch (error) { return null; }
+        }
+
+        function refreshMainGeoSelection() {
+            saveMainGeoSelection();
+            populateCityDropdown();
+            updateCounts();
+            renderCards();
+        }
+
+        function mainGeoToggle(keys, checked, scope = null) {
+            const scopes = scope ? [scope] : keys.map(key => JSON.parse(key));
+            for (const parts of scopes) {
+                // Selecting a parent again replaces any older child exceptions under that parent.
+                mainGeoSelection.rules = mainGeoSelection.rules.filter(rule => !mainGeoScopeCovers(parts, rule.parts));
+                mainGeoSelection.rules.push({parts: [...parts], include: Boolean(checked)});
+            }
+            refreshMainGeoSelection();
+        }
+
+        function mainGeoSelectOnly(keys, event, scope = null) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            mainGeoSelection = {version: 1, defaultIncluded: false,
+                rules: (scope ? [scope] : keys.map(key => JSON.parse(key))).map(parts => ({parts: [...parts], include: true})), expanded: []};
+            refreshMainGeoSelection();
+        }
+
+        function setAllCityFilters(state, event) {
+            if (event) event.stopPropagation();
+            mainGeoSelection = {version: 1, defaultIncluded: Boolean(state), rules: [], expanded: []};
+            refreshMainGeoSelection();
+        }
+
+        function updateCityDropdownLabel() {
+            const label = document.getElementById('city-dropdown-text');
+            if (!label) return;
+            if (selectedCitiesFilter === null) { label.textContent = 'כל האזורים'; label.title = label.textContent; return; }
+            const rules = mainGeoSelection.rules;
+            if (!mainGeoSelection.defaultIncluded && rules.length === 1 && rules[0].include) {
+                const parts = rules[0].parts;
+                label.textContent = parts.map((part, index) => part || (index === 2 ? 'ללא שכונה / אזור מקור' : '')).join(' › ');
+                if (!selectedCitiesFilter.size) label.textContent += ' · אין תוצאות כרגע';
+            } else if (!selectedCitiesFilter.size) {
+                label.textContent = rules.length ? 'אין תוצאות באזורים שבחרת' : 'בחר אזור להצגת נכסים';
+            } else {
+                const places = [...selectedCitiesFilter].map(key => JSON.parse(key));
+                const counties = new Set(places.map(parts => parts[0]));
+                const cities = new Set(places.map(parts => JSON.stringify(parts.slice(0, 2))));
+                if (places.length === 1) label.textContent = places[0].filter(Boolean).join(' › ');
+                else if (counties.size === 1 && cities.size === 1) label.textContent = `${places[0][0]} › ${places[0][1]} · ${places.length} אזורים`;
+                else if (counties.size === 1) label.textContent = `${places[0][0]} · ${cities.size} ערים`;
+                else label.textContent = `${counties.size} מחוזות · ${places.length} אזורים`;
+            }
+            label.title = label.textContent;
+        }
+
+        window.addEventListener('storage', event => {
+            if (event.key !== MAIN_GEO_STORAGE_KEY && event.key !== null) return;
+            mainGeoSelection = readSavedMainGeoSelection();
+            expandedMainGeoNodes = new Set(mainGeoSelection.expanded);
+            populateCityDropdown();
+            updateCounts();
+            renderCards();
+        });
+
+
         const MAIN_COUNTY_BY_CITY = { Pittsburgh: 'Allegheny', Philadelphia: 'Philadelphia', Allentown: 'Lehigh', Reading: 'Berks', Erie: 'Erie', Scranton: 'Lackawanna', Lancaster: 'Lancaster' };
         function mainGeoParts(p) {
             const clean = value => String(value || '').trim().replace(/\s+/g, ' ');
@@ -1997,26 +2119,6 @@
 
         function mainGeoKey(p) { return JSON.stringify(mainGeoParts(p)); }
         function toggleCityDropdown(e) { e.stopPropagation(); document.getElementById('city-dropdown-list').classList.toggle('hidden'); }
-        function refreshMainGeoSelection() {
-            populateCityDropdown();
-            updateCounts();
-            renderCards();
-        }
-
-        function mainGeoToggle(keys, checked) {
-            if (selectedCitiesFilter === null) selectedCitiesFilter = new Set(allAvailableCities);
-            keys.forEach(key => checked ? selectedCitiesFilter.add(key) : selectedCitiesFilter.delete(key));
-            if (selectedCitiesFilter.size === allAvailableCities.length) selectedCitiesFilter = null;
-            refreshMainGeoSelection();
-        }
-
-        function mainGeoSelectOnly(keys, event) {
-            if (event) { event.preventDefault(); event.stopPropagation(); }
-            selectedCitiesFilter = new Set(keys);
-            if (selectedCitiesFilter.size === allAvailableCities.length) selectedCitiesFilter = null;
-            refreshMainGeoSelection();
-        }
-
         function mainGeoRow(labelText, count, keys, depth = 0) {
             const row = document.createElement('div');
             row.className = 'flex flex-1 min-w-0 items-center gap-1';
@@ -2032,7 +2134,8 @@
             const picked = keys.filter(key => selectedCitiesFilter === null || selectedCitiesFilter.has(key)).length;
             cb.checked = picked === keys.length && keys.length > 0;
             cb.indeterminate = picked > 0 && picked < keys.length;
-            cb.addEventListener('change', () => mainGeoToggle(keys, cb.checked));
+            const scope = mainGeoScopeFromKeys(keys, depth);
+            cb.addEventListener('change', () => mainGeoToggle(keys, cb.checked, scope));
             const name = document.createElement('span');
             name.textContent = labelText; name.className = 'flex-1 truncate'; name.dir = 'ltr';
             name.title = labelText;
@@ -2044,7 +2147,7 @@
             only.className = 'shrink-0 text-[10px] text-blue-300 font-bold rounded px-1.5 py-1 hover:bg-blue-500/20';
             only.textContent = 'רק כאן';
             only.setAttribute('aria-label', `הצג רק ${labelText}`);
-            only.addEventListener('click', e => mainGeoSelectOnly(keys, e));
+            only.addEventListener('click', e => mainGeoSelectOnly(keys, e, scope));
             row.append(label, only);
             return row;
         }
@@ -2064,6 +2167,7 @@
                 button.setAttribute('aria-label', `${nextOpen ? 'סגור' : 'פתח'} ${label}`);
                 button.title = `${nextOpen ? 'סגור' : 'פתח'} ${label}`;
                 if (nextOpen) expandedMainGeoNodes.add(nodeKey); else expandedMainGeoNodes.delete(nodeKey);
+                saveMainGeoSelection(true);
             });
             return button;
         }
@@ -2085,10 +2189,7 @@
                 cityNode.locations.get(loc).count++; cityNode.locations.get(loc).keys.add(key);
             }
             allAvailableCities = Array.from(keys);
-            if (selectedCitiesFilter !== null) {
-                selectedCitiesFilter = new Set([...selectedCitiesFilter].filter(key => keys.has(key)));
-                if (selectedCitiesFilter.size === keys.size && keys.size) selectedCitiesFilter = null;
-            }
+            projectMainGeoSelection(keys);
             container.replaceChildren();
             const sorted = entries => [...entries].sort((a,b) => String(a[0]).localeCompare(String(b[0]), 'en', {sensitivity:'base', numeric:true}));
             let shown = 0;
@@ -2125,27 +2226,6 @@
             if (!shown) { const empty = document.createElement('p'); empty.className = 'text-gray-400 p-3 text-center'; empty.textContent = query ? 'לא נמצאו מחוזות, ערים או שכונות תואמים.' : 'אין נכסים זמינים לסינון.'; container.append(empty); }
             updateCityDropdownLabel();
         }
-        function setAllCityFilters(state, event) {
-            if (event) event.stopPropagation();
-            selectedCitiesFilter = state ? null : new Set();
-            refreshMainGeoSelection();
-        }
-
-        function updateCityDropdownLabel() {
-            const label = document.getElementById('city-dropdown-text');
-            if (!label) return;
-            if (selectedCitiesFilter === null) { label.textContent = 'כל האזורים'; return; }
-            if (!selectedCitiesFilter.size) { label.textContent = 'בחר אזור להצגת נכסים'; return; }
-            const places = [...selectedCitiesFilter].map(key => JSON.parse(key));
-            const counties = new Set(places.map(parts => parts[0]));
-            const cities = new Set(places.map(parts => parts[1]));
-            if (places.length === 1) label.textContent = places[0].filter(Boolean).join(' › ');
-            else if (counties.size === 1 && cities.size === 1) label.textContent = `${places[0][0]} › ${places[0][1]} · ${places.length} אזורים`;
-            else if (counties.size === 1) label.textContent = `${places[0][0]} · ${cities.size} ערים`;
-            else label.textContent = `${counties.size} מחוזות · ${places.length} אזורים`;
-            label.title = label.textContent;
-        }
-
         async function loadGeoCatalog() {
             const areas = {};
             for (const prop of rawProperties) {
@@ -2421,6 +2501,58 @@
             lucide.createIcons();
         }
 
+        function suppliedTechnicalValue(value) {
+            if (value === null || value === undefined || typeof value === 'boolean') return null;
+            const text = String(value).trim();
+            if (!text || /^(?:unknown|n\/a|none|null|לא ידוע|לא אומת|לא צוין|לא פורסם|-+)$/i.test(text)) return null;
+            return text;
+        }
+
+        function propertyTechnicalFact(p, field) {
+            const explicit = p.technical_facts?.[field];
+            const value = suppliedTechnicalValue(explicit?.value);
+            const source = suppliedTechnicalValue(explicit?.source);
+            const rejectedStatus = status => /estimated|simulated|placeholder|unverified|default/i.test(String(status || ''));
+            if (value !== null && source && !rejectedStatus(explicit.status)) {
+                return {value, source, url: safeExternalUrl(explicit.source_url), date: explicit.checked_at || explicit.retrieved_at};
+            }
+            const flatValue = suppliedTechnicalValue(p[field]);
+            const flatSource = suppliedTechnicalValue(p[field + '_source']);
+            if (flatValue !== null && flatSource && !rejectedStatus(p[field + '_status'])) {
+                return {value: flatValue, source: flatSource, url: safeExternalUrl(p[field + '_source_url']), date: p[field + '_checked_at']};
+            }
+            // County heating/cooling is a source fact; roof material is not evidence of roof condition.
+            const county = p.county_property_data;
+            if (field === 'hvac_type' && county && suppliedTechnicalValue(county.heating_cooling) && suppliedTechnicalValue(county.source) && safeExternalUrl(county.source_url)) {
+                return {value: String(county.heating_cooling), source: String(county.source), url: safeExternalUrl(county.source_url), date: county.retrieved_at};
+            }
+            return {value: flatValue === null ? 'לא פורסם' : 'לא אומת', source: null, url: null, date: null};
+        }
+
+        function renderPropertyTechnicalFacts(p) {
+            const fields = {occupancy: 'modal-occupancy', roof_condition: 'modal-roof', hvac_type: 'modal-hvac', parking: 'modal-parking'};
+            for (const [field, id] of Object.entries(fields)) {
+                const node = document.getElementById(id);
+                if (!node) continue;
+                const fact = propertyTechnicalFact(p, field);
+                node.textContent = fact.value;
+                node.classList.toggle('text-gray-400', !fact.source);
+                node.classList.toggle('text-white', Boolean(fact.source));
+                const sourceNode = document.getElementById(id + '-source');
+                if (!sourceNode) continue;
+                sourceNode.replaceChildren();
+                sourceNode.hidden = !fact.source;
+                if (fact.source) {
+                    const source = document.createElement(fact.url ? 'a' : 'span');
+                    source.textContent = 'מקור: ' + fact.source;
+                    if (fact.url) { source.href = fact.url; source.target = '_blank'; source.rel = 'noopener noreferrer'; source.className = 'text-blue-300 underline'; }
+                    sourceNode.appendChild(source);
+                    if (parseDate(fact.date)) sourceNode.appendChild(document.createTextNode(' · נרשם: ' + displayDate(fact.date)));
+                }
+            }
+        }
+
+
         function openPropertyModal(id) {
             const p = rawProperties.find(x => uiPropertyKey(x) === String(id)) || rawProperties.find(x => !x._idAmbiguous && String(x.id) === String(id)); if (!p) return;
             currentSelectedProperty = p;
@@ -2452,12 +2584,9 @@
             document.getElementById('modal-summary').textContent = p.probate_keyword_candidate && p.source_listing_description
                 ? `${p.summary || ''}\n\nתיאור המקור (קטע): ${p.source_listing_description}`
                 : (p.summary || p.description || 'אין תיאור נוסף');
-            document.getElementById('modal-occupancy').textContent = p.occupancy||'לא ידוע';
-            document.getElementById('modal-roof').textContent = p.roof_condition||'לא ידוע';
-            document.getElementById('modal-hvac').textContent = p.hvac_type||'לא ידוע';
+            renderPropertyTechnicalFacts(p);
             document.getElementById('modal-year-built').textContent = p.year_built || countyData?.year_built || 'לא ידוע';
             document.getElementById('modal-lot-size').textContent = p.lot_size || countyData?.lot_size || '-';
-            document.getElementById('modal-parking').textContent = p.parking||'-';
             document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
             const sheriffDetails = document.getElementById('modal-sheriff-details');
