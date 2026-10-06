@@ -19,6 +19,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 
 import pytz
+from analyzer import calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties
 import requests
 
 EST_TZ = pytz.timezone("US/Eastern")
@@ -29,7 +30,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.4-probate-scan-closed-20261005"
+ORCHESTRATOR_VERSION = "3.8.5-consistent-financials-20261006"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס"}
@@ -2202,33 +2203,18 @@ def append_scan_log(entry):
     atomic_write_json(SCANNER_STATUS_FILE, report)
 
 
-def classify_strategy(deal_type, price, beds, summary=""):
+def classify_strategy(deal_type, price, beds, summary="", property_type=""):
     dt = (deal_type or "").lower()
     text = f"{dt} {summary}".lower()
     is_distressed = any(kw in text for kw in DISTRESS_KEYWORDS) or any(
         k in dt for k in ["sheriff", "tax", "foreclosure", "reo"]
     )
-    beds_num = safe_number(beds, None, int)
-    projected_rent = None
-    gross_yield = None
-    if beds_num is not None and price:
-        base_rent = 950 + (beds_num * 250)
-        projected_rent = max(900, int(base_rent + (safe_number(price, 0, float) * 0.002)))
-        annual_rent = projected_rent * 12
-        gross_yield = round((annual_rent / max(safe_number(price, 1, float), 1)) * 100, 1)
-
-    if not is_distressed and safe_number(price, 0, float) >= 60000:
-        return {
-            "strategy": "turnkey",
-            "strategy_label": "🔑 Turnkey (מניב מיידי)",
-            "projected_rent": f"${projected_rent:,} / חודש" if projected_rent is not None else "לא זמין",
-            "gross_yield": f"{gross_yield}% תשואה" if gross_yield is not None else "לא זמין",
-        }
+    strategy = "turnkey" if not is_distressed and safe_number(price, 0, float) >= 60000 else "value_add"
     return {
-        "strategy": "value_add",
-        "strategy_label": "🔨 Value-Add (השבחה ומצוקה)",
-        "projected_rent": f"${projected_rent:,} / חודש" if projected_rent is not None else "לא זמין",
-        "gross_yield": f"{gross_yield}% תשואה (לאחר שיפוץ)" if gross_yield is not None else "לא זמין",
+        "strategy": strategy,
+        "strategy_label": "בחינה להשכרה" if strategy == "turnkey" else "בחינה להשבחה",
+        **calculate_rental_metrics({"deal_type": deal_type, "price": price, "beds": beds,
+                                    "property_type": property_type}),
     }
 
 
@@ -2304,7 +2290,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
             if home_url and not home_url.startswith("http"):
                 home_url = f"https://www.redfin.com{home_url}"
 
-            strategy_data = classify_strategy("MLS", price, beds)
+            strategy_data = classify_strategy("MLS", price, beds, property_type=property_type)
             mls_number = row.get("MLS#") or normalize_addr_key(addr, row_city, zip_code)
             discovered.append({
                 "id": f"PA-MLS-{mls_number}",
@@ -2327,6 +2313,10 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 "strategy": strategy_data["strategy"],
                 "strategy_label": strategy_data["strategy_label"],
                 "gross_yield": strategy_data["gross_yield"],
+                "gross_yield_pct": strategy_data["gross_yield_pct"],
+                "monthly_rent_est": strategy_data["monthly_rent_est"],
+                "rent_method": strategy_data["rent_method"],
+                "financial_model_version": strategy_data["financial_model_version"],
                 "beds": beds,
                 "total_rooms": total_rooms,
                 "baths": baths,
@@ -3465,14 +3455,19 @@ def source_record_analysis_cleanup_needed(properties):
     if not isinstance(properties, list):
         return False
     metrics = ("arv", "flip_rehab", "rental_rehab", "mao_flip", "monthly_rent_est",
-               "mao_rental", "neighborhood_class", "ai_summary")
-    return any(
-        isinstance(prop, dict)
-        and (prop.get("source_type") in {"tax", "sheriff", "sheriff_sale"})
-        and (prop.get("analysis_mode") != "source_record_only"
-             or any(prop.get(field) is not None for field in metrics))
-        for prop in properties
-    )
+               "mao_rental", "projected_rent", "gross_yield", "gross_yield_pct", "ai_summary")
+    return any(isinstance(prop, dict) and is_public_court_record(prop)
+               and (needs_analysis(prop) or any(prop.get(field) is not None for field in metrics))
+               for prop in properties)
+
+
+def financial_analysis_refresh_needed(properties):
+    if not isinstance(properties, list):
+        return False
+    selected_counties = load_selected_counties()
+    return any(isinstance(prop, dict) and not is_public_court_record(prop)
+               and normalize_county(prop.get('county')) in selected_counties and needs_analysis(prop)
+               for prop in properties)
 
 
 if __name__ == "__main__":
@@ -3482,6 +3477,7 @@ if __name__ == "__main__":
         stored_properties = load_json_file(PROPERTIES_FILE, [])
         source_cleanup_needed = source_record_analysis_cleanup_needed(stored_properties)
         analyze = bool(latest.get("status") in ("success", "partial") and
-                       ((latest.get("new", 0) or latest.get("updated", 0)) or source_cleanup_needed))
+                       ((latest.get("new", 0) or latest.get("updated", 0)) or source_cleanup_needed
+                        or financial_analysis_refresh_needed(stored_properties)))
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             output.write(f"analyze={'true' if analyze else 'false'}\n")
