@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.7.1 / 2026-10-06: geography hierarchy and selected-area source counts -->
+<!-- PA UI 8.8.0 / 2026-10-06: database counts, safe record identity, explicit archive and verified scan dates -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -77,7 +77,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20" id="ui-version">UI 8.7.1 · 06.10.2026</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20" id="ui-version">UI 8.8.0 · 06.10.2026</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -89,7 +89,7 @@
                 </a>
 
                 <button onclick="openTelegramModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/40 rounded-xl text-xs font-bold transition">
-                    <i data-lucide="send" class="w-4 h-4"></i><span>התראות טלגרם</span><span id="telegram-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <i data-lucide="send" class="w-4 h-4"></i><span>התראות טלגרם</span><span id="telegram-status-dot" title="מצב ההתראות לא אומת" class="w-2 h-2 rounded-full bg-gray-500"></span>
                 </button>
 
                 <button onclick="openOnDemandScanModal()" class="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/20 transition">
@@ -102,8 +102,8 @@
 
                 <div class="flex items-center gap-3 pr-2 border-r border-gray-700">
                     <div class="text-right hidden sm:block">
-                        <span class="block text-[10px] text-gray-500 font-bold mb-0.5">סריקה אחרונה</span>
-                        <span class="text-xs font-mono font-black text-emerald-400" id="last-scan-time">בודק...</span>
+                        <span class="block text-[10px] text-gray-500 font-bold mb-0.5">סריקה אחרונה · זמן ישראל</span>
+                        <span class="text-xs font-mono font-black text-emerald-400" id="last-scan-time">בודק...</span><span id="last-scan-state" class="block text-[10px] text-gray-400" aria-live="polite"></span>
                     </div>
                     <button onclick="openAutoScanModal()" id="auto-scan-toggle-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition cursor-pointer" title="ניהול תזמונים וטייס אוטומטי">
                         <span id="auto-scan-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -123,7 +123,7 @@
         </details>
         <!-- KPI Cards -->
         <section id="source-kpi-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div></button>
+            <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל · במאגר</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div><div id="count-all-visible" class="mt-1 text-[11px] text-blue-300 font-bold">בלוח: 0</div></button>
             <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS</span><i data-lucide="house" class="w-4 h-4 text-cyan-400"></i></div><div class="text-right"><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div><div id="count-mls-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-cyan-300 font-bold"></div></div></button>
             <button onclick="setCategory('price_drop')" id="btn-cat-price_drop" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">ירידות מחיר</span><i data-lucide="trending-down" class="w-4 h-4 text-rose-400"></i></div><div class="text-right"><div class="text-2xl font-black text-rose-300" id="count-price-drop">0</div><div id="count-price-drop-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-rose-300 font-bold"></div></div></button>
             <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-right"><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div><div id="count-distressed-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-amber-300 font-bold"></div></div></button>
@@ -131,11 +131,16 @@
             <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-right"><div class="text-2xl font-black text-purple-300" id="count-tax">0</div><div id="count-tax-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-purple-300 font-bold"></div></div></button>
             <button type="button" hidden onclick="setCategory('fsbo')" id="btn-cat-fsbo" class="filter-card hidden text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">FSBO · מכירה פרטית</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-right"><div class="text-2xl font-black text-emerald-300" id="count-fsbo">0</div><div id="count-fsbo-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-emerald-300 font-bold"></div></div></button>
             
-            <button onclick="setCategory('offmarket')" id="btn-cat-offmarket" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-teal-500/30 transition hover:border-teal-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-teal-300">Off Market</span><i data-lucide="house-x" class="w-4 h-4 text-teal-400"></i></div><div class="text-right"><div class="text-2xl font-black text-teal-300" id="count-offmarket">0</div><div id="count-offmarket-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-teal-300 font-bold"></div></div></button>
+            <button onclick="setCategory('offmarket')" id="btn-cat-offmarket" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-teal-500/30 transition hover:border-teal-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-teal-300">Off Market · לבדיקה</span><i data-lucide="house-x" class="w-4 h-4 text-teal-400"></i></div><div class="text-right"><div class="text-2xl font-black text-teal-300" id="count-offmarket">0</div><div id="count-offmarket-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-teal-300 font-bold"></div></div></button>
 
             <button onclick="setCategory('archive')" id="btn-cat-archive" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-gray-600/30 transition hover:border-gray-500 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-400">ארכיון מוסתר</span><i data-lucide="archive" class="w-4 h-4 text-gray-500"></i></div><div class="text-2xl font-black text-gray-400" id="count-archive">0</div></button>
         </section>
 
+        <p class="text-[11px] text-gray-400">״הכל״ כולל את רשומות המאגר גם בארכיון ובחדר העסקאות. ספירות המקורות מתייחסות לנכסים בלוח; קטגוריות עשויות לחפוף.</p>
+        <details id="data-health-notice" hidden class="bg-amber-950/20 border border-amber-500/25 rounded-xl p-3">
+            <summary id="data-health-summary" class="cursor-pointer text-xs font-bold text-amber-300"></summary>
+            <div id="data-health-details" class="mt-2 space-y-1"></div>
+        </details>
         <!-- Watchlist & View -->
         <section class="flex flex-wrap items-center justify-between bg-gray-900/80 border border-gray-800 rounded-2xl p-3 sm:px-5 gap-3 shadow-lg">
             <button onclick="toggleWatchlistFilter()" id="btn-watchlist-filter" class="flex items-center gap-3 px-6 py-2.5 rounded-xl border-2 border-amber-500 bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 text-sm font-black transition-all"><i data-lucide="star" class="w-5 h-5 text-amber-400 fill-amber-400"></i><span id="watchlist-btn-label">נכסים במעקב פעיל (Watchlist)</span><span class="badge-count px-2.5 py-0.5 bg-amber-500/30 border border-amber-400/50 rounded-lg font-mono text-white text-xs font-extrabold" id="count-watchlist">0</span></button>
@@ -157,7 +162,7 @@
                 <div id="city-dropdown-list" class="hidden absolute top-full mt-1 right-0 md:w-[400px] w-[min(90vw,400px)] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-[420px] overflow-y-auto custom-scrollbar">
                     <div class="sticky top-0 bg-gray-900 border-b border-gray-800 p-2.5 z-10 space-y-2">
                         <input id="main-geo-search" type="search" placeholder="חפש מחוז, עיר, שכונה או אזור מקור..." oninput="populateCityDropdown()" onclick="event.stopPropagation()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500">
-                        <p class="text-[10px] text-gray-400">פתח ▸ כדי לראות ערים ושכונות. לחץ „רק כאן” לבידוד מקום, או סמן כמה מקומות יחד.</p>
+                        <p class="text-[10px] text-gray-400">פתח ▸ כדי לראות ערים ושכונות. לחץ „רק כאן” לבידוד מקום, או סמן כמה מקומות יחד. המספרים ברשימת האזורים כוללים גם נכסים בארכיון.</p>
                         <div class="flex justify-between items-center">
                             <button type="button" onclick="setAllCityFilters(true, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">הצג את כל הנכסים</button>
                             <button type="button" onclick="setAllCityFilters(false, event)" class="text-[11px] font-bold text-gray-400 hover:text-white">בחר אזורים מאפס</button>
@@ -210,6 +215,10 @@
             </div>
         </section>
 
+        <section class="flex flex-wrap items-center justify-between gap-3 text-xs" aria-live="polite">
+            <div class="flex flex-wrap items-center gap-3"><strong id="filtered-result-count" class="text-blue-300">תוצאות לאחר סינון: 0</strong><span id="filtered-unknown-price" hidden class="text-gray-400"></span></div>
+            <label class="flex items-center gap-2 text-gray-300 cursor-pointer"><input type="checkbox" id="filter-unknown-price" checked onchange="applyFilters()" class="accent-blue-500">הצג גם נכסים ללא מחיר מבוקש</label>
+        </section>
         <!-- Properties Container -->
         <section id="properties-container" class="w-full"></section>
     </main>
@@ -228,6 +237,13 @@
         <button onclick="closeScanToast()" class="absolute top-2 left-2 p-1 text-gray-500 hover:text-white bg-gray-800 rounded-full transition" title="סגור חלונית"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
     </div>
 
+    <div id="telegram-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="telegram-modal-title">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-md w-full space-y-4">
+            <h3 id="telegram-modal-title" class="text-lg text-white font-black">התראות טלגרם</h3>
+            <p class="text-sm text-gray-300">אין כרגע דיווח מהשרת על מצב חיבור טלגרם או על התראה שנשלחה. מצב ההתראות מוצג כלא מאומת.</p>
+            <button type="button" onclick="closeTelegramModal()" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold">סגור</button>
+        </div>
+    </div>
     <!-- Property Modal -->
     <div id="property-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
         <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto custom-scrollbar">
@@ -241,7 +257,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap justify-end">
-                    <button onclick="moveToPipelineFromModal()" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black flex items-center gap-1.5 text-xs">
+                    <button onclick="moveToPipelineFromModal()" id="modal-pipeline-btn" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black flex items-center gap-1.5 text-xs">
                         <i data-lucide="send" class="w-4 h-4"></i>לחדר עסקאות
                     </button>
                     <button onclick="toggleWatchlistFromModal()" id="modal-watchlist-btn" class="p-2.5 rounded-xl bg-gray-800 text-amber-400 flex items-center gap-1.5 text-xs font-bold">
@@ -261,10 +277,10 @@
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
             </div>
 
-            <!-- New AI Section in Modal -->
+            <!-- Preliminary estimates: values are not source facts -->
             <div class="bg-blue-950/20 p-4 rounded-xl border border-blue-500/30">
                 <div class="flex justify-between items-center border-b border-gray-800/60 pb-2 mb-3">
-                    <span class="font-black text-blue-300 flex items-center gap-1.5 text-sm"><i data-lucide="brain-circuit" class="w-5 h-5"></i> ניתוח AI מורחב (Analyzer)</span>
+                    <span class="font-black text-blue-300 flex items-center gap-1.5 text-sm"><i data-lucide="brain-circuit" class="w-5 h-5"></i> אומדנים ראשוניים</span>
                     <span id="modal-ai-class"></span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
@@ -273,7 +289,7 @@
                     <div><span class="text-gray-400 block font-bold mb-1">MAO שכירות</span><strong class="text-emerald-400 text-lg font-black font-mono" id="modal-ai-mao-rent"></strong></div>
                     <div><span class="text-gray-400 block font-bold mb-1">MAO פליפ (70%)</span><strong class="text-amber-400 text-lg font-black font-mono" id="modal-ai-mao-flip"></strong></div>
                 </div>
-                <p class="text-gray-300 text-xs mt-3 bg-gray-900/50 p-3 rounded-lg border border-gray-800/50" id="modal-ai-summary"></p>
+                <p class="text-gray-300 text-xs mt-3 bg-gray-900/50 p-3 rounded-lg border border-gray-800/50" id="modal-ai-summary"></p><p id="modal-analysis-notice" class="text-[11px] text-amber-300 mt-2"></p>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3 rounded-xl border border-gray-800 text-xs mt-2">
@@ -908,6 +924,269 @@
         let allAvailableCities = [];
         let expandedMainGeoNodes = new Set();
 
+        // UI 8.8.0: counts, identity and date information are separate from estimates.
+        let databaseProperties = [];
+        let dataLoadSummary = {sourceRows: 0, duplicates: 0, incomplete: 0, ambiguous: 0, sheriffUnavailable: false};
+        let cloudReady = {pipeline: false, watchlist: false, archive: false};
+        let cloudErrors = [];
+        let automationStateVerified = false;
+
+        function numericData(value) {
+            if (value === null || value === undefined || typeof value === 'boolean') return null;
+            const text = String(value).trim();
+            if (!text) return null;
+            const number = Number(text.replace(/[$,]/g, ''));
+            return Number.isFinite(number) ? number : null;
+        }
+
+        function moneyData(value) {
+            const number = numericData(value);
+            return number === null ? 'אין נתון' : '$' + number.toLocaleString('en-US');
+        }
+
+        function identityText(value) {
+            return String(value || '').normalize('NFKC').toLowerCase()
+                .replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function propertyIdentity(p) {
+            const type = String(p.source_type || '').toLowerCase();
+            const dealType = String(p.deal_type || '').toLowerCase();
+            const county = identityText(p.county).replace(/\s+county(?:\s+pa)?$/, '');
+            const address = identityText(p.address);
+            const city = identityText(p.city || p.municipality);
+            const zip = String(p.zip || '').replace(/\D/g, '').slice(0, 5);
+            const unit = identityText(p.unit || p.unit_number || p.apartment);
+            if (type.includes('sheriff') || dealType.includes('sheriff')) {
+                const parcel = String(p.parcel_id || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+                const docket = identityText(p.docket_id);
+                if (county && parcel && docket) return JSON.stringify(['sheriff', county, parcel, docket, String(p.sale_date || '')]);
+                return JSON.stringify(['sheriff', county, city, zip, address, unit, String(p.id || '')]);
+            }
+            if (type === 'tax') {
+                const parcel = String(p.parcel_id || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+                if (county && parcel) return JSON.stringify(['tax', county, parcel, String(p.tax_sale_type || '')]);
+            }
+            // Redfin home IDs distinguish units, while generic PDFs/list URLs do not identify a property.
+            try {
+                const url = new URL(p.url || p.source_url || '');
+                const home = url.pathname.match(/\/home\/(\d+)\/?$/);
+                if ((url.hostname === 'redfin.com' || url.hostname.endsWith('.redfin.com')) && home) {
+                    return JSON.stringify(['market', 'redfin', home[1]]);
+                }
+            } catch (error) {}
+            if (address && (city || zip)) return JSON.stringify([type === 'tax' ? 'tax' : 'market', county, city, zip, address, unit]);
+            // Do not coalesce incomplete records merely because both lack an address.
+            return JSON.stringify(['incomplete', type, county, city, address, String(p.id || ''), String(p.url || '')]);
+        }
+
+        function uiPropertyKey(p) {
+            return p._uiKey || String(p.id || '');
+        }
+
+        function propertyCheckedTime(p) {
+            return Math.max(parseDate(p.last_source_check), parseDate(p.last_seen), parseDate(p.profile_checked_at));
+        }
+
+        function preparePropertyRecords(rows) {
+            const grouped = new Map();
+            let ignored = 0;
+            for (const source of rows) {
+                if (!source || typeof source !== 'object' || Array.isArray(source)) { ignored++; continue; }
+                const p = {...source};
+                const key = propertyIdentity(p);
+                if (!grouped.has(key)) { grouped.set(key, p); continue; }
+                const previous = grouped.get(key);
+                const nextIsNewer = propertyCheckedTime(p) > propertyCheckedTime(previous);
+                const preferred = nextIsNewer ? p : previous;
+                const other = nextIsNewer ? previous : p;
+                const merged = {...other, ...preferred};
+                // Keep the ID of the primary database record so existing saved selections remain linked.
+                merged.id = previous.id || p.id;
+                // Null source fields must not erase independently obtained building facts.
+                for (const field of ['beds', 'baths', 'sqft', 'year_built', 'county_property_data', 'zip', 'city', 'municipality']) {
+                    if (preferred[field] === null || preferred[field] === undefined || preferred[field] === '') merged[field] = other[field];
+                }
+                merged._sourceIds = [...new Set([...(previous._sourceIds || [String(previous.id || '')]), String(p.id || '')])].filter(Boolean);
+                grouped.set(key, merged);
+            }
+            const records = [...grouped.entries()].map(([key, p]) => ({...p, _identityKey: key, _uiKey: 'p-' + encodeURIComponent(key).replace(/'/g, '%27')}));
+            const byId = new Map();
+            for (const p of records) {
+                const id = String(p.id || '');
+                if (!byId.has(id)) byId.set(id, []);
+                byId.get(id).push(p);
+            }
+            for (const [id, members] of byId) {
+                for (const p of members) p._idAmbiguous = !id || members.length > 1;
+            }
+            return {records, duplicates: rows.length - ignored - records.length, ignored,
+                ambiguous: records.filter(p => p._idAmbiguous).length};
+        }
+
+        function isPipelineProperty(p) {
+            return pipelineDeals.some(deal => {
+                if (!deal || typeof deal !== 'object') return false;
+                if (deal.address && propertyIdentity(deal) === (p._identityKey || propertyIdentity(p))) return true;
+                return !p._idAmbiguous && String(deal.id) === String(p.id);
+            });
+        }
+
+        function isWatchlistedProperty(p) {
+            return !p._idAmbiguous && userWatchlist.has(String(p.id));
+        }
+
+        function cloudActionAllowed(p, kind) {
+            if (!p || p._idAmbiguous) {
+                alert('מזהה המקור משותף לכמה רשומות. אפשר לבדוק את פרטי כל נכס ואת המקור; שמירה לפי המזהה הזה מושהית כדי שלא תעדכן נכס אחר.');
+                return false;
+            }
+            if (!cloudReady[kind]) {
+                alert('נתוני השמירה לא נטענו בהצלחה. רענן את העמוד לפני שינוי מעקב, ארכיון או חדר עסקאות.');
+                return false;
+            }
+            return true;
+        }
+
+        function getMarketAskingPrice(p) {
+            const type = String(p.source_type || '').toLowerCase();
+            const auction = type.includes('sheriff') || isTaxProperty(p) || String(p.deal_type || '').toLowerCase().includes('sheriff');
+            if (auction) return null;
+            const price = numericData(p.price);
+            return price !== null && price > 0 ? price : null;
+        }
+
+        function analysisMoneyData(p, field) {
+            if (p.analysis_mode === 'source_record_only' || String(p.source_type || '').toLowerCase().includes('sheriff') || isTaxProperty(p)) return 'לא חושב';
+            return moneyData(p[field]);
+        }
+
+        function analysisNotice(p) {
+            const notice = p.analysis_disclaimer || (p.analysis_mode === 'source_record_only'
+                ? 'רשומת מקור בלבד; לא חושבו אומדני השקעה.'
+                : 'אומדנים ראשוניים דורשים בדיקת עסקאות והשכרות דומות.');
+            const date = parseDate(p.analysis_updated_at) ? ' · עודכן: ' + displayDate(p.analysis_updated_at) : '';
+            return notice + date;
+        }
+
+        function neighborhoodBadgeHtml(p) {
+            if (p.neighborhood_class_status !== 'verified' || !p.neighborhood_class_source || !p.neighborhood_class) return '';
+            return `<span class="text-[10px] text-purple-300">דירוג שכונה: ${escapeHtml(p.neighborhood_class)}</span>`;
+        }
+
+        function displayDate(value) {
+            const timestamp = parseDate(value);
+            return timestamp ? new Date(timestamp).toLocaleDateString('he-IL', {timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric'}) : 'אין תאריך';
+        }
+
+        function propertyDateLabel(p) {
+            if ((String(p.source_type || '').includes('sheriff') || String(p.deal_type || '').toLowerCase().includes('sheriff')) && parseDate(p.sale_date)) return 'מכירה: ' + displayDate(p.sale_date);
+            if (parseDate(p.listed_date)) return 'פורסם: ' + displayDate(p.listed_date);
+            if (parseDate(p.first_seen)) return 'נמצא במאגר: ' + displayDate(p.first_seen);
+            return 'תאריך פרסום לא ידוע';
+        }
+
+        function isPastSale(p) {
+            if (!String(p.source_type || '').includes('sheriff') && !String(p.deal_type || '').toLowerCase().includes('sheriff')) return false;
+            const timestamp = parseDate(p.sale_date);
+            if (!timestamp) return false;
+            const day = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
+            const saleDay = new Date(timestamp).toISOString().slice(0, 10);
+            return saleDay < day && !['sold', 'cancelled', 'canceled', 'postponed', 'withdrawn'].includes(String(p.sheriff_status || '').toLowerCase());
+        }
+
+        function propertyStatusDisplayHtml(p) {
+            const parts = [];
+            if (isPastSale(p)) parts.push('מועד המכירה עבר · נדרש עדכון מהמקור');
+            else if (p.sheriff_status) parts.push('סטטוס לפי המקור: ' + String(p.sheriff_status));
+            if (isOffMarketProperty(p)) parts.push(String(p.market_status || p.status || '').includes('candidate') ? 'מועמד Off Market · דורש אימות' : 'Off Market לפי המקור');
+            if (p._idAmbiguous) parts.push('מזהה מקור משותף · השמירה מושהית');
+            const listingTime = parseDate(p.listed_date);
+            if (getMarketAskingPrice(p) !== null && listingTime && Date.now() - listingTime > 90 * 86400000) parts.push('מודעה ותיקה · מעל 90 יום');
+            return parts.length ? `<div class="mt-1 text-[10px] leading-snug text-amber-300">${parts.map(escapeHtml).join('<br>')}</div>` : '';
+        }
+
+        function propertyDateDisplayHtml(p) {
+            const checked = p.last_source_check || p.last_seen || p.profile_checked_at;
+            return `<div>${escapeHtml(propertyDateLabel(p))}</div><div class="mt-1 text-[10px] text-gray-400">${parseDate(checked) ? 'נבדק: ' + escapeHtml(displayDate(checked)) : 'מועד בדיקה לא ידוע'}</div>`;
+        }
+
+        function updateScanHeader(report) {
+            const scan = report?.last_scan;
+            const value = scan?.finished_at || scan?.started_at;
+            const time = document.getElementById('last-scan-time');
+            const state = document.getElementById('last-scan-state');
+            if (!time || !state) return;
+            const timestamp = parseDate(value);
+            time.textContent = timestamp ? new Date(timestamp).toLocaleString('he-IL', {timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}) : 'אין דוח סריקה זמין';
+            time.title = timestamp ? 'מועד הריצה בפועל לפי דוח הסריקה · זמן ישראל' : 'אין מועד ריצה מאומת';
+            state.textContent = scan && scan.status !== 'skipped' ? scannerStatusLabel(scan.status) : 'אין סריקה שבוצעה';
+            state.className = 'block text-[10px] font-bold ' + (scan?.status === 'success' ? 'text-emerald-300' : scan?.status === 'failed' ? 'text-rose-300' : 'text-amber-300');
+            time.className = 'text-xs font-mono font-black ' + (scan?.status === 'success' ? 'text-emerald-400' : 'text-gray-200');
+        }
+
+        async function loadAutomationState() {
+            try {
+                const response = await fetch('scan_config.json?t=' + Date.now());
+                if (!response.ok) throw new Error('config unavailable');
+                const config = await response.json();
+                if (typeof config.autoScanEnabled !== 'boolean') throw new Error('config missing state');
+                isAutoScanEnabled = config.autoScanEnabled;
+                automationStateVerified = true;
+                localStorage.setItem('pa_auto_scan_status', String(isAutoScanEnabled));
+                const master = document.getElementById('autoscan-master-switch');
+                if (master) master.checked = isAutoScanEnabled;
+            } catch (error) { automationStateVerified = false; }
+            updateAutoScanUI();
+        }
+
+        function renderDataHealth() {
+            const panel = document.getElementById('data-health-details');
+            const notice = document.getElementById('data-health-notice');
+            if (!panel || !notice) return;
+            const details = [];
+            if (dataLoadSummary.duplicates) details.push(`${dataLoadSummary.duplicates.toLocaleString('en-US')} רשומות חוזרות אוחדו בתצוגה לפי זיהוי נכס; קובצי המקור נשמרו.`);
+            if (dataLoadSummary.incomplete) details.push(`${dataLoadSummary.incomplete.toLocaleString('en-US')} רשומות חסרות פרטי חובה נספרות במאגר אך אינן מוצגות בלוח.`);
+            if (dataLoadSummary.ambiguous) details.push(`${dataLoadSummary.ambiguous.toLocaleString('en-US')} רשומות חולקות מזהה מקור. כל נכס נפתח בנפרד; פעולות שמירה במזהה המשותף מושהות.`);
+            if (dataLoadSummary.sheriffUnavailable) details.push('קובץ השריף הנוסף לא נטען; מוצגות הרשומות הזמינות במאגר הראשי.');
+            const overdue = rawProperties.filter(isPastSale).length;
+            if (overdue) details.push(`${overdue.toLocaleString('en-US')} רשומות שריף מציינות מועד מכירה שכבר עבר. יש לבדוק תוצאה, ביטול או דחייה במקור.`);
+            details.push(...cloudErrors);
+            panel.replaceChildren();
+            details.forEach(value => appendScannerStatusText(panel, value, 'text-xs text-gray-300'));
+            const actionable = Boolean(dataLoadSummary.incomplete || dataLoadSummary.ambiguous || dataLoadSummary.sheriffUnavailable || overdue || cloudErrors.length);
+            notice.hidden = !details.length;
+            document.getElementById('data-health-summary').textContent = actionable ? 'הערות אמינות וטעינה · פתח לפירוט' : 'בדיקת רשומות וכפילויות · פתח לפירוט';
+        }
+
+        function getFilteredProperties() {
+            const value = id => document.getElementById(id)?.value || 'all';
+            const strat = value('filter-strategy'), type = value('filter-type'), cap = value('filter-price');
+            const minInput = document.getElementById('filter-min-price');
+            const min = minInput ? getRawPrice(minInput) : 0;
+            const includeUnknown = document.getElementById('filter-unknown-price')?.checked !== false;
+            return rawProperties.filter(p => {
+                if (isPipelineProperty(p)) return false;
+                if (watchlistFilterActive && !isWatchlistedProperty(p)) return false;
+                if (activeCategory === 'archive' ? !p.is_archived : (p.is_archived || !matchesSourceCategory(p, activeCategory))) return false;
+                if (strat !== 'all' && p.strategy !== strat) return false;
+                if (type !== 'all' && (p.type || p.property_type) !== type) return false;
+                const price = getMarketAskingPrice(p);
+                if (price === null && !includeUnknown) return false;
+                if (price !== null && ((min > 0 && price < min) || (cap !== 'all' && price > Number(cap)))) return false;
+                return selectedCitiesFilter === null || selectedCitiesFilter.has(mainGeoKey(p));
+            });
+        }
+
+        function updateResultSummary(filtered) {
+            const count = document.getElementById('filtered-result-count');
+            const unknown = document.getElementById('filtered-unknown-price');
+            if (count) count.textContent = `תוצאות לאחר סינון: ${filtered.length.toLocaleString('en-US')}`;
+            const missing = filtered.filter(p => getMarketAskingPrice(p) === null).length;
+            if (unknown) { unknown.hidden = missing === 0; unknown.textContent = `${missing.toLocaleString('en-US')} ללא מחיר מבוקש`; }
+        }
+
+
         function handlePriceInput(input) { let raw = String(input.value||'').replace(/\D/g, ''); input.value = raw ? parseInt(raw, 10).toLocaleString('en-US') : ''; }
         function getRawPrice(input) { return parseInt(String(input.value||'').replace(/\D/g, '') || 0, 10); }
 
@@ -951,60 +1230,69 @@
 
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
+            await loadAutomationState();
             await loadProperties();
             await loadGeoCatalog();
         }
 
         async function loadCloudData() {
-            try {
-                const { data: pData } = await supabaseClient.from('pipeline_deals').select('deal_data');
-                if (pData) pipelineDeals = pData.map(r => r.deal_data);
-
-                const { data: wData } = await supabaseClient.from('user_watchlist').select('property_id');
-                if (wData) userWatchlist = new Set(wData.map(r => r.property_id));
-
-                const { data: aData } = await supabaseClient.from('archive_deals').select('property_id, archive_data');
-                if (aData) {
-                    archiveDeals = {};
-                    aData.forEach(r => { archiveDeals[r.property_id] = r.archive_data; });
+            cloudErrors = [];
+            const jobs = [
+                ['pipeline', 'pipeline_deals', 'deal_data'],
+                ['watchlist', 'user_watchlist', 'property_id'],
+                ['archive', 'archive_deals', 'property_id, archive_data']
+            ];
+            const results = await Promise.allSettled(jobs.map(([, table, fields]) => supabaseClient.from(table).select(fields)));
+            for (let i = 0; i < jobs.length; i++) {
+                const [kind] = jobs[i], response = results[i];
+                const result = response.status === 'fulfilled' ? response.value : null;
+                cloudReady[kind] = Boolean(result && !result.error && Array.isArray(result.data));
+                if (!cloudReady[kind]) {
+                    cloudErrors.push(({pipeline: 'חדר העסקאות', watchlist: 'רשימת המעקב', archive: 'הארכיון'})[kind] + ' לא נטען מהשרת; פעולות השמירה בו מושהות עד לרענון תקין.');
+                    continue;
                 }
-                
-                try { viewedDeals = new Set(JSON.parse(localStorage.getItem('pa_viewed_deals') || '[]')); } catch(e){}
-                
-                updateWatchlistCountDisplay();
-            } catch(e) { console.error("Cloud data load error", e); }
+                if (kind === 'pipeline') pipelineDeals = result.data.map(row => row.deal_data).filter(p => p && typeof p === 'object');
+                if (kind === 'watchlist') userWatchlist = new Set(result.data.map(row => String(row.property_id)));
+                if (kind === 'archive') archiveDeals = Object.fromEntries(result.data.map(row => [String(row.property_id), row.archive_data]));
+            }
+            try { viewedDeals = new Set(JSON.parse(localStorage.getItem('pa_viewed_deals') || '[]')); } catch (error) {}
+            updateWatchlistCountDisplay();
         }
 
         function saveViewed() { localStorage.setItem('pa_viewed_deals', JSON.stringify(Array.from(viewedDeals))); }
 
         async function archiveFromModal() {
-            if(!currentSelectedProperty) return;
-            const idStr = String(currentSelectedProperty.id);
-            const price = Number(currentSelectedProperty.price) || 0;
-            const archData = { price: price, date: new Date().toISOString() };
-            
-            archiveDeals[idStr] = archData;
-            supabaseClient.from('archive_deals').upsert({ property_id: idStr, archive_data: archData }).then();
-            
-            if(userWatchlist.has(idStr)) { 
-                userWatchlist.delete(idStr); 
-                supabaseClient.from('user_watchlist').delete().eq('property_id', idStr).then();
-            }
-            
-            alert(`הנכס הועבר לארכיון! הוא יקפוץ בחזרה ללוח רק אם נזהה ירידת מחיר.`);
-            closePropertyModal(); loadProperties(); 
+            const p = currentSelectedProperty;
+            if (!cloudActionAllowed(p, 'archive')) return;
+            const id = String(p.id);
+            const data = {price: getMarketAskingPrice(p), date: new Date().toISOString(), reason: 'user_manual', identity_key: p._identityKey};
+            try {
+                const result = await supabaseClient.from('archive_deals').upsert({property_id: id, archive_data: data});
+                if (result.error) throw result.error;
+                archiveDeals[id] = data;
+                p.is_archived = true;
+                if (cloudReady.watchlist && userWatchlist.has(id)) {
+                    const watchResult = await supabaseClient.from('user_watchlist').delete().eq('property_id', id);
+                    if (!watchResult.error) userWatchlist.delete(id);
+                }
+                closePropertyModal();
+                populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
+                alert('הנכס נשמר בארכיון. אפשר לשחזר אותו ידנית; מחיר מבוקש נמוך יותר יחזיר אותו ללוח לאחר שמירה בשרת.');
+            } catch (error) { alert('העברה לארכיון לא נשמרה בשרת. הנכס נשאר בלוח.'); }
         }
 
         async function restoreFromModal() {
-            if(!currentSelectedProperty) return;
-            const idStr = String(currentSelectedProperty.id);
-            
-            delete archiveDeals[idStr];
-            supabaseClient.from('archive_deals').delete().eq('property_id', idStr).then();
-            
-            currentSelectedProperty.is_archived = false;
-            alert('הנכס הוחזר בהצלחה ללוח הראשי!');
-            closePropertyModal(); loadProperties();
+            const p = currentSelectedProperty;
+            if (!cloudActionAllowed(p, 'archive')) return;
+            try {
+                const result = await supabaseClient.from('archive_deals').delete().eq('property_id', String(p.id));
+                if (result.error) throw result.error;
+                delete archiveDeals[String(p.id)];
+                p.is_archived = false;
+                closePropertyModal();
+                populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
+                alert('הנכס שוחזר ללוח ונשמר בשרת.');
+            } catch (error) { alert('השחזור לא נשמר בשרת. הנכס נשאר בארכיון.'); }
         }
 
         function toggleAllCounties(prefix, state) {
@@ -1137,39 +1425,43 @@
         }
 
         function updateWatchlistCountDisplay() {
-            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
-            const count = Array.from(userWatchlist).filter(id => !pipelineIds.has(String(id))).length;
+            const count = rawProperties.filter(p => !p.is_archived && !isPipelineProperty(p) && isWatchlistedProperty(p)).length;
             const el = document.getElementById('count-watchlist');
-            if(el) el.textContent = count;
+            if (el) el.textContent = cloudReady.watchlist ? count.toLocaleString('en-US') : 'לא נטען';
         }
 
         async function moveToPipelineFromModal() {
-            if (!currentSelectedProperty) return;
-            const idStr = String(currentSelectedProperty.id);
-            if (!pipelineDeals.some(d => String(d.id) === idStr)) {
-                const dealData = {...currentSelectedProperty, pipeline_stage: 'due_diligence', added_to_pipeline_at: new Date().toLocaleDateString('he-IL')};
-                pipelineDeals.push(dealData);
-                supabaseClient.from('pipeline_deals').upsert({ property_id: idStr, deal_data: dealData }).then();
-            }
-            if (userWatchlist.has(idStr)) { 
-                userWatchlist.delete(idStr); 
-                supabaseClient.from('user_watchlist').delete().eq('property_id', idStr).then();
-            }
-            alert(`הנכס "${currentSelectedProperty.address}" הועבר בהצלחה לחדר העסקאות!`);
-            closePropertyModal(); populateCityDropdown(); renderCards(); updateCounts(); updateWatchlistCountDisplay();
+            const p = currentSelectedProperty;
+            if (!cloudActionAllowed(p, 'pipeline')) return;
+            try {
+                if (!isPipelineProperty(p)) {
+                    const deal = {...p, pipeline_stage: 'due_diligence', added_to_pipeline_at: new Date().toLocaleDateString('he-IL')};
+                    const result = await supabaseClient.from('pipeline_deals').upsert({property_id: String(p.id), deal_data: deal});
+                    if (result.error) throw result.error;
+                    pipelineDeals.push(deal);
+                }
+                if (cloudReady.watchlist && userWatchlist.has(String(p.id))) {
+                    const result = await supabaseClient.from('user_watchlist').delete().eq('property_id', String(p.id));
+                    if (!result.error) userWatchlist.delete(String(p.id));
+                }
+                closePropertyModal();
+                populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
+                alert('הנכס נשמר בחדר העסקאות.');
+            } catch (error) { alert('העברה לחדר העסקאות לא נשמרה בשרת. הנכס נשאר בלוח.'); }
         }
 
-        async function toggleWatchlist(propId, event) {
+        async function toggleWatchlist(key, event) {
             if (event) event.stopPropagation();
-            const idStr = String(propId);
-            if (userWatchlist.has(idStr)) {
-                userWatchlist.delete(idStr);
-                supabaseClient.from('user_watchlist').delete().eq('property_id', idStr).then();
-            } else {
-                userWatchlist.add(idStr);
-                supabaseClient.from('user_watchlist').upsert({ property_id: idStr }).then();
-            }
-            updateWatchlistCountDisplay(); renderCards(); updateModalWatchlistState();
+            const p = rawProperties.find(row => uiPropertyKey(row) === String(key)) || rawProperties.find(row => String(row.id) === String(key));
+            if (!cloudActionAllowed(p, 'watchlist')) return;
+            const id = String(p.id), remove = userWatchlist.has(id);
+            try {
+                const result = remove ? await supabaseClient.from('user_watchlist').delete().eq('property_id', id)
+                    : await supabaseClient.from('user_watchlist').upsert({property_id: id});
+                if (result.error) throw result.error;
+                if (remove) userWatchlist.delete(id); else userWatchlist.add(id);
+                updateWatchlistCountDisplay(); renderCards(); updateModalWatchlistState();
+            } catch (error) { alert('השינוי במעקב לא נשמר בשרת. הבחירה הקודמת נשמרה.'); }
         }
 
         function toggleWatchlistFromModal() { if (currentSelectedProperty) toggleWatchlist(currentSelectedProperty.id); }
@@ -1182,7 +1474,23 @@
             renderCards();
         }
 
-        function parseDate(d) { const p = (d||'').split('/'); return p.length===3 ? new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime() : 0; }
+        function parseDate(value) {
+            if (typeof value !== 'string' || !value.trim()) return 0;
+            const text = value.trim();
+            let match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (match) {
+                const day = Number(match[1]), month = Number(match[2]), year = Number(match[3]);
+                const date = new Date(Date.UTC(year, month - 1, day, 12));
+                return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date.getTime() : 0;
+            }
+            match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (match) return parseDate(`${match[3]}/${match[2]}/${match[1]}`);
+            if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(text)) return 0;
+            const dayPart = text.slice(0, 10);
+            if (!parseDate(dayPart)) return 0;
+            const time = Date.parse(text);
+            return Number.isFinite(time) ? time : 0;
+        }
 
         const SCANNER_STATUS_LABELS = {
             success: 'נסרק בהצלחה', partial: 'נסרק חלקית', failed: 'הסריקה נכשלה',
@@ -1291,8 +1599,10 @@
         async function loadScannerStatus() {
             try {
                 const response = await fetch('scanner_status.json?t=' + Date.now());
-                if (!response.ok) return null;
+                if (!response.ok) throw new Error('scanner report unavailable');
                 scannerReport = await response.json();
+                if (!scannerReport || typeof scannerReport !== 'object' || Array.isArray(scannerReport)) throw new Error('invalid scanner report');
+                updateScanHeader(scannerReport);
 
                 const lastScan = scannerReport.last_scan || null;
                 const lastEvent = scannerReport.last_event || null;
@@ -1406,103 +1716,67 @@
                     }
                 }
                 return scannerReport;
-            } catch (e) { return null; }
+            } catch (e) {
+                scannerReport = null;
+                updateScanHeader(null);
+                const panel = document.getElementById('scanner-source-status');
+                if (panel) panel.textContent = 'דוח הסריקה לא נטען; זמן הריצה והכיסוי אינם זמינים כרגע.';
+                return null;
+            }
         }
 
         async function loadProperties() {
             await loadScannerStatus();
             try {
-                const res = await fetch('properties.json?t=' + Date.now());
-                const lastModified = res.headers.get('Last-Modified');
-                if (lastModified) {
-                    const dateObj = new Date(lastModified);
-                    document.getElementById('last-scan-time').textContent = dateObj.toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit'}) + " " + dateObj.toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'});
-                } else {
-                    document.getElementById('last-scan-time').textContent = "מוכן";
-                }
-
-                const rawList = await res.json();
-                
+                const response = await fetch('properties.json?t=' + Date.now());
+                if (!response.ok) throw new Error('properties response failed');
+                const mainRows = await response.json();
+                if (!Array.isArray(mainRows)) throw new Error('properties must be an array');
+                const rows = [...mainRows];
+                let sheriffUnavailable = false;
                 try {
-                    const sheriffResponse = await fetch('sheriff_listings.json?t=' + Date.now());
-                    if (sheriffResponse.ok) {
-                        const sheriffRows = await sheriffResponse.json();
-                        if (Array.isArray(sheriffRows)) {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            rawList.push(...sheriffRows.filter(p => p.sheriff_status === 'Active' &&
-                                p.sale_date && new Date(p.sale_date + 'T12:00:00') >= today).map(p => {
-                                return {...p};
-                            }));
-                        }
+                    const extraResponse = await fetch('sheriff_listings.json?t=' + Date.now());
+                    if (!extraResponse.ok) throw new Error('sheriff response failed');
+                    const extra = await extraResponse.json();
+                    if (!Array.isArray(extra)) throw new Error('sheriff rows must be an array');
+                    // A past sale date is labelled for verification; it is not proof of a sale or cancellation.
+                    rows.push(...extra.filter(p => p && typeof p === 'object'));
+                } catch (error) { sheriffUnavailable = true; }
+
+                const prepared = preparePropertyRecords(rows);
+                const unarchiveFailures = [];
+                for (const p of prepared.records) {
+                    const id = String(p.id || '');
+                    const archive = archiveDeals[id];
+                    const archiveMatches = archive && (!p._idAmbiguous || archive.identity_key === p._identityKey);
+                    p.is_archived = Boolean(archiveMatches);
+                    const price = getMarketAskingPrice(p);
+                    const archivedPrice = numericData(archive?.price);
+                    if (archiveMatches && !p._idAmbiguous && cloudReady.archive && price !== null && archivedPrice !== null && archivedPrice > 0 && price < archivedPrice) {
+                        try {
+                            const result = await supabaseClient.from('archive_deals').delete().eq('property_id', id);
+                            if (result.error) throw result.error;
+                            delete archiveDeals[id];
+                            p.is_archived = false;
+                            p.price_dropped = true;
+                        } catch (error) { unarchiveFailures.push(id); }
                     }
-                } catch (error) {}
-
-                // A second display-side gate protects the UI if an old or externally
-                // edited feed bypassed the server-side persistence checks.
-                const displayableList = Array.isArray(rawList)
-                    ? rawList.filter(hasRequiredPropertyDetails) : [];
-                if (Array.isArray(rawList) && displayableList.length !== rawList.length) {
-                    console.info(`Hidden ${rawList.length - displayableList.length} properties missing mandatory details.`);
+                    // Listing age produces a visible tag; loading a page does not archive a property.
                 }
-                
-                const seenKeys = new Set(); 
-                let activeProps = [];
-                const archiveBatch = [];
-                const unarchiveIds = [];
-                const NOW = Date.now();
-                const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
-
-                displayableList.forEach(p => {
-                    const normKey = (p.source_type === 'sheriff' ? 'sheriff:' + p.id : p.address ? p.address.toLowerCase().replace(/[^a-z0-9]/gi, '') : String(p.id));
-                    
-                    if (!seenKeys.has(normKey)) { 
-                        seenKeys.add(normKey); 
-                        if (!p.listed_date) p.listed_date = '05/09/2026'; 
-
-                        if ((p.source === 'allegheny_sheriff' || p.source_type === 'sheriff_sale' || (p.deal_type||'').toLowerCase().includes('sheriff'))) {
-                            p.deal_type = p.deal_type || 'sheriff';
-                            if (!p.price && p.opening_bid) { p.price = parseFloat(String(p.opening_bid).replace(/[^0-9.-]+/g, "")); }
-                            if (String(p.address).includes("Address in comments") || String(p.address).trim() === "") { p.address = p.parcel_id ? "נכס שריף (חלקה " + p.parcel_id + ")" : "נכס שריף (חסר מספר חלקה)"; }
-                        }
-                        
-                        const idStr = String(p.id);
-                        const currentPrice = Number(p.price) || 0;
-                        
-                        if (archiveDeals[idStr]) {
-                            if (currentPrice > 0 && currentPrice < archiveDeals[idStr].price) {
-                                delete archiveDeals[idStr];
-                                unarchiveIds.push(idStr);
-                                p.price_dropped = true; 
-                                p.is_archived = false;
-                            } else { p.is_archived = true; }
-                        } else {
-                            const listTime = parseDate(p.listed_date);
-                            if (listTime > 0 && (NOW - listTime) > NINETY_DAYS_MS && !p.price_dropped) {
-                                const archData = { price: currentPrice, date: new Date().toISOString() };
-                                archiveDeals[idStr] = archData;
-                                archiveBatch.push({ property_id: idStr, archive_data: archData });
-                                p.is_archived = true;
-                            } else { p.is_archived = false; }
-                        }
-                        activeProps.push(p); 
-                    }
-                });
-                
-                // Supabase Batch execution
-                if (archiveBatch.length > 0) {
-                    supabaseClient.from('archive_deals').upsert(archiveBatch).then();
-                }
-                if (unarchiveIds.length > 0) {
-                    supabaseClient.from('archive_deals').delete().in('property_id', unarchiveIds).then();
-                }
-
-                rawProperties = activeProps;
-                populateCityDropdown(); updateCounts(); renderCards(); updateWatchlistCountDisplay();
-            } catch (err) { 
-                console.error(err); 
-                document.getElementById('last-scan-time').textContent = "שגיאה";
-                document.getElementById('properties-container').innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">שגיאה בטעינת הנתונים. נסה לרענן את העמוד.</div>';
+                databaseProperties = prepared.records;
+                rawProperties = databaseProperties.filter(hasRequiredPropertyDetails);
+                dataLoadSummary = {sourceRows: rows.length, duplicates: prepared.duplicates,
+                    incomplete: databaseProperties.length - rawProperties.length + prepared.ignored,
+                    ambiguous: prepared.ambiguous, sheriffUnavailable};
+                if (unarchiveFailures.length) cloudErrors.push('החזרת נכסים ללוח בעקבות ירידת מחיר לא נשמרה; הרשומות נשארו בארכיון.');
+                populateCityDropdown();
+                updateCounts(); renderCards(); updateWatchlistCountDisplay(); renderDataHealth();
+            } catch (error) {
+                document.getElementById('properties-container').innerHTML = '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">נתוני הנכסים לא נטענו. נסה לרענן את העמוד.</div>';
+                document.getElementById('filtered-result-count').textContent = 'נתוני הנכסים לא נטענו';
+                const unknown = document.getElementById('filtered-unknown-price');
+                if (unknown) unknown.hidden = true;
+                if (!databaseProperties.length) document.querySelectorAll('[id^="count-"]').forEach(el => { if (!el.id.endsWith('-selected')) el.textContent = '—'; });
             }
         }
 
@@ -1593,10 +1867,9 @@
             const container = document.getElementById('city-checkbox-container');
             if(!container) return;
             const query = (document.getElementById('main-geo-search')?.value || '').trim().toLowerCase();
-            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const tree = new Map(), keys = new Set();
             for (const p of rawProperties) {
-                if (p.is_archived || pipelineIds.has(String(p.id))) continue;
+                if (isPipelineProperty(p)) continue;
                 const [county, city, location] = mainGeoParts(p);
                 const key = mainGeoKey(p); keys.add(key);
                 if (!tree.has(county)) tree.set(county, {count: 0, cities: new Map(), keys: new Set()});
@@ -1747,7 +2020,8 @@
         }
 
         function isTaxProperty(p) {
-            return p?.source_type === 'tax' || String(p?.deal_type || '').toLowerCase().includes('tax');
+            const dealType = String(p?.deal_type || '').toLowerCase();
+            return String(p?.source_type || '').toLowerCase() === 'tax' || dealType.includes('tax') || dealType.includes('פיגורי מס') || dealType.includes('חוב מס');
         }
 
         function propertyCityDisplay(p) {
@@ -1788,20 +2062,14 @@
         }
 
         function updateCounts() {
-            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
-            const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
+            const available = rawProperties.filter(p => !isPipelineProperty(p));
             const nonArchived = available.filter(p => !p.is_archived);
-            const selectedAreaRows = selectedCitiesFilter === null
-                ? nonArchived : nonArchived.filter(p => selectedCitiesFilter.has(mainGeoKey(p)));
-            const setCount = (id, value) => {
-                const element = document.getElementById(id);
-                if (element) element.textContent = value.toLocaleString('en-US');
-            };
-            setCount('count-all', nonArchived.length);
-            const categories = [
-                ['mls', 'mls'], ['price_drop', 'price-drop'], ['distressed', 'distressed'],
-                ['sheriff', 'sheriff'], ['tax', 'tax'], ['fsbo', 'fsbo'], ['offmarket', 'offmarket']
-            ];
+            const selectedRows = selectedCitiesFilter === null ? nonArchived : nonArchived.filter(p => selectedCitiesFilter.has(mainGeoKey(p)));
+            const setCount = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value.toLocaleString('en-US'); };
+            setCount('count-all', databaseProperties.length);
+            document.getElementById('count-all-visible').textContent = `בלוח: ${nonArchived.length.toLocaleString('en-US')}`;
+            const categories = [['mls', 'mls'], ['price_drop', 'price-drop'], ['distressed', 'distressed'],
+                ['sheriff', 'sheriff'], ['tax', 'tax'], ['fsbo', 'fsbo'], ['offmarket', 'offmarket']];
             let fsboCount = 0;
             for (const [category, domKey] of categories) {
                 const total = nonArchived.filter(p => matchesSourceCategory(p, category)).length;
@@ -1810,23 +2078,14 @@
                 const selected = document.getElementById(`count-${domKey}-selected`);
                 if (selected) {
                     const show = selectedCitiesFilter !== null;
-                    selected.hidden = !show;
-                    selected.classList.toggle('hidden', !show);
-                    selected.textContent = show
-                        ? `באזורים שבחרת: ${selectedAreaRows.filter(p => matchesSourceCategory(p, category)).length.toLocaleString('en-US')}`
-                        : '';
+                    selected.hidden = !show; selected.classList.toggle('hidden', !show);
+                    selected.textContent = show ? `באזורים שבחרת: ${selectedRows.filter(p => matchesSourceCategory(p, category)).length.toLocaleString('en-US')}` : '';
                 }
             }
-            const fsboButton = document.getElementById('btn-cat-fsbo');
-            if (fsboButton) {
-                fsboButton.hidden = fsboCount === 0;
-                fsboButton.classList.toggle('hidden', fsboCount === 0);
-            }
+            const fsbo = document.getElementById('btn-cat-fsbo');
+            if (fsbo) { fsbo.hidden = fsboCount === 0; fsbo.classList.toggle('hidden', fsboCount === 0); }
             const grid = document.getElementById('source-kpi-grid');
-            if (grid) {
-                grid.classList.toggle('lg:grid-cols-8', fsboCount === 0);
-                grid.classList.toggle('lg:grid-cols-9', fsboCount > 0);
-            }
+            if (grid) { grid.classList.toggle('lg:grid-cols-8', fsboCount === 0); grid.classList.toggle('lg:grid-cols-9', fsboCount > 0); }
             setCount('count-archive', available.filter(p => p.is_archived).length);
             if (fsboCount === 0 && activeCategory === 'fsbo') setCategory('all');
         }
@@ -1843,27 +2102,20 @@
         function applyFilters() { renderCards(); }
 
         function propertyPriceDisplayHtml(p) {
-            const price = Number(p.price);
-            if (Number.isFinite(price) && price > 0) {
-                return '$' + price.toLocaleString();
+            const price = getMarketAskingPrice(p);
+            if (price !== null) return moneyData(price);
+            const opening = numericData(p.opening_bid), minimum = numericData(p.minimum_bid), cost = numericData(p.case_cost_tax_bid);
+            if (p.source_amount_type === 'document_opening_bid' && opening !== null && opening > 0) return `<span class="block text-sm text-amber-300">הצעת פתיחה: ${moneyData(opening)}</span><span class="block text-[10px] text-gray-400">לפי המסמך · אינה מחיר מבוקש</span>`;
+            if (isTaxProperty(p) && !String(p.source_type || '').includes('sheriff') && !String(p.deal_type || '').toLowerCase().includes('sheriff')) {
+                if (minimum !== null && minimum > 0) return `<span class="block text-sm text-purple-300">${p.source_amount_type === 'repository_minimum_bid' ? 'רף מינימום כללי' : 'הצעת מינימום'}: ${moneyData(minimum)}</span><span class="block text-[10px] text-gray-400">אינו מחיר הנכס או יתרת חוב</span>`;
+                return '<span class="text-purple-200 text-sm">מחיר וחוב לא פורסמו</span>';
             }
-            if (p.source_type === 'tax') {
-                const openingBid = Number(p.opening_bid);
-                if (p.source_amount_type === 'document_opening_bid' && Number.isFinite(openingBid) && openingBid > 0) {
-                    return `<span class="block text-purple-300 text-sm">הצעת פתיחה: $${openingBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans">לפי מסמך המקור · לא חוב המס</span>`;
-                }
-                const minimumBid = Number(p.minimum_bid);
-                if (Number.isFinite(minimumBid) && minimumBid > 0) {
-                    const label = p.source_amount_type === 'repository_minimum_bid' ? 'רף מינימום כללי' : 'הצעת מינימום';
-                    return `<span class="block text-purple-300 text-sm">${label}: $${minimumBid.toLocaleString()}</span>`;
-                }
-                return '<span class="text-purple-200">המחיר והחוב לא פורסמו</span>';
+            if (String(p.source_type || '').includes('sheriff') || String(p.deal_type || '').toLowerCase().includes('sheriff')) {
+                if (cost !== null && cost > 0) return `<span class="block text-amber-300">${moneyData(cost)}</span><span class="block text-[10px] text-gray-400">Cost &amp; Tax Bid · סכום תיק</span>`;
+                if (opening !== null && opening > 0) return `<span class="block text-amber-300">הצעת פתיחה: ${moneyData(opening)}</span>`;
+                return '<span class="text-sm text-gray-300">מחיר מבוקש לא פורסם</span>';
             }
-            const caseCostTaxBid = Number(p.case_cost_tax_bid);
-            if (p.source_type === 'sheriff' && Number.isFinite(caseCostTaxBid) && caseCostTaxBid > 0) {
-                return `<span class="block text-amber-300">$${caseCostTaxBid.toLocaleString()}</span><span class="block text-[10px] text-gray-400 font-sans font-semibold">Cost &amp; Tax Bid · סכום תיק</span>`;
-            }
-            return 'ללא הצעת פתיחה';
+            return '<span class="text-sm text-gray-300">מחיר מבוקש לא פורסם</span>';
         }
 
         function featureDisplayHtml(p) {
@@ -1878,54 +2130,32 @@
 
         function renderCards() {
             const container = document.getElementById('properties-container');
-            const displayNumberById = new Map(rawProperties.map((p, index) => [String(p.id), index + 1]));
-            const stratF = document.getElementById('filter-strategy') ? document.getElementById('filter-strategy').value : 'all';
-            const typeF = document.getElementById('filter-type') ? document.getElementById('filter-type').value : 'all';
-            const priceF = document.getElementById('filter-price') ? document.getElementById('filter-price').value : 'all';
-            const minPrice = document.getElementById('filter-min-price') ? getRawPrice(document.getElementById('filter-min-price')) : 0;
-            const sortBy = document.getElementById('sort-by') ? document.getElementById('sort-by').value : 'date_desc';
-            const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
-
-            let filtered = rawProperties.filter(p => {
-                if (pipelineIds.has(String(p.id))) return false;
-                if (watchlistFilterActive && !userWatchlist.has(String(p.id))) return false;
-                
-                if (activeCategory === 'archive') {
-                    if (!p.is_archived) return false;
-                } else {
-                    if (p.is_archived) return false;
-                    if (!matchesSourceCategory(p, activeCategory)) return false;
-                }
-
-                if (stratF !== 'all' && p.strategy !== stratF) return false;
-                if (typeF !== 'all' && p.type && p.type !== typeF) return false;
-                const hasMarketPrice = Number.isFinite(Number(p.price)) && Number(p.price) > 0;
-                if (hasMarketPrice && minPrice > 0 && Number(p.price) < minPrice) return false;
-                if (hasMarketPrice && priceF !== 'all' && Number(p.price) > parseInt(priceF, 10)) return false;
-                if (selectedCitiesFilter !== null && !selectedCitiesFilter.has(mainGeoKey(p))) return false;
-                return true;
-            });
-
-            if (sortBy === 'score_desc') filtered.sort((a,b) => (b.deal_score||0) - (a.deal_score||0));
-            else if (sortBy === 'date_desc') filtered.sort((a,b) => parseDate(b.listed_date) - parseDate(a.listed_date));
-            else if (sortBy === 'price_asc') filtered.sort((a,b) => (a.price||0) - (b.price||0));
+            const displayNumberById = new Map(rawProperties.map((p, index) => [uiPropertyKey(p), index + 1]));
+            let filtered = getFilteredProperties();
+            const sortBy = document.getElementById('sort-by')?.value || 'date_desc';
+            if (sortBy === 'score_desc') filtered.sort((a, b) => (numericData(b.deal_score) ?? -Infinity) - (numericData(a.deal_score) ?? -Infinity));
+            else if (sortBy === 'date_desc') filtered.sort((a, b) => parseDate(b.listed_date) - parseDate(a.listed_date));
+            else if (sortBy === 'price_asc') filtered.sort((a, b) => (getMarketAskingPrice(a) ?? Infinity) - (getMarketAskingPrice(b) ?? Infinity));
+            updateResultSummary(filtered);
 
             if (!filtered.length) { container.innerHTML = selectedCitiesFilter !== null && !selectedCitiesFilter.size ? '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">בחר מחוז, עיר או אזור מהרשימה, או לחץ ״הצג את כל הנכסים״.</div>' : '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
 
             if (currentViewMode === 'table') {
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">תשואה/שיפוץ</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
                 ${filtered.map((p, index) => {
-                    const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
-                    const isV = viewedDeals.has(String(p.id));
-                    const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
-                    return `<tr onclick="openPropertyModal('${p.id}')" class="hover:bg-gray-800/60 cursor-pointer ${p.price_dropped ? 'bg-rose-950/50 border-r-4 border-r-rose-400 shadow-[inset_-4px_0_0_rgba(251,113,133,0.35)]' : ''} ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
+                    const isW = isWatchlistedProperty(p), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
+                    const isV = viewedDeals.has(uiPropertyKey(p)) || (!p._idAmbiguous && viewedDeals.has(String(p.id)));
+                    const askingPrice = getMarketAskingPrice(p);
+                    const isGoodDeal = askingPrice !== null && numericData(p.mao_flip) !== null && askingPrice <= Number(p.mao_flip);
+                    return `<tr onclick="openPropertyModal('${uiPropertyKey(p)}')" class="hover:bg-gray-800/60 cursor-pointer ${p.price_dropped ? 'bg-rose-950/50 border-r-4 border-r-rose-400 shadow-[inset_-4px_0_0_rgba(251,113,133,0.35)]' : ''} ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
-                                <span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span>
+                                <span class="property-number-badge" title="מספר נכס במאגר הטעון">${displayNumberById.get(uiPropertyKey(p)) ?? index + 1}</span>
                                 ${isV && activeCategory !== 'archive' ? '<span title="נצפה"><i data-lucide="eye" class="w-3.5 h-3.5 text-gray-500"></i></span>' : ''}
                                 <div class="font-black text-white text-sm truncate" title="${escapeHtml(p.address)}">${escapeHtml(p.address)}</div>
                             </div>
                             <div class="text-[11px] text-gray-400 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</div>
+                            ${propertyStatusDisplayHtml(p)}
                             ${p.probate_keyword_candidate ? `<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">🧾 מועמד עיזבון לפי תיאור MLS · לבדיקה</span>` : ''}
                             ${p.price_dropped ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירד מחיר!</span>' : ''}
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
@@ -1933,17 +2163,18 @@
                         <td class="p-3 font-mono font-black text-emerald-400 text-sm">${propertyPriceDisplayHtml(p)}</td>
                         <td class="p-3 font-bold text-gray-300 whitespace-nowrap">${featureDisplayHtml(p)}</td>
                         <td class="p-3"><div class="text-emerald-300 font-mono whitespace-nowrap">💰 ${p.projected_rent||'חסר נתון'}</div><div class="text-amber-300 text-[11px] whitespace-nowrap">${isT ? (p.gross_yield||'-') : (p.rehab_scope||'--')}</div></td>
-                        <td class="p-3 font-mono text-amber-300 whitespace-nowrap">📅 ${p.listed_date||'-'}</td>
+                        <td class="p-3 font-mono text-amber-300">${propertyDateDisplayHtml(p)}</td>
                         <td class="p-3 text-center"><span class="px-2 py-1 rounded font-mono font-black ${isH ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-gray-800 text-gray-300'}">${p.deal_score ?? '—'}</span></td>
-                        <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${p.id}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${p.id}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
+                        <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${uiPropertyKey(p)}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${uiPropertyKey(p)}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
             } else {
                 container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">` + filtered.map((p, index) => {
-                    const isW = userWatchlist.has(String(p.id)), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
-                    const isV = viewedDeals.has(String(p.id));
-                    const isGoodDeal = p.price && p.mao_flip && (Number(p.price) <= Number(p.mao_flip));
+                    const isW = isWatchlistedProperty(p), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
+                    const isV = viewedDeals.has(uiPropertyKey(p)) || (!p._idAmbiguous && viewedDeals.has(String(p.id)));
+                    const askingPrice = getMarketAskingPrice(p);
+                    const isGoodDeal = askingPrice !== null && numericData(p.mao_flip) !== null && askingPrice <= Number(p.mao_flip);
 
-                    return `<div onclick="openPropertyModal('${p.id}')" class="bg-gray-900 border ${p.price_dropped ? 'border-rose-500/70 bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.16)]' : (isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800'))} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
+                    return `<div onclick="openPropertyModal('${uiPropertyKey(p)}')" class="bg-gray-900 border ${p.price_dropped ? 'border-rose-500/70 bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.16)]' : (isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800'))} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         
                         ${isGoodDeal ? '<span class="absolute -top-3 -right-3 bg-emerald-600 text-white font-black text-[10px] px-2 py-1 rounded-md shadow-lg rotate-12 z-20">DEAL!</span>' : ''}
 
@@ -1955,9 +2186,9 @@
                                 ${p.probate_keyword_candidate ? `<span class="bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-black text-[10px] px-2 py-1 rounded-md">🧾 מועמד עיזבון</span>` : ''}
                             </div>
 
-                            <button onclick="toggleWatchlist('${p.id}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
+                            <button onclick="toggleWatchlist('${uiPropertyKey(p)}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
                             
-                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${escapeHtml(p.address)}"><span class="property-number-badge" title="מספר נכס קבוע">${displayNumberById.get(String(p.id)) ?? index + 1}</span><span class="truncate">${escapeHtml(p.address)}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</p>
+                            <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${escapeHtml(p.address)}"><span class="property-number-badge" title="מספר נכס במאגר הטעון">${displayNumberById.get(uiPropertyKey(p)) ?? index + 1}</span><span class="truncate">${escapeHtml(p.address)}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</p>${propertyStatusDisplayHtml(p)}
                             <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${propertyPriceDisplayHtml(p)}</div>
                             
                             <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
@@ -1965,16 +2196,18 @@
                         
                             <div class="bg-blue-950/20 p-2.5 rounded-xl border border-blue-500/30 mt-3 mb-1 space-y-1.5">
                                 <div class="flex justify-between items-center border-b border-gray-800/60 pb-1">
-                                    <span class="font-black text-blue-300 flex items-center gap-1 text-[11px]"><i data-lucide="brain-circuit" class="w-3 h-3"></i> ניתוח AI</span>
-                                    ${p.neighborhood_class ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-[9px] text-gray-500">ממתין...</span>'}
+                                    <span class="font-black text-blue-300 flex items-center gap-1 text-[11px]"><i data-lucide="brain-circuit" class="w-3 h-3"></i> אומדנים ראשוניים</span>
+                                    ${neighborhoodBadgeHtml(p)}
                                 </div>
                                 <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
-                                    <div><span class="text-gray-400 block">ARV משוער</span><strong class="text-white">$${(p.arv||0).toLocaleString()}</strong></div>
-                                    <div><span class="text-gray-400 block">צפי שכירות</span><strong class="text-white">$${(p.monthly_rent_est||0).toLocaleString()}</strong></div>
-                                    <div><span class="text-gray-400 block">MAO שכירות</span><strong class="text-emerald-400 font-black">$${(p.mao_rental||0).toLocaleString()}</strong></div>
-                                    <div><span class="text-gray-400 block">MAO פליפ</span><strong class="text-amber-400 font-black">$${(p.mao_flip||0).toLocaleString()}</strong></div>
+                                    <div><span class="text-gray-400 block">ARV משוער</span><strong class="text-white">${analysisMoneyData(p, 'arv')}</strong></div>
+                                    <div><span class="text-gray-400 block">צפי שכירות</span><strong class="text-white">${analysisMoneyData(p, 'monthly_rent_est')}</strong></div>
+                                    <div><span class="text-gray-400 block">MAO שכירות</span><strong class="text-emerald-400 font-black">${analysisMoneyData(p, 'mao_rental')}</strong></div>
+                                    <div><span class="text-gray-400 block">MAO פליפ</span><strong class="text-amber-400 font-black">${analysisMoneyData(p, 'mao_flip')}</strong></div>
                                 </div>
+                                <p class="text-[10px] text-amber-300 mt-2">${escapeHtml(analysisNotice(p))}</p>
                             </div>
+                            <div class="mt-2 text-[11px] text-gray-400">${propertyDateDisplayHtml(p)}</div>
                         </div>
 
                     </div>`}).join('') + `</div>`;
@@ -1983,18 +2216,20 @@
         }
 
         function openPropertyModal(id) {
-            const p = rawProperties.find(x => String(x.id) === String(id)); if (!p) return;
+            const p = rawProperties.find(x => uiPropertyKey(x) === String(id)) || rawProperties.find(x => !x._idAmbiguous && String(x.id) === String(id)); if (!p) return;
             currentSelectedProperty = p;
             
-            if (!viewedDeals.has(String(p.id))) {
-                viewedDeals.add(String(p.id));
+            if (!viewedDeals.has(uiPropertyKey(p))) {
+                viewedDeals.add(uiPropertyKey(p));
                 saveViewed();
                 renderCards(); 
             }
 
             document.getElementById('modal-address').textContent = p.address;
             document.getElementById('modal-location').textContent = `${propertyCityDisplay(p)} ${p.zip || ''}`.trim();
-            document.getElementById('modal-listed-date').textContent = p.listed_date;
+            document.getElementById('modal-listed-date').textContent = propertyDateLabel(p);
+            document.getElementById('modal-badges').innerHTML = propertyStatusDisplayHtml(p);
+            document.getElementById('modal-pipeline-btn').disabled = Boolean(p._idAmbiguous || !cloudReady.pipeline);
             
             document.getElementById('modal-price').innerHTML = propertyPriceDisplayHtml(p);
             
@@ -2118,12 +2353,13 @@
                 setSheriff('modal-sheriff-sale-type', p.source_sale_type);
             }
             
-            document.getElementById('modal-ai-class').innerHTML = p.neighborhood_class ? `<span class="px-2 py-0.5 rounded text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">Class ${p.neighborhood_class}</span>` : '<span class="text-xs text-gray-500">חסר נתון שרת</span>';
-            document.getElementById('modal-ai-arv').textContent = `$${(p.arv||0).toLocaleString()}`;
-            document.getElementById('modal-ai-rent').textContent = `$${(p.monthly_rent_est||0).toLocaleString()}`;
-            document.getElementById('modal-ai-mao-rent').textContent = `$${(p.mao_rental||0).toLocaleString()}`;
-            document.getElementById('modal-ai-mao-flip').textContent = `$${(p.mao_flip||0).toLocaleString()}`;
-            document.getElementById('modal-ai-summary').textContent = p.ai_summary || 'לא קיים תקציר AI מוכן לנכס זה.';
+            document.getElementById('modal-ai-class').innerHTML = neighborhoodBadgeHtml(p);
+            document.getElementById('modal-ai-arv').textContent = analysisMoneyData(p, 'arv');
+            document.getElementById('modal-ai-rent').textContent = analysisMoneyData(p, 'monthly_rent_est');
+            document.getElementById('modal-ai-mao-rent').textContent = analysisMoneyData(p, 'mao_rental');
+            document.getElementById('modal-ai-mao-flip').textContent = analysisMoneyData(p, 'mao_flip');
+            document.getElementById('modal-ai-summary').textContent = p.ai_summary || 'אין תקציר חישוב לנכס זה.';
+            document.getElementById('modal-analysis-notice').textContent = analysisNotice(p);
 
             updateModalWatchlistState();
             
@@ -2131,9 +2367,10 @@
             if (p.is_archived) {
                 archiveBtnContainer.innerHTML = `<button onclick="restoreFromModal()" class="p-2.5 rounded-xl bg-gray-800 hover:bg-emerald-900/30 text-gray-400 hover:text-emerald-400 border border-gray-700 flex items-center gap-1.5 text-xs font-bold transition"><i data-lucide="refresh-cw" class="w-4 h-4"></i> שחזר ללוח הראשי</button>`;
             } else {
-                archiveBtnContainer.innerHTML = `<button onclick="archiveFromModal()" class="p-2.5 rounded-xl bg-gray-800 hover:bg-rose-900/30 text-gray-400 hover:text-rose-400 border border-gray-700 flex items-center gap-1.5 text-xs font-bold transition" title="העבר לארכיון (יוחזר רק אם המחיר ירד)"><i data-lucide="archive" class="w-4 h-4"></i> ארכיון</button>`;
+                archiveBtnContainer.innerHTML = `<button onclick="archiveFromModal()" class="p-2.5 rounded-xl bg-gray-800 hover:bg-rose-900/30 text-gray-400 hover:text-rose-400 border border-gray-700 flex items-center gap-1.5 text-xs font-bold transition" title="ארכוב לפי בחירתך; גיל המודעה אינו גורם לארכוב"><i data-lucide="archive" class="w-4 h-4"></i> ארכיון</button>`;
             }
             
+            archiveBtnContainer.querySelector('button').disabled = Boolean(p._idAmbiguous || !cloudReady.archive);
             const q = encodeURIComponent(`${p.address}, ${p.city}, PA`);
             document.getElementById('modal-action-buttons').innerHTML = `
                 <a href="https://www.google.com/search?q=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i> רשת</a>
@@ -2150,7 +2387,8 @@
 
         function updateModalWatchlistState() {
             if (!currentSelectedProperty) return;
-            const w = userWatchlist.has(String(currentSelectedProperty.id));
+            const w = isWatchlistedProperty(currentSelectedProperty);
+            document.getElementById('modal-watchlist-btn').disabled = Boolean(currentSelectedProperty._idAmbiguous || !cloudReady.watchlist);
             document.getElementById('modal-watchlist-text').textContent = w ? 'במעקב ✓' : 'הוסף למעקב';
             document.getElementById('modal-watchlist-btn').className = w ? 'p-2.5 rounded-xl bg-amber-500 text-gray-950 font-black text-xs flex gap-1.5' : 'p-2.5 rounded-xl bg-gray-800 text-amber-400 font-bold text-xs flex gap-1.5';
         }
@@ -2232,7 +2470,8 @@
                     body: JSON.stringify({ message: "Update scan config from UI", content: contentBase64, sha: sha || undefined })
                 });
                 if(putRes.ok) {
-                    alert("ההגדרות נשמרו בשרת בהצלחה! מעכשיו הטייס האוטומטי יעבוד רק לפיהן.");
+                    isAutoScanEnabled = config.autoScanEnabled; automationStateVerified = true; updateAutoScanUI();
+                    alert("ההגדרות נשמרו בשרת.");
                     closeSettingsModal();
                 } else { 
                     const errTxt = await putRes.text();
@@ -2343,9 +2582,7 @@
             if (!token) { alert('כדי לשמור את התזמון לשרת, חסר מפתח GitHub. הזן אותו בחלון "הגדרות סריקה".'); return; }
 
             const isEnabled = document.getElementById('autoscan-master-switch').checked;
-            localStorage.setItem('pa_auto_scan_status', isEnabled);
-            isAutoScanEnabled = isEnabled;
-            updateAutoScanUI();
+            // The server setting changes only after the PUT has succeeded.
 
             saveSettingsStateLocally();
 
@@ -2370,7 +2607,9 @@
                 });
 
                 if(putRes.ok) {
-                    alert("פקודת התזמון לכלל 5 הסורקים נשמרה בשרת בהצלחה!\nמנוע הפייתון מעודכן ויציית לשעות אלו.");
+                    localStorage.setItem('pa_auto_scan_status', String(isEnabled));
+                    isAutoScanEnabled = isEnabled; automationStateVerified = true; updateAutoScanUI();
+                    alert("התזמון נשמר בשרת. מצב הריצות בפועל מוצג בדוח הסריקה.");
                     closeAutoScanModal();
                 } else { 
                     alert("שגיאה בשמירת התזמון בשרת. ודא שהטוקן תקין."); 
@@ -2420,8 +2659,14 @@
         }
 
         function updateAutoScanUI() {
-            const txt = document.getElementById('auto-scan-text');
-            if(isAutoScanEnabled) { txt.textContent = "טייס אוטומטי (ON)"; } else { txt.textContent = "טייס אוטומטי (OFF)"; }
+            const text = document.getElementById('auto-scan-text');
+            const dot = document.getElementById('auto-scan-dot');
+            const button = document.getElementById('auto-scan-toggle-btn');
+            const active = automationStateVerified && isAutoScanEnabled;
+            text.textContent = automationStateVerified ? (isAutoScanEnabled ? 'תזמון אוטומטי: פעיל' : 'תזמון אוטומטי: כבוי') : 'תזמון אוטומטי: לא אומת';
+            text.className = 'text-xs font-bold ' + (active ? 'text-emerald-400' : 'text-amber-300');
+            dot.className = 'w-2 h-2 rounded-full ' + (active ? 'bg-emerald-400' : 'bg-amber-400');
+            button.title = automationStateVerified ? 'הגדרת התזמון בשרת; תוצאת הריצות מופיעה בדוח הסריקה' : 'הגדרת התזמון בשרת לא נטענה';
         }
 
         window.onload = init;
