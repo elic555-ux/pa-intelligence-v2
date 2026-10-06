@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI PATCH 2026-10-02: Cloud Sync Integration via Supabase (Uncompressed Full Structure) -->
+<!-- PA UI 8.7.1 / 2026-10-06: geography hierarchy and selected-area source counts -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -13,6 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+        [hidden] { display: none !important; }
         body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .kpi-active-all { background-color: rgba(59, 130, 246, 0.2) !important; border-color: #3b82f6 !important; box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); transform: translateY(-2px); }
@@ -21,7 +22,7 @@
         .kpi-active-distressed { background-color: rgba(245, 158, 11, 0.2) !important; border-color: #fbbf24 !important; box-shadow: 0 0 20px rgba(251, 191, 36, 0.5); transform: translateY(-2px); }
         .kpi-active-sheriff { background-color: rgba(244, 63, 94, 0.2) !important; border-color: #fb7185 !important; box-shadow: 0 0 20px rgba(251, 113, 133, 0.5); transform: translateY(-2px); }
         .kpi-active-tax { background-color: rgba(168, 85, 247, 0.2) !important; border-color: #c084fc !important; box-shadow: 0 0 20px rgba(192, 132, 252, 0.5); transform: translateY(-2px); }
-        .kpi-active-probate { background-color: rgba(16, 185, 129, 0.2) !important; border-color: #34d399 !important; box-shadow: 0 0 20px rgba(52, 211, 153, 0.5); transform: translateY(-2px); }
+        .kpi-active-fsbo { background-color: rgba(16, 185, 129, 0.2) !important; border-color: #34d399 !important; box-shadow: 0 0 20px rgba(52, 211, 153, 0.5); transform: translateY(-2px); }
         .kpi-active-offmarket { background-color: rgba(20, 184, 166, 0.2) !important; border-color: #2dd4bf !important; box-shadow: 0 0 20px rgba(45, 212, 191, 0.5); transform: translateY(-2px); }
         .kpi-active-archive { background-color: rgba(107, 114, 128, 0.2) !important; border-color: #6b7280 !important; box-shadow: 0 0 20px rgba(107, 114, 128, 0.5); transform: translateY(-2px); }
         
@@ -76,7 +77,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         PA Real Estate Intelligence Hub
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Dual-Track V8.6 AI</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20" id="ui-version">UI 8.7.1 · 06.10.2026</span>
                     </h1>
                     <p class="text-xs text-gray-400">מודיעין נדל"ן, עסקאות מניבות והשבחה בפנסילבניה</p>
                 </div>
@@ -121,16 +122,16 @@
             <p class="text-gray-400 mt-2">רשימת MLS עשויה להיות חלקית. OFF MARKET כולל מועמדים שדורשים אימות. נכס בלי כתובת ומיקום, שטח וחדרי שינה לא יישמר ולא יוצג. מחיר אינו תנאי חובה, ולכן נכס בלי מחיר עדיין עשוי להופיע.</p>
         </details>
         <!-- KPI Cards -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3">
+        <section id="source-kpi-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             <button onclick="setCategory('all')" id="btn-cat-all" class="filter-card kpi-active-all text-right p-3.5 rounded-2xl bg-gray-900/80 border border-blue-500/40 transition hover:border-blue-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-300">הכל</span><i data-lucide="layers" class="w-4 h-4 text-blue-400"></i></div><div class="text-2xl font-black text-white" id="count-all">0</div></button>
-            <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS</span><i data-lucide="house" class="w-4 h-4 text-cyan-400"></i></div><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div></button>
-            <button onclick="setCategory('price_drop')" id="btn-cat-price_drop" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">ירידות מחיר</span><i data-lucide="trending-down" class="w-4 h-4 text-rose-400"></i></div><div class="text-2xl font-black text-rose-300" id="count-price-drop">0</div></button>
-            <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div></button>
-            <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">מכירות שריף</span><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i></div><div class="text-2xl font-black text-rose-300" id="count-sheriff">0</div></button>
-            <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-2xl font-black text-purple-300" id="count-tax">0</div></button>
-            <button onclick="setCategory('probate')" id="btn-cat-probate" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">עיזבונות ו-FSBO</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-2xl font-black text-emerald-300" id="count-probate">0</div></button>
+            <button onclick="setCategory('mls')" id="btn-cat-mls" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-cyan-500/30 transition hover:border-cyan-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-cyan-300">MLS</span><i data-lucide="house" class="w-4 h-4 text-cyan-400"></i></div><div class="text-right"><div class="text-2xl font-black text-cyan-300" id="count-mls">0</div><div id="count-mls-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-cyan-300 font-bold"></div></div></button>
+            <button onclick="setCategory('price_drop')" id="btn-cat-price_drop" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">ירידות מחיר</span><i data-lucide="trending-down" class="w-4 h-4 text-rose-400"></i></div><div class="text-right"><div class="text-2xl font-black text-rose-300" id="count-price-drop">0</div><div id="count-price-drop-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-rose-300 font-bold"></div></div></button>
+            <button onclick="setCategory('distressed')" id="btn-cat-distressed" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-amber-500/30 transition hover:border-amber-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-amber-300">בנקים וכינוס נכסים</span><i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i></div><div class="text-right"><div class="text-2xl font-black text-amber-300" id="count-distressed">0</div><div id="count-distressed-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-amber-300 font-bold"></div></div></button>
+            <button onclick="setCategory('sheriff')" id="btn-cat-sheriff" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-rose-500/30 transition hover:border-rose-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-rose-300">מכירות שריף</span><i data-lucide="gavel" class="w-4 h-4 text-rose-400"></i></div><div class="text-right"><div class="text-2xl font-black text-rose-300" id="count-sheriff">0</div><div id="count-sheriff-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-rose-300 font-bold"></div></div></button>
+            <button onclick="setCategory('tax')" id="btn-cat-tax" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-purple-500/30 transition hover:border-purple-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-purple-300">פיגורי מס</span><i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i></div><div class="text-right"><div class="text-2xl font-black text-purple-300" id="count-tax">0</div><div id="count-tax-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-purple-300 font-bold"></div></div></button>
+            <button type="button" hidden onclick="setCategory('fsbo')" id="btn-cat-fsbo" class="filter-card hidden text-right p-3.5 rounded-2xl bg-gray-900/80 border border-emerald-500/30 transition hover:border-emerald-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-emerald-300">FSBO · מכירה פרטית</span><i data-lucide="home" class="w-4 h-4 text-emerald-400"></i></div><div class="text-right"><div class="text-2xl font-black text-emerald-300" id="count-fsbo">0</div><div id="count-fsbo-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-emerald-300 font-bold"></div></div></button>
             
-            <button onclick="setCategory('offmarket')" id="btn-cat-offmarket" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-teal-500/30 transition hover:border-teal-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-teal-300">Off Market</span><i data-lucide="house-x" class="w-4 h-4 text-teal-400"></i></div><div class="text-2xl font-black text-teal-300" id="count-offmarket">0</div></button>
+            <button onclick="setCategory('offmarket')" id="btn-cat-offmarket" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-teal-500/30 transition hover:border-teal-400 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-teal-300">Off Market</span><i data-lucide="house-x" class="w-4 h-4 text-teal-400"></i></div><div class="text-right"><div class="text-2xl font-black text-teal-300" id="count-offmarket">0</div><div id="count-offmarket-selected" aria-live="polite" class="hidden mt-1 text-[11px] leading-tight text-teal-300 font-bold"></div></div></button>
 
             <button onclick="setCategory('archive')" id="btn-cat-archive" class="filter-card text-right p-3.5 rounded-2xl bg-gray-900/80 border border-gray-600/30 transition hover:border-gray-500 flex flex-col justify-between"><div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-400">ארכיון מוסתר</span><i data-lucide="archive" class="w-4 h-4 text-gray-500"></i></div><div class="text-2xl font-black text-gray-400" id="count-archive">0</div></button>
         </section>
@@ -156,7 +157,7 @@
                 <div id="city-dropdown-list" class="hidden absolute top-full mt-1 right-0 md:w-[400px] w-[min(90vw,400px)] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-[420px] overflow-y-auto custom-scrollbar">
                     <div class="sticky top-0 bg-gray-900 border-b border-gray-800 p-2.5 z-10 space-y-2">
                         <input id="main-geo-search" type="search" placeholder="חפש מחוז, עיר, שכונה או אזור מקור..." oninput="populateCityDropdown()" onclick="event.stopPropagation()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500">
-                        <p class="text-[10px] text-gray-400">פתח ▸ ליד מחוז כדי לראות ערים, וליד עיר כדי לראות שכונות.</p>
+                        <p class="text-[10px] text-gray-400">פתח ▸ כדי לראות ערים ושכונות. לחץ „רק כאן” לבידוד מקום, או סמן כמה מקומות יחד.</p>
                         <div class="flex justify-between items-center">
                             <button type="button" onclick="setAllCityFilters(true, event)" class="text-[11px] font-bold text-blue-400 hover:text-blue-300">הצג את כל הנכסים</button>
                             <button type="button" onclick="setAllCityFilters(false, event)" class="text-[11px] font-bold text-gray-400 hover:text-white">בחר אזורים מאפס</button>
@@ -1507,29 +1508,69 @@
 
         const MAIN_COUNTY_BY_CITY = { Pittsburgh: 'Allegheny', Philadelphia: 'Philadelphia', Allentown: 'Lehigh', Reading: 'Berks', Erie: 'Erie', Scranton: 'Lackawanna', Lancaster: 'Lancaster' };
         function mainGeoParts(p) {
-            const city = String(p.city || 'עיר לא ידועה').trim();
-            const scanArea = String(p.source_scan_area || '').trim();
-            const county = String(p.county || '').trim() || (scanArea === 'Allegheny' ? 'Allegheny' : MAIN_COUNTY_BY_CITY[city]) || 'מחוז לא מזוהה';
-            return [county, city, String(p.source_location || '').trim()];
+            const clean = value => String(value || '').trim().replace(/\s+/g, ' ');
+            const cleanCounty = value => clean(value).replace(/\s+County(?:,?\s*PA)?$/i, '').trim();
+            const city = clean(p.city || p.municipality) || 'עיר לא ידועה';
+            const scanArea = cleanCounty(p.source_scan_area);
+            const county = cleanCounty(p.county) || (scanArea === 'Allegheny' ? 'Allegheny' : MAIN_COUNTY_BY_CITY[city]) || 'מחוז לא מזוהה';
+            const location = clean(p.neighborhood || p.neighbourhood || p.source_location);
+            return [county, city, location];
         }
+
         function mainGeoKey(p) { return JSON.stringify(mainGeoParts(p)); }
         function toggleCityDropdown(e) { e.stopPropagation(); document.getElementById('city-dropdown-list').classList.toggle('hidden'); }
+        function refreshMainGeoSelection() {
+            populateCityDropdown();
+            updateCounts();
+            renderCards();
+        }
+
         function mainGeoToggle(keys, checked) {
             if (selectedCitiesFilter === null) selectedCitiesFilter = new Set(allAvailableCities);
             keys.forEach(key => checked ? selectedCitiesFilter.add(key) : selectedCitiesFilter.delete(key));
             if (selectedCitiesFilter.size === allAvailableCities.length) selectedCitiesFilter = null;
-            populateCityDropdown(); renderCards();
+            refreshMainGeoSelection();
         }
+
+        function mainGeoSelectOnly(keys, event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            selectedCitiesFilter = new Set(keys);
+            if (selectedCitiesFilter.size === allAvailableCities.length) selectedCitiesFilter = null;
+            refreshMainGeoSelection();
+        }
+
         function mainGeoRow(labelText, count, keys, depth = 0) {
-            const label = document.createElement('label'); label.className = 'flex flex-1 min-w-0 items-center gap-2 cursor-pointer hover:bg-gray-800 px-2 py-1 rounded-lg'; label.style.paddingRight = `${8 + depth * 14}px`; label.addEventListener('click', e => e.stopPropagation());
-            const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'accent-blue-500 w-3.5 h-3.5';
+            const row = document.createElement('div');
+            row.className = 'flex flex-1 min-w-0 items-center gap-1';
+            row.dataset.geoLevel = ['county', 'city', 'location'][depth];
+            row.dataset.geoName = labelText;
+            const label = document.createElement('label');
+            label.className = 'flex flex-1 min-w-0 items-center gap-2 cursor-pointer hover:bg-gray-800 px-2 py-1 rounded-lg';
+            label.style.paddingRight = `${8 + depth * 14}px`;
+            label.addEventListener('click', e => e.stopPropagation());
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 'accent-blue-500 w-3.5 h-3.5';
+            cb.setAttribute('aria-label', `בחר ${labelText}`);
             const picked = keys.filter(key => selectedCitiesFilter === null || selectedCitiesFilter.has(key)).length;
-            cb.checked = picked === keys.length && keys.length > 0; cb.indeterminate = picked > 0 && picked < keys.length;
+            cb.checked = picked === keys.length && keys.length > 0;
+            cb.indeterminate = picked > 0 && picked < keys.length;
             cb.addEventListener('change', () => mainGeoToggle(keys, cb.checked));
-            const name = document.createElement('span'); name.textContent = labelText; name.className = 'flex-1 truncate'; name.dir = 'ltr';
-            const badge = document.createElement('span'); badge.textContent = count; badge.className = 'text-blue-300 font-mono';
-            label.append(cb, name, badge); return label;
+            const name = document.createElement('span');
+            name.textContent = labelText; name.className = 'flex-1 truncate'; name.dir = 'ltr';
+            name.title = labelText;
+            const badge = document.createElement('span');
+            badge.textContent = count.toLocaleString('en-US'); badge.className = 'text-blue-300 font-mono';
+            label.append(cb, name, badge);
+            const only = document.createElement('button');
+            only.type = 'button'; only.dataset.geoOnly = 'true';
+            only.className = 'shrink-0 text-[10px] text-blue-300 font-bold rounded px-1.5 py-1 hover:bg-blue-500/20';
+            only.textContent = 'רק כאן';
+            only.setAttribute('aria-label', `הצג רק ${labelText}`);
+            only.addEventListener('click', e => mainGeoSelectOnly(keys, e));
+            row.append(label, only);
+            return row;
         }
+
         function mainGeoExpandButton(nodeKey, children, initiallyOpen, label) {
             const button = document.createElement('button'); button.type = 'button';
             button.className = 'shrink-0 w-8 h-8 mx-1 rounded-md text-blue-300 hover:bg-gray-800 hover:text-white font-bold';
@@ -1607,13 +1648,25 @@
             if (!shown) { const empty = document.createElement('p'); empty.className = 'text-gray-400 p-3 text-center'; empty.textContent = query ? 'לא נמצאו מחוזות, ערים או שכונות תואמים.' : 'אין נכסים זמינים לסינון.'; container.append(empty); }
             updateCityDropdownLabel();
         }
-        function setAllCityFilters(state, e) { if (e) e.stopPropagation(); selectedCitiesFilter = state ? null : new Set(); populateCityDropdown(); renderCards(); }
+        function setAllCityFilters(state, event) {
+            if (event) event.stopPropagation();
+            selectedCitiesFilter = state ? null : new Set();
+            refreshMainGeoSelection();
+        }
+
         function updateCityDropdownLabel() {
             const label = document.getElementById('city-dropdown-text');
-            if(!label) return;
-            if (selectedCitiesFilter === null) label.textContent = 'כל האזורים';
-            else if (!selectedCitiesFilter.size) label.textContent = 'בחר אזור להצגת נכסים';
-            else label.textContent = `${selectedCitiesFilter.size} אזורים נבחרו`;
+            if (!label) return;
+            if (selectedCitiesFilter === null) { label.textContent = 'כל האזורים'; return; }
+            if (!selectedCitiesFilter.size) { label.textContent = 'בחר אזור להצגת נכסים'; return; }
+            const places = [...selectedCitiesFilter].map(key => JSON.parse(key));
+            const counties = new Set(places.map(parts => parts[0]));
+            const cities = new Set(places.map(parts => parts[1]));
+            if (places.length === 1) label.textContent = places[0].filter(Boolean).join(' › ');
+            else if (counties.size === 1 && cities.size === 1) label.textContent = `${places[0][0]} › ${places[0][1]} · ${places.length} אזורים`;
+            else if (counties.size === 1) label.textContent = `${places[0][0]} · ${cities.size} ערים`;
+            else label.textContent = `${counties.size} מחוזות · ${places.length} אזורים`;
+            label.title = label.textContent;
         }
 
         async function loadGeoCatalog() {
@@ -1717,26 +1770,71 @@
             return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
         }
 
+        function matchesSourceCategory(p, category) {
+            const dealType = String(p.deal_type || '').toLowerCase();
+            const sourceType = String(p.source_type || '').toLowerCase();
+            const source = String(p.source || '').toLowerCase();
+            switch (category) {
+                case 'all': return true;
+                case 'mls': return dealType.includes('mls') || sourceType === 'mls';
+                case 'price_drop': return Boolean(p.price_dropped);
+                case 'distressed': return dealType.includes('reo') || dealType.includes('foreclosure') || sourceType === 'reo';
+                case 'sheriff': return dealType.includes('sheriff') || source.includes('sheriff') || sourceType.includes('sheriff');
+                case 'tax': return isTaxProperty(p);
+                case 'fsbo': return [dealType, sourceType, source].some(value => value.includes('fsbo') || value.includes('for sale by owner'));
+                case 'offmarket': return isOffMarketProperty(p);
+                default: return false;
+            }
+        }
+
         function updateCounts() {
             const pipelineIds = new Set(pipelineDeals.map(d => String(d.id)));
             const available = rawProperties.filter(p => !pipelineIds.has(String(p.id)));
             const nonArchived = available.filter(p => !p.is_archived);
-            
-            if(document.getElementById('count-all')) document.getElementById('count-all').textContent = nonArchived.length;
-            if(document.getElementById('count-mls')) document.getElementById('count-mls').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('mls')).length;
-            if(document.getElementById('count-price-drop')) document.getElementById('count-price-drop').textContent = nonArchived.filter(p => p.price_dropped).length;
-            if(document.getElementById('count-distressed')) document.getElementById('count-distressed').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('reo') || (p.deal_type || '').toLowerCase().includes('foreclosure')).length;
-            if(document.getElementById('count-sheriff')) document.getElementById('count-sheriff').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('sheriff') || (p.source || '').toLowerCase().includes('sheriff') || (p.source_type || '').toLowerCase().includes('sheriff')).length;
-            if(document.getElementById('count-tax')) document.getElementById('count-tax').textContent = nonArchived.filter(isTaxProperty).length;
-            if(document.getElementById('count-probate')) document.getElementById('count-probate').textContent = nonArchived.filter(p => (p.deal_type || '').toLowerCase().includes('probate') || (p.deal_type || '').toLowerCase().includes('fsbo')).length;
-            if(document.getElementById('count-offmarket')) document.getElementById('count-offmarket').textContent = nonArchived.filter(isOffMarketProperty).length;
-            if(document.getElementById('count-archive')) document.getElementById('count-archive').textContent = available.filter(p => p.is_archived).length;
+            const selectedAreaRows = selectedCitiesFilter === null
+                ? nonArchived : nonArchived.filter(p => selectedCitiesFilter.has(mainGeoKey(p)));
+            const setCount = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = value.toLocaleString('en-US');
+            };
+            setCount('count-all', nonArchived.length);
+            const categories = [
+                ['mls', 'mls'], ['price_drop', 'price-drop'], ['distressed', 'distressed'],
+                ['sheriff', 'sheriff'], ['tax', 'tax'], ['fsbo', 'fsbo'], ['offmarket', 'offmarket']
+            ];
+            let fsboCount = 0;
+            for (const [category, domKey] of categories) {
+                const total = nonArchived.filter(p => matchesSourceCategory(p, category)).length;
+                setCount(`count-${domKey}`, total);
+                if (category === 'fsbo') fsboCount = total;
+                const selected = document.getElementById(`count-${domKey}-selected`);
+                if (selected) {
+                    const show = selectedCitiesFilter !== null;
+                    selected.hidden = !show;
+                    selected.classList.toggle('hidden', !show);
+                    selected.textContent = show
+                        ? `באזורים שבחרת: ${selectedAreaRows.filter(p => matchesSourceCategory(p, category)).length.toLocaleString('en-US')}`
+                        : '';
+                }
+            }
+            const fsboButton = document.getElementById('btn-cat-fsbo');
+            if (fsboButton) {
+                fsboButton.hidden = fsboCount === 0;
+                fsboButton.classList.toggle('hidden', fsboCount === 0);
+            }
+            const grid = document.getElementById('source-kpi-grid');
+            if (grid) {
+                grid.classList.toggle('lg:grid-cols-8', fsboCount === 0);
+                grid.classList.toggle('lg:grid-cols-9', fsboCount > 0);
+            }
+            setCount('count-archive', available.filter(p => p.is_archived).length);
+            if (fsboCount === 0 && activeCategory === 'fsbo') setCategory('all');
         }
 
         function setCategory(cat) {
             activeCategory = cat;
-            ['all', 'mls', 'price_drop', 'distressed', 'sheriff', 'tax', 'probate', 'offmarket', 'archive'].forEach(c => {
-                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-price_drop', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-probate', 'kpi-active-offmarket', 'kpi-active-archive');
+            ['all', 'mls', 'price_drop', 'distressed', 'sheriff', 'tax', 'fsbo', 'offmarket', 'archive'].forEach(c => {
+                document.getElementById(`btn-cat-${c}`)?.classList.remove('kpi-active-all', 'kpi-active-mls', 'kpi-active-price_drop', 'kpi-active-distressed', 'kpi-active-sheriff', 'kpi-active-tax', 'kpi-active-fsbo', 'kpi-active-offmarket', 'kpi-active-archive');
                 if (c === cat) document.getElementById(`btn-cat-${c}`)?.classList.add(`kpi-active-${c}`);
             });
             renderCards();
@@ -1796,14 +1894,7 @@
                     if (!p.is_archived) return false;
                 } else {
                     if (p.is_archived) return false;
-                    const dt = (p.deal_type || '').toLowerCase();
-                    if (activeCategory === 'mls' && !dt.includes('mls')) return false;
-                    if (activeCategory === 'price_drop' && !p.price_dropped) return false;
-                    if (activeCategory === 'distressed' && !dt.includes('reo') && !dt.includes('foreclosure')) return false;
-                    if (activeCategory === 'sheriff' && !dt.includes('sheriff') && !(p.source || '').toLowerCase().includes('sheriff') && !(p.source_type || '').toLowerCase().includes('sheriff')) return false;
-                    if (activeCategory === 'tax' && !isTaxProperty(p)) return false;
-                    if (activeCategory === 'probate' && !dt.includes('probate') && !dt.includes('fsbo')) return false;
-                    if (activeCategory === 'offmarket' && !isOffMarketProperty(p)) return false;
+                    if (!matchesSourceCategory(p, activeCategory)) return false;
                 }
 
                 if (stratF !== 'all' && p.strategy !== stratF) return false;
