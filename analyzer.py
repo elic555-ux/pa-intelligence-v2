@@ -2,6 +2,8 @@ import json
 import requests
 import time
 import os
+import math
+import re
 from datetime import datetime, timezone, timedelta
 
 PROPERTIES_FILE = 'properties.json'
@@ -9,7 +11,7 @@ GEOCODE_CACHE_FILE = 'geocode_cache.json'
 CONFIG_FILE = 'scan_config.json'
 GEOCODE_RETRY_DAYS = 30
 MAX_GEOCODE_REQUESTS_PER_RUN = 20
-ANALYZER_VERSION = '2.2-source-record-guard'
+ANALYZER_VERSION = '2.3-consistent-financials-20261006'
 
 
 def utc_now_iso():
@@ -104,6 +106,7 @@ SOURCE_ONLY_ANALYSIS_FIELDS = (
     "arv", "arv_status", "arv_method", "arv_confidence", "arv_source",
     "flip_rehab", "rental_rehab", "rehab_status", "rehab_method", "rehab_confidence", "rehab_source",
     "mao_flip", "mao_flip_status", "mao_flip_method", "mao_flip_confidence",
+    "projected_rent", "gross_yield", "gross_yield_pct", "rehab_scope", "rent_unavailable_reason",
     "monthly_rent_est", "rent_status", "rent_method", "rent_confidence", "rent_source",
     "mao_rental", "mao_rental_status", "mao_rental_method", "mao_rental_confidence",
     "neighborhood_class", "neighborhood_class_status", "neighborhood_class_method",
@@ -119,15 +122,22 @@ def is_repository_record(prop):
 
 def is_public_court_record(prop):
     """Public auction/tax records are source evidence, not MLS asking prices."""
-    return str(prop.get("source_type") or "").casefold() in {"sheriff", "sheriff_sale", "tax"}
+    source_type = str(prop.get("source_type") or "").lower()
+    deal_type = str(prop.get("deal_type") or "").lower()
+    return ('sheriff' in source_type or source_type == 'tax' or 'sheriff' in deal_type
+            or any(token in deal_type for token in ('tax', 'פיגורי מס', 'חוב מס')))
 
 
 def mark_public_record_source_only(prop):
     """Remove estimates derived from auction bids or court records; preserve source facts."""
     changed = False
+    verified_neighborhood = (prop.get('neighborhood_class_status') == 'verified'
+                             and prop.get('neighborhood_class_source') and prop.get('neighborhood_class'))
     for field in SOURCE_ONLY_ANALYSIS_FIELDS:
+        if field.startswith('neighborhood_class') and verified_neighborhood:
+            continue
         default = "not_applicable" if field.endswith("_status") else None
-        if prop.get(field) != default:
+        if field not in prop or prop.get(field) != default:
             prop[field] = default
             changed = True
     if prop.get("analyzer_version") != ANALYZER_VERSION:
@@ -164,176 +174,151 @@ def mark_public_record_source_only(prop):
                 changed = True
         prop["geocode_status"] = "not_geocoded_repository_description"
         changed = True
+    current_inputs = financial_inputs(prop)
+    if prop.get('analysis_inputs') != current_inputs or prop.get('financial_model_version') != FINANCIAL_MODEL_VERSION:
+        prop['analysis_inputs'] = current_inputs
+        prop['financial_model_version'] = FINANCIAL_MODEL_VERSION
+        changed = True
+    if changed:
+        prop['analysis_updated_at'] = utc_now_iso()
     return changed
 
-def positive_number(value):
-    """מחזיר מספר חיובי, או None אם הערך חסר/לא תקין."""
+FINANCIAL_MODEL_VERSION = 'financial-baseline-v1-20261006'
+
+
+def numeric_financial_value(value):
     if value is None or isinstance(value, bool):
         return None
     try:
         number = float(str(value).replace(',', '').replace('$', '').strip())
-        return number if number > 0 else None
+        return number if math.isfinite(number) else None
     except (TypeError, ValueError):
         return None
 
 
-def calculate_metrics(prop):
-    """
-    מחשב אומדנים ראשוניים בלבד.
-    אין כאן AI ואין המצאת Price/SqFt/Beds כאשר נתון חסר.
-    """
-    price = positive_number(prop.get('price'))
-    sqft = positive_number(prop.get('sqft'))
-    beds = positive_number(prop.get('beds'))
-    city = prop.get('city') or 'Unknown'
+def positive_number(value):
+    number = numeric_financial_value(value)
+    return number if number is not None and number > 0 else None
 
-    metrics = {
-        "analyzer_version": ANALYZER_VERSION,
-        "analysis_updated_at": utc_now_iso(),
-        "analysis_mode": "preliminary_estimate",
-        "analysis_is_ai": False,
-        "analysis_disclaimer": "אומדן ראשוני בלבד. אינו תחליף ל-Comps, Rental Comps, בדיקת שיפוץ או בדיקת שכונה מאומתת.",
+
+def financial_inputs(prop):
+    return {
+        'model_version': FINANCIAL_MODEL_VERSION,
+        'price': None if is_public_court_record(prop) else positive_number(prop.get('price')),
+        'beds': positive_number(prop.get('beds')),
+        'sqft': positive_number(prop.get('sqft')),
+        'property_type': str(prop.get('property_type') or prop.get('type') or '').strip(),
+        'source_type': str(prop.get('source_type') or '').lower(),
+        'deal_type': str(prop.get('deal_type') or '').lower(),
+        'verified_monthly_rent': positive_number(prop.get('verified_monthly_rent')),
+        'verified_rent_source': str(prop.get('verified_rent_source') or '').strip(),
+        'verified_arv': positive_number(prop.get('verified_arv')),
+        'verified_arv_source': str(prop.get('verified_arv_source') or '').strip(),
+        'verified_flip_rehab': numeric_financial_value(prop.get('verified_flip_rehab')),
+        'verified_rental_rehab': numeric_financial_value(prop.get('verified_rental_rehab')),
+        'verified_rehab_source': str(prop.get('verified_rehab_source') or '').strip(),
     }
 
-    if price is not None:
-        arv = int(price * 1.6) if price < 100000 else int(price * 1.35)
-        metrics.update({
-            "arv": arv, "arv_status": "estimated",
-            "arv_method": "rule_of_thumb_price_multiplier",
-            "arv_confidence": "low",
-            "arv_source": "calculated_from_listing_price",
-        })
-    else:
-        arv = None
-        metrics.update({
-            "arv": None, "arv_status": "unavailable", "arv_method": None,
-            "arv_confidence": "none", "arv_source": None,
-        })
 
-    if sqft is not None:
-        flip_rehab = int(sqft * 45)
-        rental_rehab = int(sqft * 25)
-        metrics.update({
-            "flip_rehab": flip_rehab, "rental_rehab": rental_rehab,
-            "rehab_status": "estimated", "rehab_method": "sqft_rule_of_thumb",
-            "rehab_confidence": "low", "rehab_source": "calculated_from_sqft",
-        })
-    else:
-        flip_rehab = rental_rehab = None
-        metrics.update({
-            "flip_rehab": None, "rental_rehab": None,
-            "rehab_status": "unavailable", "rehab_method": None,
-            "rehab_confidence": "none", "rehab_source": None,
-        })
+def format_financial_money(number):
+    if number is None:
+        return 'אין נתון'
+    # Match the display precision of moneyData() in the browser.
+    return '$' + f'{number:,.3f}'.rstrip('0').rstrip('.')
 
-    if arv is not None and flip_rehab is not None:
-        mao_flip = int((arv * 0.70) - flip_rehab)
-        metrics.update({
-            "mao_flip": mao_flip, "mao_flip_status": "calculated_from_estimates",
-            "mao_flip_method": "70_percent_rule", "mao_flip_confidence": "low",
-        })
-    else:
-        mao_flip = None
-        metrics.update({
-            "mao_flip": None, "mao_flip_status": "unavailable",
-            "mao_flip_method": None, "mao_flip_confidence": "none",
-        })
 
-    if beds is not None:
-        monthly_rent = int(950 + (beds * 180))
-        metrics.update({
-            "monthly_rent_est": monthly_rent, "rent_status": "estimated",
-            "rent_method": "bedroom_rule_of_thumb", "rent_confidence": "low",
-            "rent_source": "calculated_from_bedrooms",
-        })
-    else:
-        monthly_rent = None
-        metrics.update({
-            "monthly_rent_est": None, "rent_status": "unavailable",
-            "rent_method": None, "rent_confidence": "none", "rent_source": None,
-        })
+def calculate_rental_metrics(prop):
+    """Shared by the scanner and analyzer; never infer rent from listing price."""
+    inputs = financial_inputs(prop)
+    source_only = is_public_court_record(prop)
+    multi_unit = bool(re.search(r'multi|duplex|triplex|quadplex|apartment|two family|two-family|2-4',
+                               inputs['property_type'].lower()))
+    verified = inputs['verified_monthly_rent'] is not None and bool(inputs['verified_rent_source'])
+    rent = (inputs['verified_monthly_rent'] if verified else
+            int(950 + inputs['beds'] * 180) if inputs['beds'] is not None and not multi_unit else None)
+    if source_only:
+        rent = None
+    gross_yield = (math.floor((rent * 1200 / inputs['price']) * 10 + 0.5) / 10
+                   if rent is not None and inputs['price'] is not None else None)
+    method = ('verified_source_input' if verified else 'bedroom_rule_of_thumb') if rent is not None else None
+    return {
+        'financial_model_version': FINANCIAL_MODEL_VERSION,
+        'monthly_rent_est': rent,
+        'projected_rent': format_financial_money(rent) + ' / חודש' if rent is not None else None,
+        'gross_yield_pct': gross_yield,
+        'gross_yield': f'{gross_yield:.1f}% ברוטו' if gross_yield is not None else None,
+        'rent_status': 'not_applicable' if source_only else 'source_input' if verified else 'estimated' if rent is not None else 'unavailable',
+        'rent_method': method,
+        'rent_confidence': 'source_supplied' if rent is not None and verified else 'low' if rent is not None else 'none',
+        'rent_source': inputs['verified_rent_source'] if rent is not None and verified else 'calculated_from_bedrooms' if rent is not None else None,
+        'rent_unavailable_reason': ('public_court_record' if source_only else
+                                    'multi_unit_requires_unit_rents' if multi_unit and not verified else
+                                    'missing_bedrooms' if rent is None else None),
+    }
 
-    if monthly_rent is not None and rental_rehab is not None:
-        annual_rent = monthly_rent * 12
-        noi = annual_rent * 0.74
-        mao_rental = int((noi / 0.10) - rental_rehab - 5000)
-        metrics.update({
-            "mao_rental": mao_rental,
-            "mao_rental_status": "calculated_from_estimates",
-            "mao_rental_method": "10_percent_cap_rate_with_26_percent_expense_assumption",
-            "mao_rental_confidence": "low",
-        })
-    else:
-        mao_rental = None
-        metrics.update({
-            "mao_rental": None, "mao_rental_status": "unavailable",
-            "mao_rental_method": None, "mao_rental_confidence": "none",
-        })
 
-    # נשמר זמנית לתאימות לממשק הישן, אבל מסומן במפורש כסימולציה.
-    if price is not None:
-        if price < 60000:
-            hood_class = "C-"
-        elif price < 90000:
-            hood_class = "C+"
-        elif price < 150000:
-            hood_class = "B"
-        else:
-            hood_class = "A-"
-        metrics.update({
-            "neighborhood_class": hood_class,
-            "neighborhood_class_status": "simulated",
-            "neighborhood_class_method": "listing_price_bucket",
-            "neighborhood_class_confidence": "very_low",
-            "neighborhood_class_source": "not_verified_neighborhood_data",
-        })
-    else:
-        hood_class = None
-        metrics.update({
-            "neighborhood_class": None,
-            "neighborhood_class_status": "unavailable",
-            "neighborhood_class_method": None,
-            "neighborhood_class_confidence": "none",
-            "neighborhood_class_source": None,
-        })
-
-    summary_parts = [f"נכס ב-{city}."]
-    if arv is not None:
-        summary_parts.append(f"ARV ראשוני משוער: ${arv:,} (Rule of Thumb בלבד).")
-    else:
-        summary_parts.append("ARV: אין מספיק נתונים לחישוב.")
-
-    if mao_rental is not None:
-        summary_parts.append(f"MAO שכירות ראשוני: ${mao_rental:,}, על בסיס אומדן שכירות והנחות הוצאה קבועות.")
-    else:
-        summary_parts.append("MAO שכירות: אין מספיק נתונים לחישוב.")
-
-    if mao_flip is not None:
-        summary_parts.append(f"MAO פליפ ראשוני: ${mao_flip:,}, לפי כלל 70% ואומדן שיפוץ לפי שטח.")
-    else:
-        summary_parts.append("MAO פליפ: אין מספיק נתונים לחישוב.")
-
-    if hood_class is not None:
-        summary_parts.append(f"דירוג השכונה {hood_class} הוא סימולציה זמנית לפי מחיר הנכס ואינו דירוג שכונה מאומת.")
-
-    summary_parts.append("יש לאמת Comps, שכירות, מצב הנכס והשכונה לפני החלטת השקעה.")
-
+def calculate_metrics(prop):
+    """Transparent scenarios based on the current inputs; no fabricated neighborhood grade."""
+    if is_public_court_record(prop):
+        clean = dict(prop)
+        mark_public_record_source_only(clean)
+        fields = (*SOURCE_ONLY_ANALYSIS_FIELDS, 'analyzer_version', 'financial_model_version',
+                  'analysis_inputs', 'analysis_updated_at', 'analysis_mode', 'analysis_is_ai',
+                  'analysis_disclaimer', 'analysis_skip_reason')
+        return {key: clean.get(key) for key in fields}
+    inputs = financial_inputs(prop)
+    metrics = calculate_rental_metrics(prop)
+    price, sqft, rent = inputs['price'], inputs['sqft'], metrics['monthly_rent_est']
+    verified_arv = inputs['verified_arv'] is not None and bool(inputs['verified_arv_source'])
+    arv = (inputs['verified_arv'] if verified_arv else
+           int(price * (1.6 if price < 100000 else 1.35)) if price is not None else None)
+    verified_rehab = bool(inputs['verified_rehab_source'])
+    flip = (inputs['verified_flip_rehab'] if verified_rehab and inputs['verified_flip_rehab'] is not None
+            and inputs['verified_flip_rehab'] >= 0 else int(sqft * 45) if sqft is not None else None)
+    rental = (inputs['verified_rental_rehab'] if verified_rehab and inputs['verified_rental_rehab'] is not None
+              and inputs['verified_rental_rehab'] >= 0 else int(sqft * 25) if sqft is not None else None)
+    mao_flip = int(arv * 0.70 - flip) if arv is not None and flip is not None else None
+    mao_rental = int(rent * 12 * 0.74 / 0.10 - rental - 5000) if rent is not None and rental is not None else None
     metrics.update({
-        # שם השדה נשמר כדי לא לשבור את index.html הקיים.
-        "ai_summary": " ".join(summary_parts),
-        "summary_status": "rule_based_not_ai",
-        "summary_method": "deterministic_template",
+        'analyzer_version': ANALYZER_VERSION, 'analysis_updated_at': utc_now_iso(),
+        'analysis_inputs': inputs, 'analysis_mode': 'preliminary_estimate', 'analysis_is_ai': False,
+        'analysis_skip_reason': None,
+        'analysis_disclaimer': 'חישוב לפי נתוני הנכס והנחות מפורשות; נתונים ממקור מזוהה מוצגים בנפרד מתרחישים.',
+        'arv': arv, 'arv_status': 'source_input' if verified_arv else 'scenario' if arv is not None else 'unavailable',
+        'arv_method': 'verified_source_input' if verified_arv else 'asking_price_scenario' if arv is not None else None,
+        'arv_confidence': 'source_supplied' if verified_arv else 'low' if arv is not None else 'none',
+        'arv_source': inputs['verified_arv_source'] if verified_arv else 'calculated_from_listing_price' if arv is not None else None,
+        'flip_rehab': flip, 'rental_rehab': rental,
+        'rehab_status': 'source_input_or_estimated' if verified_rehab else 'estimated' if flip is not None else 'unavailable',
+        'rehab_method': 'source_input_or_sqft_rule' if verified_rehab else 'sqft_rule_of_thumb',
+        'rehab_confidence': 'low' if flip is not None or rental is not None else 'none',
+        'rehab_source': inputs['verified_rehab_source'] if verified_rehab else 'calculated_from_sqft' if sqft is not None else None,
+        'rehab_scope': 'תקציב שיפוץ משוער: ' + format_financial_money(flip if prop.get('strategy') == 'value_add' else rental),
+        'mao_flip': mao_flip, 'mao_flip_status': 'calculated_from_estimates' if mao_flip is not None else 'unavailable',
+        'mao_flip_method': '70_percent_rule' if mao_flip is not None else None,
+        'mao_flip_confidence': 'low' if mao_flip is not None else 'none',
+        'mao_rental': mao_rental, 'mao_rental_status': 'calculated_from_estimates' if mao_rental is not None else 'unavailable',
+        'mao_rental_method': '10_percent_cap_rate_with_26_percent_expense_assumption' if mao_rental is not None else None,
+        'mao_rental_confidence': 'low' if mao_rental is not None else 'none',
+        'summary_status': 'rule_based_not_ai', 'summary_method': 'deterministic_template',
+        'ai_summary': f"שכירות: {metrics['projected_rent'] or 'אין נתון'}. תשואה: {metrics['gross_yield'] or 'אין נתון'}. "
+                      f"MAO להשכרה (תרחיש): {format_financial_money(mao_rental)}. MAO לפליפ (תרחיש): {format_financial_money(mao_flip)}.",
     })
+    if prop.get('strategy') in ('turnkey', 'value_add'):
+        metrics['strategy_label'] = 'בחינה להשכרה' if prop['strategy'] == 'turnkey' else 'בחינה להשבחה'
+    if not (prop.get('neighborhood_class_status') == 'verified' and prop.get('neighborhood_class_source') and prop.get('neighborhood_class')):
+        metrics.update({'neighborhood_class': None, 'neighborhood_class_status': 'unavailable',
+                        'neighborhood_class_method': None, 'neighborhood_class_confidence': 'none', 'neighborhood_class_source': None})
     return metrics
 
 
 def needs_analysis(prop):
-    """מריץ מחדש ניתוח ישן כדי להוסיף Metadata של מקור ואמינות."""
-    return (
-        prop.get('analyzer_version') != ANALYZER_VERSION
-        or 'analysis_mode' not in prop
-        or 'mao_flip' not in prop
-    )
+    """A changed price, size, bedrooms or sourced input invalidates cached calculations."""
+    return (prop.get('analyzer_version') != ANALYZER_VERSION
+            or prop.get('financial_model_version') != FINANCIAL_MODEL_VERSION
+            or prop.get('analysis_inputs') != financial_inputs(prop)
+            or prop.get('analysis_mode') != ('source_record_only' if is_public_court_record(prop) else 'preliminary_estimate')
+            or any(field not in prop for field in ('mao_flip', 'mao_rental', 'monthly_rent_est', 'gross_yield_pct')))
 
 
 def run_analyzer():
@@ -486,7 +471,7 @@ def run_analyzer():
         f"ממתינים לסבב הבא: {geocode_batch_skipped} | "
         f"מחוץ למחוזות שנבחרו: {outside_counties_skipped}"
     )
-    print("ℹ️ ARV, Rent, Rehab ו-Neighborhood Class עדיין אומדנים זמניים ולא נתונים מאומתים.")
+    print("ℹ️ שכירות, תשואה ותרחישי שווי/MAO חושבו באותה נוסחה; דירוג שכונה אינו נגזר ממחיר.")
 
 
 if __name__ == '__main__':
