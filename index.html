@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.10.0 / 2026-10-06: persistent county/city/neighborhood intent, compact header and attributed technical facts -->
+<!-- PA UI 8.11.0 / 2026-10-06: closed probate/FSBO controls, scan-aligned display prices, range validation and request-aware scan monitoring -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.10.0 · 06.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.11.0 · 06.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -188,11 +188,12 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-emerald-400 mb-1.5">מחיר מינימום</label>
-                <input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyFilters();" placeholder="0" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center">
+                <input type="text" id="filter-min-price" oninput="handlePriceInput(this); applyPriceFilters('min');" value="50,000" placeholder="0" class="w-full bg-gray-950 border-2 border-emerald-500/40 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-sm text-emerald-400 font-black font-mono text-center">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מחיר מקסימום</label>
-                <select id="filter-price" onchange="applyFilters()" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
+                <select id="filter-price" onchange="applyPriceFilters('max')" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
+                    <option value="scan" selected>לפי הסריקה · עד $190,000</option>
                     <option value="all">ללא הגבלה</option>
                     <option value="100000">עד $100k</option>
                     <option value="190000">עד $190k</option>
@@ -210,7 +211,7 @@
         </section>
 
         <section class="flex flex-wrap items-center justify-between gap-3 text-xs" aria-live="polite">
-            <div class="flex flex-wrap items-center gap-3"><strong id="filtered-result-count" class="text-blue-300">תוצאות לאחר סינון: 0</strong><span id="filtered-unknown-price" hidden class="text-gray-400"></span></div>
+            <div class="flex flex-wrap items-center gap-3"><strong id="filtered-result-count" class="text-blue-300">תוצאות לאחר סינון: 0</strong><span id="filtered-unknown-price" hidden class="text-gray-400"></span><span id="active-price-range" class="text-gray-400"></span><button id="reset-board-price-range" hidden onclick="restoreBoardScanPriceRange()" class="text-blue-300 underline text-xs">לטווח הסריקה</button></div>
             <label class="flex items-center gap-2 text-gray-300 cursor-pointer"><input type="checkbox" id="filter-unknown-price" checked onchange="applyFilters()" class="accent-blue-500">הצג גם נכסים ללא מחיר מבוקש</label>
         </section>
         <!-- Properties Container -->
@@ -503,29 +504,6 @@
                         </div>
                     </div>
                     
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-emerald-500/40 transition">
-                        <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5"><i data-lucide="home" class="w-4 h-4"></i> 5. עיזבונות ו-FSBO</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-emerald-500">
-                                <option value="Everyday">כל יום</option>
-                                <option value="Sunday">ראשון</option>
-                                <option value="Monday">שני</option>
-                                <option value="Tuesday">שלישי</option>
-                                <option value="Wednesday" selected>רביעי</option>
-                                <option value="Thursday">חמישי</option>
-                                <option value="Friday">שישי</option>
-                                <option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-probate" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-emerald-500">
-                                <option value="02:00">02:00</option>
-                                <option value="05:00">05:00</option>
-                                <option value="08:00" selected>08:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="16:00">16:00</option>
-                                <option value="20:00">20:00</option>
-                            </select>
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
@@ -553,7 +531,6 @@
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" class="setting-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-rose-500/30"><input type="checkbox" checked value="sheriff" class="setting-sector-box accent-rose-500 w-4 h-4"><span class="text-rose-300 font-bold">3. מכירות שריף</span></label>
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-purple-500/30"><input type="checkbox" checked value="tax" class="setting-sector-box accent-purple-500 w-4 h-4"><span class="text-purple-300 font-bold">4. פיגורי מס</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="setting-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
                 </div>
             </div>
             
@@ -743,7 +720,6 @@
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-amber-500/30"><input type="checkbox" checked value="reo" class="ondemand-sector-box accent-amber-500 w-4 h-4"><span class="text-amber-300 font-bold">2. כינוס נכסים ובנקים</span></label>
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-rose-500/30"><input type="checkbox" checked value="sheriff" class="ondemand-sector-box accent-rose-500 w-4 h-4"><span class="text-rose-300 font-bold">3. מכירות שריף</span></label>
                     <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-purple-500/30"><input type="checkbox" checked value="tax" class="ondemand-sector-box accent-purple-500 w-4 h-4"><span class="text-purple-300 font-bold">4. פיגורי מס</span></label>
-                    <label class="flex items-center gap-2 bg-gray-950 p-2 rounded-lg border border-emerald-500/30 sm:col-span-2"><input type="checkbox" checked value="06_probate_estates" class="ondemand-sector-box accent-emerald-500 w-4 h-4"><span class="text-emerald-300 font-bold">5. תיקי עיזבונות, יורשים ו-FSBO</span></label>
                 </div>
             </div>
             
@@ -926,12 +902,14 @@
         let allAvailableCities = [];
         let expandedMainGeoNodes = new Set(mainGeoSelection.expanded);
 
-        // UI 8.10.0: counts, identity and date information are separate from estimates.
+        // UI 8.11.0: counts, identity and date information are separate from estimates.
         let databaseProperties = [];
         let dataLoadSummary = {sourceRows: 0, duplicates: 0, incomplete: 0, ambiguous: 0, sheriffUnavailable: false};
         let cloudReady = {pipeline: false, watchlist: false, archive: false};
         let cloudErrors = [];
         let automationStateVerified = false;
+        let boardScanPriceRange = initialBoardScanPriceRange();
+        let boardPriceMinEdited = false;
 
         function numericData(value) {
             if (value === null || value === undefined || typeof value === 'boolean') return null;
@@ -1126,11 +1104,132 @@
             time.className = 'text-xs font-mono font-black ' + (scan?.status === 'success' ? 'text-emerald-400' : 'text-gray-200');
         }
 
+        const AVAILABLE_SCAN_SECTORS = new Set(['mls', 'reo', 'sheriff', 'tax']);
+
+        function cleanScanSettings(config) {
+            if (!config || typeof config !== 'object' || Array.isArray(config)) return {};
+            const clean = {...config};
+            if (Array.isArray(clean.sectors)) clean.sectors = clean.sectors.filter(value => AVAILABLE_SCAN_SECTORS.has(value));
+            if (clean.schedules && typeof clean.schedules === 'object') {
+                clean.schedules = Object.fromEntries(Object.entries(clean.schedules).filter(([key]) => AVAILABLE_SCAN_SECTORS.has(key)));
+            }
+            return clean;
+        }
+
+        function migrateClosedScanSettings() {
+            for (const key of ['pa_settings_state_v7', 'pa_ondemand_state_v7']) {
+                try {
+                    const saved = localStorage.getItem(key);
+                    if (!saved) continue;
+                    const original = JSON.parse(saved), clean = cleanScanSettings(original);
+                    if (JSON.stringify(original) !== JSON.stringify(clean)) localStorage.setItem(key, JSON.stringify(clean));
+                } catch (error) {}
+            }
+        }
+
+        function configuredPriceRange(config) {
+            const nested = config?.scan_settings?.price_range;
+            const min = numericData(config?.minPrice ?? nested?.min);
+            const max = numericData(config?.maxPrice ?? nested?.max);
+            return min !== null && max !== null && min >= 0 && max > 0 && min <= max ? {min, max} : null;
+        }
+
+        function initialBoardScanPriceRange() {
+            for (const key of ['pa_confirmed_scan_price_v1', 'pa_settings_state_v7', 'pa_ondemand_state_v7']) {
+                try {
+                    const range = configuredPriceRange(JSON.parse(localStorage.getItem(key) || 'null'));
+                    if (range) return range;
+                } catch (error) {}
+            }
+            return {min: 50000, max: 190000};
+        }
+
+        function applyBoardScanPriceRange(config, confirmed = false, resetView = false) {
+            const range = configuredPriceRange(config);
+            if (!range) return false;
+            boardScanPriceRange = range;
+            if (confirmed) {
+                try { localStorage.setItem('pa_confirmed_scan_price_v1', JSON.stringify({minPrice: range.min, maxPrice: range.max})); }
+                catch (error) {}
+            }
+            if (resetView) boardPriceMinEdited = false;
+            const minInput = document.getElementById('filter-min-price');
+            if (minInput && !boardPriceMinEdited) minInput.value = range.min.toLocaleString('en-US');
+            const maxSelect = document.getElementById('filter-price');
+            const option = maxSelect?.querySelector('option[value="scan"]');
+            if (option) option.textContent = 'לפי הסריקה · עד ' + moneyData(range.max);
+            if (resetView && maxSelect) maxSelect.value = 'scan';
+            if (databaseProperties.length) renderCards();
+            return true;
+        }
+
+        function boardPriceRange() {
+            const rawMin = document.getElementById('filter-min-price')?.value;
+            const min = String(rawMin ?? '').trim() ? numericData(rawMin) : 0;
+            const choice = document.getElementById('filter-price')?.value || 'scan';
+            const max = choice === 'scan' ? boardScanPriceRange.max : choice === 'all' ? null : numericData(choice);
+            const error = min === null || min < 0 || (choice !== 'all' && (max === null || max <= 0))
+                ? 'יש להזין טווח מחיר תקין.' : max !== null && min > max ? 'מחיר המינימום גבוה ממחיר המקסימום.' : '';
+            return {min, max, error, choice};
+        }
+
+        function applyPriceFilters(field) {
+            if (field === 'min') boardPriceMinEdited = true;
+            renderCards();
+        }
+
+        function restoreBoardScanPriceRange() {
+            applyBoardScanPriceRange({minPrice: boardScanPriceRange.min, maxPrice: boardScanPriceRange.max}, false, true);
+            if (!databaseProperties.length) renderCards();
+        }
+
+        function updateBoardPriceSummary() {
+            const range = boardPriceRange();
+            const label = document.getElementById('active-price-range');
+            if (label) {
+                label.textContent = range.error || ('מחיר בלוח: ' + moneyData(range.min) + (range.max === null ? ' ומעלה' : '–' + moneyData(range.max)));
+                label.classList.toggle('text-rose-300', Boolean(range.error));
+                label.classList.toggle('text-gray-400', !range.error);
+            }
+            const reset = document.getElementById('reset-board-price-range');
+            if (reset) reset.hidden = !range.error && range.choice === 'scan' && range.min === boardScanPriceRange.min;
+        }
+
+        function scanRangeNumber(value, fallback = null) {
+            if (value === '' || value === null || value === undefined || value === 'all') return fallback;
+            return numericData(value);
+        }
+
+        function scanConfigurationErrors(config) {
+            const errors = [];
+            if (config.minPrice === null || config.maxPrice === null || config.minPrice < 0 || config.maxPrice <= 0) errors.push('יש להזין מחיר מינימום של אפס ומעלה ומחיר מקסימום חיובי.');
+            else if (config.minPrice > config.maxPrice) errors.push('מחיר המינימום גבוה ממחיר המקסימום.');
+            for (const [minField, maxField, label] of [['minSqft', 'maxSqft', 'שטח'], ['minBeds', 'maxBeds', 'חדרי שינה']]) {
+                const min = scanRangeNumber(config[minField], 0), max = scanRangeNumber(config[maxField], Infinity);
+                if (min === null || max === null || min < 0 || max < 0) errors.push('טווח ' + label + ' אינו תקין.');
+                else if (min > max) errors.push('מינימום ' + label + ' גבוה מהמקסימום.');
+            }
+            const baths = scanRangeNumber(config.minBaths, 0);
+            if (baths === null || baths < 0) errors.push('מספר חדרי הרחצה אינו תקין.');
+            if ((config.is_manual_scan || config.autoScanEnabled !== false) && !config.sectors?.length) errors.push('יש לבחור לפחות מקור סריקה אחד.');
+            return errors;
+        }
+
+        function validatedScanConfig(isManual) {
+            const config = cleanScanSettings(buildServerConfig(isManual));
+            const errors = scanConfigurationErrors(config);
+            if (errors.length) { alert(errors.join('\n')); return null; }
+            return config;
+        }
+
+
         async function loadAutomationState() {
+            applyBoardScanPriceRange({minPrice: boardScanPriceRange.min, maxPrice: boardScanPriceRange.max});
             try {
                 const response = await fetch('scan_config.json?t=' + Date.now());
                 if (!response.ok) throw new Error('config unavailable');
                 const config = await response.json();
+                applyBoardScanPriceRange(config, true);
                 if (typeof config.autoScanEnabled !== 'boolean') throw new Error('config missing state');
                 isAutoScanEnabled = config.autoScanEnabled;
                 automationStateVerified = true;
@@ -1177,9 +1276,9 @@
 
         function getFilteredProperties() {
             const value = id => document.getElementById(id)?.value || 'all';
-            const strat = value('filter-strategy'), type = value('filter-type'), cap = value('filter-price');
-            const minInput = document.getElementById('filter-min-price');
-            const min = minInput ? getRawPrice(minInput) : 0;
+            const strat = value('filter-strategy'), type = value('filter-type');
+            const range = boardPriceRange();
+            if (range.error) return [];
             const includeUnknown = document.getElementById('filter-unknown-price')?.checked !== false;
             return rawProperties.filter(p => {
                 if (isPipelineProperty(p)) return false;
@@ -1189,12 +1288,13 @@
                 if (type !== 'all' && (p.type || p.property_type) !== type) return false;
                 const price = getMarketAskingPrice(p);
                 if (price === null && !includeUnknown) return false;
-                if (price !== null && ((min > 0 && price < min) || (cap !== 'all' && price > Number(cap)))) return false;
+                if (price !== null && (price < range.min || (range.max !== null && price > range.max))) return false;
                 return selectedCitiesFilter === null || selectedCitiesFilter.has(mainGeoKey(p));
             });
         }
 
         function updateResultSummary(filtered) {
+            updateBoardPriceSummary();
             const count = document.getElementById('filtered-result-count');
             const unknown = document.getElementById('filtered-unknown-price');
             if (count) count.textContent = `תוצאות לאחר סינון: ${filtered.length.toLocaleString('en-US')}`;
@@ -1413,6 +1513,7 @@
                 if(st) st.value = savedToken;
             }
 
+            migrateClosedScanSettings();
             loadSettingsState();
             loadOnDemandState();
 
@@ -1540,14 +1641,14 @@
         function buildServerConfig(isManual = false) {
             const prefix = isManual ? 'ondemand' : 'setting';
             return {
-                minPrice: getRawPrice(document.getElementById(`${prefix}-min-price`)),
-                maxPrice: getRawPrice(document.getElementById(`${prefix}-max-price`)) || 190000,
+                minPrice: String(document.getElementById(`${prefix}-min-price`).value || '').trim() ? numericData(document.getElementById(`${prefix}-min-price`).value) : 0,
+                maxPrice: numericData(document.getElementById(`${prefix}-max-price`).value),
                 minSqft: document.getElementById(`${prefix}-min-sqft`).value,
                 maxSqft: document.getElementById(`${prefix}-max-sqft`) ? document.getElementById(`${prefix}-max-sqft`).value : '',
                 minBeds: document.getElementById(`${prefix}-min-beds`).value,
                 maxBeds: document.getElementById(`${prefix}-max-beds`) ? document.getElementById(`${prefix}-max-beds`).value : 'all',
                 minBaths: document.getElementById(`${prefix}-min-baths`).value,
-                sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value),
+                sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value).filter(value => AVAILABLE_SCAN_SECTORS.has(value)),
                 propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
                 counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
@@ -1559,7 +1660,6 @@
                     reo: { day: document.getElementById('sched-day-reo') ? document.getElementById('sched-day-reo').value : 'Wednesday', time: document.getElementById('sched-time-reo') ? document.getElementById('sched-time-reo').value : '08:00' },
                     sheriff: { day: document.getElementById('sched-day-sheriff') ? document.getElementById('sched-day-sheriff').value : 'Wednesday', time: document.getElementById('sched-time-sheriff') ? document.getElementById('sched-time-sheriff').value : '08:00' },
                     tax: { day: document.getElementById('sched-day-tax') ? document.getElementById('sched-day-tax').value : 'Wednesday', time: document.getElementById('sched-time-tax') ? document.getElementById('sched-time-tax').value : '08:00' },
-                    "06_probate_estates": { day: document.getElementById('sched-day-probate') ? document.getElementById('sched-day-probate').value : 'Wednesday', time: document.getElementById('sched-time-probate') ? document.getElementById('sched-time-probate').value : '08:00' }
                 },
                 updatedAt: new Date().toISOString(),
                 is_manual_scan: isManual
@@ -1572,9 +1672,9 @@
             try {
                 const saved = localStorage.getItem('pa_settings_state_v7');
                 if (saved) {
-                    const st = JSON.parse(saved);
-                    if(document.getElementById('setting-min-price') && st.minPrice) document.getElementById('setting-min-price').value = st.minPrice.toLocaleString('en-US');
-                    if(document.getElementById('setting-max-price') && st.maxPrice) document.getElementById('setting-max-price').value = st.maxPrice.toLocaleString('en-US');
+                    const st = cleanScanSettings(JSON.parse(saved));
+                    if(document.getElementById('setting-min-price') && st.minPrice !== undefined && st.minPrice !== null) document.getElementById('setting-min-price').value = st.minPrice.toLocaleString('en-US');
+                    if(document.getElementById('setting-max-price') && st.maxPrice !== undefined && st.maxPrice !== null) document.getElementById('setting-max-price').value = st.maxPrice.toLocaleString('en-US');
                     if(document.getElementById('setting-min-sqft') && st.minSqft) document.getElementById('setting-min-sqft').value = st.minSqft;
                     if(document.getElementById('setting-max-sqft') && st.maxSqft !== undefined) document.getElementById('setting-max-sqft').value = st.maxSqft;
                     if(document.getElementById('setting-min-beds') && st.minBeds) document.getElementById('setting-min-beds').value = st.minBeds;
@@ -1596,9 +1696,9 @@
             try {
                 const saved = localStorage.getItem('pa_ondemand_state_v7');
                 if (saved) {
-                    const st = JSON.parse(saved);
-                    if(document.getElementById('ondemand-min-price') && st.minPrice) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
-                    if(document.getElementById('ondemand-max-price') && st.maxPrice) document.getElementById('ondemand-max-price').value = st.maxPrice.toLocaleString('en-US');
+                    const st = cleanScanSettings(JSON.parse(saved));
+                    if(document.getElementById('ondemand-min-price') && st.minPrice !== undefined && st.minPrice !== null) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
+                    if(document.getElementById('ondemand-max-price') && st.maxPrice !== undefined && st.maxPrice !== null) document.getElementById('ondemand-max-price').value = st.maxPrice.toLocaleString('en-US');
                     if(document.getElementById('ondemand-min-sqft') && st.minSqft) document.getElementById('ondemand-min-sqft').value = st.minSqft;
                     if(document.getElementById('ondemand-max-sqft') && st.maxSqft !== undefined) document.getElementById('ondemand-max-sqft').value = st.maxSqft;
                     if(document.getElementById('ondemand-min-beds') && st.minBeds) document.getElementById('ondemand-min-beds').value = st.minBeds;
@@ -2784,6 +2884,8 @@
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
         async function saveScanSettingsToServer() {
+            const config = validatedScanConfig(false);
+            if (!config) return;
             const token = document.getElementById('setting-token-input').value.trim() || localStorage.getItem('pa_github_token');
             if (!token) { alert('כדי לשדר את ההגדרות לשרת, חובה להזין מפתח GitHub בחלק העליון של החלון.'); return; }
             localStorage.setItem('pa_github_token', token);
@@ -2791,7 +2893,6 @@
             document.getElementById('scan-progress-toast').classList.remove('hidden');
             document.getElementById('scan-toast-subtitle').textContent = "ההגדרות משודרות לשרת...";
             
-            const config = buildServerConfig(false);
             const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
             let sha = '';
 
@@ -2808,6 +2909,7 @@
                 });
                 if(putRes.ok) {
                     isAutoScanEnabled = config.autoScanEnabled; automationStateVerified = true; updateAutoScanUI();
+                    applyBoardScanPriceRange(config, true, true);
                     alert("ההגדרות נשמרו בשרת.");
                     closeSettingsModal();
                 } else { 
@@ -2819,6 +2921,8 @@
         }
 
         async function triggerOnDemandExecution() {
+            const config = validatedScanConfig(true);
+            if (!config) return;
             const tokenInput = document.getElementById('ondemand-token-input');
             let tk = tokenInput ? tokenInput.value.trim() : '';
             if (!tk) tk = localStorage.getItem('pa_github_token') || '';
@@ -2835,7 +2939,6 @@
             btn.disabled = true;
             lucide.createIcons();
 
-            const config = buildServerConfig(true);
             config.requestId = window.crypto?.randomUUID ? window.crypto.randomUUID() : 'manual-' + Date.now();
 
             try {
@@ -2851,6 +2954,7 @@
                     body: JSON.stringify({ message: "Update config for On-Demand Scan", content: contentBase64, sha: sha || undefined })
                 });
                 if (!configResponse.ok) throw new Error('שמירת ההגדרות נכשלה: HTTP ' + configResponse.status);
+                applyBoardScanPriceRange(config, true, true);
             } catch(e) {
                 alert(e.message + '\nהסריקה לא שוגרה. שמור את ההגדרות ונסה שוב.');
                 btn.innerHTML = originalHtml;
@@ -2897,24 +3001,24 @@
             document.getElementById('autoscan-master-switch').checked = isEnabled;
             
             try {
-                const st = JSON.parse(localStorage.getItem('pa_settings_state_v7') || '{}');
+                const st = cleanScanSettings(JSON.parse(localStorage.getItem('pa_settings_state_v7') || '{}'));
                 if (st.schedules) {
                     if (st.schedules.mls) { document.getElementById('sched-day-mls').value = st.schedules.mls.day || 'Everyday'; document.getElementById('sched-time-mls').value = st.schedules.mls.time || '08:00'; }
                     if (st.schedules.reo) { document.getElementById('sched-day-reo').value = st.schedules.reo.day || 'Wednesday'; document.getElementById('sched-time-reo').value = st.schedules.reo.time || '08:00'; }
                     if (st.schedules.sheriff) { document.getElementById('sched-day-sheriff').value = st.schedules.sheriff.day || 'Wednesday'; document.getElementById('sched-time-sheriff').value = st.schedules.sheriff.time || '08:00'; }
                     if (st.schedules.tax) { document.getElementById('sched-day-tax').value = st.schedules.tax.day || 'Wednesday'; document.getElementById('sched-time-tax').value = st.schedules.tax.time || '08:00'; }
-                    if (st.schedules["06_probate_estates"]) { document.getElementById('sched-day-probate').value = st.schedules["06_probate_estates"].day || 'Wednesday'; document.getElementById('sched-time-probate').value = st.schedules["06_probate_estates"].time || '08:00'; }
                 } else {
                     document.getElementById('sched-day-mls').value = 'Everyday'; document.getElementById('sched-time-mls').value = '08:00';
                     document.getElementById('sched-day-reo').value = 'Wednesday'; document.getElementById('sched-time-reo').value = '08:00';
                     document.getElementById('sched-day-sheriff').value = 'Wednesday'; document.getElementById('sched-time-sheriff').value = '08:00';
                     document.getElementById('sched-day-tax').value = 'Wednesday'; document.getElementById('sched-time-tax').value = '08:00';
-                    document.getElementById('sched-day-probate').value = 'Wednesday'; document.getElementById('sched-time-probate').value = '08:00';
                 }
             } catch(e){}
         }
 
         async function saveScheduleSettings() {
+            const config = validatedScanConfig(false);
+            if (!config) return;
             const token = document.getElementById('setting-token-input')?.value.trim() || localStorage.getItem('pa_github_token');
             if (!token) { alert('כדי לשמור את התזמון לשרת, חסר מפתח GitHub. הזן אותו בחלון "הגדרות סריקה".'); return; }
 
@@ -2929,7 +3033,6 @@
             btn.disabled = true;
             lucide.createIcons();
 
-            const config = buildServerConfig(false);
 
             try {
                 const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
@@ -2940,12 +3043,13 @@
                 const putRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: "Update 5 Sectors Auto-Scan Schedule", content: contentBase64, sha: sha || undefined })
+                    body: JSON.stringify({ message: "Update 4 Sectors Auto-Scan Schedule", content: contentBase64, sha: sha || undefined })
                 });
 
                 if(putRes.ok) {
                     localStorage.setItem('pa_auto_scan_status', String(isEnabled));
                     isAutoScanEnabled = isEnabled; automationStateVerified = true; updateAutoScanUI();
+                    applyBoardScanPriceRange(config, true, true);
                     alert("התזמון נשמר בשרת. מצב הריצות בפועל מוצג בדוח הסריקה.");
                     closeAutoScanModal();
                 } else { 
@@ -2961,12 +3065,14 @@
         function startBackgroundScanMonitor(requestId) {
             document.getElementById('scan-progress-toast').classList.remove('hidden');
             document.getElementById('scan-toast-subtitle').textContent = 'הסריקה שוגרה. ממתין לתוצאת הריצה בשרת.';
+            const baselineScanId = scannerReport?.last_scan?.scan_id || lastKnownScanId;
             scanStartTime = Date.now();
+            const requestedAt = scanStartTime;
             const tEl = document.getElementById('scan-timer');
             if (scanTimerInterval) clearInterval(scanTimerInterval);
             let checking = false;
             scanTimerInterval = setInterval(async () => {
-                const diff = Math.floor((Date.now() - scanStartTime) / 1000);
+                const diff = Math.floor((Date.now() - requestedAt) / 1000);
                 tEl.textContent = `${String(Math.floor(diff / 60)).padStart(2,'0')}:${String(diff % 60).padStart(2,'0')}`;
                 if (diff >= 600) {
                     clearInterval(scanTimerInterval);
@@ -2977,23 +3083,28 @@
                 checking = true;
                 try {
                     const report = await loadScannerStatus();
-                    // Auto-close if the scan_id changed since we started waiting
-                    if (report?.last_scan?.scan_id && lastKnownScanId && report.last_scan.scan_id !== lastKnownScanId) {
-                        clearInterval(scanTimerInterval);
-                        await loadProperties();
-                        await loadGeoCatalog();
-                        closeScanToast();
+                    const scan = report?.last_scan, event = report?.last_event;
+                    const ownEvent = event?.request_id === requestId ? event : scan?.request_id === requestId ? scan : null;
+                    // Older reports may omit request IDs. Compare with a captured baseline, not a header value updated by loadScannerStatus().
+                    const newLegacyScan = scan && !scan.request_id && scan.scan_id && scan.scan_id !== baselineScanId &&
+                        parseDate(scan.started_at || scan.finished_at) >= requestedAt - 120000;
+                    const completed = ownEvent || (newLegacyScan ? scan : null);
+                    if (!completed || !['success', 'partial', 'failed', 'skipped'].includes(completed.status)) return;
+                    clearInterval(scanTimerInterval);
+                    if (completed.status === 'skipped') {
+                        document.getElementById('scan-toast-subtitle').textContent = 'הסריקה לא בוצעה: ' + (completed.skip_reason || 'השרת דילג על הבקשה. פרטים במצב מקורות הסריקה.');
+                        return;
                     }
-                    // Legacy fallback
-                    else if (report?.last_scan?.request_id === requestId && ['success','partial','failed'].includes(report.last_scan.status)) {
-                        clearInterval(scanTimerInterval);
-                        await loadProperties();
-                        await loadGeoCatalog();
-                        closeScanToast();
-                    }
+                    await loadProperties();
+                    await loadGeoCatalog();
+                    if (completed.status === 'failed') document.getElementById('scan-toast-subtitle').textContent = 'הסריקה נכשלה. הנתונים הקיימים נשארו בלוח; פרטי השגיאה במצב מקורות הסריקה.';
+                    else closeScanToast();
+                } catch (error) {
+                    document.getElementById('scan-toast-subtitle').textContent = 'דוח הסריקה לא נטען כרגע; ממשיך לבדוק את הבקשה.';
                 } finally { checking = false; }
             }, 1000);
         }
+
 
         function updateAutoScanUI() {
             const text = document.getElementById('auto-scan-text');
