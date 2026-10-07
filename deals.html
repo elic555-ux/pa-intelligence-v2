@@ -57,7 +57,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         חדר עסקאות וניהול צנרת (Deal Room)
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">UI 8.12.0 · 07.10.2026</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">UI 8.13.0 · 07.10.2026</span>
                     </h1>
                     <p class="text-xs text-gray-300">מעקב, מפות ותחשיבים לפי נתונים מתועדים</p><p id="deal-save-status" role="status" class="text-xs mt-1"></p>
                 </div>
@@ -198,8 +198,10 @@
 
 function escapeHtml(value) { return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function savedReportFinancialLabel(report) {
-    if(report.financial_model_version!==FINANCIAL_MODEL_VERSION || !report.deal_data) return 'דוח קודם · חסרים מקורות לתחשיבים';
-    const f=financialSnapshot(report.deal_data);
+    if(!report.deal_data) return 'דוח קודם · חסרים מקורות לתחשיבים';
+    const stamp=financialDate(report.date);
+    if(stamp===null||stamp>Date.now()) return 'דוח קודם · חסר מועד תקין';
+    const f=financialSnapshot(report.deal_data,stamp);
     const count=Object.values(f.evidence).filter(Boolean).length;
     return count?'נתונים עם מקור: '+count+' סעיפים':'אין נתונים כספיים מבוססים';
 }
@@ -291,6 +293,7 @@ function financialEvidence(p, key, now = Date.now()) {
     if (!p.id || String(entry.property_id || '') !== String(p.id)) return null;
     if (!['documented','verified','provider_estimate'].includes(entry.status) || !rule.methods.includes(entry.method)) return null;
     if (entry.property_match_confirmed !== true) return null;
+    if (entry.source_name === 'RentCast' && key === 'rent' && stamp !== null && now-stamp > 30*86400000) return null;
     if (entry.period !== rule.period || stamp === null || stamp > now || now - stamp > rule.days * 86400000) return null;
     return {value,property_id:String(p.id),source_name:entry.source_name.trim(),source_url:url,document_ref:typeof entry.document_ref==='string'?documentRef:'',
         observed_at:entry.observed_at,method:entry.method,period:entry.period,status:entry.status,
@@ -759,7 +762,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function openExpandedReport(dealId) {
-            window.open(`report.html?id=${dealId}`, '_blank');
+            window.open(`report.html?id=${encodeURIComponent(String(dealId))}`, '_blank');
         }
 
 
@@ -839,7 +842,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                             
                             <button onclick="openExpandedReport('${d.id}')" class="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition shadow-lg mt-2 mb-4">
                                 <i data-lucide="microscope" class="w-4 h-4"></i>
-                                <span>פתח דוח נתונים ותחשיבים</span>
+                                <span>פתח דוח מורחב</span>
                             </button>
 
                             <!-- מעקב צנרת -->
@@ -1016,7 +1019,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         window.onload = init;
-        console.info('PA Hub Deals UI 8.12.0 — documented financial inputs only');
+        console.info('PA Hub Deals UI 8.13.0 — documented financial inputs only');
     </script>
 </body>
 </html>
