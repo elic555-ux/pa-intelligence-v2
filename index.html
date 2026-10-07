@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.11.0 / 2026-10-06: closed probate/FSBO controls, scan-aligned display prices, range validation and request-aware scan monitoring -->
+<!-- PA UI 8.12.0 / 2026-10-07: documented financial inputs; closed probate/FSBO controls, scan-aligned display prices, range validation and request-aware scan monitoring -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.11.0 · 06.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.12.0 · 07.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -278,17 +278,17 @@
                 <div id="modal-price-history-body" class="mt-3"></div>
             </section>
 
-            <!-- Preliminary estimates: values are not source facts -->
+            <!-- Financial values require property-specific documented evidence -->
             <div class="bg-blue-950/20 p-4 rounded-xl border border-blue-500/30">
                 <div class="flex justify-between items-center border-b border-gray-800/60 pb-2 mb-3">
-                    <span class="font-black text-blue-300 flex items-center gap-1.5 text-sm"><i data-lucide="brain-circuit" class="w-5 h-5"></i> אומדנים ראשוניים</span>
+                    <span class="font-black text-blue-300 flex items-center gap-1.5 text-sm"><i data-lucide="brain-circuit" class="w-5 h-5"></i> נתונים כספיים עם מקור</span>
                     <span id="modal-ai-class"></span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div><span class="text-gray-400 block font-bold mb-1">תרחיש שווי (ARV)</span><strong class="text-white text-lg font-mono" id="modal-ai-arv"></strong></div>
-                    <div><span class="text-gray-400 block font-bold mb-1">צפי שכירות</span><strong class="text-white text-lg font-mono" id="modal-ai-rent"></strong></div>
-                    <div><span class="text-gray-400 block font-bold mb-1">תרחיש MAO להשכרה</span><strong class="text-emerald-400 text-lg font-black font-mono" id="modal-ai-mao-rent"></strong></div>
-                    <div><span class="text-gray-400 block font-bold mb-1">תרחיש MAO לפליפ</span><strong class="text-amber-400 text-lg font-black font-mono" id="modal-ai-mao-flip"></strong></div>
+                    <div><span class="text-gray-400 block font-bold mb-1">שווי לאחר שיפוץ לפי מקור</span><strong class="text-white text-lg font-mono" id="modal-ai-arv"></strong></div>
+                    <div><span class="text-gray-400 block font-bold mb-1">שכירות לפי מקור</span><strong class="text-white text-lg font-mono" id="modal-ai-rent"></strong></div>
+                    <div><span class="text-gray-400 block font-bold mb-1">תקרת רכישה להשכרה</span><strong class="text-emerald-400 text-lg font-black font-mono" id="modal-ai-mao-rent"></strong></div>
+                    <div><span class="text-gray-400 block font-bold mb-1">תקרת רכישה לפליפ</span><strong class="text-amber-400 text-lg font-black font-mono" id="modal-ai-mao-flip"></strong></div>
                 </div>
                 <p class="text-gray-300 text-xs mt-3 bg-gray-900/50 p-3 rounded-lg border border-gray-800/50" id="modal-ai-summary"></p><div id="modal-analysis-notice" class="text-xs text-gray-400 mt-2"></div>
             </div>
@@ -1043,15 +1043,12 @@
         function analysisNotice(p) {
             const notice = p.analysis_disclaimer || (p.analysis_mode === 'source_record_only'
                 ? 'רשומת מקור בלבד; לא חושבו אומדני השקעה.'
-                : 'אומדנים ראשוניים דורשים בדיקת עסקאות והשכרות דומות.');
+                : 'נתונים כספיים עם מקור דורשים בדיקת עסקאות והשכרות דומות.');
             const date = parseDate(p.analysis_updated_at) ? ' · עודכן: ' + displayDate(p.analysis_updated_at) : '';
             return notice + date;
         }
 
-        function neighborhoodBadgeHtml(p) {
-            if (p.neighborhood_class_status !== 'verified' || !p.neighborhood_class_source || !p.neighborhood_class) return '';
-            return `<span class="text-[10px] text-purple-300">דירוג שכונה: ${escapeHtml(p.neighborhood_class)}</span>`;
-        }
+        function neighborhoodBadgeHtml(p) { return ''; }
 
         function displayDate(value) {
             const timestamp = parseDate(value);
@@ -1304,129 +1301,176 @@
 
 
 
-        // One local, deterministic model. These are scenarios, not verified market valuations.
-        const FINANCIAL_MODEL_VERSION = 'financial-baseline-v1-20261006';
-
-        function positiveFinancialNumber(value) {
-            const number = numericData(value);
-            return number !== null && number > 0 ? number : null;
-        }
-
-        function financialSourceOnly(p) {
-            return String(p.source_type || '').toLowerCase().includes('sheriff') ||
-                String(p.deal_type || '').toLowerCase().includes('sheriff') || isTaxProperty(p);
-        }
-
-        function financialInputs(p) {
-            return {
-                model_version: FINANCIAL_MODEL_VERSION,
-                price: getMarketAskingPrice(p),
-                beds: positiveFinancialNumber(p.beds),
-                sqft: positiveFinancialNumber(p.sqft),
-                property_type: String(p.property_type || p.type || '').trim(),
-                source_type: String(p.source_type || '').toLowerCase(),
-                deal_type: String(p.deal_type || '').toLowerCase(),
-                verified_monthly_rent: positiveFinancialNumber(p.verified_monthly_rent),
-                verified_rent_source: String(p.verified_rent_source || '').trim(),
-                verified_arv: positiveFinancialNumber(p.verified_arv),
-                verified_arv_source: String(p.verified_arv_source || '').trim(),
-                verified_flip_rehab: numericData(p.verified_flip_rehab),
-                verified_rental_rehab: numericData(p.verified_rental_rehab),
-                verified_rehab_source: String(p.verified_rehab_source || '').trim()
-            };
-        }
-
-        function financialSnapshot(p) {
-            const inputs = financialInputs(p);
-            if (financialSourceOnly(p)) return {inputs, mode: 'source_record_only', rent: null, yield: null, arv: null,
-                rentalRehab: null, flipRehab: null, maoRental: null, maoFlip: null, rentMethod: null,
-                rentReason: 'רשומת מכרז או חוב; לא חושבו אומדני השקעה.', arvMethod: null, rehabMethod: null};
-            const type = inputs.property_type.toLowerCase();
-            const multiUnit = /multi|duplex|triplex|quadplex|apartment|two family|two-family|2-4/.test(type);
-            const verifiedRent = inputs.verified_monthly_rent !== null && Boolean(inputs.verified_rent_source);
-            const rent = verifiedRent ? inputs.verified_monthly_rent :
-                (!multiUnit && inputs.beds !== null ? Math.trunc(950 + inputs.beds * 180) : null);
-            const rentMethod = verifiedRent ? 'verified_source_input' : rent !== null ? 'bedroom_rule_of_thumb' : null;
-            const grossYield = rent !== null && inputs.price !== null ? Math.round((rent * 1200 / inputs.price) * 10) / 10 : null;
-            const verifiedArv = inputs.verified_arv !== null && Boolean(inputs.verified_arv_source);
-            const arv = verifiedArv ? inputs.verified_arv : inputs.price !== null ? Math.trunc(inputs.price * (inputs.price < 100000 ? 1.6 : 1.35)) : null;
-            const verifiedRehab = Boolean(inputs.verified_rehab_source);
-            const flipRehab = verifiedRehab && inputs.verified_flip_rehab !== null && inputs.verified_flip_rehab >= 0 ? inputs.verified_flip_rehab :
-                inputs.sqft !== null ? Math.trunc(inputs.sqft * 45) : null;
-            const rentalRehab = verifiedRehab && inputs.verified_rental_rehab !== null && inputs.verified_rental_rehab >= 0 ? inputs.verified_rental_rehab :
-                inputs.sqft !== null ? Math.trunc(inputs.sqft * 25) : null;
-            return {inputs, mode: 'preliminary_estimate', rent, yield: grossYield, arv, flipRehab, rentalRehab,
-                maoFlip: arv !== null && flipRehab !== null ? Math.trunc(arv * 0.70 - flipRehab) : null,
-                maoRental: rent !== null && rentalRehab !== null ? Math.trunc((rent * 12 * 0.74 / 0.10) - rentalRehab - 5000) : null,
-                rentMethod, rentReason: multiUnit && !verifiedRent ? 'נדרשים נתוני שכירות ליחידות הנכס.' : rent === null ? 'אין מספיק נתונים לאומדן שכירות.' : '',
-                arvMethod: verifiedArv ? 'verified_source_input' : arv !== null ? 'asking_price_scenario' : null,
-                rehabMethod: verifiedRehab ? 'source_input_or_sqft_rule' : 'sqft_rule_of_thumb'};
-        }
-
-        function financialRentText(p) {
-            const f = financialSnapshot(p);
-            return f.rent !== null ? moneyData(f.rent) + ' / חודש' : f.mode === 'source_record_only' ? 'לא חושב' : 'אין נתון';
-        }
-
-        function financialYieldText(p) {
-            const f = financialSnapshot(p);
-            return f.yield !== null ? f.yield.toFixed(1) + '% ברוטו' : f.mode === 'source_record_only' ? 'לא חושב' : 'אין נתון';
-        }
-
-        function financialRehabText(p) {
-            const f = financialSnapshot(p);
-            const value = p.strategy === 'value_add' ? f.flipRehab : f.rentalRehab;
-            return value !== null ? 'תקציב שיפוץ משוער: ' + moneyData(value) : f.mode === 'source_record_only' ? 'לא חושב' : 'אין נתון';
-        }
-
-        function financialDisplayHtml(p) {
-            const f = financialSnapshot(p);
-            const rentLabel = f.rentMethod === 'verified_source_input' ? 'שכירות לפי מקור' : 'שכירות משוערת';
-            return `<div class="text-emerald-300 text-xs">${rentLabel}: <span class="font-mono">${escapeHtml(financialRentText(p))}</span></div>` +
-                `<div class="mt-1 text-gray-300 text-[11px]">תשואה ברוטו: ${escapeHtml(financialYieldText(p).replace(' ברוטו', ''))}</div>` +
-                (p.strategy === 'value_add' ? `<div class="mt-1 text-gray-400 text-[10px]">${escapeHtml(financialRehabText(p))}</div>` : '');
-        }
-
-        function financialExplanationHtml(p) {
-            const f = financialSnapshot(p);
-            if (f.mode === 'source_record_only') return '<p class="text-xs text-gray-400">רשומת מקור בלבד; סכומי תיק או מכרז אינם בסיס לאומדני השקעה.</p>';
-            const rent = f.rentMethod === 'verified_source_input' ? `שכירות: ${moneyData(f.rent)} לפי ${p.verified_rent_source}.` :
-                f.rent !== null ? `אומדן שכירות: $950 ועוד $180 לכל חדר שינה; ${f.inputs.beds} חדרים נותנים ${moneyData(f.rent)} לחודש.` : f.rentReason;
-            const arv = f.arvMethod === 'verified_source_input' ? `שווי לאחר שיפוץ: ${moneyData(f.arv)} לפי ${p.verified_arv_source}.` :
-                f.arv !== null ? `תרחיש שווי: המחיר המבוקש כפול ${f.inputs.price < 100000 ? '1.60' : '1.35'}; אין כאן השוואות מכירה מאומתות.` : 'אין נתון לתרחיש שווי.';
-            const lines = [rent, 'תשואה ברוטו = שכירות שנתית חלקי המחיר המבוקש; הוצאות, מימון ושיפוץ אינם מנוכים.', arv,
-                f.rehabMethod === 'sqft_rule_of_thumb' ? 'תקציב שיפוץ: $25 לכל SqFt להשכרה או $45 לכל SqFt לפליפ.' : 'תקציב שיפוץ לפי המקור שהוזן; נתון חסר מושלם כאומדן לפי שטח.',
-                'תרחיש MAO להשכרה: הוצאה קבועה של 26% מהשכירות, תשואת יעד 10%, הפחתת תקציב השיפוץ ו-$5,000.',
-                'תרחיש MAO לפליפ: 70% מתרחיש השווי, פחות תקציב השיפוץ.'];
-            return `<details class="text-xs text-gray-400"><summary class="cursor-pointer text-blue-300 font-bold">איך חושבו האומדנים?</summary><div class="mt-2 space-y-1">${lines.map(line => `<p>${escapeHtml(line)}</p>`).join('')}</div></details>`;
-        }
-
-        function applyFinancialSnapshot(p) {
-            const f = financialSnapshot(p);
-            p.financial_model_version = FINANCIAL_MODEL_VERSION;
-            p.analysis_inputs = f.inputs;
-            p.analysis_mode = f.mode;
-            p.analysis_is_ai = false;
-            p.monthly_rent_est = f.rent;
-            p.projected_rent = f.rent === null ? null : moneyData(f.rent) + ' / חודש';
-            p.gross_yield_pct = f.yield;
-            p.gross_yield = f.yield === null ? null : f.yield.toFixed(1) + '% ברוטו';
-            p.arv = f.arv; p.flip_rehab = f.flipRehab; p.rental_rehab = f.rentalRehab;
-            p.mao_flip = f.maoFlip; p.mao_rental = f.maoRental;
-            p.rent_method = f.rentMethod; p.arv_method = f.arvMethod; p.rehab_method = f.rehabMethod;
-            p.rehab_scope = financialRehabText(p);
-            if (p.strategy === 'turnkey') p.strategy_label = 'בחינה להשכרה';
-            else if (p.strategy === 'value_add') p.strategy_label = 'בחינה להשבחה';
-            p.ai_summary = f.mode === 'source_record_only' ? 'רשומת מקור בלבד. לא חושבו שווי, שכירות או MAO מסכום מכרז או חוב.' :
-                `שכירות: ${financialRentText(p)}. תשואה: ${financialYieldText(p)}. MAO להשכרה (תרחיש): ${moneyData(f.maoRental)}. MAO לפליפ (תרחיש): ${moneyData(f.maoFlip)}.`;
-        }
-
-        function currentFinancialMoney(p, field) {
-            const f = financialSnapshot(p);
-            if (f.mode === 'source_record_only') return 'לא חושב';
-            const key = {arv: 'arv', monthly_rent_est: 'rent', mao_rental: 'maoRental', mao_flip: 'maoFlip'}[field];
-            return moneyData(f[key]);
-        }
+        // Financial values are accepted only with property-specific, dated evidence.
+const FINANCIAL_MODEL_VERSION = 'documented-financials-v2-20261007';
+const FINANCIAL_EVIDENCE_RULES = {
+    rent: {field:'verified_monthly_rent', prefix:'verified_rent', period:'monthly', days:90, methods:['lease','rent_roll','market_rent_estimate']},
+    arv: {field:'verified_arv', prefix:'verified_arv', period:'total', days:180, methods:['appraisal_after_repair','comparable_sales_after_repair']},
+    flipRehab: {field:'verified_flip_rehab', prefix:'verified_rehab', period:'total', days:90, methods:['contractor_quote','inspection_scope_estimate']},
+    rentalRehab: {field:'verified_rental_rehab', prefix:'verified_rehab', period:'total', days:90, methods:['contractor_quote','inspection_scope_estimate']},
+    operatingExpenses: {period:'annual', days:90, methods:['operating_budget','documented_expenses']},
+    vacancyLoss: {period:'annual', days:90, methods:['operating_budget','documented_expenses']},
+    acquisitionCosts: {period:'total', days:90, methods:['closing_estimate','settlement_statement']},
+    sellingCosts: {period:'total', days:90, methods:['selling_quote','closing_estimate']},
+    holdingCosts: {period:'total', days:90, methods:['holding_budget','documented_expenses']},
+    financingCosts: {period:'total', days:90, methods:['lender_quote','documented_expenses']}
+};
+function financialNumber(value) {
+    if (typeof value === 'boolean' || value === null || value === undefined) return null;
+    if (typeof value !== 'string' && typeof value !== 'number') return null;
+    if (typeof value === 'number') return Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER ? value : null;
+    const text = String(value).replace(/[$,]/g, '').trim();
+    if (!/^-?\d+(?:\.\d+)?$/.test(text)) return null;
+    const n = Number(text); return Number.isFinite(n) && Math.abs(n) <= Number.MAX_SAFE_INTEGER ? n : null;
+}
+function positiveFinancialNumber(value) { const n=financialNumber(value);return n!==null&&n>0?n:null; }
+function financialUrl(value) {
+    if (typeof value !== 'string') return null;
+    const text=value.trim();
+    if (!/^https?:\/\/[^/?#]+/i.test(text) || /[\s<>"'\\]/.test(text)) return null;
+    try { const u = new URL(text); return ['https:','http:'].includes(u.protocol) && u.hostname && !u.username && !u.password ? text : null; }
+    catch (_) { return null; }
+}
+function financialDate(value) {
+    const text = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))?$/.test(text)) return null;
+    const datePart = new Date(text.slice(0,10)+'T00:00:00Z');
+    if (!Number.isFinite(datePart.getTime()) || datePart.toISOString().slice(0,10)!==text.slice(0,10)) return null;
+    const stamp = new Date(text).getTime();
+    return Number.isFinite(stamp) ? stamp : null;
+}
+function financialSourceOnly(p) {
+    const s = String(p.source_type || '').toLowerCase(), d = String(p.deal_type || '').toLowerCase();
+    return s.includes('sheriff') || s.includes('tax') || d.includes('sheriff') || d.includes('tax') || d.includes('פיגורי מס') || d.includes('חוב מס') ||
+        ['repository_minimum_bid','court_amount','opening_bid'].includes(p.source_amount_type);
+}
+function financialEvidence(p, key, now = Date.now()) {
+    const rule = FINANCIAL_EVIDENCE_RULES[key];
+    let entry = p.financial_evidence?.[key];
+    if (!entry && rule.field && p[rule.field] !== undefined) {
+        const prefix = rule.prefix;
+        entry = {value:p[rule.field], source_name:p[prefix+'_source'], source_url:p[prefix+'_source_url'],
+            document_ref:p[prefix+'_document_ref'], observed_at:p[prefix+'_observed_at'], method:p[prefix+'_method'],
+            period:p[prefix+'_period'], status:p[prefix+'_status'], property_id:p[prefix+'_property_id'],
+            zero_cost_confirmed:p[prefix+'_zero_cost_confirmed'], property_match_confirmed:p[prefix+'_property_match_confirmed']};
+    }
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+    const value = financialNumber(entry.value), stamp = financialDate(entry.observed_at);
+    const url = financialUrl(entry.source_url), documentRef = String(entry.document_ref || '').trim();
+    if (value === null || value < 0 || (['rent','arv'].includes(key) && value <= 0)) return null;
+    if (value === 0 && entry.zero_cost_confirmed !== true) return null;
+    if (typeof entry.source_name !== 'string' || !entry.source_name.trim() || (!url && (typeof entry.document_ref !== 'string' || documentRef.length < 5))) return null;
+    if (!p.id || String(entry.property_id || '') !== String(p.id)) return null;
+    if (!['documented','verified','provider_estimate'].includes(entry.status) || !rule.methods.includes(entry.method)) return null;
+    if (entry.property_match_confirmed !== true) return null;
+    if (entry.period !== rule.period || stamp === null || stamp > now || now - stamp > rule.days * 86400000) return null;
+    return {value,property_id:String(p.id),source_name:entry.source_name.trim(),source_url:url,document_ref:typeof entry.document_ref==='string'?documentRef:'',
+        observed_at:entry.observed_at,method:entry.method,period:entry.period,status:entry.status,
+        property_match_confirmed:true,zero_cost_confirmed:entry.zero_cost_confirmed===true,notes:typeof entry.notes==='string'?entry.notes:''};
+}
+function financialTarget(p, name, percentage = false) {
+    const t = p.financial_targets;
+    if (!t || t.confirmed !== true) return null;
+    const value = financialNumber(t[name]);
+    if (value === null || value < 0 || (percentage && (value <= 0 || value > 100))) return null;
+    return value;
+}
+function financialAskingPrice(p, now=Date.now()) {
+    if(financialSourceOnly(p))return null;
+    const price=positiveFinancialNumber(p.price),checked=financialDate(p.last_source_check);
+    if(price===null||checked===null||checked>now||now-checked>30*86400000||!financialUrl(p.url||p.source_url))return null;
+    return price;
+}
+function financialSnapshot(p, now = Date.now()) {
+    const sourceOnly = financialSourceOnly(p), evidence = {};
+    for (const key of Object.keys(FINANCIAL_EVIDENCE_RULES)) evidence[key] = sourceOnly ? null : financialEvidence(p,key,now);
+    const askingPrice = financialAskingPrice(p,now);
+    const val = key => evidence[key]?.value ?? null;
+    const rent = val('rent'), arv = val('arv'), rentalRehab = val('rentalRehab'), flipRehab = val('flipRehab');
+    const operatingExpenses = val('operatingExpenses'), vacancyLoss = val('vacancyLoss');
+    const acquisitionCosts = val('acquisitionCosts'), sellingCosts = val('sellingCosts');
+    const holdingCosts = val('holdingCosts'), financingCosts = val('financingCosts');
+    const annualRent = rent !== null ? rent * 12 : null;
+    const grossYield = rent !== null && askingPrice !== null ? Math.round(rent*1200/askingPrice*10)/10 : null;
+    const noi = annualRent !== null && operatingExpenses !== null && vacancyLoss !== null ? annualRent-operatingExpenses-vacancyLoss : null;
+    const targetCap = financialTarget(p,'cap_rate_pct',true), targetProfit = financialTarget(p,'flip_profit_amount');
+    const rentalInputs = [noi,rentalRehab,acquisitionCosts,targetCap];
+    const flipInputs = [arv,flipRehab,acquisitionCosts,sellingCosts,holdingCosts,financingCosts,targetProfit];
+    const rentalCeiling = rentalInputs.every(x=>x!==null) ? Math.floor(noi/(targetCap/100)-rentalRehab-acquisitionCosts) : null;
+    const flipCeiling = flipInputs.every(x=>x!==null) ? Math.floor(arv-flipRehab-acquisitionCosts-sellingCosts-holdingCosts-financingCosts-targetProfit) : null;
+    const allIn = [askingPrice,flipRehab,acquisitionCosts,holdingCosts,financingCosts].every(x=>x!==null) ? askingPrice+flipRehab+acquisitionCosts+holdingCosts+financingCosts : null;
+    const flipProfit = [arv,allIn,sellingCosts].every(x=>x!==null) ? arv-allIn-sellingCosts : null;
+    const targets=p.financial_targets?.confirmed===true?{confirmed:true,cap_rate_pct:targetCap,flip_profit_amount:targetProfit}:null;
+    const inputs = {model_version:FINANCIAL_MODEL_VERSION, price:askingPrice, evidence, targets};
+    return {inputs, evidence, mode:sourceOnly?'source_record_only':'documented_inputs_only', price:askingPrice,
+        rent, yield:grossYield, arv, rentalRehab, flipRehab, annualRent, operatingExpenses, vacancyLoss, acquisitionCosts,
+        sellingCosts, holdingCosts, financingCosts, noi, allIn, flipProfit,
+        flipRoi:flipProfit!==null && allIn>0 ? Math.round(flipProfit/allIn*1000)/10 : null,
+        capRate:noi!==null && askingPrice!==null ? Math.round(noi/askingPrice*1000)/10 : null,
+        maoRental:rentalCeiling>0?rentalCeiling:null, maoFlip:flipCeiling>0?flipCeiling:null,
+        rentalFeasible:rentalCeiling===null?null:rentalCeiling>0,flipFeasible:flipCeiling===null?null:flipCeiling>0,
+        rentMethod:rent!==null?'documented_source_input':null, arvMethod:arv!==null?'documented_source_input':null,
+        rehabMethod:flipRehab!==null || rentalRehab!==null?'documented_source_input':null,
+        rentReason:sourceOnly?'רשומת מכרז או חוב.':'חסר מקור עדכני לשכירות בנכס.',
+        targetCap, targetProfit};
+}
+function financialMoney(value) {
+    return value === null || value === undefined ? 'אין נתון מבוסס' : '$'+Number(value).toLocaleString('en-US',{maximumFractionDigits:2});
+}
+function financialRentText(p) { const f=financialSnapshot(p); return f.rent===null?'אין נתון מבוסס':financialMoney(f.rent)+' / חודש'; }
+function financialYieldText(p) { const f=financialSnapshot(p); return f.yield===null?'אין נתון מבוסס':f.yield.toFixed(1)+'% ברוטו'; }
+function financialRehabText(p) { const f=financialSnapshot(p), v=p.strategy==='value_add'?f.flipRehab:f.rentalRehab; return v===null?'אין נתון מבוסס':'שיפוץ לפי מקור: '+financialMoney(v); }
+function financialDisplayHtml(p) {
+    const f=financialSnapshot(p);
+    if (f.rent===null) return '<span class="text-xs text-gray-500">אין נתון שכירות מבוסס</span>';
+    return `<div class="text-emerald-300 text-xs">שכירות לפי מקור: ${escapeHtml(financialRentText(p))}</div>`+
+        (f.yield!==null?`<div class="mt-1 text-gray-300 text-[11px]">תשואה ברוטו: ${f.yield.toFixed(1)}%</div>`:'');
+}
+function financialEvidenceHtml(entry) {
+    if (!entry) return '';
+    const label=escapeHtml(entry.source_name), date=escapeHtml(entry.observed_at.slice(0,10));
+    const source=entry.source_url?`<a href="${escapeHtml(entry.source_url)}" target="_blank" rel="noopener noreferrer" class="text-blue-300 underline">${label}</a>`:label+' · '+escapeHtml(entry.document_ref);
+    const estimated=['market_rent_estimate','appraisal_after_repair','comparable_sales_after_repair','inspection_scope_estimate','closing_estimate','operating_budget','holding_budget'].includes(entry.method)||entry.status==='provider_estimate';
+    return source+' · '+date+(estimated?' · הערכה לפי המקור':'');
+}
+function financialExplanationHtml(p) {
+    const f=financialSnapshot(p), labels={rent:'שכירות',arv:'שווי לאחר שיפוץ',flipRehab:'שיפוץ לפליפ',rentalRehab:'שיפוץ להשכרה',operatingExpenses:'הוצאות תפעול לשנה',vacancyLoss:'אובדן שכירות לשנה',acquisitionCosts:'עלויות רכישה',sellingCosts:'עלויות מכירה',holdingCosts:'עלויות החזקה',financingCosts:'עלויות מימון'};
+    const entries=Object.keys(labels).filter(k=>f.evidence[k]);
+    const lines=entries.map(k=>`<p>${labels[k]}: ${financialMoney(f.evidence[k].value)} · ${financialEvidenceHtml(f.evidence[k])}${f.evidence[k].notes?' · '+escapeHtml(f.evidence[k].notes):''}</p>`);
+    if(f.yield!==null)lines.push('<p>תשואה ברוטו = שכירות חודשית × 12 ÷ המחיר המבוקש × 100. הוצאות ושיפוץ אינם מנוכים.</p>');
+    if(f.noi!==null)lines.push('<p>הכנסה תפעולית = שכירות שנתית פחות הוצאות תפעול ואובדן שכירות מתועדים.</p>');
+    if(f.maoRental!==null)lines.push(`<p>תקרת רכישה להשכרה: הכנסה תפעולית ÷ יעד ${f.targetCap}% שהוזן, פחות שיפוץ ועלויות רכישה.</p>`);
+    if(f.maoFlip!==null)lines.push(`<p>תקרת רכישה לפליפ: שווי לאחר שיפוץ פחות השיפוץ, עלויות רכישה, מכירה, החזקה ומימון, ופחות יעד רווח שהוזן: ${financialMoney(f.targetProfit)}.</p>`);
+    if(f.rentalFeasible===false)lines.push('<p>הנתונים ויעד התשואה אינם מאפשרים מחיר רכישה חיובי להשכרה.</p>');
+    if(f.flipFeasible===false)lines.push('<p>הנתונים ויעד הרווח אינם מאפשרים מחיר רכישה חיובי לפליפ.</p>');
+    if(f.price===null&&entries.length)lines.push('<p>לחישוב לפי המחיר המבוקש דרושים קישור למודעה ובדיקת מקור ב־30 הימים האחרונים.</p>');
+    if(!lines.length)return '<p class="text-xs text-gray-400">אין נתונים מתועדים לחישוב כספי בנכס זה.</p>';
+    return `<details class="text-xs text-gray-400"><summary class="cursor-pointer text-blue-300 font-bold">מקורות ודרך החישוב</summary><div class="mt-2 space-y-1">${lines.join('')}</div></details>`;
+}
+function applyFinancialSnapshot(p) {
+    const f=financialSnapshot(p);
+    Object.assign(p,{financial_model_version:FINANCIAL_MODEL_VERSION,analysis_inputs:f.inputs,analysis_mode:f.mode,analysis_is_ai:false,
+        monthly_rent_est:f.rent,projected_rent:f.rent===null?null:financialRentText(p),gross_yield_pct:f.yield,
+        gross_yield:f.yield===null?null:financialYieldText(p),arv:f.arv,flip_rehab:f.flipRehab,rental_rehab:f.rentalRehab,
+        mao_flip:f.maoFlip,mao_rental:f.maoRental,rent_method:f.rentMethod,arv_method:f.arvMethod,rehab_method:f.rehabMethod,
+        rent_source:f.evidence.rent?.source_name??null,arv_source:f.evidence.arv?.source_name??null,
+        rehab_scope:financialRehabText(p),noi:f.noi,annual_operating_expenses:f.operatingExpenses,cap_rate_pct:f.capRate,
+        all_in_cost:f.allIn,flip_profit:f.flipProfit,flip_roi_pct:f.flipRoi,deal_score:null,margin_estimate:null,
+        neighborhood_class:null,analysis_disclaimer:'מוצגים רק נתונים כספיים עם מקור ותאריך; חסר בנתוני הבסיס מונע את החישוב התלוי בו.'});
+    for(const [field,key] of Object.entries({monthly_rent_est:'rent',arv:'arv',flip_rehab:'flipRehab',rental_rehab:'rentalRehab'})){
+        const entry=f.evidence[key];p[field+'_status']=entry?'documented':'unavailable';p[field+'_confidence']=entry?'source_documented':'none';
+    }
+    Object.assign(p,{rent_status:f.rent===null?'unavailable':'documented',rent_confidence:f.rent===null?'none':'source_documented',
+        neighborhood_class_status:'unavailable',neighborhood_class_source:null,neighborhood_class_method:null,neighborhood_class_confidence:'none',
+        mao_flip_status:f.maoFlip===null?'unavailable':'calculated_from_documented_inputs',mao_rental_status:f.maoRental===null?'unavailable':'calculated_from_documented_inputs'});
+    const parts=[];
+    if(f.rent!==null)parts.push('שכירות לפי מקור: '+financialRentText(p));
+    if(f.yield!==null)parts.push('תשואה ברוטו: '+financialYieldText(p));
+    if(f.arv!==null)parts.push('שווי לאחר שיפוץ לפי מקור: '+financialMoney(f.arv));
+    p.ai_summary=parts.length?parts.join('. '):'אין נתונים כספיים מבוססים להצגה.';
+    return f;
+}
+function currentFinancialMoney(p,field){const f=financialSnapshot(p);return financialMoney(f[{arv:'arv',monthly_rent_est:'rent',mao_rental:'maoRental',mao_flip:'maoFlip'}[field]]);}
 
         function recordedPriceDrops(p) {
             if (financialSourceOnly(p)) return [];
@@ -2531,7 +2575,7 @@
                     const isV = viewedDeals.has(uiPropertyKey(p)) || (!p._idAmbiguous && viewedDeals.has(String(p.id)));
                     const askingPrice = getMarketAskingPrice(p);
                     const finance = financialSnapshot(p);
-                    const isGoodDeal = askingPrice !== null && finance.arvMethod === 'verified_source_input' && finance.maoFlip !== null && askingPrice <= finance.maoFlip;
+                    const isGoodDeal = askingPrice !== null && finance.arvMethod === 'documented_source_input' && finance.maoFlip !== null && askingPrice <= finance.maoFlip;
                     return `<tr onclick="openPropertyModal('${uiPropertyKey(p)}')" class="hover:bg-gray-800/60 cursor-pointer ${hasRecordedPriceDrop(p) ? 'bg-rose-950/50 border-r-4 border-r-rose-400 shadow-[inset_-4px_0_0_rgba(251,113,133,0.35)]' : ''} ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         <td class="p-3">
                             <div class="flex items-center gap-1.5">
@@ -2543,7 +2587,7 @@
                             ${propertyStatusDisplayHtml(p)}
                             ${p.probate_keyword_candidate ? `<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">🧾 מועמד עיזבון לפי תיאור MLS · לבדיקה</span>` : ''}
                             ${hasRecordedPriceDrop(p) ? '<span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">📉 ירידת מחיר מתועדת</span>' : ''}
-                            ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">DEAL!</span>' : ''}
+                            ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">עומד ביעד שהוזן</span>' : ''}
                         </td>
                         <td class="p-3 font-mono font-black text-emerald-400 text-sm">${propertyPriceDisplayHtml(p)}${priceDropDetailsHtml(p)}</td>
                         <td class="p-3 font-bold text-gray-300 whitespace-nowrap">${featureDisplayHtml(p)}</td>
@@ -2558,11 +2602,11 @@
                     const isV = viewedDeals.has(uiPropertyKey(p)) || (!p._idAmbiguous && viewedDeals.has(String(p.id)));
                     const askingPrice = getMarketAskingPrice(p);
                     const finance = financialSnapshot(p);
-                    const isGoodDeal = askingPrice !== null && finance.arvMethod === 'verified_source_input' && finance.maoFlip !== null && askingPrice <= finance.maoFlip;
+                    const isGoodDeal = askingPrice !== null && finance.arvMethod === 'documented_source_input' && finance.maoFlip !== null && askingPrice <= finance.maoFlip;
 
                     return `<div onclick="openPropertyModal('${uiPropertyKey(p)}')" class="bg-gray-900 border ${hasRecordedPriceDrop(p) ? 'border-rose-500/70 bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.16)]' : (isGoodDeal?'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]':(isH?'border-amber-500/50':'border-gray-800'))} rounded-2xl p-5 shadow-lg cursor-pointer group relative flex flex-col justify-between h-full ${isV && activeCategory !== 'archive' ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300' : ''}">
                         
-                        ${isGoodDeal ? '<span class="absolute -top-3 -right-3 bg-emerald-600 text-white font-black text-[10px] px-2 py-1 rounded-md shadow-lg rotate-12 z-20">DEAL!</span>' : ''}
+                        ${isGoodDeal ? '<span class="absolute -top-3 -right-3 bg-emerald-600 text-white font-black text-[10px] px-2 py-1 rounded-md shadow-lg rotate-12 z-20">עומד ביעד שהוזן</span>' : ''}
 
                         <div>
                             <div class="absolute top-3 left-3 flex items-center gap-1.5 z-10">
@@ -2582,14 +2626,14 @@
                         
                             <div class="bg-blue-950/20 p-2.5 rounded-xl border border-blue-500/30 mt-3 mb-1 space-y-1.5">
                                 <div class="flex justify-between items-center border-b border-gray-800/60 pb-1">
-                                    <span class="font-black text-blue-300 flex items-center gap-1 text-[11px]"><i data-lucide="brain-circuit" class="w-3 h-3"></i> אומדנים ראשוניים</span>
+                                    <span class="font-black text-blue-300 flex items-center gap-1 text-[11px]"><i data-lucide="brain-circuit" class="w-3 h-3"></i> נתונים כספיים עם מקור</span>
                                     ${neighborhoodBadgeHtml(p)}
                                 </div>
                                 <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
-                                    <div><span class="text-gray-400 block">תרחיש שווי (ARV)</span><strong class="text-white">${analysisMoneyData(p, 'arv')}</strong></div>
-                                    <div><span class="text-gray-400 block">צפי שכירות</span><strong class="text-white">${analysisMoneyData(p, 'monthly_rent_est')}</strong></div>
-                                    <div><span class="text-gray-400 block">תרחיש MAO להשכרה</span><strong class="text-emerald-400 font-black">${analysisMoneyData(p, 'mao_rental')}</strong></div>
-                                    <div><span class="text-gray-400 block">תרחיש MAO לפליפ</span><strong class="text-amber-400 font-black">${analysisMoneyData(p, 'mao_flip')}</strong></div>
+                                    <div><span class="text-gray-400 block">שווי לאחר שיפוץ לפי מקור</span><strong class="text-white">${analysisMoneyData(p, 'arv')}</strong></div>
+                                    <div><span class="text-gray-400 block">שכירות לפי מקור</span><strong class="text-white">${analysisMoneyData(p, 'monthly_rent_est')}</strong></div>
+                                    <div><span class="text-gray-400 block">תקרת רכישה להשכרה</span><strong class="text-emerald-400 font-black">${analysisMoneyData(p, 'mao_rental')}</strong></div>
+                                    <div><span class="text-gray-400 block">תקרת רכישה לפליפ</span><strong class="text-amber-400 font-black">${analysisMoneyData(p, 'mao_flip')}</strong></div>
                                 </div>
                                 <div class="mt-2" onclick="event.stopPropagation()">${financialExplanationHtml(p)}</div>
                             </div>
