@@ -1,55 +1,222 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>דוח נכס · נתונים עם מקור</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוח נכס מורחב 8.13.0 — PA Intelligence Hub</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f9fafb; font-size: 17px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111827; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+        .en-text { direction: ltr !important; display: inline-block !important; unicode-bidi: isolate !important; text-align: left; }
+    </style>
 <style>
-:root{color-scheme:dark;font-family:Arial,sans-serif;background:#0b0f19;color:#f8fafc}*{box-sizing:border-box}body{margin:0;padding:24px}main,header{max-width:1180px;margin:auto}header{display:flex;justify-content:space-between;gap:20px;align-items:center;border-bottom:1px solid #334155;padding-bottom:20px;margin-bottom:22px}h1{font-size:26px;margin:0 0 8px}h2{font-size:20px;margin:0 0 20px}h3{font-size:16px;margin:0 0 16px}p{line-height:1.6}button,a.button{font:inherit;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#f1f5f9;border-radius:10px;padding:10px 16px;text-decoration:none;display:inline-block}button:hover{background:#334155}button:disabled{opacity:.45;cursor:default}.primary{background:#2563eb;border-color:#2563eb}.green{background:#047857}.actions{display:flex;gap:8px;flex-wrap:wrap}.muted{color:#94a3b8;font-size:13px}.version{font-size:11px;color:#60a5fa}.panel{background:#111827;border:1px solid #273449;padding:24px;border-radius:16px;margin-bottom:20px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.fact{background:#0b1220;border:1px solid #273449;border-radius:12px;padding:16px}.fact span{color:#94a3b8;display:block;font-size:13px;margin-bottom:10px}.fact strong{font-size:24px;display:block}.money{direction:ltr;unicode-bidi:isolate;color:#34d399}.source{font-size:12px;line-height:1.5;margin-top:8px;color:#94a3b8}.source a,a{color:#93c5fd}.tabs{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}.tabs .active{background:#2563eb}.tab[hidden],[hidden]{display:none!important}.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}label{font-size:13px;color:#cbd5e1;display:block}input,select,textarea{font:inherit;width:100%;margin-top:8px;border:1px solid #475569;border-radius:9px;padding:11px;background:#080e1a;color:#f8fafc}input[type=checkbox]{width:auto;margin:0 0 0 6px}input[type=number],input[type=url],input[type=date]{direction:ltr;text-align:right}.wide{grid-column:1/-1}.status{min-height:24px;font-size:13px;color:#93c5fd;margin-top:12px}.error{color:#fda4af}.success{color:#6ee7b7}table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:right;padding:14px 10px;border-bottom:1px solid #273449;vertical-align:top}th{color:#94a3b8}td.money{text-align:left}.scroll{overflow-x:auto}.form-note{margin:0 0 16px;color:#94a3b8;font-size:13px}.empty{text-align:center;padding:40px 20px;color:#94a3b8}.source-box{line-height:1.7;font-size:13px;color:#94a3b8}.pill{display:inline-block;font-size:12px;background:#172554;color:#93c5fd;border-radius:6px;padding:5px 8px}.image-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:15px}.image-grid img{max-width:100%;max-height:280px;border-radius:10px}.checkbox-row{display:flex;gap:8px;align-items:center;margin-top:18px}.footer{font-size:12px;color:#64748b;text-align:center;padding:12px}.unavailable{color:#94a3b8!important;font-size:16px!important}.small-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media(max-width:800px){body{padding:14px}header{align-items:flex-start;flex-direction:column}.grid,.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:18px}.image-grid{grid-template-columns:1fr}}
-@media(max-width:480px){.grid,.form-grid{grid-template-columns:1fr}.actions button{padding:8px 10px;font-size:13px}}
-@media print{body{background:#fff;color:#111;padding:0;font-size:11pt}header{margin-bottom:12px}button,.tabs,.actions,.entry-form,.status,.upload,.no-print{display:none!important}.tab[hidden]{display:block!important}.panel,.fact{background:#fff;color:#111;border-color:#bbb;break-inside:avoid;box-shadow:none}.panel{padding:14px;margin-bottom:12px}.muted,.fact span,.source,.form-note,.source-box,.unavailable{color:#444!important}.money{color:#111}a{color:#111}.grid{gap:9px}.fact strong{font-size:16pt}h1{font-size:20pt}h2{font-size:15pt}td,th{border-color:#bbb}.footer{color:#444}@page{size:A4;margin:14mm}}
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:not([class]){border:1px solid #2563eb;border-radius:10px;background:#2563eb;color:#fff;padding:10px 16px;font-weight:700}a{color:#93c5fd}h2{font-size:19px;font-weight:800;margin:0 0 16px}.card{background:#111827;border:1px solid #293448;border-radius:16px;padding:24px;margin:20px 0}.api-panel{max-width:1152px;width:100%;margin:0 auto 24px;border-color:#264679}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.version,.small{font-size:13px}.muted{color:#9ca3af}.green{color:#34d399}.amber{color:#fbbf24}.api-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:16px 0}.api-controls label:first-child{flex:1;min-width:220px}.api-controls label:not(.checkbox),.connection-settings label,.form-grid label:not(.checkbox){display:flex;flex-direction:column;gap:7px;font-size:14px}.api-panel input:not([type=checkbox]),.api-panel select,.form-grid input:not([type=checkbox]),.form-grid select,.form-grid textarea{color:#f9fafb;background:#070c16;border:1px solid #374151;border-radius:8px;padding:10px;min-width:0;width:100%}.checkbox{display:flex;gap:8px;align-items:center;font-size:13px}.checkbox input{width:18px;height:18px;accent-color:#3b82f6}.secondary{background:#1f2937;border:1px solid #374151;color:#dbeafe;border-radius:10px;padding:10px 14px}.status.error,.error{color:#fda4af}.status.success,.success{color:#6ee7b7}.metric-grid{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.metric-grid>.metric{flex:1 1 210px}.metric{background:#080e1b;border:1px solid #273145;border-radius:12px;padding:16px}.metric span{font-size:13px;display:block;color:#9ca3af}.metric strong{display:block;font-size:22px;direction:ltr;text-align:right;margin-top:8px;font-weight:800}.results{border-top:1px solid #293448;padding-top:14px}.strategy-grid,.rehab-grid{display:flex;gap:20px;flex-wrap:wrap}.strategy-grid>.card{flex:1 1 380px}.rehab-grid>.card{flex:1 1 280px}.emphasized{margin-top:24px}.emphasized strong{color:#fbbf24;font-size:28px}.value-row{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #293448;padding:12px 0;font-size:14px}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:12px 10px;border-bottom:1px solid #283344;text-align:right;vertical-align:top}th{background:#080e1b;color:#aebed5;font-weight:700}td{overflow-wrap:anywhere}details{margin-top:18px}summary{cursor:pointer;color:#93c5fd;font-weight:700}.form-grid{display:flex;flex-wrap:wrap;gap:16px;margin-top:18px}.form-grid>label{flex:1 1 230px}.form-grid .actions{width:100%;display:flex;gap:12px}.form-grid textarea{resize:vertical}.connection-settings{padding:18px 0}.connection-settings label{margin-bottom:12px}.saved-snapshot{border-right:3px solid #3b82f6;padding:8px 16px}.source-date{display:block;font-size:12px;color:#93c5fd;margin-top:4px}.unavailable{font-size:16px!important;color:#9ca3af!important}.money{font-variant-numeric:tabular-nums;color:#34d399}.image-placeholder{font-size:13px;color:#9ca3af}.report-hidden,[hidden]{display:none!important}p{overflow-wrap:anywhere}#inspection-main-view,#inspection-interior-view,#inspection-exterior-view{white-space:pre-wrap}.loading-box{max-width:1152px;margin:24px auto;padding:24px;border:1px solid #374151;border-radius:12px}.property-source{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-top:18px}.legacy-card{white-space:pre-wrap}
+@media(max-width:640px){body{padding:16px!important}.card{padding:18px}.metric strong{font-size:20px}.metric-grid>.metric{flex-basis:130px}.section-heading{align-items:start;flex-direction:column}.api-controls{align-items:stretch}.api-controls>button{width:100%}.version{color:#93c5fd}header{position:static}td,th{padding:9px 7px}header button{font-size:12px!important}.metric.emphasized strong{font-size:24px}}
+@page{size:A4 portrait;margin:12mm}
+@media print{html,body{background:white!important;color:#111827!important;font-family:Arial,sans-serif!important;font-size:10pt!important;direction:rtl}body{padding:0!important;margin:0!important}header{border-color:#d1d5db!important;margin-bottom:12px!important;padding:0 0 10px!important}header>div:last-child,.no-print,#tabs-bar,.api-controls,button,input,textarea,select,summary,.image-placeholder{display:none!important}#report-content,#tab-overview,#tab-financials,#tab-rehab{display:block!important;width:100%!important;max-width:none!important}main,.api-panel{width:100%!important;max-width:none!important}h1{font-size:20pt!important;color:#111827!important}h2,h3,h4,h5{color:#111827!important;font-size:12pt!important;break-after:avoid}.card,.api-panel,#tab-overview>div,.metric{background:white!important;color:#111827!important;border:1px solid #d1d5db!important;box-shadow:none!important;padding:10px!important;margin:10px 0!important;border-radius:4px!important}.card,.metric,tr,img{break-inside:avoid}#tab-overview .grid{display:flex!important;flex-wrap:wrap!important;gap:10px!important}#tab-overview .grid>div{flex:1 1 100px!important;background:white!important;border-color:#d1d5db!important;color:#111827!important;height:auto!important}#tab-overview .grid:has(img){max-height:180px;overflow:hidden}img{max-height:150px!important;object-fit:contain!important;max-width:100%!important}#tab-overview strong,#tab-overview span,#tab-overview p{color:#111827!important;background:transparent!important}#tab-overview .h-80{height:auto!important}.metric-grid{display:flex!important;gap:8px}.metric-grid>.metric{flex:1 1 120px}.metric strong{font-size:13pt!important;color:#111827!important}.metric span,.muted,.small,.source-date{color:#4b5563!important;font-size:8pt!important}.strategy-grid,.rehab-grid{display:block!important}.strategy-grid>.card,.rehab-grid>.card{width:100%!important}.value-row{font-size:9pt;border-color:#d1d5db!important}.table-scroll{overflow:visible!important}table{width:100%!important;table-layout:fixed;font-size:8pt!important}th,td{padding:5px!important;color:#111827!important;background:white!important;border:1px solid #d1d5db!important;white-space:normal!important;overflow-wrap:anywhere!important}thead{display:table-header-group}tbody{display:table-row-group}a{color:#1d4ed8!important;text-decoration:none!important}.en-text{direction:ltr;unicode-bidi:isolate}details{display:block!important}.property-source{font-size:8pt!important}#tab-overview .text-4xl{font-size:18pt!important}.unavailable{color:#6b7280!important;font-size:10pt!important}}
+
 </style>
 </head>
-<body data-financial-policy="documented-financials-v2-20261007">
-<header><div><h1 id="report-address">דוח נכס</h1><div class="muted" id="report-city"></div><div class="version">UI 8.12.0 · 07.10.2026</div></div><div class="actions"><button class="green" id="save-report" onclick="saveReportToHistory()" disabled>שמור דוח</button><button class="primary" id="print-report" onclick="generateCleanPDF()" disabled>הדפס / שמור PDF</button><a class="button" href="deals.html">חדר עסקאות</a><button onclick="closeReportWindow()">סגור</button></div></header>
-<main>
-<div id="loading" class="panel empty">טוען את הנכס שנבחר…</div>
-<div id="report-content" hidden>
-<div class="tabs no-print"><button id="btn-overview" class="active" onclick="switchTab('overview')">פרטי הנכס</button><button id="btn-financials" onclick="switchTab('financials')">נתונים ותחשיבים</button><button id="btn-rehab" onclick="switchTab('rehab')">שיפוץ ומסמכים</button></div>
-<section class="tab" id="tab-overview">
-<div class="panel"><h2>פרטי הנכס מהמאגר</h2><div class="grid" id="property-facts"></div><div id="listing-source" class="source-box" style="margin-top:18px"></div></div>
-<div class="panel"><h2>נתונים כספיים עם מקור</h2><div id="overview-financials" class="grid"></div><div id="financial-source-summary" class="source-box" style="margin-top:18px"></div></div>
-<div class="panel"><h2>תיאור שנשמר בנכס</h2><p id="property-description" class="muted"></p></div>
+<body class="min-h-screen flex flex-col antialiased p-4 sm:p-8">
+
+    <!-- Top Navigation & Action Buttons -->
+    <header class="max-w-6xl w-full mx-auto flex flex-wrap justify-between items-center mb-6 border-b border-gray-800 pb-4 gap-4">
+        <div class="flex items-center gap-3">
+            <div class="p-3 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
+                <i data-lucide="microscope" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-white" id="report-address">טוען דוח</h1>
+                <p class="text-sm text-gray-300" id="report-city"></p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+            <button onclick="configureRentCast()" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-400 border border-amber-500/30 rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
+                <i data-lucide="key" class="w-4 h-4"></i> חיבור RentCast
+            </button>
+            <button id="save-report" onclick="saveReportToHistory()" disabled class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
+                <i data-lucide="bookmark" class="w-4 h-4"></i> שמור דוח
+            </button>
+            <button id="btn-download-pdf" disabled onclick="generateCleanPDF()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> הדפס / שמור PDF
+            </button>
+            <button onclick="closeReportWindow()" class="px-4 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl text-sm font-bold transition flex items-center gap-2">
+                <i data-lucide="x" class="w-4 h-4"></i> סגור דוח
+            </button>
+        </div>
+    </header>
+
+
+<section class="api-panel card" aria-labelledby="rentcast-title">
+  <div class="section-heading"><h2 id="rentcast-title">בדיקת עומק עם RentCast</h2><span class="version">דוח 8.13.0 · 07.10.2026</span></div>
+  <p id="rentcast-status" role="status">טוען נתונים שמורים…</p>
+  <div class="api-controls no-print">
+    <label>הנתונים לבקשה<select id="rentcast-mode"><option value="rent">שכירות והשוואות — עד קריאה אחת</option><option value="value">שווי והשוואות — עד קריאה אחת</option><option value="both">שווי ושכירות — עד שתי קריאות</option></select></label>
+    <button id="request-report" onclick="requestRentCastReport()" disabled>הפק דוח נתונים</button>
+    <button class="secondary" id="resume-report" onclick="resumePendingReport()" hidden>בדוק תוצאה של בקשה קיימת</button>
+    <label class="checkbox"><input id="force-refresh" type="checkbox">עדכן נתונים גם אם קיימת תוצאה שמורה</label>
+  </div>
+  <p id="quota-status" class="small muted">מכסה: ממתין למונה המערכת.</p>
+  <p class="small muted">פתיחת הדוח וטעינת תוצאה שמורה אינן מפעילות את RentCast. המונה כולל קריאות שמורות מראש; שימוש באותו מפתח מחוץ למערכת אינו כלול בו.</p>
+  <details class="no-print"><summary>הגדרות החיבור</summary><div class="connection-settings"><label>מפתח GitHub של המערכת<input id="github-token" type="password" autocomplete="off" placeholder="המפתח שנשמר בהגדרות הסריקה"></label><button class="secondary" onclick="saveGitHubConnection()">שמור חיבור</button><p class="small muted">מפתח RentCast נשאר בסוד RENTCAST_API_KEY בשרת GitHub. הוא אינו נשמר בדוח או בדפדפן.</p></div></details>
+  <p class="small no-print"><a href="https://github.com/elic555-ux/pa-intelligence-v2/actions/workflows/expanded-report.yml" target="_blank" rel="noopener noreferrer">מצב בקשות הדוח ב־GitHub</a></p>
+  <p id="report-status" role="status"></p>
 </section>
-<section class="tab" id="tab-financials" hidden>
-<div class="panel"><h2>תוצאות התחשיבים</h2><div id="calculated-results" class="grid"></div><div id="calculation-explanation" class="source-box" style="margin-top:18px"></div></div>
-<div class="panel"><h2>נתוני הבסיס</h2><div class="scroll"><table><thead><tr><th>נתון</th><th>סכום</th><th>מקור ומועד</th></tr></thead><tbody id="evidence-table"></tbody></table></div></div>
-<div class="panel entry-form"><h2>הוספת נתון מתועד לנכס</h2><p class="form-note">הזן סכום רק לאחר בדיקת המקור. מספר ללא מקור, תאריך וסוג נתון מתאים לא ישמש בתחשיבים.</p><form id="financial-entry-form" onsubmit="event.preventDefault();saveFinancialEvidence()"><div class="form-grid">
-<label>סוג הנתון<select id="evidence-key" onchange="updateEvidenceForm()"></select></label>
-<label><span id="amount-label">סכום ($)</span><input id="evidence-value" type="number" min="0" step="0.01" required></label>
-<label>סוג המקור<select id="evidence-method" required></select></label>
-<label>שם המקור או נותן ההצעה<input id="evidence-source-name" required maxlength="200"></label>
-<label>תאריך בדיקת הנתון במקור<input id="evidence-date" type="date" required></label>
-<label>קישור למקור<input id="evidence-source-url" type="url" placeholder="https://…"></label>
-<label class="wide">שם או מזהה מסמך כשאין קישור<input id="evidence-document" maxlength="300" placeholder="למשל: הצעת הקבלן לנכס מתאריך…"></label>
-<label class="wide">היקף ומידע נוסף<textarea id="evidence-notes" rows="2" placeholder="מה כלול בסכום; מספר היחידות; מצב השיפוץ שאליו מתייחס השווי"></textarea></label>
-<label class="wide checkbox-row"><input id="evidence-confirmed" type="checkbox" required>בדקתי שהסכום במקור מתייחס לנכס הזה ולהיקף הסעיף שנבחר.</label>
-<label class="wide checkbox-row"><input id="evidence-zero" type="checkbox">אם הסכום אפס: בדקתי במקור שאין עלות בסעיף זה.</label>
-</div><div class="actions" style="margin-top:18px"><button id="save-evidence" class="primary" type="submit">שמור נתון ומקור</button><button id="remove-evidence" type="button" onclick="removeFinancialEvidence()">הסר את הנתון שנבחר</button></div><div class="status" id="evidence-status" role="status"></div></form></div>
-<div class="panel entry-form"><h2>יעדים לבחינת מחיר הרכישה</h2><p class="form-note">היעדים הם בחירה שלך. תקרת רכישה תחושב רק לאחר שהוזנו גם כל ההוצאות הדרושות עם מקור.</p><div class="form-grid"><label>יעד תשואה תפעולית להשכרה (%)<input id="target-cap" type="number" min="0.01" max="100" step="0.1" placeholder="ללא יעד מוגדר"></label><label>יעד רווח לפליפ ($)<input id="target-profit" type="number" min="0" step="1" placeholder="ללא יעד מוגדר"></label></div><div class="actions" style="margin-top:18px"><button id="save-targets" onclick="saveFinancialTargets()">שמור את היעדים</button></div><div class="status" id="targets-status" role="status"></div></div>
-<div class="panel"><h2>השוואות מכירה ושכירות</h2><div id="documented-comparables"></div></div>
-</section>
-<section class="tab" id="tab-rehab" hidden><div class="panel"><h2>תקציב שיפוץ לפי מקור</h2><div class="grid small-grid" id="rehab-results"></div><p class="muted">נתוני השיפוץ מוצגים לפי הצעת קבלן או הערכת היקף עבודה מתועדת לנכס.</p></div><div class="panel"><h2>תמונות שהועלו לנכס</h2><p class="muted">תמונות מוצגות לצורך בדיקה. לא מופק מהן תקציב שיפוץ אוטומטי.</p><label class="upload">הוסף תמונות<input id="image-upload" type="file" accept="image/*" multiple onchange="uploadCustomImages(event)"></label><div class="image-grid" id="property-images"></div><div class="status" id="images-status"></div></div></section>
+<div id="loading" class="loading-box" role="status">טוען את הנכס שנבחר…</div><div id="legacy-report-note" class="loading-box" hidden></div><main id="report-content" hidden class="max-w-6xl w-full mx-auto space-y-6 flex-1 pb-10">        <!-- Tabs Bar -->
+        <div id="tabs-bar" class="flex border-b border-gray-800 gap-3 text-sm font-bold pb-3 overflow-x-auto">
+            <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="px-5 py-3 rounded-xl bg-blue-600 text-white shadow-md shrink-0 flex items-center gap-2">
+                <i data-lucide="layout-grid" class="w-5 h-5"></i> סקירה כללית
+            </button>
+            <button onclick="switchTab('tab-financials')" id="btn-tab-financials" class="px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
+                <i data-lucide="calculator" class="w-5 h-5"></i> תחשיבים והשוואות
+            </button>
+            <button onclick="switchTab('tab-rehab')" id="btn-tab-rehab" class="px-5 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0 flex items-center gap-2">
+                <i data-lucide="camera" class="w-5 h-5"></i> בדיקת שיפוץ ותמונות
+            </button>
+        </div>
+
+        <!-- TAB 1: Overview & Scores -->
+        <div id="tab-overview" class="space-y-6">
+            <div class="bg-gray-900 border border-gray-800 p-7 rounded-2xl shadow-xl space-y-6">
+                
+
+
+                <div class="space-y-2 border border-gray-800 rounded-2xl p-4 bg-gray-950/50">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-bold text-gray-300">גלריית תמונות הנכס:</span>
+                        <label class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-bold cursor-pointer transition flex items-center gap-1.5">
+                            <i data-lucide="upload" class="w-4 h-4"></i> העלה תמונת חזית
+                            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled onchange="uploadCustomImage(event, 0)" class="hidden upload-input">
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2 rounded-2xl overflow-hidden border border-gray-700 h-80 relative shadow-2xl bg-gray-950 group flex items-center justify-center">
+                            <span class="image-placeholder" id="image-placeholder-0">לא נשמרה תמונה לנכס</span><img hidden id="rep-main-img" class="w-full h-full object-cover" alt="Property Main">
+                        </div>
+                        <div class="grid grid-rows-2 gap-4 h-80">
+                            <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950 group flex items-center justify-center">
+                                <span class="image-placeholder" id="image-placeholder-1">לא נשמרה תמונה לנכס</span><img hidden id="rep-sub-img-1" class="w-full h-full object-cover" alt="Property Sub 1">
+                                <label class="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded cursor-pointer text-[11px] font-bold shadow-lg opacity-90 hover:opacity-100 transition">החלף <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled onchange="uploadCustomImage(event, 1)" class="hidden upload-input"></label>
+                            </div>
+                            <div class="rounded-xl overflow-hidden border border-gray-700 relative h-full bg-gray-950 group flex items-center justify-center">
+                                <span class="image-placeholder" id="image-placeholder-2">לא נשמרה תמונה לנכס</span><img hidden id="rep-sub-img-2" class="w-full h-full object-cover" alt="Property Sub 2">
+                                <label class="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded cursor-pointer text-[11px] font-bold shadow-lg opacity-90 hover:opacity-100 transition">החלף <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled onchange="uploadCustomImage(event, 2)" class="hidden upload-input"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center border-b border-gray-800 pb-5 pt-2">
+                    <div>
+                        <span class="text-sm font-bold text-gray-400 block mb-1">מחיר מבוקש בשוק (Asking):</span>
+                        <strong class="text-4xl font-black text-white font-mono" id="rep-asking">לא פורסם</strong>
+                    </div>
+                    <div class="text-left">
+                        <span class="text-sm font-bold text-gray-400 block mb-1">אומדן שווי שוק — RentCast:</span>
+                        <strong class="text-4xl font-black text-emerald-400 font-mono" id="rep-arv">לא פורסם</strong><span id="rep-value-range" class="source-date"></span>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-xl border flex justify-between items-center" id="rep-price-gap-box">
+                    <span class="text-sm font-extrabold">פער מחירים מה-MAO (Price Gap):</span>
+                    <strong class="text-base font-mono font-black" id="rep-price-gap-val">לא פורסם</strong>
+                </div>
+
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center text-sm">
+                    <div><span class="text-gray-400 block mb-1 font-bold">חדרים</span><strong class="text-white text-base block mt-1" id="rep-beds">לא פורסם</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">רחצה</span><strong class="text-white text-base block mt-1" id="rep-baths">לא פורסם</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">שטח (SqFt)</span><strong class="text-white text-base font-mono block mt-1" id="rep-sqft">לא פורסם</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">שנת בנייה</span><strong class="text-white text-base font-mono block mt-1" id="rep-year">לא פורסם</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">ימי שוק</span><strong class="text-white text-base font-mono block mt-1" id="rep-dom">לא פורסם</strong></div>
+                    <div><span class="text-gray-400 block mb-1 font-bold">מחיר לרגל רבועה (SqFt)</span><strong class="text-white text-base font-mono block mt-1" id="rep-psf">לא פורסם</strong></div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-sm font-black text-blue-300 mb-2">תקציר הנתונים:</h4>
+                <p class="text-base text-gray-100 leading-relaxed font-bold bg-gray-950 p-5 rounded-xl border border-gray-800" id="rep-summary">לא פורסם</p>
+            </div>
+
+            <div class="space-y-4 pt-4 border-t border-gray-800">
+                <h4 class="text-lg font-black text-white flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5 text-emerald-400"></i> נתוני שכונה ואזור (Neighborhood Insights)
+                </h4>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                        <i data-lucide="building" class="w-6 h-6 text-blue-400 mb-2"></i>
+                        <span class="text-xs text-gray-400 font-bold">עירייה / מחוז</span>
+                        <strong class="text-lg font-black text-white mt-1" id="neigh-muni">לא פורסם</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                        <i data-lucide="map" class="w-6 h-6 text-blue-400 mb-2"></i>
+                        <span class="text-xs text-gray-400 font-bold">שכונה</span>
+                        <strong class="text-lg font-black text-white mt-1" id="neigh-name">לא פורסם</strong>
+                    </div>
+                </div>
+
+                <h5 class="text-sm font-bold text-gray-400 mt-2">מדדי אזור לפי מקור מתועד:</h5>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="bg-blue-950/20 border-2 border-blue-500/40 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-blue-300 font-bold mb-1">דירוג שכונה</span>
+                        <strong class="text-2xl font-black text-blue-400" id="neigh-class">לא פורסם</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">הכנסה חציונית</span>
+                        <strong class="text-xl font-black text-white font-mono" id="neigh-income">לא פורסם</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">אחוז שוכרים</span>
+                        <strong class="text-xl font-black text-white font-mono" id="neigh-renters">לא פורסם</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">השכלה אקדמית</span>
+                        <strong class="text-xl font-black text-white font-mono" id="neigh-edu">לא פורסם</strong>
+                    </div>
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col items-center text-center">
+                        <span class="text-xs text-gray-400 font-bold mb-1">שיעור עוני</span>
+                        <strong class="text-xl font-black text-rose-400 font-mono" id="neigh-poverty">לא פורסם</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<div id="property-source-links" class="property-source"></div>
+
+<div id="tab-financials" class="space-y-6 hidden">
+  <section class="card"><h2>מחשבון עסקה לפי מקורות</h2>
+    <div class="metric-grid four"><div class="metric"><span>מחיר מבוקש לתחשיב</span><strong id="calc-price-value">לא פורסם</strong></div><div class="metric"><span>שווי לאחר שיפוץ — ARV</span><strong id="calc-arv-value">חסר מקור</strong></div><div class="metric"><span>שכירות חודשית לפי מקור</span><strong id="calc-rent-value">חסר מקור</strong></div><div class="metric"><span>תשואה ברוטו</span><strong id="calc-gross-yield">חסרים נתונים</strong></div></div>
+    <div class="metric-grid four results"><div class="metric"><span>עלות השקעה כוללת בפליפ</span><strong id="calc-allin">חסרים נתונים</strong></div><div class="metric"><span>תשואה תפעולית על המחיר המבוקש</span><strong id="calc-caprate">חסרים נתונים</strong></div><div class="metric"><span>רווח פליפ לפני מס על הרווח</span><strong id="calc-flipprofit">חסרים נתונים</strong></div><div class="metric"><span>תשואה על ההשקעה בפליפ</span><strong id="calc-roi">חסרים נתונים</strong></div></div>
+  </section>
+  <div class="strategy-grid"><section class="card"><h2 class="amber">פליפ</h2><div class="value-row"><span>שיפוץ לפי מקור</span><strong id="rep-flip-rehab">חסר מקור</strong></div><div class="value-row"><span>יעד רווח שהזנת</span><strong id="rep-flip-margin">לא הוזן</strong></div><div class="metric emphasized"><span>תקרת רכישה לפי הנתונים והיעד</span><strong id="rep-flip-mao">חסרים נתונים</strong></div></section><section class="card"><h2 class="green">השכרה</h2><div class="value-row"><span>שכירות חודשית</span><strong id="rep-rent-monthly">חסר מקור</strong></div><div class="value-row"><span>הכנסה תפעולית שנתית — NOI</span><strong id="rep-rent-noi">חסרים נתונים</strong></div><div class="metric emphasized"><span>תקרת רכישה לפי יעד התשואה</span><strong id="rep-rental-mao">חסרים נתונים</strong></div></section></div>
+  <section class="card"><h2>מקורות הנתונים לתחשיב</h2><div class="table-scroll"><table><thead><tr><th>נתון</th><th>סכום</th><th>מקור ומועד</th></tr></thead><tbody id="evidence-table"></tbody></table></div><details><summary>הנוסחאות והנתונים שחסרים</summary><div id="calculation-explanation"></div></details></section>
+  <section class="card no-print" id="evidence-editor"><details><summary>הוסף נתון מתועד או הצעת מחיר</summary><div class="entry-form form-grid"><label>סוג נתון<select id="evidence-key" onchange="updateEvidenceForm()"></select></label><label><span id="amount-label">סכום ($)</span><input id="evidence-value" inputmode="decimal"></label><label>סוג מקור<select id="evidence-method"></select></label><label>שם המקור<input id="evidence-source-name"></label><label>קישור למקור<input id="evidence-source-url" type="url"></label><label>או שם / מזהה מסמך<input id="evidence-document"></label><label>מועד הנתון<input id="evidence-date" type="date"></label><label>הערה<textarea id="evidence-notes" rows="2"></textarea></label><label class="checkbox"><input id="evidence-confirmed" type="checkbox">בדקתי שהמקור מתייחס לנכס הזה</label><label class="checkbox"><input id="evidence-zero" type="checkbox">סכום אפס אומת במקור</label><div class="actions"><button id="save-evidence" onclick="saveFinancialEvidence()">שמור נתון ומקור</button><button class="secondary" id="remove-evidence" onclick="removeFinancialEvidence()">הסר נתון מהתחשיב</button></div></div><p id="evidence-status" role="status"></p></details></section>
+  <section class="card no-print" id="target-editor"><h2>היעדים שלך</h2><div class="entry-form form-grid"><label>יעד תשואה תפעולית (%)<input id="target-cap" inputmode="decimal"></label><label>יעד רווח פליפ ($)<input id="target-profit" inputmode="decimal"></label><button id="save-targets" onclick="saveFinancialTargets()">שמור יעדים</button></div><p id="targets-status" role="status"></p></section>
+  <section class="card"><h2>מודעות מכירה להשוואה</h2><p class="small muted">המחירים כאן הם מחירי מודעות שהחזיר RentCast. הסרה מהשוק אינה הוכחה למכירה במחיר המודעה.</p><p class="small" id="value-source-description"></p><div class="table-scroll"><table id="tbl-sales-comps"><thead><tr><th>כתובת</th><th>מחיר מודעה</th><th>נראה במקור</th><th>שטח SqFt</th><th>חדרים / רחצה</th><th>מרחק במייל</th><th>דמיון לפי הספק</th></tr></thead><tbody id="rep-comps-tbody"></tbody></table></div></section>
+  <section class="card"><h2>מודעות שכירות להשוואה</h2><p class="small muted">השכירות היא מחיר מודעה, ולא הוכחה לחוזה שנחתם או להכנסה בפועל.</p><p class="small" id="rent-source-description"></p><div class="table-scroll"><table id="tbl-rent-comps"><thead><tr><th>כתובת</th><th>שכירות במודעה</th><th>נראה במקור</th><th>שטח SqFt</th><th>חדרים / רחצה</th><th>מרחק במייל</th><th>דמיון לפי הספק</th></tr></thead><tbody id="rep-rent-comps-tbody"></tbody></table></div></section>
+  <section class="card"><h2>מימון</h2><div id="financing-source"></div></section>
 </div>
-<div class="status no-print" id="report-status" role="status"></div>
-<div class="footer">PA Real Estate Intelligence Hub · נתון חסר נשאר חסר. חישובים נגזרים מוצגים רק כשיש נתוני בסיס מתועדים.</div>
+
+<div id="tab-rehab" class="space-y-6 hidden">
+  <section class="card"><h2>בדיקת שיפוץ ותמונות</h2><p class="muted">ממצאים מתועדים של בודק והצעות קבלן לנכס. RentCast מספק נתוני שוק; לא מתבצע כאן אבחון אוטומטי של גג, מערכות או מצב מבני מתמונה.</p><div class="metric-grid"><div class="metric"><span>תקציב שיפוץ לפליפ לפי מקור</span><strong id="rehab-flip-total">חסר מקור</strong></div><div class="metric"><span>תקציב שיפוץ להשכרה לפי מקור</span><strong id="rehab-rental-total">חסר מקור</strong></div></div><div id="rehab-source-description" class="small"></div></section>
+  <div class="rehab-grid"><section class="card"><h2>מערכות מרכזיות</h2><p id="inspection-main-view">לא נשמרו ממצאים מתועדים.</p></section><section class="card"><h2>גימורי פנים</h2><p id="inspection-interior-view">לא נשמרו ממצאים מתועדים.</p></section><section class="card"><h2>מעטפת ומבנה</h2><p id="inspection-exterior-view">לא נשמרו ממצאים מתועדים.</p></section></div>
+  <section class="card"><h2>הצעות שהוזנו בחדר העסקאות</h2><div id="contractor-quotes"></div></section>
+  <section class="card no-print" id="inspection-editor"><details><summary>הוסף ממצאים מדוח בודק</summary><div class="entry-form form-grid"><label>שם הבודק או המקור<input id="inspection-source"></label><label>שם / מזהה מסמך הבדיקה<input id="inspection-document"></label><label>מועד הבדיקה<input id="inspection-date" type="date"></label><label class="checkbox"><input id="inspection-confirmed" type="checkbox">הבדיקה מתייחסת לנכס הזה</label><label>מערכות מרכזיות<textarea id="inspection-main" rows="4"></textarea></label><label>גימורי פנים<textarea id="inspection-interior" rows="4"></textarea></label><label>מעטפת ומבנה<textarea id="inspection-exterior" rows="4"></textarea></label><button id="save-inspection" onclick="saveInspectionFindings()">שמור ממצאים</button></div><p id="inspection-status" role="status"></p></details></section>
+</div>
 </main>
 <script>
         const SUPABASE_URL = 'https://rccncvnybybastdgdoqe.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_-OFzsbOGfsPATYLeD5Grnw_GpHYDAAC';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+        const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 // Financial values are accepted only with property-specific, dated evidence.
 const FINANCIAL_MODEL_VERSION = 'documented-financials-v2-20261007';
 const FINANCIAL_EVIDENCE_RULES = {
@@ -112,6 +279,7 @@ function financialEvidence(p, key, now = Date.now()) {
     if (!p.id || String(entry.property_id || '') !== String(p.id)) return null;
     if (!['documented','verified','provider_estimate'].includes(entry.status) || !rule.methods.includes(entry.method)) return null;
     if (entry.property_match_confirmed !== true) return null;
+    if (entry.source_name === 'RentCast' && key === 'rent' && stamp !== null && now-stamp > 30*86400000) return null;
     if (entry.period !== rule.period || stamp === null || stamp > now || now - stamp > rule.days * 86400000) return null;
     return {value,property_id:String(p.id),source_name:entry.source_name.trim(),source_url:url,document_ref:typeof entry.document_ref==='string'?documentRef:'',
         observed_at:entry.observed_at,method:entry.method,period:entry.period,status:entry.status,
@@ -222,49 +390,193 @@ function applyFinancialSnapshot(p) {
 function currentFinancialMoney(p,field){const f=financialSnapshot(p);return financialMoney(f[{arv:'arv',monthly_rent_est:'rent',mao_rental:'maoRental',mao_flip:'maoFlip'}[field]]);}
 
 let currentDeal=null, cloudAvailable=false, currentSavedReportId=null, reportSavePending=false;
+let savedReferenceTime=null, reportRequestPending=false, activePoll=null, lastUsage=null;
+const REPO_API='https://api.github.com/repos/elic555-ux/pa-intelligence-v2';
+const REPORT_VERSION='8.13.0';
 const EVIDENCE_LABELS={rent:'שכירות חודשית',arv:'שווי לאחר שיפוץ',flipRehab:'שיפוץ לפליפ',rentalRehab:'שיפוץ להשכרה',operatingExpenses:'הוצאות תפעול שנתיות',vacancyLoss:'אובדן שכירות שנתי',acquisitionCosts:'עלויות רכישה',sellingCosts:'עלויות מכירה',holdingCosts:'עלויות החזקה',financingCosts:'עלויות מימון'};
 const METHOD_LABELS={lease:'חוזה שכירות לנכס',rent_roll:'דוח שכירויות של הנכס',market_rent_estimate:'הערכת שכירות של מקור מזוהה',appraisal_after_repair:'שמאות למצב לאחר השיפוץ',comparable_sales_after_repair:'ניתוח מכירות דומות למצב לאחר השיפוץ',contractor_quote:'הצעת קבלן לנכס',inspection_scope_estimate:'הערכת היקף עבודה מבדיקה בנכס',operating_budget:'תקציב תפעול מפורט לנכס',documented_expenses:'הוצאות מתועדות לנכס',closing_estimate:'אומדן סגירה מפורט לנכס',settlement_statement:'מסמך סגירה לנכס',selling_quote:'הצעת עלויות מכירה לנכס',holding_budget:'תקציב החזקה מפורט לנכס',lender_quote:'הצעת מימון לנכס'};
+const SOURCE_MESSAGES={accepted:'האומדן עבר בקרת התאמה ומוצג כהערכת הספק',stale:'התוצאה השמורה אינה עדכנית מספיק להצגת אומדן',subject_mismatch:'פרטי הנכס בתשובת הספק אינם תואמים',insufficient_comparables:'לא התקבלו מספיק מודעות דומות ועדכניות להצגת אומדן',estimate_range_unreliable:'טווח ההערכה רחב מדי או חסר',api_key_missing:'סוד RentCast אינו זמין לשרת GitHub',usage_guard_blocked:'הבקשה נחסמה כדי לשמור על מכסת הקריאות',usage_ledger_missing:'מונה השימוש בשרת חסר. לא בוצעה קריאה',billing_cycle_not_configured:'מחזור החיוב לא הוגדר. לא בוצעה קריאה',api_rerun_blocked:'הפעלה חוזרת של אותה משימה נחסמה. לא בוצעה קריאה חוזרת',request_already_reserved:'הבקשה הזאת כבר נרשמה במכסה',authentication_failed:'RentCast דחה את פרטי החיבור',rate_limited:'RentCast עצר את הבקשה. אין ניסיון חוזר אוטומטי',request_failed_without_retry:'בקשת RentCast לא הושלמה. אין ניסיון חוזר אוטומטי',invalid_response:'הספק החזיר תשובה שאינה מתאימה לדוח',attempt_already_reserved_and_sent:'הבקשה כבר נשלחה ולא נשלחה שוב'};
+const copy=value=>JSON.parse(JSON.stringify(value));
+const referenceTime=()=>savedReferenceTime??Date.now();
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function put(id,text){document.getElementById(id).textContent=String(text??'לא פורסם');}
 function statusText(id,message,error=false){const el=document.getElementById(id);el.textContent=message;el.className='status '+(error?'error':'success');}
-function switchTab(name){for(const tab of ['overview','financials','rehab']){document.getElementById('tab-'+tab).hidden=tab!==name;document.getElementById('btn-'+tab).classList.toggle('active',tab===name);}}
+function switchTab(tabId){for(const tab of ['overview','financials','rehab']){const active=tabId==='tab-'+tab;document.getElementById('tab-'+tab).classList.toggle('hidden',!active);const button=document.getElementById('btn-tab-'+tab);button.classList.toggle('bg-blue-600',active);button.classList.toggle('bg-gray-800',!active);button.setAttribute('aria-selected',String(active));}}
 function closeReportWindow(){if(window.opener)window.close();else window.location.href='deals.html';}
-function factHtml(label,value,entry=null,money=false){return `<div class="fact"><span>${escapeHtml(label)}</span><strong class="${value===null?'unavailable':money?'money':''}">${escapeHtml(value===null?'אין נתון מבוסס':money?financialMoney(value):value)}</strong>${entry?`<div class="source">${financialEvidenceHtml(entry)}</div>`:''}</div>`;}
+function configureRentCast(){const panel=document.querySelector('.api-panel details');panel.open=true;document.getElementById('github-token').focus();}
+function saveGitHubConnection(){try{const value=document.getElementById('github-token').value.trim();if(!value){statusText('report-status','הזן את מפתח GitHub שכבר משמש את הגדרות הסריקה.',true);return;}localStorage.setItem('pa_github_token',value);document.getElementById('github-token').value='';statusText('report-status','מפתח GitHub נשמר במכשיר הזה.');refreshRepositoryData();}catch(_){statusText('report-status','לא ניתן לשמור את הגדרת החיבור בדפדפן.',true);}}
+function githubToken(){try{return localStorage.getItem('pa_github_token')||'';}catch(_){return '';}}
+function pendingKey(){return 'pa_expanded_report_pending_'+String(currentDeal?.id||'');}
+function pendingRequest(){try{return JSON.parse(localStorage.getItem(pendingKey())||'null');}catch(_){return null;}}
+function savePending(pending){try{if(pending){localStorage.setItem(pendingKey(),JSON.stringify(pending));return pendingRequest()?.request_id===pending.request_id;}else localStorage.removeItem(pendingKey());return true;}catch(_){return false;}}
+function reportProperty(p=currentDeal){return {id:String(p.id),address:String(p.address||'').trim(),city:String(p.city||'').trim(),state:String(p.state||'PA'),zip:String(p.zip||''),property_type:p.property_type||p.type||'',beds:financialNumber(p.beds),baths:financialNumber(p.baths),sqft:financialNumber(p.sqft)};}
+function addressNorm(value){const aliases={street:'st',avenue:'ave',road:'rd',drive:'dr',place:'pl',boulevard:'blvd',lane:'ln',court:'ct',north:'n',south:'s',east:'e',west:'w',apartment:'unit',apt:'unit',suite:'unit'};return String(value||'').toLowerCase().replace(/#/g,' unit ').replace(/[^a-z0-9 ]/g,' ').trim().split(/\s+/).map(w=>aliases[w]||w).join(' ');}
+function propertyType(value){const s=String(value||'').trim().toLowerCase();if(/duplex|triplex|multi/.test(s))return 'Multi-Family';if(s.includes('apartment'))return 'Apartment';if(s.includes('single'))return 'Single Family';return ['Condo','Townhouse','Manufactured'].find(name=>addressNorm(name).replace(/ /g,'')===addressNorm(s).replace(/ /g,''))||null;}
+function sameProperty(report,p=currentDeal){const q=report?.property;return !!q&&String(report.property_id)===String(p.id)&&addressNorm(q.address)===addressNorm(p.address)&&addressNorm(q.city)===addressNorm(p.city)&&q.state===(p.state||'PA')&&String(q.zip).slice(0,5)===String(p.zip).slice(0,5);}
+function sourceAccepted(report,kind){
+    if(!report||!sameProperty(report))return null;
+    const s=report.sources?.[kind],e=s?.estimate,t=financialDate(s?.observed_at),n=referenceTime();
+    if(s?.status!=='accepted'||!e||t===null||t>n||n-t>(kind==='rent'?30:60)*86400000)return null;
+    const value=positiveFinancialNumber(e.value),lo=positiveFinancialNumber(e.range_low),hi=positiveFinancialNumber(e.range_high);
+    if(value===null||lo===null||hi===null||lo>value||hi<value||(hi-lo)/value>.4)return null;
+    const subject=s.subject;if(!subject)return null;
+    if(propertyType(subject.propertyType)!==propertyType(currentDeal.property_type||currentDeal.type)||propertyType(currentDeal.property_type||currentDeal.type)===null)return null;
+    const addr=[subject.addressLine1,subject.addressLine2].filter(Boolean).join(' ')||String(subject.formattedAddress||'').split(',')[0];
+    if(addressNorm(addr)!==addressNorm(currentDeal.address)||addressNorm(subject.city)!==addressNorm(currentDeal.city)||subject.state!==(currentDeal.state||'PA')||String(subject.zipCode).slice(0,5)!==String(currentDeal.zip).slice(0,5))return null;
+    for(const[a,b]of [['beds','bedrooms'],['baths','bathrooms']]){const expected=financialNumber(currentDeal[a]);if(expected!==null&&expected!==financialNumber(subject[b]))return null;}
+    const expected=positiveFinancialNumber(currentDeal.sqft),actual=positiveFinancialNumber(subject.squareFootage);if(expected!==null&&(actual===null||Math.abs(actual/expected-1)>.1))return null;
+    const comparables=Array.isArray(s.comparables)?s.comparables:[];
+    if(comparables.length<3||s.quality?.minimum_comparables!==3)return null;
+    return s;
+}
+function moneyOrMissing(value){return value===null?'חסר נתון מבוסס':financialMoney(value);}
+function displayMetric(id,value,kind='money'){const el=document.getElementById(id);el.textContent=value===null?'חסרים נתונים':kind==='percent'?value.toFixed(1)+'%':kind==='text'?String(value):financialMoney(value);el.classList.toggle('unavailable',value===null);}
+function validInspection(p=currentDeal){const item=p.inspection_evidence,t=financialDate(item?.observed_at);return item&&String(item.property_id)===String(p.id)&&item.property_match_confirmed===true&&String(item.source_name||'').trim()&&String(item.document_ref||'').trim().length>=5&&t!==null&&t<=referenceTime()&&referenceTime()-t<=90*86400000?item:null;}
 function renderReport(){
     if(!currentDeal)return;
-    const p=currentDeal,f=applyFinancialSnapshot(p);
-    document.getElementById('report-address').textContent=p.address||'כתובת לא פורסמה';
-    document.getElementById('report-city').textContent=[p.city,p.state||'PA',p.zip].filter(Boolean).join(' · ');
-    const number=value=>{const n=financialNumber(value);return n!==null&&n>=0?n:null;};
-    const listingPrice=f.price;
-    document.getElementById('property-facts').innerHTML=[factHtml('מחיר מבוקש',listingPrice,null,true),factHtml('חדרי שינה',number(p.beds)),factHtml('חדרי רחצה',number(p.baths)),factHtml('שטח (SqFt)',number(p.sqft)),factHtml('שנת בנייה',number(p.year_built)),factHtml('סוג נכס',p.property_type||p.type||null),factHtml('מזהה מקור',p.docket_id||p.id||null),factHtml('נבדק במקור',p.last_source_check||null)].join('');
-    const sourceUrl=financialUrl(p.url||p.source_url);
-    document.getElementById('listing-source').innerHTML=sourceUrl?`<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">פתח את מקור הנכס</a>`:'קישור המקור לא נשמר.';
-    if(financialSourceOnly(p))document.getElementById('listing-source').innerHTML+='<p>רשומת מכרז או חוב: סכום התיק אינו מחיר רכישה, ולכן לא חושבו ממנו תוצאות השקעה.</p>';
-    document.getElementById('property-description').textContent=p.source_listing_description||p.description||p.summary||'לא נשמר תיאור בנכס.';
-    document.getElementById('overview-financials').innerHTML=[factHtml('שכירות חודשית לפי מקור',f.rent,f.evidence.rent,true),factHtml('תשואה ברוטו לפי המחיר המבוקש',f.yield===null?null:f.yield.toFixed(1)+'%'),factHtml('שווי לאחר שיפוץ לפי מקור',f.arv,f.evidence.arv,true),factHtml('שיפוץ להשכרה לפי מקור',f.rentalRehab,f.evidence.rentalRehab,true)].join('');
-    document.getElementById('financial-source-summary').innerHTML=financialExplanationHtml(p);
-    document.getElementById('calculated-results').innerHTML=[factHtml('הכנסה תפעולית שנתית',f.noi,null,true),factHtml('תשואה תפעולית לפי המחיר המבוקש',f.capRate===null?null:f.capRate.toFixed(1)+'%'),factHtml('תקרת רכישה להשכרה לפי היעד',f.maoRental,null,true),factHtml('תקרת רכישה לפליפ לפי היעד',f.maoFlip,null,true),factHtml('עלות השקעה בפליפ לפי המחיר המבוקש',f.allIn,null,true),factHtml('רווח פליפ לפי הנתונים שהוזנו',f.flipProfit,null,true),factHtml('תשואת פליפ על העלות הכוללת',f.flipRoi===null?null:f.flipRoi.toFixed(1)+'%'),factHtml('שכירות שנתית לפי מקור',f.annualRent,null,true)].join('');
-    const formulas=[];
-    if(f.noi!==null)formulas.push('הכנסה תפעולית = שכירות שנתית פחות הוצאות תפעול ואובדן שכירות מתועדים. מימון אינו מנוכה ממדד זה.');
-    if(f.capRate!==null)formulas.push('תשואה תפעולית = הכנסה תפעולית שנתית ÷ המחיר המבוקש × 100.');
-    if(f.flipProfit!==null)formulas.push('רווח פליפ = שווי לאחר שיפוץ פחות המחיר המבוקש, שיפוץ, רכישה, מכירה, החזקה ומימון. מס על הרווח אינו כלול.');
-    if(f.rentalFeasible===null)formulas.push('תקרת רכישה להשכרה דורשת שכירות, הוצאות תפעול, אובדן שכירות, שיפוץ, עלויות רכישה ויעד תשואה שהוזן.');
-    if(f.flipFeasible===null)formulas.push('תקרת רכישה לפליפ דורשת שווי לאחר שיפוץ, שיפוץ, עלויות רכישה, מכירה, החזקה ומימון, ויעד רווח שהוזן.');
-    document.getElementById('calculation-explanation').innerHTML=formulas.map(line=>'<p>'+escapeHtml(line)+'</p>').join('')+financialExplanationHtml(p);
-    document.getElementById('evidence-table').innerHTML=Object.entries(EVIDENCE_LABELS).map(([key,label])=>{const entry=f.evidence[key];return `<tr><td>${label}${FINANCIAL_EVIDENCE_RULES[key].period==='annual'?' · לשנה':''}</td><td class="${entry?'money':''}">${entry?financialMoney(entry.value):'אין נתון מבוסס'}</td><td>${entry?financialEvidenceHtml(entry):'חסר מקור מתאים ועדכני'}${entry?.notes?'<div class="muted">'+escapeHtml(entry.notes)+'</div>':''}</td></tr>`;}).join('');
-    document.getElementById('rehab-results').innerHTML=factHtml('שיפוץ לפליפ לפי מקור',f.flipRehab,f.evidence.flipRehab,true)+factHtml('שיפוץ להשכרה לפי מקור',f.rentalRehab,f.evidence.rentalRehab,true);
-    renderDocumentedComparables();renderImages();
-    document.getElementById('target-cap').value=p.financial_targets?.cap_rate_pct??'';
-    document.getElementById('target-profit').value=p.financial_targets?.flip_profit_amount??'';
-    document.getElementById('save-report').disabled=!cloudAvailable;
-    document.getElementById('print-report').disabled=false;
+    const p=currentDeal,f=financialSnapshot(p,referenceTime()),report=p.expanded_source_report;
+    const valueSource=sourceAccepted(report,'value'),rentSource=sourceAccepted(report,'rent');
+    const sourceSubject=valueSource?.subject||rentSource?.subject||null;
+    put('report-address',p.address||'כתובת לא פורסמה');put('report-city',[p.city,p.state||'PA',p.zip].filter(Boolean).join(' · '));
+    displayMetric('rep-asking',financialSourceOnly(p)?null:positiveFinancialNumber(p.price));displayMetric('rep-arv',valueSource?.estimate?.value??null);
+    put('rep-value-range',valueSource?financialMoney(valueSource.estimate.range_low)+'–'+financialMoney(valueSource.estimate.range_high)+' · RentCast · '+valueSource.observed_at.slice(0,10):'לא התקבל אומדן שווי מתאים ועדכני.');
+    const fact=(key,providerKey)=>{const known=financialNumber(p[key]);return known!==null?known:financialNumber(sourceSubject?.[providerKey]);};
+    put('rep-beds',fact('beds','bedrooms')??'לא פורסם');put('rep-baths',fact('baths','bathrooms')??'לא פורסם');put('rep-sqft',fact('sqft','squareFootage')?.toLocaleString('en-US')??'לא פורסם');put('rep-year',fact('year_built','yearBuilt')??'לא פורסם');
+    const dom=financialNumber(p.days_on_market??p.dom);put('rep-dom',dom===null?'לא פורסם':dom+' ימים');
+    const sqft=positiveFinancialNumber(p.sqft),price=f.price;put('rep-psf',sqft&&price?financialMoney(Math.round(price/sqft)):'לא חושב');
+    put('neigh-muni',[p.city,p.county].filter(Boolean).join(' · ')||'לא פורסם');put('neigh-name',p.neighborhood||'לא פורסם');
+    for(const id of ['neigh-class','neigh-income','neigh-renters','neigh-edu','neigh-poverty'])put(id,'אין מקור מתועד');
+    const lines=['הנכס: '+(p.address||'כתובת לא פורסמה')+', '+(p.city||'עיר לא פורסמה')+'.'];
+    if(valueSource)lines.push('אומדן שווי שוק של RentCast: '+financialMoney(valueSource.estimate.value)+'.');
+    if(rentSource)lines.push('אומדן שכירות של RentCast: '+financialMoney(rentSource.estimate.value)+' לחודש.');
+    if(f.yield!==null)lines.push('תשואה ברוטו לפי המחיר המבוקש והמקור לשכירות: '+f.yield.toFixed(1)+'%.');
+    if(financialSourceOnly(p))lines.push('סכום מכרז או חוב אינו מחיר רכישה. תחשיבי השקעה לא מבוססים עליו.');
+    if(!valueSource&&!rentSource)lines.push('לא נשמרו עדיין אומדני RentCast שעברו בקרת התאמה לנכס.');
+    put('rep-summary',lines.join(' '));
+    put('rep-price-gap-val',f.maoFlip!==null&&f.price!==null?financialMoney(f.price-f.maoFlip)+' לעומת תקרת הרכישה לפליפ':'נדרשים נתוני שיפוץ, ARV ועלויות מתועדות כדי לחשב פער.');
+    for(const [id,key]of [['calc-price-value','price'],['calc-arv-value','arv'],['calc-rent-value','rent'],['calc-allin','allIn'],['calc-flipprofit','flipProfit'],['rep-flip-rehab','flipRehab'],['rep-flip-margin','targetProfit'],['rep-flip-mao','maoFlip'],['rep-rent-monthly','rent'],['rep-rent-noi','noi'],['rep-rental-mao','maoRental'],['rehab-flip-total','flipRehab'],['rehab-rental-total','rentalRehab']])displayMetric(id,f[key]);
+    displayMetric('calc-gross-yield',f.yield,'percent');displayMetric('calc-caprate',f.capRate,'percent');displayMetric('calc-roi',f.flipRoi,'percent');
+    document.getElementById('evidence-table').innerHTML=Object.entries(EVIDENCE_LABELS).map(([key,label])=>{const entry=f.evidence[key];return '<tr><td>'+label+(FINANCIAL_EVIDENCE_RULES[key].period==='annual'?' · לשנה':'')+'</td><td>'+moneyOrMissing(entry?.value??null)+'</td><td>'+(entry?financialEvidenceHtml(entry)+(entry.notes?'<p>'+escapeHtml(entry.notes)+'</p>':''):'חסר מקור מתאים ועדכני')+'</td></tr>';}).join('');
+    const formulas=['תשואה ברוטו = שכירות חודשית × 12 ÷ המחיר המבוקש × 100.','NOI = שכירות שנתית פחות הוצאות תפעול ואובדן שכירות מתועדים.','תשואה תפעולית = NOI ÷ המחיר המבוקש × 100.','תקרת רכישה להשכרה = NOI ÷ יעד התשואה שהוזן, פחות שיפוץ להשכרה ועלויות רכישה.','תקרת רכישה לפליפ = ARV פחות שיפוץ, רכישה, מכירה, החזקה, מימון ויעד רווח שהוזן.','רווח פליפ = ARV פחות עלות ההשקעה הכוללת ועלויות המכירה; מס על הרווח אינו כלול.','תשואת הפליפ מוצגת על עלות ההשקעה הכוללת ואינה תשואה שנתית.','אומדן שווי שוק של RentCast אינו משמש אוטומטית כ-ARV לאחר שיפוץ.'];
+    if(f.rentalFeasible===false)formulas.push('לפי הנתונים והיעד אין תקרת רכישה חיובית להשכרה.');if(f.flipFeasible===false)formulas.push('לפי הנתונים והיעד אין תקרת רכישה חיובית לפליפ.');
+    const missing=Object.keys(EVIDENCE_LABELS).filter(key=>!f.evidence[key]).map(key=>EVIDENCE_LABELS[key]);if(missing.length)formulas.push('נתונים חסרים: '+missing.join(', ')+'.');
+    document.getElementById('calculation-explanation').innerHTML=formulas.map(x=>'<p>'+escapeHtml(x)+'</p>').join('');
+    renderComparables(report,'value','rep-comps-tbody','value-source-description');renderComparables(report,'rent','rep-rent-comps-tbody','rent-source-description');
+    document.getElementById('target-cap').value=p.financial_targets?.cap_rate_pct??'';document.getElementById('target-profit').value=p.financial_targets?.flip_profit_amount??'';
+    document.getElementById('financing-source').innerHTML=f.evidence.financingCosts?'<p>'+financialMoney(f.financingCosts)+' · '+financialEvidenceHtml(f.evidence.financingCosts)+'</p>':'<p class="muted">לא נשמרה הצעת מימון מתועדת לנכס. אין שיעורי ריבית או סכומי הלוואה לדוגמה.</p>';
+    document.getElementById('rehab-source-description').innerHTML=[f.evidence.flipRehab,f.evidence.rentalRehab].filter(Boolean).map(financialEvidenceHtml).join('<br>');
+    renderInspection();renderImages();renderSourceLinks();setEditability();
+    if(window.lucide)window.lucide.createIcons();
 }
-function renderDocumentedComparables(){
-    const el=document.getElementById('documented-comparables');
-    const rows=Array.isArray(currentDeal?.documented_comparables)?currentDeal.documented_comparables:[];
-    const valid=rows.filter(r=>r&&r.status==='documented'&&String(r.subject_property_id)===String(currentDeal.id)&&financialUrl(r.source_url)&&financialDate(r.observed_at)!==null&&financialDate(r.observed_at)<=Date.now()&&String(r.address||'').trim()&&['closed_sale','rental_listing','signed_lease'].includes(r.kind)&&financialNumber(r.amount)>0&&financialDate(r.transaction_date)!==null&&financialDate(r.transaction_date)<=Date.now());
-    if(!valid.length){el.innerHTML='<p class="muted">לא נשמרו לנכס עסקאות השוואה מתועדות. אין רשימות השוואה לדוגמה.</p>';return;}
-    el.innerHTML='<div class="scroll"><table><thead><tr><th>כתובת השוואה</th><th>סוג</th><th>סכום</th><th>מועד העסקה</th><th>מקור</th></tr></thead><tbody>'+valid.map(r=>`<tr><td>${escapeHtml(r.address)}</td><td>${{closed_sale:'מכירה שהושלמה',rental_listing:'מודעת שכירות',signed_lease:'חוזה שכירות'}[r.kind]}</td><td class="money">${financialMoney(financialNumber(r.amount))}</td><td>${escapeHtml(r.transaction_date)}</td><td><a href="${escapeHtml(financialUrl(r.source_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.source_name||'מקור')}</a></td></tr>`).join('')+'</tbody></table></div>';
+function renderComparables(report,kind,tbodyId,descriptionId){
+    const s=sameProperty(report||{})?report.sources?.[kind]:null;const rows=Array.isArray(s?.comparables)?s.comparables:[];
+    put(descriptionId,s?['RentCast',s.observed_at?.slice(0,10)||'',SOURCE_MESSAGES[s.status]||'תוצאה שמורה',rows.length+' מודעות מתאימות'].join(' · '):'לא נשמרו נתוני השוואה לנכס הזה.');
+    document.getElementById(tbodyId).innerHTML=rows.length?rows.map(row=>'<tr><td>'+escapeHtml(row.address)+'</td><td>'+moneyOrMissing(positiveFinancialNumber(row.amount))+'</td><td>'+escapeHtml(String(row.date||'').slice(0,10))+'</td><td>'+escapeHtml(row.sqft??'לא פורסם')+'</td><td>'+escapeHtml(row.beds??'—')+' / '+escapeHtml(row.baths??'—')+'</td><td>'+escapeHtml(row.distance??'—')+'</td><td>'+escapeHtml(financialNumber(row.correlation)!==null?Math.round(row.correlation*100)+'%':'—')+'</td></tr>').join(''):'<tr><td colspan="7">לא התקבלו מודעות השוואה מתאימות. אין רשומות דוגמה.</td></tr>';
 }
+function renderSourceLinks(){const p=currentDeal,url=financialUrl(p.url||p.source_url),report=p.expanded_source_report;document.getElementById('property-source-links').innerHTML=(url?'<a href="'+escapeHtml(url)+'" target="_blank" rel="noopener noreferrer">מקור הפרסום</a>':'מקור הפרסום לא נשמר')+'<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([p.address,p.city,p.state||'PA',p.zip].filter(Boolean).join(', '))+'" target="_blank" rel="noopener noreferrer">מפה</a>'+((report&&sameProperty(report)&&/^[a-zA-Z0-9-]{16,80}$/.test(report.request_id))?'<a href="https://github.com/elic555-ux/pa-intelligence-v2/blob/main/COMPS_REPORTS/expanded_receipts/'+encodeURIComponent(report.request_id)+'.json" target="_blank" rel="noopener noreferrer">נתוני הבדיקה והמקורות</a>':'')+'<span>נבדק בפרסום: '+escapeHtml(p.last_source_check||'לא נשמר מועד')+'</span>';}
+function renderImages(){const images=Array.isArray(currentDeal.custom_images)?currentDeal.custom_images:[];for(let i=0;i<3;i++){const el=document.getElementById(i?'rep-sub-img-'+i:'rep-main-img'),src=images[i];const accepted=typeof src==='string'&&(/^data:image\/(?:png|jpeg|webp|gif);base64,/.test(src)||!!financialUrl(src));el.hidden=!accepted;if(accepted)el.src=src;else el.removeAttribute('src');document.getElementById('image-placeholder-'+i).hidden=accepted;}}
+function renderInspection(){const item=validInspection();for(const category of ['main','interior','exterior'])put('inspection-'+category+'-view',item?.findings?.[category]||'לא נשמרו ממצאים מתועדים.');
+    if(item)for(const [id,key]of [['inspection-source','source_name'],['inspection-document','document_ref'],['inspection-date','observed_at']])document.getElementById(id).value=key==='observed_at'?item[key].slice(0,10):item[key];
+    for(const category of ['main','interior','exterior'])document.getElementById('inspection-'+category).value=item?.findings?.[category]||'';
+    document.getElementById('inspection-confirmed').checked=!!item;
+    const contractors=Array.isArray(currentDeal.tracker?.contractors)?currentDeal.tracker.contractors:[];
+    document.getElementById('contractor-quotes').innerHTML=contractors.length?'<table><thead><tr><th>שם קבלן שהוזן</th><th>סכום שהוזן</th></tr></thead><tbody>'+contractors.map(c=>'<tr><td>'+escapeHtml(c.name||'לא הוזן שם')+'</td><td>'+moneyOrMissing(positiveFinancialNumber(c.amount))+'</td></tr>').join('')+'</tbody></table><p class="small muted">לשילוב הצעה בתחשיב, שמור את המסמך והמועד שלה בנתונים המתועדים.</p>':'<p class="muted">לא הוזנו הצעות קבלן בחדר העסקאות.</p>';
+}
+function setEditability(){const locked=!!currentSavedReportId||!cloudAvailable||reportSavePending;document.querySelectorAll('.entry-form input,.entry-form textarea,.entry-form select,.entry-form button,.upload-input').forEach(el=>el.disabled=locked);document.getElementById('save-report').disabled=locked;document.getElementById('btn-download-pdf').disabled=false;document.getElementById('request-report').disabled=!!currentSavedReportId||reportRequestPending;document.getElementById('rentcast-mode').disabled=!!currentSavedReportId||reportRequestPending;document.getElementById('force-refresh').disabled=!!currentSavedReportId||reportRequestPending;}
+function cacheLocally(p){try{const rows=JSON.parse(localStorage.getItem('pa_pipeline_deals')||'[]');if(!Array.isArray(rows))return;const i=rows.findIndex(row=>String(row.id)===String(p.id));if(i>=0)rows[i]=p;else rows.push(p);localStorage.setItem('pa_pipeline_deals',JSON.stringify(rows));}catch(_){}}
+async function latestCloudDeal(){if(!supabaseClient)throw new Error('חיבור השמירה לא נטען');const {data,error}=await supabaseClient.from('pipeline_deals').select('*').eq('property_id',String(currentDeal.id));if(error)throw new Error('לא ניתן לקרוא את העדכון האחרון של הנכס');const rows=(data||[]).filter(row=>String(row.property_id)===String(currentDeal.id));if(rows.length!==1||!rows[0].deal_data)throw new Error('לא נמצאה רשומת נכס יחידה לשמירה');return copy(rows[0].deal_data);}
+async function commitCurrentDeal(next){
+    if(!cloudAvailable||currentSavedReportId)throw new Error('הדוח במצב צפייה; אין חיבור מאומת לשמירה');if(reportSavePending)throw new Error('שמירה קודמת עדיין מתבצעת');
+    reportSavePending=true;setEditability();
+    try{const latest=await latestCloudDeal();
+        if(String(latest.id)!==String(currentDeal.id)||addressNorm(latest.address)!==addressNorm(currentDeal.address)||addressNorm(latest.city)!==addressNorm(currentDeal.city)||(latest.state||'PA')!==(currentDeal.state||'PA')||String(latest.zip||'').slice(0,5)!==String(currentDeal.zip||'').slice(0,5))throw new Error('זיהוי הנכס השתנה בחדר העסקאות. פתח מחדש את הדוח לפני שמירה.');
+        for(const key of ['financial_targets','custom_images','inspection_evidence','expanded_source_report'])if(JSON.stringify(next[key])!==JSON.stringify(currentDeal[key]))latest[key]=copy(next[key]??null);
+        const before=currentDeal.financial_evidence||{},after=next.financial_evidence||{};latest.financial_evidence={...(latest.financial_evidence||{})};
+        for(const key of new Set([...Object.keys(before),...Object.keys(after)]))if(JSON.stringify(before[key])!==JSON.stringify(after[key])){if(key in after)latest.financial_evidence[key]=copy(after[key]);else delete latest.financial_evidence[key];}
+        for(const rule of Object.values(FINANCIAL_EVIDENCE_RULES))if(rule.field&&rule.field in currentDeal&&!(rule.field in next))delete latest[rule.field];
+        applyFinancialSnapshot(latest);const {error}=await supabaseClient.from('pipeline_deals').upsert({property_id:String(latest.id),deal_data:latest});if(error)throw new Error(error.message||'השמירה נכשלה');currentDeal=latest;cacheLocally(latest);renderReport();
+    }finally{reportSavePending=false;setEditability();}
+}
+async function saveInspectionFindings(){const item={property_id:String(currentDeal.id),source_name:document.getElementById('inspection-source').value.trim(),document_ref:document.getElementById('inspection-document').value.trim(),observed_at:document.getElementById('inspection-date').value,property_match_confirmed:document.getElementById('inspection-confirmed').checked,findings:{}};for(const category of ['main','interior','exterior'])item.findings[category]=document.getElementById('inspection-'+category).value.trim();const next=copy(currentDeal);next.inspection_evidence=item;if(!validInspection(next)){statusText('inspection-status','בדוק שם מקור, מסמך, תאריך עדכני ואישור התאמה לנכס.',true);return;}try{await commitCurrentDeal(next);statusText('inspection-status','ממצאי הבדיקה נשמרו.');}catch(error){statusText('inspection-status',error.message,true);}}
+async function uploadCustomImage(event,index){const file=event.target.files?.[0];if(!file||!currentDeal)return;if(!/^image\/(png|jpeg|webp|gif)$/.test(file.type)||file.size>3*1024*1024){statusText('report-status','אפשר להעלות PNG, JPEG, WebP או GIF בגודל עד 3 MB.',true);return;}try{const src=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});const next=copy(currentDeal);next.custom_images=Array.isArray(next.custom_images)?next.custom_images:[];next.custom_images[index]=src;await commitCurrentDeal(next);statusText('report-status','התמונה נשמרה לנכס.');}catch(error){statusText('report-status','התמונה לא נשמרה: '+error.message,true);}}
+async function saveReportToHistory(automatic=false){
+    if(!currentDeal||currentSavedReportId)return;if(!cloudAvailable)throw new Error('אין חיבור מאומת לשמירת דוח בחדר העסקאות');if(reportSavePending)throw new Error('המתן לסיום שמירת הנתונים');
+    reportSavePending=true;setEditability();try{const p=copy(currentDeal),requestId=p.expanded_source_report?.request_id;
+        if(automatic&&requestId){const {data,error}=await supabaseClient.from('saved_reports').select('*').eq('address',p.address);if(error)throw new Error('לא ניתן לבדוק אם הדוח כבר נשמר');if((data||[]).some(row=>row.report_data?.property_id===String(p.id)&&row.report_data?.source_request_id===requestId))return;}
+        const report={property_id:String(p.id),address:p.address||'',city:p.city||'',date:new Date().toISOString(),report_version:REPORT_VERSION,financial_model_version:FINANCIAL_MODEL_VERSION,source_request_id:requestId||null,deal_data:p,financial_snapshot:financialSnapshot(p),analysis:{rangeStr:'דוח מורחב לפי מקורות'}};
+        const {error}=await supabaseClient.from('saved_reports').insert({address:report.address,report_data:report});if(error)throw new Error(error.message||'שמירת הדוח נכשלה');statusText('report-status','הדוח נשמר בחדר העסקאות.');
+    }catch(error){statusText('report-status','הדוח לא נשמר בחדר העסקאות: '+error.message,true);if(automatic)throw error;}finally{reportSavePending=false;setEditability();}
+}
+async function getRepoJson(path){const headers={'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};const token=githubToken();if(token)headers.Authorization='Bearer '+token;const response=await fetch(REPO_API+'/contents/'+path+'?ref=main',{headers,cache:'no-store'});if(response.status===404)return null;if(!response.ok)throw new Error(response.status===401||response.status===403?'GitHub דחה את החיבור או הרשאות הקריאה':'לא ניתן לקרוא את נתוני הדוח מ-GitHub');const envelope=await response.json();if(typeof envelope.content!=='string'||envelope.encoding!=='base64')throw new Error('קובץ הנתונים לא התקבל');const bytes=Uint8Array.from(atob(envelope.content.replace(/\s/g,'')),c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));}
+async function reportKey(id){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(id)));return [...new Uint8Array(bytes)].map(n=>n.toString(16).padStart(2,'0')).join('').slice(0,32);}
+async function failedWorkflow(requestId){try{const token=githubToken();if(!token)return null;const response=await fetch(REPO_API+'/actions/workflows/expanded-report.yml/runs?event=workflow_dispatch&per_page=100',{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'},cache:'no-store'});if(!response.ok)return null;const data=await response.json();const run=(data.workflow_runs||[]).find(r=>String(r.display_title||'').endsWith(requestId));return run?.status==='completed'&&run.conclusion!=='success'?run.conclusion:null;}catch(_){return null;}}
+function showUsage(usage){lastUsage=usage;if(!usage){put('quota-status','מונה השימוש אינו זמין. השרת יבדוק את המכסה לפני כל קריאה.');return;}const used=financialNumber(usage.used??usage.successful_api_calls),limit=50,stop=45;put('quota-status',used===null?'מונה המכסה לא התקבל':'ניצול שמור במערכת: '+used+' / '+limit+' · זמינות עד עצירת הביטחון: '+Math.max(0,stop-used)+' · עצירה ב־45 · איפוס: '+(usage.next_reset||'לא פורסם'));}
+async function applySourceReport(report,automatic=false){
+    if(!sameProperty(report))throw new Error('תוצאת הבדיקה אינה שייכת לנכס שנבחר');const next=copy(currentDeal);next.expanded_source_report=copy(report);
+    const prior=currentDeal;currentDeal=next;const source=sourceAccepted(report,'rent');currentDeal=prior;
+    const existing=financialEvidence(next,'rent');
+    if(source&&(!existing||existing.method==='market_rent_estimate'&&existing.source_name==='RentCast')){next.financial_evidence={...(next.financial_evidence||{}),rent:{value:source.estimate.value,property_id:String(next.id),source_name:'RentCast',source_url:'https://github.com/elic555-ux/pa-intelligence-v2/blob/main/COMPS_REPORTS/expanded_receipts/'+encodeURIComponent(report.request_id)+'.json',document_ref:'RentCast '+report.request_id,observed_at:source.observed_at,method:'market_rent_estimate',period:'monthly',status:'provider_estimate',property_match_confirmed:true,notes:'אומדן שכירות לפי מודעות דומות. טווח: '+financialMoney(source.estimate.range_low)+'–'+financialMoney(source.estimate.range_high)+'. אין הוכחה לחוזה שכירות.'}};}
+    if(cloudAvailable&&!currentSavedReportId){try{await commitCurrentDeal(next);if(automatic)await saveReportToHistory(true);}catch(error){currentDeal=next;cacheLocally(next);renderReport();statusText('report-status','התוצאה נשמרה בשרת הדוחות; השמירה בחדר העסקאות לא הושלמה: '+error.message,true);}}
+    else{currentDeal=next;cacheLocally(next);renderReport();}
+    if(report.usage)showUsage(report.usage);
+}
+async function refreshRepositoryData(){
+    if(!currentDeal||currentSavedReportId)return;const key=await reportKey(currentDeal.id);
+    const settled=await Promise.allSettled([getRepoJson('COMPS_REPORTS/expanded_reports/'+key+'.json'),getRepoJson('COMPS_REPORTS/rentcast_usage.json')]);
+    if(settled[0].status==='fulfilled'&&settled[0].value&&sameProperty(settled[0].value)){const result=settled[0].value;if(currentDeal.expanded_source_report?.request_id!==result.request_id)await applySourceReport(result,true);statusText('rentcast-status','תוצאה שמורה מ־'+String(result.generated_at||'').slice(0,10)+' נטענה ללא קריאת RentCast.');}
+    else if(settled[0].status==='rejected')statusText('rentcast-status',settled[0].reason.message,true);
+    else statusText('rentcast-status','לא נמצאה עדיין תוצאה שמורה לנכס. אפשר לבחור נתונים ולהפיק דוח.');
+    // The current ledger is authoritative; an old report carries only its past quota snapshot.
+    if(settled[1].status==='fulfilled')showUsage(settled[1].value);else put('quota-status',settled[1].reason.message);
+    document.getElementById('resume-report').hidden=!pendingRequest();setEditability();
+}
+async function requestRentCastReport(){
+    if(!currentDeal||currentSavedReportId||reportRequestPending)return;
+    const existing=pendingRequest();if(existing){statusText('rentcast-status','קיימת בקשה שעדיין לא נבדקה. בדוק את התוצאה שלה לפני בקשה נוספת.');document.getElementById('resume-report').hidden=false;return;}
+    const token=githubToken();if(!token){statusText('rentcast-status','חסר מפתח GitHub. פתח את הגדרות החיבור והשתמש במפתח של המערכת.',true);configureRentCast();return;}
+    const property=reportProperty(),mode=document.getElementById('rentcast-mode').value;
+    if(!propertyType(property.property_type)){statusText('rentcast-status','סוג הנכס אינו מזוהה. נדרש סוג מגורים מאומת לפני בדיקת RentCast.',true);return;}
+    if(!/^\d+[A-Za-z]?\s/.test(property.address)||!property.city||property.state!=='PA'||!/^\d{5}(?:-\d{4})?$/.test(property.zip)||['id','address','city','state','zip'].some(key=>property[key].length>180||/[\x00-\x1f<>]/.test(property[key]))){statusText('rentcast-status','נדרשים כתובת רחוב מלאה בפנסילבניה, עיר ומיקוד תקין לפני בדיקת RentCast.',true);return;}
+    if(['beds','baths','sqft'].some(key=>property[key]!==null&&(property[key]<0||(key==='sqft'?(property[key]<100||property[key]>100000):property[key]>100)))){statusText('rentcast-status','בדוק את מספר החדרים ואת שטח הנכס לפני בדיקת RentCast.',true);return;}
+    if(/multi|duplex|triplex|apartment/i.test(property.property_type)&&mode!=='value'){statusText('rentcast-status','בנכס עם כמה יחידות, RentCast מחזיר שכירות ליחידה בלבד. בחר בדיקת שווי בניין; שכירות כוללת דורשת דוח שכירויות.',true);return;}
+    const request={request_id:crypto.randomUUID(),property,mode,refresh:document.getElementById('force-refresh').checked},payload=JSON.stringify(request);
+    if(payload.length>6000){statusText('rentcast-status','פרטי הנכס ארוכים מדי לבקשה.',true);return;}
+    reportRequestPending=true;setEditability();statusText('rentcast-status','שולח בקשת בדיקה לנכס שנבחר…');
+    try{if(!savePending({request_id:request.request_id,property_id:property.id,at:new Date().toISOString()}))throw new Error('לא ניתן לשמור את מזהה הבקשה בדפדפן. הבקשה לא נשלחה.');
+        const response=await fetch(REPO_API+'/actions/workflows/expanded-report.yml/dispatches',{method:'POST',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'},body:JSON.stringify({ref:'main',inputs:{payload}})});
+        if(response.status!==204){savePending(null);throw new Error(response.status===404?'קובץ expanded-report.yml לא נמצא ב-GitHub או אינו זמין למפתח':response.status===401||response.status===403?'מפתח GitHub אינו מורשה להפעיל את הדוח':'GitHub לא קיבל את בקשת הדוח');}
+        document.getElementById('resume-report').hidden=false;await pollReceipt(request.request_id);
+    }catch(error){statusText('rentcast-status',error.message,true);}finally{reportRequestPending=false;setEditability();}
+}
+async function pollReceipt(requestId){
+    if(activePoll)return;activePoll=requestId;try{for(let attempt=0;attempt<24;attempt++){
+        const receipt=await getRepoJson('COMPS_REPORTS/expanded_receipts/'+encodeURIComponent(requestId)+'.json');
+        if(receipt&&receipt.request_id===requestId){if(!sameProperty(receipt))throw new Error('התקבלה תוצאה עבור נכס אחר');await applySourceReport(receipt,true);savePending(null);document.getElementById('resume-report').hidden=true;const errors=Object.values(receipt.errors||{});statusText('rentcast-status',SOURCE_MESSAGES[receipt.status]||(errors.length?errors.map(code=>SOURCE_MESSAGES[code]||'מקור מידע לא זמין').join(' · '):'בדיקת RentCast הסתיימה. התוצאות והמקורות נטענו.'),!['completed','partial'].includes(receipt.status)||!!errors.length);return;}
+        if(attempt>=2&&attempt%3===2&&await failedWorkflow(requestId)){savePending(null);document.getElementById('resume-report').hidden=true;statusText('rentcast-status','משימת הדוח נכשלה ב-GitHub. בדוק את פרטי המשימה. אם נרשמה מכסה לפני הכשל, היא נשארת במונה.',true);return;}
+        statusText('rentcast-status','הבקשה נשלחה. ממתין לתוצאה בשרת; פתיחה חוזרת תמשיך לבדוק את אותה בקשה.');await new Promise(resolve=>setTimeout(resolve,15000));
+    }statusText('rentcast-status','השרת עדיין לא החזיר תוצאה. הבקשה נשמרה; השתמש בבדיקת תוצאה קיימת. אפשר לבדוק את המשימה ב-GitHub Actions.',true);
+    }finally{activePoll=null;}
+}
+async function resumePendingReport(){const pending=pendingRequest();if(!pending||reportRequestPending)return;reportRequestPending=true;setEditability();try{await pollReceipt(pending.request_id);}catch(error){statusText('rentcast-status',error.message,true);}finally{reportRequestPending=false;setEditability();}}
+function generateCleanPDF(){if(!currentDeal)return;if(reportSavePending){statusText('report-status','המתן לסיום השמירה לפני הדפסה.');return;}renderReport();document.querySelectorAll('details').forEach(el=>el.open=true);window.print();}
+async function loadReport(){
+    const params=new URLSearchParams(window.location.search),id=params.get('id'),savedId=params.get('report');let wanted=id,snapshot=null;
+    try{
+        if(savedId){if(!supabaseClient)throw new Error('חיבור הדוחות השמורים לא נטען');const {data,error}=await supabaseClient.from('saved_reports').select('*').eq('id',savedId);if(error)throw new Error('לא ניתן לקרוא את הדוח השמור');const row=(data||[]).find(r=>String(r.id)===String(savedId));if(!row)throw new Error('הדוח השמור לא נמצא');const saved=row.report_data||{};if(!saved.deal_data){document.getElementById('legacy-report-note').hidden=false;put('legacy-report-note','רשומת הדוח הקודמת נשמרה ללא תמונת מצב מלאה ומקורות. הנתונים המקוריים לא נמחקו; להפקת דוח מעודכן פתח את הנכס מתוך חדר העסקאות.');throw new Error('לא ניתן לשחזר תחשיבים מבוססים מהרשומה הקודמת הזאת.');}snapshot=copy(saved.deal_data);wanted=String(snapshot.id);currentSavedReportId=savedId;savedReferenceTime=financialDate(saved.date||row.created_at);if(savedReferenceTime===null||savedReferenceTime>Date.now())throw new Error('מועד הדוח השמור אינו תקין');}
+        if(!wanted)throw new Error('לא נבחר נכס. פתח את הדוח מתוך חדר העסקאות.');
+        if(snapshot)currentDeal=snapshot;
+        else{let cloudResponded=false;try{if(!supabaseClient)throw new Error('חיבור השמירה לא נטען');const {data,error}=await supabaseClient.from('pipeline_deals').select('*').eq('property_id',String(wanted));if(error)throw new Error('לא ניתן לטעון את הנכס מהענן');cloudResponded=true;const rows=(data||[]).filter(row=>String(row.property_id)===String(wanted));if(rows.length>1)throw new Error('מזהה הנכס אינו ייחודי');if(rows.length!==1||!rows[0].deal_data)throw new Error('הנכס שנבחר לא נמצא בחדר העסקאות');currentDeal=copy(rows[0].deal_data);cloudAvailable=true;cacheLocally(currentDeal);}catch(error){if(cloudResponded)throw error;let rows=[];try{rows=JSON.parse(localStorage.getItem('pa_pipeline_deals')||'[]');}catch(_){}const matches=Array.isArray(rows)?rows.filter(p=>String(p.id)===String(wanted)):[];if(matches.length!==1)throw error;currentDeal=copy(matches[0]);statusText('report-status','נטען עותק מקומי לצפייה. חיבור השמירה בענן לא אומת.',true);}}
+        if(String(currentDeal.id)!==String(wanted))throw new Error('מזהה הנתונים אינו תואם לנכס שנבחר');
+        document.getElementById('loading').hidden=true;document.getElementById('report-content').hidden=false;
+        document.getElementById('evidence-key').innerHTML=Object.entries(EVIDENCE_LABELS).map(([key,label])=>'<option value="'+key+'">'+label+'</option>').join('');
+        document.getElementById('inspection-date').max=new Date().toISOString().slice(0,10);renderReport();updateEvidenceForm();
+        if(/multi|duplex|triplex|apartment/i.test(reportProperty().property_type))document.getElementById('rentcast-mode').value='value';
+        if(snapshot){statusText('report-status','עותק דוח שמור מ־'+new Date(savedReferenceTime).toLocaleDateString('he-IL')+'. מוצגים המקורות והתחשיבים כפי שהיו במועד הדוח.');statusText('rentcast-status','צפייה בדוח שמור — לא מתבצעות קריאות RentCast.');showUsage(currentDeal.expanded_source_report?.usage);}
+        else{await refreshRepositoryData();if(pendingRequest())statusText('rentcast-status','קיימת בקשת דוח שנשלחה קודם. בדוק את תוצאתה; אין צורך לשלוח בקשה חדשה.');}
+    }catch(error){put('loading',error.message);document.getElementById('loading').classList.add('error');}
+}
+window.onload=loadReport;
+
 function updateEvidenceForm(){
     if(!currentDeal)return;
     const key=document.getElementById('evidence-key').value,rule=FINANCIAL_EVIDENCE_RULES[key];
@@ -278,23 +590,6 @@ function updateEvidenceForm(){
     if(rule.methods.includes(entry.method))document.getElementById('evidence-method').value=entry.method;
     document.getElementById('amount-label').textContent=EVIDENCE_LABELS[key]+' ($)';
 }
-async function commitCurrentDeal(next){
-    if(!cloudAvailable)throw new Error('אין חיבור מאומת לשמירה. הנתון לא נשמר.');
-    if(reportSavePending)throw new Error('שמירה קודמת עדיין מתבצעת. המתן לסיומה.');
-    reportSavePending=true;
-    document.querySelectorAll('.entry-form button,.upload input,#save-report').forEach(el=>el.disabled=true);
-    try{
-        applyFinancialSnapshot(next);
-        const {error}=await supabaseClient.from('pipeline_deals').upsert({property_id:String(next.id),deal_data:next});
-        if(error)throw new Error(error.message||'הנתון לא נשמר');
-        currentDeal=next;
-        try{const local=JSON.parse(localStorage.getItem('pa_pipeline_deals')||'[]');const rows=Array.isArray(local)?local:[];const i=rows.findIndex(p=>String(p.id)===String(next.id));if(i>=0)rows[i]=next;else rows.push(next);localStorage.setItem('pa_pipeline_deals',JSON.stringify(rows));}catch(_){}
-        renderReport();
-    }finally{
-        reportSavePending=false;
-        document.querySelectorAll('.entry-form button,.upload input,#save-report').forEach(el=>el.disabled=!cloudAvailable);
-    }
-}
 async function saveFinancialEvidence(){
     if(!currentDeal)return;
     const key=document.getElementById('evidence-key').value,rule=FINANCIAL_EVIDENCE_RULES[key];
@@ -305,7 +600,7 @@ async function saveFinancialEvidence(){
     const next=JSON.parse(JSON.stringify(currentDeal));next.financial_evidence={...next.financial_evidence,[key]:entry};
     if(!financialEvidence(next,key)){statusText('evidence-status',`הנתון לא נשמר. בדוק סכום, מקור או מסמך, תאריך בטווח ${rule.days} ימים, סוג נתון ואישור התאמה לנכס. סכום אפס דורש אישור מפורש.`,true);return;}
     const btn=document.getElementById('save-evidence');btn.disabled=true;
-    try{statusText('evidence-status','שומר נתון ומקור…');await commitCurrentDeal(next);statusText('evidence-status','הנתון והמקור נשמרו.');}catch(error){statusText('evidence-status','הנתון לא נשמר: '+error.message,true);}finally{btn.disabled=false;}
+    try{statusText('evidence-status','שומר נתון ומקור…');await commitCurrentDeal(next);statusText('evidence-status','הנתון והמקור נשמרו.');}catch(error){statusText('evidence-status','הנתון לא נשמר: '+error.message,true);}finally{setEditability();}
 }
 async function removeFinancialEvidence(){
     if(!currentDeal)return;
@@ -322,49 +617,6 @@ async function saveFinancialTargets(){
     const next=JSON.parse(JSON.stringify(currentDeal));next.financial_targets={confirmed:true,cap_rate_pct:capValue,flip_profit_amount:profitValue};
     try{await commitCurrentDeal(next);statusText('targets-status','היעדים נשמרו.');}catch(error){statusText('targets-status','היעדים לא נשמרו: '+error.message,true);}
 }
-function renderImages(){const images=Array.isArray(currentDeal?.custom_images)?currentDeal.custom_images:[];document.getElementById('property-images').innerHTML=images.filter(src=>typeof src==='string'&&/^data:image\/(?:png|jpeg|webp|gif);base64,/.test(src)).map(src=>`<img src="${escapeHtml(src)}" alt="תמונה שהועלתה לנכס">`).join('')||'<p class="muted">לא הועלו תמונות לנכס.</p>';}
-async function uploadCustomImages(event){
-    if(!currentDeal)return;
-    const files=[...event.target.files].filter(f=>/^image\/(png|jpeg|webp|gif)$/.test(f.type));
-    if(files.some(f=>f.size>3*1024*1024)){statusText('images-status','ניתן להעלות תמונה בגודל עד 3 MB.',true);return;}
-    try{const images=await Promise.all(files.map(file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);})));const next=JSON.parse(JSON.stringify(currentDeal));next.custom_images=[...(next.custom_images||[]),...images];await commitCurrentDeal(next);statusText('images-status','התמונות נשמרו.');}catch(error){statusText('images-status','התמונות לא נשמרו: '+error.message,true);}
-}
-async function saveReportToHistory(){
-    if(!currentDeal||!cloudAvailable)return;
-    if(reportSavePending){statusText('report-status','המתן לסיום שמירת הנתון לפני שמירת הדוח.');return;}
-    const button=document.getElementById('save-report');button.disabled=true;
-    try{const copy=JSON.parse(JSON.stringify(currentDeal));applyFinancialSnapshot(copy);const f=financialSnapshot(copy);const report={property_id:String(copy.id),address:copy.address||'',city:copy.city||'',date:new Date().toISOString(),financial_model_version:FINANCIAL_MODEL_VERSION,deal_data:copy,analysis:{rangeStr:Object.values(f.evidence).some(Boolean)?'נתונים מתועדים בלבד':'אין נתונים כספיים מבוססים'}};const {error}=await supabaseClient.from('saved_reports').insert({address:report.address,report_data:report});if(error)throw new Error(error.message||'שמירת הדוח נכשלה');statusText('report-status','הדוח נשמר בחדר העסקאות.');}catch(error){statusText('report-status','הדוח לא נשמר: '+error.message,true);}finally{button.disabled=false;}
-}
-function generateCleanPDF(){
-    if(!currentDeal)return;
-    if(reportSavePending){statusText('report-status','המתן לסיום שמירת הנתון לפני הדפסה.');return;}
-    renderReport();
-    document.querySelectorAll('details').forEach(el=>el.open=true);
-    window.print();
-}
-async function loadReport(){
-    const params=new URLSearchParams(window.location.search),requestedId=params.get('id'),reportId=params.get('report');
-    let wantedId=requestedId,storedSnapshot=null;
-    try{
-        if(reportId){const {data,error}=await supabaseClient.from('saved_reports').select('*');if(error)throw new Error('לא ניתן לטעון את הדוח השמור.');const row=(data||[]).find(r=>String(r.id)===String(reportId));if(!row)throw new Error('הדוח השמור לא נמצא.');const report=row.report_data||{};if(report.financial_model_version!==FINANCIAL_MODEL_VERSION||!report.deal_data)throw new Error('הדוח נוצר בגרסה קודמת ללא מקורות לתחשיבים. פתח את הנכס מחדר העסקאות כדי ליצור דוח מבוסס.');storedSnapshot=report.deal_data;currentSavedReportId=reportId;wantedId=String(storedSnapshot.id);}
-        if(!wantedId)throw new Error('לא נבחר נכס. פתח דוח מתוך חדר העסקאות.');
-        const {data,error}=await supabaseClient.from('pipeline_deals').select('*');
-        if(error)throw new Error('לא ניתן לטעון את נתוני חדר העסקאות.');
-        cloudAvailable=true;
-        const deals=(data||[]).map(row=>row.deal_data).filter(p=>p&&typeof p==='object'&&!Array.isArray(p));
-        const matches=deals.filter(p=>String(p.id)===String(wantedId));
-        if(!storedSnapshot&&matches.length>1)throw new Error('מזהה הנכס משותף לכמה רשומות. לא ניתן לבחור נתונים של נכס מסוים בבטחה.');
-        currentDeal=storedSnapshot||matches[0]||null;
-        if(!currentDeal)throw new Error('הנכס שנבחר לא נמצא בחדר העסקאות. לא מוצג נכס אחר במקומו.');
-        if(storedSnapshot){cloudAvailable=false;statusText('report-status','עותק של דוח שמור. לעריכת הנתונים פתח את הנכס מחדר העסקאות.');}
-        else {try{localStorage.setItem('pa_pipeline_deals',JSON.stringify(deals));}catch(_){}}
-        document.getElementById('loading').hidden=true;document.getElementById('report-content').hidden=false;
-        document.getElementById('evidence-key').innerHTML=Object.entries(EVIDENCE_LABELS).map(([key,label])=>`<option value="${key}">${label}</option>`).join('');
-        renderReport();updateEvidenceForm();
-        if(storedSnapshot)document.querySelectorAll('.entry-form,.upload').forEach(el=>el.hidden=true);
-    }catch(error){document.getElementById('loading').textContent=error.message;document.getElementById('loading').classList.add('error');}
-}
-window.onload=loadReport;
 
 </script>
 </body></html>
