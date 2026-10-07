@@ -19,7 +19,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 
 import pytz
-from analyzer import calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties
+from analyzer import calculate_metrics, calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties
 import requests
 
 EST_TZ = pytz.timezone("US/Eastern")
@@ -30,7 +30,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.5-consistent-financials-20261006"
+ORCHESTRATOR_VERSION = "3.8.6-documented-financials-20261007"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס"}
@@ -2090,22 +2090,9 @@ def enrich_erie_tax_rows_from_mls(tax_rows, mls_rows):
     return rows, audit
 
 
-def calculate_deal_score(deal_type, price, margin_est=25):
-    score = 50
-    dt = (deal_type or "").lower()
-    score += min(30, int(margin_est * 0.8))
-    if "sheriff" in dt:
-        score += 15
-    elif "tax" in dt:
-        score += 12
-    elif "foreclosure" in dt or "reo" in dt:
-        score += 8
-
-    if price and price < 90000:
-        score += 5
-    elif price and price > 250000:
-        score -= 5
-    return max(40, min(99, score))
+def calculate_deal_score(deal_type, price, margin_est=None):
+    # A source category and asking price cannot establish investment quality.
+    return None
 
 
 def load_json_file(path, default):
@@ -3403,6 +3390,10 @@ def run_orchestrator():
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"}
 
     final_merged_list = list(existing_props_dict.values())
+    # Remove cached unsupported financial results, including rows outside today's scan.
+    for stored_prop in final_merged_list:
+        if isinstance(stored_prop, dict):
+            stored_prop.update(calculate_metrics(stored_prop))
     price_drop_events, price_drop_properties = count_scan_price_drops(final_merged_list, scan_id)
     log_entry["price_drop_events"] = price_drop_events
     log_entry["price_drop_properties"] = price_drop_properties
@@ -3455,7 +3446,7 @@ def source_record_analysis_cleanup_needed(properties):
     if not isinstance(properties, list):
         return False
     metrics = ("arv", "flip_rehab", "rental_rehab", "mao_flip", "monthly_rent_est",
-               "mao_rental", "projected_rent", "gross_yield", "gross_yield_pct", "ai_summary")
+               "mao_rental", "projected_rent", "gross_yield", "gross_yield_pct")
     return any(isinstance(prop, dict) and is_public_court_record(prop)
                and (needs_analysis(prop) or any(prop.get(field) is not None for field in metrics))
                for prop in properties)
