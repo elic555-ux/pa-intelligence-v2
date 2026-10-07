@@ -15,7 +15,7 @@ from pathlib import Path
 
 import requests
 
-VERSION = "2.7-resilient"
+VERSION = "2.8-documented-financials-20261007"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -1099,36 +1099,14 @@ def merge_verified_comps(primary, secondary):
 
 
 def conservative_arv_from_comps(comps, subject):
-    verified = [
-        c for c in comps
-        if c.get("sold_price")
-        and c.get("sold_date")
-        and c.get("verification") == "unit_level_closed_sale_verified"
-    ]
-    if len(verified) < 3:
-        return None, "insufficient_date_verified_closed_sales", "unavailable"
+    """Closed sale evidence does not establish condition after the subject's repairs.
 
-    cutoff = date.today().replace(year=date.today().year - 2)
-    verified = [
-        c for c in verified
-        if datetime.strptime(c["sold_date"], "%Y-%m-%d").date() >= cutoff
-    ]
-    if len(verified) < 3:
-        return None, "insufficient_recent_verified_closed_sales", "unavailable"
+    Preserve and display the individual verified transactions. A property's ARV
+    must be documented separately by an appraisal or a reviewed analysis that
+    explicitly covers the intended after-repair condition.
+    """
+    return None, "after_repair_condition_and_reviewed_valuation_required", "unavailable"
 
-    top = verified[:5]
-
-    if subject.get("sqft"):
-        ppsf = sorted(c["price_per_sqft"] for c in top if c.get("price_per_sqft"))
-        if len(ppsf) >= 3:
-            n = len(ppsf)
-            med = ppsf[n//2] if n % 2 else (ppsf[n//2-1] + ppsf[n//2]) / 2
-            return round(med * subject["sqft"], -3), "median_same_building_ppsf", "medium"
-
-    prices = sorted(c["sold_price"] for c in top)
-    n = len(prices)
-    med = prices[n//2] if n % 2 else (prices[n//2-1] + prices[n//2]) / 2
-    return round(med, -3), "median_same_building_sale_price", "low"
 
 def sales_for_parcel(parcel_id):
     if not parcel_id:
@@ -1635,6 +1613,10 @@ def rentcast_sold_properties(target, subject, days=730):
     }
 
 def attach_rentcast_to_result(result):
+    # Legacy reports must not retain a median-sale figure labelled as ARV.
+    result.update({"arv":None,"arv_status":"not_calculated_without_after_repair_evidence",
+                   "arv_method":"after_repair_condition_and_reviewed_valuation_required",
+                   "arv_confidence":"unavailable"})
     target = result.get("parsed_input") or {}
     if not target:
         result["rentcast"] = {"status": "skipped_no_target", "api_calls": 0}
@@ -2051,7 +2033,7 @@ def print_summary(result):
             f"(expand to {plan.get('expanded_lookback_months')} if needed)"
         )
         if result.get("arv") is None:
-            print("\nℹ️ אין ARV עד שיש לפחות 3 עסקאות Unit מתאימות.")
+            print("\nℹ️ אין ARV ללא הערכת שווי מתועדת שמתייחסת למצב לאחר השיפוץ.")
         else:
             print("\n✅ ARV חושב על בסיס עסקאות Unit באותו בניין.")
         return
