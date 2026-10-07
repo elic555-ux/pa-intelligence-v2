@@ -11,7 +11,7 @@ GEOCODE_CACHE_FILE = 'geocode_cache.json'
 CONFIG_FILE = 'scan_config.json'
 GEOCODE_RETRY_DAYS = 30
 MAX_GEOCODE_REQUESTS_PER_RUN = 20
-ANALYZER_VERSION = '2.3-consistent-financials-20261006'
+ANALYZER_VERSION = '2.4-documented-financials-20261007'
 
 
 def utc_now_iso():
@@ -121,11 +121,11 @@ def is_repository_record(prop):
 
 
 def is_public_court_record(prop):
-    """Public auction/tax records are source evidence, not MLS asking prices."""
-    source_type = str(prop.get("source_type") or "").lower()
-    deal_type = str(prop.get("deal_type") or "").lower()
-    return ('sheriff' in source_type or source_type == 'tax' or 'sheriff' in deal_type
-            or any(token in deal_type for token in ('tax', 'פיגורי מס', 'חוב מס')))
+    source = str(prop.get('source_type') or '').lower()
+    deal_type = str(prop.get('deal_type') or '').lower()
+    return ('sheriff' in source or 'tax' in source or 'sheriff' in deal_type
+            or any(token in deal_type for token in ('tax','פיגורי מס','חוב מס'))
+            or prop.get('source_amount_type') in ('repository_minimum_bid','court_amount','opening_bid'))
 
 
 def mark_public_record_source_only(prop):
@@ -183,146 +183,197 @@ def mark_public_record_source_only(prop):
         prop['analysis_updated_at'] = utc_now_iso()
     return changed
 
-FINANCIAL_MODEL_VERSION = 'financial-baseline-v1-20261006'
-
+FINANCIAL_MODEL_VERSION = 'documented-financials-v2-20261007'
+FINANCIAL_EVIDENCE_RULES = {
+    'rent': {'field':'verified_monthly_rent','prefix':'verified_rent','period':'monthly','days':90,'methods':['lease','rent_roll','market_rent_estimate']},
+    'arv': {'field':'verified_arv','prefix':'verified_arv','period':'total','days':180,'methods':['appraisal_after_repair','comparable_sales_after_repair']},
+    'flipRehab': {'field':'verified_flip_rehab','prefix':'verified_rehab','period':'total','days':90,'methods':['contractor_quote','inspection_scope_estimate']},
+    'rentalRehab': {'field':'verified_rental_rehab','prefix':'verified_rehab','period':'total','days':90,'methods':['contractor_quote','inspection_scope_estimate']},
+    'operatingExpenses': {'period':'annual','days':90,'methods':['operating_budget','documented_expenses']},
+    'vacancyLoss': {'period':'annual','days':90,'methods':['operating_budget','documented_expenses']},
+    'acquisitionCosts': {'period':'total','days':90,'methods':['closing_estimate','settlement_statement']},
+    'sellingCosts': {'period':'total','days':90,'methods':['selling_quote','closing_estimate']},
+    'holdingCosts': {'period':'total','days':90,'methods':['holding_budget','documented_expenses']},
+    'financingCosts': {'period':'total','days':90,'methods':['lender_quote','documented_expenses']},
+}
 
 def numeric_financial_value(value):
-    if value is None or isinstance(value, bool):
+    if isinstance(value, bool) or not isinstance(value, (str,int,float)):
         return None
-    try:
-        number = float(str(value).replace(',', '').replace('$', '').strip())
-        return number if math.isfinite(number) else None
-    except (TypeError, ValueError):
+    if isinstance(value,(int,float)):
+        return value if math.isfinite(value) and abs(value) <= 9007199254740991 else None
+    text = str(value).replace('$','').replace(',','').strip()
+    if not re.fullmatch(r'-?\d+(?:\.\d+)?',text):
         return None
-
+    number = float(text)
+    return number if math.isfinite(number) and abs(number) <= 9007199254740991 else None
 
 def positive_number(value):
-    number = numeric_financial_value(value)
-    return number if number is not None and number > 0 else None
+    n = numeric_financial_value(value)
+    return n if n is not None and n > 0 else None
 
+def financial_url(value):
+    from urllib.parse import urlsplit
+    try:
+        if not isinstance(value,str): return None
+        url = value.strip()
+        if not re.match(r'^https?://[^/?#]+',url,re.I) or re.search(r'''[\s<>"'\\]''',url): return None
+        parts = urlsplit(url)
+        _ = parts.port
+        return url if parts.scheme in ('https','http') and parts.hostname and not parts.username and not parts.password else None
+    except (ValueError,TypeError):
+        return None
+
+def financial_date(value):
+    text = str(value or '')
+    if not re.fullmatch(r'\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))?',text):
+        return None
+    try:
+        datetime.strptime(text[:10],'%Y-%m-%d')
+        d = datetime.fromisoformat(text.replace('Z','+00:00'))
+        return d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+def financial_evidence(prop,key,now=None):
+    now = now or datetime.now(timezone.utc)
+    rule = FINANCIAL_EVIDENCE_RULES[key]
+    collection = prop.get('financial_evidence')
+    entry = collection.get(key) if isinstance(collection,dict) else None
+    if entry is None and rule.get('field') and rule['field'] in prop:
+        prefix = rule['prefix']
+        entry = {name:prop.get(prefix+'_'+name) for name in ('source_url','document_ref','observed_at','method','period','status','property_id','zero_cost_confirmed','property_match_confirmed')}
+        entry.update({'value':prop.get(rule['field']),'source_name':prop.get(prefix+'_source')})
+    if not isinstance(entry,dict):
+        return None
+    value = numeric_financial_value(entry.get('value'))
+    stamp = financial_date(entry.get('observed_at'))
+    url = financial_url(entry.get('source_url'))
+    document_ref = str(entry.get('document_ref') or '').strip()
+    if value is None or value < 0 or (key in ('rent','arv') and value <= 0):
+        return None
+    if value == 0 and entry.get('zero_cost_confirmed') is not True:
+        return None
+    if not isinstance(entry.get('source_name'),str) or not entry['source_name'].strip() or (not url and (not isinstance(entry.get('document_ref'),str) or len(document_ref)<5)):
+        return None
+    if not prop.get('id') or str(entry.get('property_id') or '') != str(prop['id']):
+        return None
+    if entry.get('status') not in ('documented','verified','provider_estimate') or entry.get('method') not in rule['methods']:
+        return None
+    if entry.get('property_match_confirmed') is not True:
+        return None
+    if entry.get('period') != rule['period'] or stamp is None or stamp > now or now-stamp > timedelta(days=rule['days']):
+        return None
+    return {'value':value,'property_id':str(prop['id']),'source_name':entry['source_name'].strip(),'source_url':url,
+        'document_ref':document_ref if isinstance(entry.get('document_ref'),str) else '',
+        'observed_at':entry['observed_at'],'method':entry['method'],'period':entry['period'],'status':entry['status'],
+        'property_match_confirmed':True,'zero_cost_confirmed':entry.get('zero_cost_confirmed') is True,
+        'notes':entry.get('notes') if isinstance(entry.get('notes'),str) else ''}
+
+def financial_target(prop,name,percentage=False):
+    targets = prop.get('financial_targets')
+    if not isinstance(targets,dict) or targets.get('confirmed') is not True:
+        return None
+    value = numeric_financial_value(targets.get(name))
+    if value is None or value < 0 or (percentage and not 0 < value <= 100):
+        return None
+    return value
+
+def financial_snapshot(prop,now=None):
+    now = now or datetime.now(timezone.utc)
+    source_only = is_public_court_record(prop)
+    evidence = {key:None if source_only else financial_evidence(prop,key,now) for key in FINANCIAL_EVIDENCE_RULES}
+    def val(key):
+        return evidence[key]['value'] if evidence[key] else None
+    checked = financial_date(prop.get('last_source_check'))
+    price = positive_number(prop.get('price')) if not source_only and checked and checked <= now and now-checked <= timedelta(days=30) and financial_url(prop.get('url') or prop.get('source_url')) else None
+    rent,arv,rental,flip = [val(k) for k in ('rent','arv','rentalRehab','flipRehab')]
+    expenses,vacancy,acquisition,selling,holding,financing = [val(k) for k in ('operatingExpenses','vacancyLoss','acquisitionCosts','sellingCosts','holdingCosts','financingCosts')]
+    annual = rent*12 if rent is not None else None
+    gross = math.floor(rent*1200/price*10+0.5)/10 if rent is not None and price is not None else None
+    noi = annual-expenses-vacancy if all(v is not None for v in (annual,expenses,vacancy)) else None
+    target_cap = financial_target(prop,'cap_rate_pct',True)
+    target_profit = financial_target(prop,'flip_profit_amount')
+    rental_ceiling = math.floor(noi/(target_cap/100)-rental-acquisition) if all(v is not None for v in (noi,rental,acquisition,target_cap)) else None
+    flip_ceiling = math.floor(arv-flip-acquisition-selling-holding-financing-target_profit) if all(v is not None for v in (arv,flip,acquisition,selling,holding,financing,target_profit)) else None
+    all_in = price+flip+acquisition+holding+financing if all(v is not None for v in (price,flip,acquisition,holding,financing)) else None
+    profit = arv-all_in-selling if all(v is not None for v in (arv,all_in,selling)) else None
+    targets = {'confirmed':True,'cap_rate_pct':target_cap,'flip_profit_amount':target_profit} if isinstance(prop.get('financial_targets'),dict) and prop['financial_targets'].get('confirmed') is True else None
+    inputs = {'model_version':FINANCIAL_MODEL_VERSION,'price':price,'evidence':evidence,'targets':targets}
+    return {'inputs':inputs,'evidence':evidence,'mode':'source_record_only' if source_only else 'documented_inputs_only',
+        'price':price,'rent':rent,'yield':gross,'arv':arv,'rentalRehab':rental,'flipRehab':flip,'annualRent':annual,
+        'operatingExpenses':expenses,'vacancyLoss':vacancy,'acquisitionCosts':acquisition,'sellingCosts':selling,
+        'holdingCosts':holding,'financingCosts':financing,'noi':noi,'allIn':all_in,'flipProfit':profit,
+        'flipRoi':math.floor(profit/all_in*1000+0.5)/10 if profit is not None and all_in and all_in>0 else None,
+        'capRate':math.floor(noi/price*1000+0.5)/10 if noi is not None and price is not None else None,
+        'maoRental':rental_ceiling if rental_ceiling is not None and rental_ceiling>0 else None,
+        'maoFlip':flip_ceiling if flip_ceiling is not None and flip_ceiling>0 else None,
+        'rentalFeasible':rental_ceiling>0 if rental_ceiling is not None else None,'flipFeasible':flip_ceiling>0 if flip_ceiling is not None else None,
+        'targetCap':target_cap,'targetProfit':target_profit}
 
 def financial_inputs(prop):
-    return {
-        'model_version': FINANCIAL_MODEL_VERSION,
-        'price': None if is_public_court_record(prop) else positive_number(prop.get('price')),
-        'beds': positive_number(prop.get('beds')),
-        'sqft': positive_number(prop.get('sqft')),
-        'property_type': str(prop.get('property_type') or prop.get('type') or '').strip(),
-        'source_type': str(prop.get('source_type') or '').lower(),
-        'deal_type': str(prop.get('deal_type') or '').lower(),
-        'verified_monthly_rent': positive_number(prop.get('verified_monthly_rent')),
-        'verified_rent_source': str(prop.get('verified_rent_source') or '').strip(),
-        'verified_arv': positive_number(prop.get('verified_arv')),
-        'verified_arv_source': str(prop.get('verified_arv_source') or '').strip(),
-        'verified_flip_rehab': numeric_financial_value(prop.get('verified_flip_rehab')),
-        'verified_rental_rehab': numeric_financial_value(prop.get('verified_rental_rehab')),
-        'verified_rehab_source': str(prop.get('verified_rehab_source') or '').strip(),
-    }
+    return financial_snapshot(prop)['inputs']
 
-
-def format_financial_money(number):
-    if number is None:
-        return 'אין נתון'
-    # Match the display precision of moneyData() in the browser.
-    return '$' + f'{number:,.3f}'.rstrip('0').rstrip('.')
-
+def format_financial_money(value):
+    return 'אין נתון מבוסס' if value is None else '$'+f'{value:,.2f}'.rstrip('0').rstrip('.')
 
 def calculate_rental_metrics(prop):
-    """Shared by the scanner and analyzer; never infer rent from listing price."""
-    inputs = financial_inputs(prop)
-    source_only = is_public_court_record(prop)
-    multi_unit = bool(re.search(r'multi|duplex|triplex|quadplex|apartment|two family|two-family|2-4',
-                               inputs['property_type'].lower()))
-    verified = inputs['verified_monthly_rent'] is not None and bool(inputs['verified_rent_source'])
-    rent = (inputs['verified_monthly_rent'] if verified else
-            int(950 + inputs['beds'] * 180) if inputs['beds'] is not None and not multi_unit else None)
-    if source_only:
-        rent = None
-    gross_yield = (math.floor((rent * 1200 / inputs['price']) * 10 + 0.5) / 10
-                   if rent is not None and inputs['price'] is not None else None)
-    method = ('verified_source_input' if verified else 'bedroom_rule_of_thumb') if rent is not None else None
-    return {
-        'financial_model_version': FINANCIAL_MODEL_VERSION,
-        'monthly_rent_est': rent,
-        'projected_rent': format_financial_money(rent) + ' / חודש' if rent is not None else None,
-        'gross_yield_pct': gross_yield,
-        'gross_yield': f'{gross_yield:.1f}% ברוטו' if gross_yield is not None else None,
-        'rent_status': 'not_applicable' if source_only else 'source_input' if verified else 'estimated' if rent is not None else 'unavailable',
-        'rent_method': method,
-        'rent_confidence': 'source_supplied' if rent is not None and verified else 'low' if rent is not None else 'none',
-        'rent_source': inputs['verified_rent_source'] if rent is not None and verified else 'calculated_from_bedrooms' if rent is not None else None,
-        'rent_unavailable_reason': ('public_court_record' if source_only else
-                                    'multi_unit_requires_unit_rents' if multi_unit and not verified else
-                                    'missing_bedrooms' if rent is None else None),
-    }
-
+    f = financial_snapshot(prop)
+    rent,gross = f['rent'],f['yield']
+    return {'financial_model_version':FINANCIAL_MODEL_VERSION,'monthly_rent_est':rent,
+        'projected_rent':format_financial_money(rent)+' / חודש' if rent is not None else None,
+        'gross_yield_pct':gross,'gross_yield':f'{gross:.1f}% ברוטו' if gross is not None else None,
+        'rent_status':'documented' if rent is not None else 'unavailable',
+        'rent_method':'documented_source_input' if rent is not None else None,
+        'rent_confidence':'source_documented' if rent is not None else 'none',
+        'rent_source':f['evidence']['rent']['source_name'] if rent is not None else None,
+        'rent_unavailable_reason':None if rent is not None else 'missing_or_invalid_evidence'}
 
 def calculate_metrics(prop):
-    """Transparent scenarios based on the current inputs; no fabricated neighborhood grade."""
-    if is_public_court_record(prop):
-        clean = dict(prop)
-        mark_public_record_source_only(clean)
-        fields = (*SOURCE_ONLY_ANALYSIS_FIELDS, 'analyzer_version', 'financial_model_version',
-                  'analysis_inputs', 'analysis_updated_at', 'analysis_mode', 'analysis_is_ai',
-                  'analysis_disclaimer', 'analysis_skip_reason')
-        return {key: clean.get(key) for key in fields}
-    inputs = financial_inputs(prop)
+    f = financial_snapshot(prop)
     metrics = calculate_rental_metrics(prop)
-    price, sqft, rent = inputs['price'], inputs['sqft'], metrics['monthly_rent_est']
-    verified_arv = inputs['verified_arv'] is not None and bool(inputs['verified_arv_source'])
-    arv = (inputs['verified_arv'] if verified_arv else
-           int(price * (1.6 if price < 100000 else 1.35)) if price is not None else None)
-    verified_rehab = bool(inputs['verified_rehab_source'])
-    flip = (inputs['verified_flip_rehab'] if verified_rehab and inputs['verified_flip_rehab'] is not None
-            and inputs['verified_flip_rehab'] >= 0 else int(sqft * 45) if sqft is not None else None)
-    rental = (inputs['verified_rental_rehab'] if verified_rehab and inputs['verified_rental_rehab'] is not None
-              and inputs['verified_rental_rehab'] >= 0 else int(sqft * 25) if sqft is not None else None)
-    mao_flip = int(arv * 0.70 - flip) if arv is not None and flip is not None else None
-    mao_rental = int(rent * 12 * 0.74 / 0.10 - rental - 5000) if rent is not None and rental is not None else None
-    metrics.update({
-        'analyzer_version': ANALYZER_VERSION, 'analysis_updated_at': utc_now_iso(),
-        'analysis_inputs': inputs, 'analysis_mode': 'preliminary_estimate', 'analysis_is_ai': False,
-        'analysis_skip_reason': None,
-        'analysis_disclaimer': 'חישוב לפי נתוני הנכס והנחות מפורשות; נתונים ממקור מזוהה מוצגים בנפרד מתרחישים.',
-        'arv': arv, 'arv_status': 'source_input' if verified_arv else 'scenario' if arv is not None else 'unavailable',
-        'arv_method': 'verified_source_input' if verified_arv else 'asking_price_scenario' if arv is not None else None,
-        'arv_confidence': 'source_supplied' if verified_arv else 'low' if arv is not None else 'none',
-        'arv_source': inputs['verified_arv_source'] if verified_arv else 'calculated_from_listing_price' if arv is not None else None,
-        'flip_rehab': flip, 'rental_rehab': rental,
-        'rehab_status': 'source_input_or_estimated' if verified_rehab else 'estimated' if flip is not None else 'unavailable',
-        'rehab_method': 'source_input_or_sqft_rule' if verified_rehab else 'sqft_rule_of_thumb',
-        'rehab_confidence': 'low' if flip is not None or rental is not None else 'none',
-        'rehab_source': inputs['verified_rehab_source'] if verified_rehab else 'calculated_from_sqft' if sqft is not None else None,
-        'rehab_scope': 'תקציב שיפוץ משוער: ' + format_financial_money(flip if prop.get('strategy') == 'value_add' else rental),
-        'mao_flip': mao_flip, 'mao_flip_status': 'calculated_from_estimates' if mao_flip is not None else 'unavailable',
-        'mao_flip_method': '70_percent_rule' if mao_flip is not None else None,
-        'mao_flip_confidence': 'low' if mao_flip is not None else 'none',
-        'mao_rental': mao_rental, 'mao_rental_status': 'calculated_from_estimates' if mao_rental is not None else 'unavailable',
-        'mao_rental_method': '10_percent_cap_rate_with_26_percent_expense_assumption' if mao_rental is not None else None,
-        'mao_rental_confidence': 'low' if mao_rental is not None else 'none',
-        'summary_status': 'rule_based_not_ai', 'summary_method': 'deterministic_template',
-        'ai_summary': f"שכירות: {metrics['projected_rent'] or 'אין נתון'}. תשואה: {metrics['gross_yield'] or 'אין נתון'}. "
-                      f"MAO להשכרה (תרחיש): {format_financial_money(mao_rental)}. MAO לפליפ (תרחיש): {format_financial_money(mao_flip)}.",
-    })
-    if prop.get('strategy') in ('turnkey', 'value_add'):
-        metrics['strategy_label'] = 'בחינה להשכרה' if prop['strategy'] == 'turnkey' else 'בחינה להשבחה'
-    if not (prop.get('neighborhood_class_status') == 'verified' and prop.get('neighborhood_class_source') and prop.get('neighborhood_class')):
-        metrics.update({'neighborhood_class': None, 'neighborhood_class_status': 'unavailable',
-                        'neighborhood_class_method': None, 'neighborhood_class_confidence': 'none', 'neighborhood_class_source': None})
+    rent,gross,arv = f['rent'],f['yield'],f['arv']
+    parts = []
+    if rent is not None: parts.append('שכירות לפי מקור: '+metrics['projected_rent'])
+    if gross is not None: parts.append('תשואה ברוטו: '+metrics['gross_yield'])
+    if arv is not None: parts.append('שווי לאחר שיפוץ לפי מקור: '+format_financial_money(arv))
+    rehab = f['flipRehab'] if prop.get('strategy')=='value_add' else f['rentalRehab']
+    metrics.update({'analyzer_version':ANALYZER_VERSION,'analysis_updated_at':utc_now_iso(),
+        'analysis_inputs':f['inputs'],'analysis_mode':f['mode'],'analysis_is_ai':False,'analysis_skip_reason':None,
+        'analysis_disclaimer':'מוצגים רק נתונים כספיים עם מקור ותאריך; חסר בנתוני הבסיס מונע את החישוב התלוי בו.',
+        'arv':arv,'flip_rehab':f['flipRehab'],'rental_rehab':f['rentalRehab'],
+        'mao_flip':f['maoFlip'],'mao_rental':f['maoRental'],'noi':f['noi'],'annual_operating_expenses':f['operatingExpenses'],
+        'cap_rate_pct':f['capRate'],'all_in_cost':f['allIn'],'flip_profit':f['flipProfit'],'flip_roi_pct':f['flipRoi'],
+        'rehab_scope':('שיפוץ לפי מקור: '+format_financial_money(rehab)) if rehab is not None else 'אין נתון מבוסס',
+        'deal_score':None,'margin_estimate':None,'neighborhood_class':None,'neighborhood_class_status':'unavailable',
+        'neighborhood_class_method':None,'neighborhood_class_source':None,'neighborhood_class_confidence':'none',
+        'summary_status':'documented_data_only','summary_method':'deterministic_template',
+        'ai_summary':'. '.join(parts) if parts else 'אין נתונים כספיים מבוססים להצגה.'})
+    for key,field in (('arv','arv'),('flipRehab','flip_rehab'),('rentalRehab','rental_rehab')):
+        entry = f['evidence'][key]
+        metrics.update({field+'_status':'documented' if entry else 'unavailable',field+'_method':entry['method'] if entry else None,
+            field+'_confidence':'source_documented' if entry else 'none',field+'_source':entry['source_name'] if entry else None})
+    metrics.update({'arv_method':'documented_source_input' if arv is not None else None,
+        'rehab_status':'documented' if f['flipRehab'] is not None or f['rentalRehab'] is not None else 'unavailable',
+        'rehab_method':'documented_source_input' if f['flipRehab'] is not None or f['rentalRehab'] is not None else None,
+        'rehab_source':None,'rehab_confidence':'none'})
+    for field,key in (('mao_flip','maoFlip'),('mao_rental','maoRental')):
+        metrics.update({field+'_status':'calculated_from_documented_inputs' if f[key] is not None else 'unavailable',
+            field+'_method':'documented_costs_and_user_target' if f[key] is not None else None,
+            field+'_confidence':'input_dependent' if f[key] is not None else 'none'})
     return metrics
 
-
 def needs_analysis(prop):
-    """A changed price, size, bedrooms or sourced input invalidates cached calculations."""
-    return (prop.get('analyzer_version') != ANALYZER_VERSION
-            or prop.get('financial_model_version') != FINANCIAL_MODEL_VERSION
-            or prop.get('analysis_inputs') != financial_inputs(prop)
-            or prop.get('analysis_mode') != ('source_record_only' if is_public_court_record(prop) else 'preliminary_estimate')
-            or any(field not in prop for field in ('mao_flip', 'mao_rental', 'monthly_rent_est', 'gross_yield_pct')))
+    snapshot = financial_snapshot(prop)
+    fields = {'arv':'arv','flip_rehab':'flipRehab','rental_rehab':'rentalRehab','mao_flip':'maoFlip',
+              'mao_rental':'maoRental','monthly_rent_est':'rent','gross_yield_pct':'yield','noi':'noi',
+              'all_in_cost':'allIn','flip_profit':'flipProfit','cap_rate_pct':'capRate','flip_roi_pct':'flipRoi'}
+    return (prop.get('analyzer_version') != ANALYZER_VERSION or prop.get('financial_model_version') != FINANCIAL_MODEL_VERSION
+        or prop.get('analysis_inputs') != snapshot['inputs'] or any(k not in prop or prop.get(k)!=snapshot[v] for k,v in fields.items()))
 
 
 def run_analyzer():
-    print(f"🧠 מתחיל Analyzer V{ANALYZER_VERSION} — אומדנים שקופים, ללא AI...")
+    print(f"🧠 מתחיל Analyzer V{ANALYZER_VERSION} — נתונים כספיים מתועדים בלבד...")
 
     if not os.path.exists(PROPERTIES_FILE):
         print("❌ קובץ הנכסים לא נמצא.")
@@ -338,8 +389,7 @@ def run_analyzer():
     selected_counties = load_selected_counties()
     print(f"🎯 Analyzer מוגבל למחוזות שנבחרו: {sorted(selected_counties)}")
     if not selected_counties:
-        print("⏭️ לא נבחרו מחוזות תקינים; אין עיבוד נכסים ולא נשלחות בקשות מיקום.")
-        return
+        print("⏭️ לא נבחרו מחוזות; מתבצע ניקוי כספי מקומי בלבד, ללא בקשות מיקום.")
 
     updated_properties = []
     analyzed_count = 0
@@ -359,8 +409,15 @@ def run_analyzer():
             updated_properties.append(prop)
             continue
 
+        # Apply the evidence policy to every stored row, without expanding geocoding scope.
+        if needs_analysis(prop):
+            prop.update(calculate_metrics(prop))
+            analyzed_count += 1
+
         if is_public_court_record(prop):
             if mark_public_record_source_only(prop):
+                # Preserve the established parcel/geocode cleanup, then apply the new financial signature.
+                prop.update(calculate_metrics(prop))
                 source_records_cleaned += 1
             source_only_count += 1
             updated_properties.append(prop)
@@ -443,7 +500,7 @@ def run_analyzer():
                 time.sleep(1.1)
 
         if needs_analysis(prop):
-            print(f"📊 מחשב אומדנים: {prop.get('address', 'Unknown')}...")
+            print(f"📊 בודק נתונים מתועדים: {prop.get('address', 'Unknown')}...")
             prop.update(calculate_metrics(prop))
             analyzed_count += 1
 
@@ -471,7 +528,7 @@ def run_analyzer():
         f"ממתינים לסבב הבא: {geocode_batch_skipped} | "
         f"מחוץ למחוזות שנבחרו: {outside_counties_skipped}"
     )
-    print("ℹ️ שכירות, תשואה ותרחישי שווי/MAO חושבו באותה נוסחה; דירוג שכונה אינו נגזר ממחיר.")
+    print("ℹ️ תחשיב דורש נתוני בסיס מתועדים; אין שכירות, שווי או שיפוץ לפי קבועי ברירת מחדל.")
 
 
 if __name__ == '__main__':
