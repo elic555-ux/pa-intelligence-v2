@@ -44,6 +44,11 @@
         .leaflet-popup-content-wrapper { background: #111827 !important; border: 1px solid #374151; color: white; border-radius: 12px; }
         .leaflet-popup-tip { background: #111827 !important; border: 1px solid #374151; }
     </style>
+
+    <style>
+        .en-text{direction:ltr;unicode-bidi:isolate;display:inline-block}
+        @media(max-width:640px){#general-price-catalog-modal>div{padding:18px}#item-pricing-details strong.en-text{font-size:14px}}
+    </style>
 </head>
 <body data-financial-policy="documented-financials-v2-20261007" class="min-h-screen flex flex-col antialiased">
 
@@ -57,7 +62,7 @@
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         חדר עסקאות וניהול צנרת (Deal Room)
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">UI 8.13.0 · 07.10.2026</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">שמירה בענן · 8.14 · 08.10.2026</span>
                     </h1>
                     <p class="text-xs text-gray-300">מעקב, מפות ותחשיבים לפי נתונים מתועדים</p><p id="deal-save-status" role="status" class="text-xs mt-1"></p>
                 </div>
@@ -71,7 +76,7 @@
 
                 <button onclick="openGeneralPriceCatalogModal()" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-600/20 transition">
                     <i data-lucide="hammer" class="w-4 h-4"></i>
-                    <span>🔨 מקורות לשיפוץ</span>
+                    <span>🔨 מחירון ומקורות לשיפוץ</span>
                 </button>
 
                 <button onclick="toggleArchiveView()" id="btn-toggle-archive" class="flex items-center gap-1.5 px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition relative">
@@ -170,15 +175,132 @@
     </div>
 
     <div id="general-price-catalog-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-gray-900 border border-amber-500/40 rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl text-right">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-                <h3 class="text-base font-extrabold text-white">מקורות לנתוני שיפוץ</h3>
-                <button onclick="closeGeneralPriceCatalogModal()" class="text-gray-400 hover:text-white">סגור</button>
+        <div class="bg-gray-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative text-right max-h-[92vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="hammer" class="w-5 h-5 text-amber-400"></i>
+                    מחירון שיפוץ, בדיקת תיקונים והצעות קבלן
+                </h3>
+                <button onclick="closeGeneralPriceCatalogModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <p class="text-gray-300 text-sm leading-7">תקציב שיפוץ מוצג רק לפי הצעת קבלן או בדיקת היקף עבודה לנכס. פתח את דוח הנכס כדי לשמור את הסכום, המקור והתאריך.</p>
-            <select id="financial-source-deal" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white"><option value="">בחר נכס מחדר העסקאות</option></select>
-            <button onclick="openSelectedFinancialReport()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold">פתח את דוח הנכס</button>
-            <p class="text-xs text-gray-400">אין במערכת מחירון מקומי מתועד. תמונה או PDF אינם מפיקים עלות שיפוץ אוטומטית.</p>
+
+            <!-- הטאבים -->
+            <div class="flex border-b border-gray-800 gap-2 text-xs font-bold pb-2 overflow-x-auto">
+                <button onclick="switchGeneralModalTab('tab-gen-inspector')" id="btn-gen-tab-inspector" class="px-3.5 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 shrink-0">
+                    🔍 בדיקת דוח בודק (PDF)
+                </button>
+                <button onclick="switchGeneralModalTab('tab-gen-catalog')" id="btn-gen-tab-catalog" class="px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0">
+                    🔨 מחירון ובדיקת תיקון ספציפי
+                </button>
+                <button onclick="switchGeneralModalTab('tab-gen-audit')" id="btn-gen-tab-audit" class="px-3.5 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 shrink-0">
+                    📄 בדיקת הצעת קבלן
+                </button>
+            </div>
+
+            
+            <p class="text-xs text-amber-200 leading-6 bg-amber-950/30 border border-amber-500/20 rounded-xl p-3">
+                מחירון מובנה מהגרסה הישנה. הטווחים הם אומדנים לפי סוג עבודה ועיר.
+                כדי לכלול עלות בתחשיב של נכס, שמור הצעה עם מקור ותאריך בדוח הנכס.
+            </p>
+<!-- Tab 1: Inspection PDF Uploader -->
+            <div id="tab-gen-inspector" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1.5">העלה קובץ PDF של דוח הבודק:</label>
+                    <div class="border-2 border-dashed border-blue-500/50 hover:border-blue-400 bg-gray-950 p-6 rounded-xl text-center cursor-pointer relative">
+                        <input type="file" id="gen-inspector-file" accept=".pdf,image/*" onchange="handleStandaloneInspectionUpload(event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        <i data-lucide="file-check-2" class="w-10 h-10 text-blue-400 mx-auto mb-2"></i>
+                        <span class="text-gray-200 font-bold block text-sm" id="gen-inspector-label">לחץ לבחירת דוח בודק (PDF) או גרור לכאן</span>
+                        <span class="text-xs text-amber-400 font-bold block mt-1" id="gen-inspector-status">הסוכן יזהה אוטומטית כתובת, עיר ועלויות</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 bg-gray-950 p-3 rounded-xl border border-gray-800">
+                    <div>
+                        <label class="block font-bold text-gray-400 mb-1">כתובת הנכס:</label>
+                        <input type="text" id="gen-inspector-address" placeholder="נשלף אוטומטית..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-400 mb-1">עיר / מחוז:</label>
+                        <input type="text" id="gen-inspector-city" placeholder="נשלף אוטומטית..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-white font-bold">
+                    </div>
+                </div>
+
+                <button onclick="triggerDetailedReportModal()" class="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:opacity-90 text-white rounded-xl text-xs font-black shadow-lg flex items-center justify-center gap-2 transition">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                    <span>פתח דוח מפורט מלא</span>
+                </button>
+            </div>
+
+            <!-- Tab 2: Specific Repair Pricing & Catalog -->
+            <div id="tab-gen-catalog" class="space-y-3.5 text-xs hidden">
+                <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                    <label class="block font-bold text-gray-300 mb-1">התאם מחירון לפי עיר בפנסילבניה:</label>
+                    <select id="rehab-city-select" onchange="updateItemPricingDetails()" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-amber-400">
+                        <option value="Pittsburgh" selected>Pittsburgh / Allegheny</option>
+                        <option value="Philadelphia">Philadelphia</option>
+                        <option value="Allentown">Allentown</option>
+                        <option value="Reading">Reading</option>
+                        <option value="Erie">Erie</option>
+                        <option value="Scranton">Scranton</option>
+                        <option value="Bethlehem">Bethlehem</option>
+                        <option value="Lancaster">Lancaster</option>
+                        <option value="Wilkes-Barre">Wilkes-Barre (Luzerne)</option>
+                        <option value="Harrisburg">Harrisburg</option>
+                        <option value="York">York</option>
+                        <option value="Altoona">Altoona</option>
+                    </select>
+                </div>
+
+                <div class="bg-gray-950 p-3.5 rounded-xl border border-amber-500/30 space-y-2">
+                    <label class="block font-bold text-amber-300 text-xs">חיפוש אומדן לתיקון או עבודה:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="dynamic-rehab-query" placeholder="לדוגמה: החלפת אסלה, התקנת ברז..." class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white font-medium focus:border-amber-400 focus:outline-none">
+                        <button onclick="runDynamicPriceQuery()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-black shrink-0 transition">בדוק מחיר</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">או בחר מתוך קטלוג עבודות נפוצות:</label>
+                    <select id="rehab-item-select" onchange="updateItemPricingDetails()" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold focus:border-amber-400">
+                        <option value="roof_full">החלפת גג אספלט מלא (Asphalt Shingles)</option>
+                        <option value="hvac">מערכת חימום ומיזוג מרכזי חדשה (HVAC System)</option>
+                        <option value="kitchen_full">שיפוץ מטבח קומפלט</option>
+                        <option value="bathroom_full">שיפוץ חדר רחצה מלא</option>
+                    </select>
+                </div>
+
+                <div id="item-pricing-details" class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2.5"></div>
+            </div>
+
+            <!-- Tab 3: Free Contractor Quote Audit -->
+            <div id="tab-gen-audit" class="space-y-3.5 text-xs hidden">
+                <div>
+                    <label class="block font-bold text-gray-200 mb-1">סעיפי הצעת הקבלן:</label>
+                    <textarea id="gen-quote-text-input" rows="3" placeholder="הדבק כאן את סעיפי ההצעה..." class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-white font-medium"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">סך הצעת הקבלן ($):</label>
+                        <input type="number" id="gen-quote-total-amount" placeholder="18000" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-emerald-400 font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-200 mb-1">עיר ב-PA:</label>
+                        <input type="text" id="gen-quote-city" placeholder="Pittsburgh" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold">
+                    </div>
+                </div>
+                <button onclick="runGeneralContractorAudit()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-black">השווה הצעה למחירון</button>
+                <div id="gen-audit-results-box" class="hidden bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs"></div>
+            </div>
+
+            
+            <div class="border-t border-gray-800 pt-4 space-y-2">
+                <label for="financial-source-deal" class="text-xs font-bold text-gray-300">שמירת מקור מתועד לנכס</label>
+                <select id="financial-source-deal" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white"></select>
+                <button onclick="openSelectedFinancialReport()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold">פתח דוח נכס לשמירת הצעה או בדיקה</button>
+            </div>
+<div class="pt-2 border-t border-gray-800 text-left">
+                <button onclick="closeGeneralPriceCatalogModal()" class="px-4 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-xs font-bold">סגור</button>
+            </div>
         </div>
     </div>
 
@@ -224,9 +346,79 @@ function syncDealToDB(deal) {
     }).catch(error=>{console.error('Deal save failed',error);dealSaveStatus('העדכון לא נשמר בענן. הנתונים עדיין במסך; נסה לשמור שוב.',true);});
     financialDealSaveQueues.set(key,pending);return pending;
 }
-function updateItemPricingDetails(){const box=document.getElementById('item-pricing-details');if(box)box.innerHTML='<p class="text-gray-400 text-sm">אין מחירון שיפוץ מתועד במערכת. ניתן לשמור הצעות קבלן ולהזין סכום מתועד בדוח הנכס.</p>';}
-function runDynamicPriceQuery(){updateItemPricingDetails();}
-function runGeneralContractorAudit(){const box=document.getElementById('gen-audit-results-box');if(box){box.classList.remove('hidden');box.textContent='אין נתוני השוואה מתועדים למחיר ההצעה. לא ניתן לקבוע אם המחיר סביר.';}}
+
+// Restored catalog estimates remain separate from property-specific financial evidence.
+        const CITY_COST_MULTIPLIER = { "Pittsburgh": 1.15, "Homestead": 1.15, "Philadelphia": 1.25, "Allentown": 1.12 };
+        const REHAB_PRICE_CATALOG = {
+            "roof_full": { title: "החלפת גג אספלט מלא", baseMin: 6500, baseMax: 9500, paRate: "$3.60 – $4.80 ל-SqFt", proAlternative: "בדיקת חלופות חומרים והיקף העבודה מול הקבלן." },
+            "hvac": { title: "מערכת חימום ומיזוג מרכזי", baseMin: 7200, baseMax: 11000, paRate: "$8,000 ממוצע", proAlternative: "מערכות Goodman בדירוג SEER2." },
+            "kitchen_full": { title: "שיפוץ מטבח קומפלט", baseMin: 9500, baseMax: 15500, paRate: "$1,100 ל-LF", proAlternative: "ארונות RTA מעץ מלא." },
+            "bathroom_full": { title: "שיפוץ חדר רחצה מלא", baseMin: 4500, baseMax: 7800, paRate: "$5,500 קומפלט", proAlternative: "שימוש בפנלים עמידים למים." }
+        };
+
+
+const REPAIR_QUERY_ITEMS = {
+    toilet: {title:'החלפת אסלה',baseMin:220,baseMax:480,aliases:['אסלה','toilet']},
+    faucet: {title:'החלפת ברז',baseMin:150,baseMax:320,aliases:['ברז','faucet']}
+};
+const CATALOG_ALIASES = {
+    roof_full:['גג','roof','shingle'],
+    hvac:['מיזוג','חימום','מזגן','hvac','furnace'],
+    kitchen_full:['מטבח','kitchen'],
+    bathroom_full:['חדר רחצה','חדר אמבט','bathroom']
+};
+function catalogRange(item,city){
+    const multiplier=CITY_COST_MULTIPLIER[city]||1.15;
+    return {min:Math.round(item.baseMin*multiplier),max:Math.round(item.baseMax*multiplier)};
+}
+function catalogPriceHtml(item,city,query=''){
+    const range=catalogRange(item,city);
+    return '<div class="flex justify-between gap-3 border-b border-gray-800 pb-3">'+
+        '<div><strong class="text-white text-sm block">'+escapeHtml(item.title)+'</strong>'+
+        '<span class="text-gray-400 text-xs">עיר: '+escapeHtml(city)+', PA</span></div>'+
+        '<strong class="text-emerald-400 font-black text-base en-text" dir="ltr">'+financialMoney(range.min)+' – '+financialMoney(range.max)+'</strong></div>'+
+        (query?'<p class="text-gray-300 text-xs mt-2">חיפוש: '+escapeHtml(query)+'</p>':'')+
+        (item.paRate?'<p class="text-gray-400 text-xs mt-2">'+escapeHtml(item.paRate)+' · לפי המחירון המובנה</p>':'')+
+        (item.proAlternative?'<div class="bg-blue-950/40 p-3 rounded-lg border border-blue-500/30 mt-3"><span class="text-blue-300 font-bold">אפשרות לבדיקה עם הקבלן</span><p class="text-gray-300 text-xs mt-1">'+escapeHtml(item.proAlternative)+'</p></div>':'')+
+        '<p class="text-xs text-amber-200 mt-3">אומדן קטלוג. לשילוב בתחשיב הנכס דרושים הצעה או בדיקה עם מקור ותאריך.</p>';
+}
+function updateItemPricingDetails(){
+    const select=document.getElementById('rehab-item-select'),box=document.getElementById('item-pricing-details');
+    if(!select||!box)return;
+    const city=document.getElementById('rehab-city-select').value;
+    box.innerHTML=catalogPriceHtml(REHAB_PRICE_CATALOG[select.value]||REHAB_PRICE_CATALOG.roof_full,city);
+}
+function catalogMatches(query){
+    const text=String(query||'').trim().toLowerCase();
+    return Object.entries(CATALOG_ALIASES).filter(([,aliases])=>aliases.some(alias=>text.includes(alias))).map(([key])=>key);
+}
+function runDynamicPriceQuery(){
+    const query=document.getElementById('dynamic-rehab-query').value.trim(),box=document.getElementById('item-pricing-details');
+    if(!query){box.textContent='הזן תיקון או עבודה לחיפוש.';return;}
+    const keys=catalogMatches(query),repair=Object.values(REPAIR_QUERY_ITEMS).find(item=>item.aliases.some(alias=>query.toLowerCase().includes(alias)));
+    const item=keys.length===1?REHAB_PRICE_CATALOG[keys[0]]:repair;
+    if(keys.length>1){box.textContent='החיפוש כולל כמה עבודות. בחר כל עבודה בנפרד מהקטלוג, או הדבק את הסעיפים בבדיקת הצעת קבלן.';return;}
+    if(!item){box.innerHTML='<p class="text-gray-300 text-sm">אין אומדן מובנה עבור '+escapeHtml(query)+'. בחר עבודה מהקטלוג או הזן הצעת קבלן מתועדת בדוח הנכס.</p>';return;}
+    box.innerHTML=catalogPriceHtml(item,document.getElementById('rehab-city-select').value,query);
+}
+function runGeneralContractorAudit(){
+    const total=positiveFinancialNumber(document.getElementById('gen-quote-total-amount').value);
+    const text=document.getElementById('gen-quote-text-input').value.trim();
+    const city=document.getElementById('gen-quote-city').value.trim()||document.getElementById('rehab-city-select').value;
+    const box=document.getElementById('gen-audit-results-box');box.classList.remove('hidden');
+    if(total===null||!text){box.textContent='הזן את סעיפי ההצעה וסכום חיובי כדי לבצע השוואה.';return;}
+    const keys=catalogMatches(text);
+    if(!keys.length){box.textContent='אין במחירון עבודות שמתאימות לסעיפים שהוזנו. דרושה השוואה להצעות נוספות עבור אותו היקף עבודה.';return;}
+    const ranges=keys.map(key=>catalogRange(REHAB_PRICE_CATALOG[key],city));
+    const min=ranges.reduce((sum,item)=>sum+item.min,0),max=ranges.reduce((sum,item)=>sum+item.max,0);
+    const comparison=total<min?'מתחת לטווח המחירון':total>max?'מעל לטווח המחירון':'בתוך טווח המחירון';
+    box.innerHTML='<strong class="text-amber-300">השוואה למחירון המובנה</strong>'+
+        '<p class="mt-2">סכום ההצעה: '+escapeHtml(financialMoney(total))+' · '+comparison+'</p>'+
+        '<p class="mt-1">טווח העבודות שזוהו: '+escapeHtml(financialMoney(min))+' – '+escapeHtml(financialMoney(max))+'</p>'+
+        '<p class="mt-1 text-gray-300">'+keys.map(key=>escapeHtml(REHAB_PRICE_CATALOG[key].title)).join(' · ')+'</p>'+
+        '<p class="mt-3 text-gray-400">ההשוואה מתייחסת לעבודה אחת מכל סוג שזוהה. יש להתאים כמויות, חומרים והיקף עבודה להצעה בפועל.</p>';
+}
+
 function handleStandaloneInspectionUpload(){alert('המערכת אינה מחלצת נתונים מהקובץ הזה אוטומטית. ניתן להזין את ממצאי הדוח בדוח הנכס, עם שם המסמך ותאריך.');}
 function calculateAccurateRehab(deal){const f=financialSnapshot(deal);const entry=deal.strategy==='value_add'?f.evidence.flipRehab:f.evidence.rentalRehab;return entry?{range:financialMoney(entry.value),details:entry.source_name+' · '+entry.observed_at.slice(0,10)}:{range:'אין נתון מבוסס',details:'חסרה הצעת קבלן או בדיקת שיפוץ מתועדת לנכס.'};}
 function propertyPriceDisplayHtml(p){if(financialSourceOnly(p)){const n=financialNumber(p.minimum_bid??p.opening_bid??p.case_cost_tax_bid);return n!==null?'סכום מקור / מכרז: '+escapeHtml(financialMoney(n)):'מחיר רכישה לא פורסם';}const n=financialNumber(p.price);return n!==null&&n>0?escapeHtml(financialMoney(n)):'מחיר מבוקש לא פורסם';}
@@ -577,10 +769,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function openSavedReportsModal() { loadSavedReports(); document.getElementById('saved-reports-modal').classList.remove('hidden'); }
         function closeSavedReportsModal() { document.getElementById('saved-reports-modal').classList.add('hidden'); }
 
+
         function openGeneralPriceCatalogModal() {
             const select=document.getElementById('financial-source-deal');
-            select.innerHTML='<option value="">בחר נכס מחדר העסקאות</option>'+pipelineDeals.filter(d=>!d.is_pipeline_archived).map(d=>'<option value="'+escapeHtml(d.id)+'">'+escapeHtml(d.address||d.id)+'</option>').join('');
+            select.innerHTML='<option value="">בחר נכס מחדר העסקאות</option>'+pipelineDeals.filter(d=>!d.is_archived).map(d=>'<option value="'+escapeHtml(d.id)+'">'+escapeHtml(d.address||d.id)+'</option>').join('');
             document.getElementById('general-price-catalog-modal').classList.remove('hidden');
+            switchGeneralModalTab('tab-gen-catalog');
+            updateItemPricingDetails();
+            if(window.lucide)lucide.createIcons();
         }
         function openSelectedFinancialReport() {
             const id=document.getElementById('financial-source-deal').value;
@@ -1019,7 +1215,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         window.onload = init;
-        console.info('PA Hub Deals UI 8.13.0 — documented financial inputs only');
+        console.info('PA Hub Deals UI 8.14.0 — documented financial inputs only');
     </script>
 </body>
 </html>
