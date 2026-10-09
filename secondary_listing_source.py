@@ -15,14 +15,14 @@ from pathlib import Path
 import re
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from urllib.robotparser import RobotFileParser
 
 from bs4 import BeautifulSoup
 import property_sources as registry
 
-VERSION = 'additional-source-1.0.0-20261009'
+VERSION = 'additional-source-1.1.0-20261009'
 ORIGIN = 'https://www.clearchoiceenterprises.com'
 PROVIDER = 'clearchoice'
 SOURCE = 'Clear Choice / MLS'
@@ -242,10 +242,12 @@ class SameOriginRedirect(HTTPRedirectHandler):
 
 
 class PublicReader:
-    def __init__(self, interval=10, clock=time.monotonic, sleep=time.sleep, opener=None):
+    def __init__(self, interval=10, clock=time.monotonic, sleep=time.sleep, opener=None, max_requests=None, deadline=None):
         self.interval, self.clock, self.sleep = max(10, interval), clock, sleep
         self.opener = opener or build_opener(SameOriginRedirect())
         self.last_request, self.requests, self.robots = None, 0, None
+        self.max_requests, self.deadline = max_requests, deadline
+        self.page_cache = {}
 
     def _get(self, url, robots=False):
         parsed = urlparse(url)
@@ -253,8 +255,13 @@ class PublicReader:
             raise StopSource('unsupported_source_url')
         if not robots and (not self.robots or not self.robots.can_fetch(AGENT, url)):
             raise StopSource('robots_disallowed')
+        if self.max_requests is not None and self.requests >= self.max_requests:
+            raise StopSource('source_request_budget_exhausted')
+        wait = 0 if self.last_request is None else max(0, self.interval - (self.clock() - self.last_request))
+        if self.deadline is not None and self.clock() + wait + 25 > self.deadline:
+            raise StopSource('batch_time_limit')
         if self.last_request is not None:
-            self.sleep(max(0, self.interval - (self.clock() - self.last_request)))
+            self.sleep(wait)
         self.last_request = self.clock()
         self.requests += 1
         req = Request(url, headers={'User-Agent': AGENT, 'Accept': 'text/html,text/plain;q=0.9'})
@@ -271,6 +278,8 @@ class PublicReader:
             raise StopSource('source_unavailable') from error
 
     def initialize(self):
+        if self.robots is not None:
+            return
         body = self._get(ORIGIN + '/robots.txt', robots=True)
         rp = RobotFileParser()
         rp.parse(body.splitlines())
@@ -281,7 +290,9 @@ class PublicReader:
         self.robots = rp
 
     def get(self, url):
-        return self._get(url)
+        if url not in self.page_cache:
+            self.page_cache[url] = self._get(url)
+        return self.page_cache[url]
 
 
 def discover(reader, row):
@@ -323,6 +334,93 @@ def parse_date(value):
         return None
 
 
+def discover_many(reader, rows):
+    """Match a bounded shared public index to current, unambiguous inventory rows."""
+    by_mls = {}
+    for row in rows:
+        by_mls.setdefault(registry.listing_id(row), []).append(row)
+    found = {}
+    for page in range(1, 4):
+        suffix = '' if page == 1 else '?pg=' + str(page)
+        soup = BeautifulSoup(reader.get(ORIGIN + '/newest-listings/' + suffix), 'html.parser')
+        cards = soup.select('.si-listing[data-url]')
+        if not cards:
+            raise StopSource('source_discovery_page_unavailable')
+        for card in cards:
+            button = card.find(attrs={'data-mls': True})
+            matches = by_mls.get(str(button.get('data-mls')), []) if button else []
+            if len(matches) != 1:
+                continue
+            row = matches[0]
+            street = card.select_one('.si-listing__title-main')
+            city = card.select_one('.si-listing__title-description')
+            if not street or not city:
+                continue
+            if registry.parse_address(street.get_text(' ', strip=True))[:2] != registry.parse_address(row['address'])[:2]:
+                continue
+            if registry.norm(city.get_text(' ', strip=True).replace(',', ' ')) != registry.norm(f"{row['city']} PA {str(row['zip'])[:5]}"):
+                continue
+            url = source_url(urljoin(ORIGIN, card.get('data-url', '')))
+            if url:
+                found.setdefault(str(row['id']), set()).add(url)
+    return {key: next(iter(urls)) for key, urls in found.items() if len(urls) == 1}
+
+
+def discover_directory(reader, rows, start_page=1):
+    """Use the public listing directory, resuming after at most three pages."""
+    by_mls = {}
+    for row in rows:
+        by_mls.setdefault(registry.listing_id(row), []).append(row)
+    found, next_page = {}, max(1, int(start_page))
+    cycle_complete = False
+    for _ in range(3):
+        number = next_page
+        url = ORIGIN + '/idx/site-map/' + ('?offset=' + str(number) if number > 1 else '')
+        try:
+            soup = BeautifulSoup(reader.get(url), 'html.parser')
+        except StopSource as error:
+            if number > 1 and error.status in {'source_redirect_stopped', 'source_unavailable'}:
+                error.reset_directory = True
+            raise
+        listing_links = 0
+        pages = [number]
+        for anchor in soup.find_all('a', href=True):
+            candidate = source_url(urljoin(ORIGIN, anchor['href']))
+            if candidate:
+                listing_links += 1
+                label = anchor.get_text(' ', strip=True)
+                match = re.fullmatch(r'(.+?)\s+PA\s+(\d{5})(?:-\d{4})?\s+MLS\s*#\s*(\d+)', label, flags=re.I)
+                matches = by_mls.get(match[3], []) if match else []
+                if len(matches) != 1:
+                    continue
+                row = matches[0]
+                city = re.sub(r'\s+', ' ', str(row['city']).strip())
+                prefix = match[1].rstrip(' ,')
+                if match[2] != str(row['zip'])[:5] or not prefix.casefold().endswith(' ' + city.casefold()):
+                    continue
+                street = prefix[:-len(city)].strip()
+                if registry.parse_address(street)[:2] != registry.parse_address(row['address'])[:2]:
+                    continue
+                found.setdefault(str(row['id']), set()).add(candidate)
+            else:
+                link = urlparse(urljoin(ORIGIN, anchor['href']))
+                offsets = parse_qs(link.query).get('offset', [])
+                if link.scheme == 'https' and link.netloc == 'www.clearchoiceenterprises.com' and link.path == '/idx/site-map/' and len(offsets) == 1 and offsets[0].isdigit():
+                    if 1 <= int(offsets[0]) <= 1000:
+                        pages.append(int(offsets[0]))
+        if not listing_links:
+            error = StopSource('source_discovery_page_unavailable')
+            error.reset_directory = number > 1
+            raise error
+        maximum = max(pages)
+        cycle_complete = number >= maximum
+        next_page = 1 if cycle_complete else number + 1
+        if sum(len(urls) == 1 for urls in found.values()) >= min(3, len(rows)) or cycle_complete:
+            break
+    return ({key: next(iter(urls)) for key, urls in found.items() if len(urls) == 1},
+            next_page, cycle_complete)
+
+
 def cooldown_until(retry_after, now):
     until = now + timedelta(days=1)
     if retry_after:
@@ -337,7 +435,7 @@ def cooldown_until(retry_after, now):
     return until.isoformat()
 
 
-def run(repo, mode, property_id, requested_url='', request_id='', reader=None):
+def run(repo, mode, property_id, requested_url='', request_id='', reader=None, write_status=True):
     report = {'version': VERSION, 'mode': mode, 'property_id': property_id, 'request_id': request_id,
               'new_rentcast_calls': 0, 'new_source_network_requests': 0, 'cache_saved': False,
               'cached_facts': 0, 'cached_photos': 0,
@@ -346,7 +444,7 @@ def run(repo, mode, property_id, requested_url='', request_id='', reader=None):
         row = eligible(repo, property_id)
     except ValueError as error:
         report['status'] = str(error)
-        if mode == 'fetch':
+        if mode == 'fetch' and write_status:
             registry.atomic_json(repo / STATUS, report)
         return report
     path = repo / ROOT / (cache_key(property_id) + '.json')
@@ -369,6 +467,7 @@ def run(repo, mode, property_id, requested_url='', request_id='', reader=None):
         report['status'] = 'unsupported_source_url'
     else:
         reader = reader or PublicReader()
+        requests_before = reader.requests
         try:
             reader.initialize()
             url = source_url(requested_url) if requested_url else (old or {}).get('source_url') or KNOWN_URLS.get(registry.listing_id(row))
@@ -384,7 +483,7 @@ def run(repo, mode, property_id, requested_url='', request_id='', reader=None):
             # Keep successful facts and their true retrieval date on any failed
             # attempt. A per-source receipt records the block/cooldown separately.
             url = source_url(requested_url) or source_url((old or {}).get('source_url')) or KNOWN_URLS.get(registry.listing_id(row))
-            if url:
+            if url and status not in ('source_request_budget_exhausted', 'batch_time_limit'):
                 record = dict(old or {'schema': 1, 'provider': PROVIDER, 'property_id': property_id,
                     'identity': identity4(row), 'subject': registry.identity(row), 'listing_id': registry.listing_id(row),
                     'inventory_source_url': registry.safe_url(row.get('url')), 'source_url': url,
@@ -398,8 +497,9 @@ def run(repo, mode, property_id, requested_url='', request_id='', reader=None):
                     'checked_at': now.isoformat(), 'http_status': error.http_status,
                     'retry_after_at': cooldown_until(error.retry_after, now)})
             report['status'] = status
-        report['new_source_network_requests'] = reader.requests
-    registry.atomic_json(repo / STATUS, report)
+        report['new_source_network_requests'] = reader.requests - requests_before
+    if write_status:
+        registry.atomic_json(repo / STATUS, report)
     return report
 
 
