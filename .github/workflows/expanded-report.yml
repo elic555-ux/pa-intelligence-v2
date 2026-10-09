@@ -9,6 +9,14 @@ on:
         required: false
         default: ''
         type: string
+      operation:
+        description: 'check = read-only check; build_internal_store = import existing data and migrate quota'
+        required: true
+        default: check
+        type: choice
+        options:
+          - check
+          - build_internal_store
 
 permissions:
   contents: read
@@ -20,7 +28,7 @@ concurrency:
 
 jobs:
   installation-check:
-    if: ${{ !inputs.payload }}
+    if: ${{ !inputs.payload && inputs.operation != 'build_internal_store' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -36,6 +44,42 @@ jobs:
       - name: Check report installation without calling RentCast
         run: python expanded_report.py check
 
+  build-internal-store:
+    if: ${{ !inputs.payload && inputs.operation == 'build_internal_store' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      RENTCAST_REPORT_API_ENABLED: 'false'
+      FREE_COUNTY_LOOKUPS_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install existing dependency
+        run: python -m pip install requests
+      - name: Build internal index and preserve existing quota
+        run: python expanded_report.py maintain
+      - name: Save internal database and migrated quota
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add COMPS_REPORTS
+          if ! git diff --cached --quiet; then
+            git commit -m 'Build internal property database and preserve RentCast quota'
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              echo '::error::Internal data was not pushed. No RentCast calls were made.'
+              exit 1
+            fi
+            git push origin HEAD:main
+          fi
+
   report:
     if: ${{ inputs.payload != '' }}
     permissions:
@@ -46,6 +90,7 @@ jobs:
       RENTCAST_API_KEY: ${{ secrets.RENTCAST_API_KEY }}
       # Keep new calls disabled until the shared quota ledger is migrated.
       RENTCAST_REPORT_API_ENABLED: 'false'
+      FREE_COUNTY_LOOKUPS_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
