@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 import pytz
 from analyzer import calculate_metrics, calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties
 import requests
+from listing_source import enrich_rows as enrich_listing_source_rows
 
 EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
@@ -30,7 +31,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.6-documented-financials-20261007"
+ORCHESTRATOR_VERSION = "3.8.7-listing-source-facts-20261009"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס"}
@@ -2351,8 +2352,11 @@ def comparable_changed(old, new):
         "source_published_date", "sheriff_status", "repository_status",
         "property_record_url", "profile_enrichment_source", "profile_checked_at",
         "cross_source_enrichment",
+        "technical_facts", "source_listing_description", "listing_photos",
     ]
-    return any(old.get(field) != new.get(field) for field in tracked_fields)
+    detail_fields = {"technical_facts", "source_listing_description", "listing_photos"}
+    return any(old.get(field) != new.get(field) for field in tracked_fields
+               if field not in detail_fields or new.get(field) not in (None, "", {}))
 
 
 def required_property_data_failures(prop):
@@ -2493,6 +2497,16 @@ def merge_property(existing, incoming, scan_id):
 
     merged = deepcopy(existing)
     merged.update(incoming)
+    if existing.get("listing_source_details") and existing.get("url") == incoming.get("url") and existing.get("docket_id") == incoming.get("docket_id"):
+        for field in ("source_listing_description", "listing_photos", "listing_source_details"):
+            if incoming.get(field) in (None, "", {}):
+                merged[field] = deepcopy(existing.get(field))
+    # A CSV refresh cannot erase the older dated source facts or inspection facts.
+    if isinstance(existing.get("technical_facts"), dict) and isinstance(incoming.get("technical_facts"), dict):
+        merged["technical_facts"] = {**deepcopy(existing["technical_facts"]), **deepcopy(incoming["technical_facts"])}
+        for field, previous in existing["technical_facts"].items():
+            if isinstance(previous, dict) and previous.get("source") and previous.get("method") not in {"listing_label", "listing_description_claim", "source_page_review"} and not str(previous["source"]).startswith("Redfin"):
+                merged["technical_facts"][field] = deepcopy(previous)
 
     merged["first_seen"] = existing.get("first_seen") or timestamp
     merged["last_seen"] = timestamp
@@ -3331,6 +3345,19 @@ def run_orchestrator():
     print(f"🧪 MLS QA — דחיות לפי מסנן: {filter_rejections}")
     print(f"🏷️️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
+
+    # Read the subject's source page only after the existing scan filters.
+    # Scheduled scans reuse snapshots; a manually started scan reads up to 20 pages.
+    # Source blocks are separate from the search CSV coverage, with no paid fallback.
+    try:
+        detail_audit = enrich_listing_source_rows(
+            final_filtered, limit=20,
+            allow_network=os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch")
+        log_entry["listing_source_details"] = detail_audit
+        print("📄 פרטי מודעות מהמקור: " + json.dumps(detail_audit, ensure_ascii=False))
+    except (OSError, ValueError) as exc:
+        log_entry["listing_source_details"] = {"status": "failed", "error": str(exc), "new_rentcast_calls": 0}
+        log_entry["errors"].append("Listing source details unavailable: " + str(exc))
 
     seen_keys = set()
     for deal in final_filtered:
