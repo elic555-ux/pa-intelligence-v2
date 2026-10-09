@@ -18,7 +18,7 @@ from pathlib import Path
 import re
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "property-sources-1.1.0-20261009"
+VERSION = "property-sources-1.2.0-20261009"
 ROOT = Path("COMPS_REPORTS/property_sources")
 SUFFIXES = {"street": "st", "avenue": "ave", "road": "rd", "drive": "dr",
             "place": "pl", "boulevard": "blvd", "lane": "ln", "court": "ct",
@@ -206,23 +206,31 @@ def read_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def secondary_source_url(value):
+SECONDARY_PROVIDERS = {
+    "clearchoice": ("www.clearchoiceenterprises.com", "Clear Choice / MLS", r"/idx/[a-z0-9-]+/\d+_spid/"),
+    "tarasa": ("www.tarasa.com", "Tarasa / River Point Realty / MLS", r"/property-search/detail/56/\d+/[a-z0-9-]+/"),
+}
+
+
+def secondary_source_url(value, provider=None):
     url = safe_url(value)
     if not url:
         return None
     p = urlparse(url)
-    if (p.hostname == "www.clearchoiceenterprises.com" and not p.query
-            and re.fullmatch(r"/idx/[a-z0-9-]+/\d+_spid/", p.path)):
-        return url
+    for name, (host, _, pattern) in SECONDARY_PROVIDERS.items():
+        if (provider in (None, name) and p.hostname == host and not p.query
+                and not urlparse(str(value)).fragment and re.fullmatch(pattern, p.path)):
+            return url
     return None
 
 
 def secondary_record_matches(row, record):
-    return bool(isinstance(record, dict) and record.get("provider") == "clearchoice"
+    return bool(isinstance(record, dict) and record.get("provider") in SECONDARY_PROVIDERS
         and record.get("status") == "published" and record.get("property_id") == str(row.get("id"))
         and record.get("listing_id") == listing_id(row)
         and safe_url(row.get("url")) and safe_url(row.get("url")) == safe_url(record.get("inventory_source_url"))
-        and secondary_source_url(record.get("source_url"))
+        and secondary_source_url(record.get("source_url"), record["provider"])
+        and (record["provider"] != "tarasa" or urlparse(record["source_url"]).path.split('/')[4] == listing_id(row))
         and identity(row)["complete"] and (record.get("subject") or {}).get("complete")
         and address_key(identity(row)) == address_key(record["subject"]))
 
@@ -323,7 +331,9 @@ def collect(repo):
             "county_record", record.get("fields") or {}, record.get("retrieved_at"),
             record.get("source_as_of"), record.get("parcel_id"), record.get("basis"), record.get("photos")))
     secondary_bound, secondary_rejected = 0, 0
-    for path in sorted((repo / "COMPS_REPORTS/additional_sources/clearchoice").glob("*.json")):
+    secondary_paths = [path for provider in SECONDARY_PROVIDERS
+        for path in (repo / "COMPS_REPORTS/additional_sources" / provider).glob("*.json")]
+    for path in sorted(secondary_paths):
         record = read_json(path)
         candidates = by_id.get(str(record.get("property_id") or ""), []) if isinstance(record, dict) else []
         if len(candidates) != 1 or not secondary_record_matches(candidates[0], record):
@@ -333,10 +343,13 @@ def collect(repo):
         for field, entry in (record.get("facts") or {}).items():
             if (isinstance(entry, dict) and entry.get("listing_id") == listing_id(row)
                     and entry.get("property_id") == str(row["id"])
+                    and entry.get("source") == SECONDARY_PROVIDERS[record["provider"]][1]
+                    and entry.get("status") == "reported_by_source"
                     and safe_url(entry.get("source_url")) == safe_url(record["source_url"])):
                 facts[field] = entry
         for photo in record.get("photos") or []:
-            if not isinstance(photo, dict) or photo.get("listing_id") != listing_id(row):
+            if (not isinstance(photo, dict) or photo.get("listing_id") != listing_id(row)
+                    or photo.get("source") != SECONDARY_PROVIDERS[record["provider"]][1]):
                 continue
             url = safe_url(photo.get("url"))
             p = urlparse(url or "")

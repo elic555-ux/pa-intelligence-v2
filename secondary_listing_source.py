@@ -22,7 +22,7 @@ from urllib.robotparser import RobotFileParser
 from bs4 import BeautifulSoup
 import property_sources as registry
 
-VERSION = 'additional-source-1.1.0-20261009'
+VERSION = 'additional-source-1.2.0-20261009'
 ORIGIN = 'https://www.clearchoiceenterprises.com'
 PROVIDER = 'clearchoice'
 SOURCE = 'Clear Choice / MLS'
@@ -31,6 +31,10 @@ ROOT = Path('COMPS_REPORTS/additional_sources/clearchoice')
 STATUS = Path('COMPS_REPORTS/additional_source_status.json')
 SOURCE_STATE = Path('COMPS_REPORTS/additional_sources/clearchoice_state.json')
 CACHE_DAYS = 7
+PROVIDERS = {
+    'clearchoice': ('https://www.clearchoiceenterprises.com', 'Clear Choice / MLS', r'/idx/[a-z0-9-]+/\d+_spid/'),
+    'tarasa': ('https://www.tarasa.com', 'Tarasa / River Point Realty / MLS', r'/property-search/detail/56/\d+/[a-z0-9-]+/'),
+}
 KNOWN_URLS = {'1778408': ORIGIN + '/idx/2346-fremont-pl-pittsburgh-pa-15216/1810062759_spid/'}
 LABELS = {'Roof': 'roof_type', 'Heating': 'heating', 'Cooling': 'cooling',
           'Parking Features': 'parking', 'Parking Total': 'parking_spaces',
@@ -56,15 +60,16 @@ def identity4(row):
     return [street.upper(), subject['city'].upper(), subject['state'], subject['zip']]
 
 
-def source_url(value):
+def source_url(value, provider=PROVIDER):
     try:
         u = urlparse(str(value or ''))
-        if (u.scheme == 'https' and u.hostname == 'www.clearchoiceenterprises.com'
+        origin, _, pattern = PROVIDERS[provider]
+        if (u.scheme == 'https' and u.hostname == urlparse(origin).hostname
                 and not u.username and not u.password and u.port in (None, 443)
                 and not u.query and not u.fragment
-                and re.fullmatch(r'/idx/[a-z0-9-]+/\d+_spid/', u.path)):
+                and re.fullmatch(pattern, u.path)):
             return u.geturl()
-    except ValueError:
+    except (ValueError, KeyError):
         pass
     return None
 
@@ -80,14 +85,15 @@ def photo_url(value, mls):
         return False
 
 
-def bound(row, record):
-    return bool(isinstance(record, dict) and record.get('provider') == PROVIDER
+def bound(row, record, provider=PROVIDER):
+    return bool(isinstance(record, dict) and record.get('provider') == provider
         and record.get('property_id') == str(row.get('id'))
         and record.get('identity') == identity4(row)
         and record.get('listing_id') == registry.listing_id(row)
         and registry.safe_url(row.get('url'))
         and registry.safe_url(record.get('inventory_source_url')) == registry.safe_url(row.get('url'))
-        and source_url(record.get('source_url'))
+        and source_url(record.get('source_url'), provider)
+        and (provider != 'tarasa' or urlparse(record['source_url']).path.split('/')[4] == registry.listing_id(row))
         and registry.address_key(record.get('subject') or {}) == registry.address_key(registry.identity(row)))
 
 
@@ -115,14 +121,17 @@ def numeric(text):
     return int(value) if value.is_integer() else value
 
 
-def parse_detail(html, row, url, checked_at=None):
+def parse_detail(html, row, url, checked_at=None, provider=PROVIDER):
     """Extract only the subject's labeled fields, never nearby cards/agent data."""
-    url = source_url(url)
+    url = source_url(url, provider)
     if not url:
         raise ValueError('unsupported_source_url')
+    source_name = PROVIDERS[provider][1]
+    if provider == 'tarasa' and urlparse(url).path.split('/')[4] != registry.listing_id(row):
+        raise ValueError('source_identity_mismatch: URL MLS')
     soup = BeautifulSoup(html, 'html.parser')
     canonical = soup.find('link', rel='canonical')
-    if not canonical or source_url(canonical.get('href')) != url:
+    if not canonical or source_url(canonical.get('href'), provider) != url:
         raise ValueError('source_identity_mismatch: canonical')
     details, h1 = soup.find(id='propertyDetails'), soup.find('h1')
     if details is None or h1 is None:
@@ -194,7 +203,7 @@ def parse_detail(html, row, url, checked_at=None):
         if registry.clean_value(value) is None:
             return
         facts[field] = {'value': value, 'unit': unit or FIELD_UNITS.get(field),
-            'source': SOURCE, 'source_url': url, 'listing_id': mls, 'property_id': str(row['id']),
+            'source': source_name, 'source_url': url, 'listing_id': mls, 'property_id': str(row['id']),
             'checked_at': checked_at, 'source_as_of': updated, 'method': 'public_listing_label',
             'status': 'reported_by_source', 'label': label}
     for label, field in LABELS.items():
@@ -215,14 +224,14 @@ def parse_detail(html, row, url, checked_at=None):
         if seq in seen:
             continue
         seen.add(seq)
-        photos.append({'url': photo, 'source': SOURCE, 'source_url': url, 'listing_id': mls,
+        photos.append({'url': photo, 'source': source_name, 'source_url': url, 'listing_id': mls,
                        'retrieved_at': checked_at, 'capture_date': None})
         if len(photos) == 3:
             break
-    return {'schema': 1, 'version': VERSION, 'provider': PROVIDER, 'property_id': str(row['id']),
+    return {'schema': 1, 'version': VERSION, 'provider': provider, 'property_id': str(row['id']),
         'listing_id': mls, 'identity': identity4(row), 'subject': expected,
         'inventory_source_url': registry.safe_url(row.get('url')), 'source_url': url,
-        'source_name': SOURCE, 'status': 'published', 'method': 'public_listing_labels_and_jsonld_identity',
+        'source_name': source_name, 'status': 'published', 'method': 'public_listing_labels_and_jsonld_identity',
         'retrieved_at': checked_at, 'source_updated_at': updated, 'facts': facts, 'photos': photos,
         'missing_fields': [k for k in ('occupancy', 'roof_condition') if k not in facts],
         'html_sha256': hashlib.sha256(html.encode()).hexdigest()}
@@ -242,7 +251,10 @@ class SameOriginRedirect(HTTPRedirectHandler):
 
 
 class PublicReader:
-    def __init__(self, interval=10, clock=time.monotonic, sleep=time.sleep, opener=None, max_requests=None, deadline=None):
+    def __init__(self, interval=10, clock=time.monotonic, sleep=time.sleep, opener=None, max_requests=None, deadline=None, origin=ORIGIN):
+        if origin not in {v[0] for v in PROVIDERS.values()}:
+            raise ValueError('Unsupported public source origin')
+        self.origin = origin
         self.interval, self.clock, self.sleep = max(10, interval), clock, sleep
         self.opener = opener or build_opener(SameOriginRedirect())
         self.last_request, self.requests, self.robots = None, 0, None
@@ -251,7 +263,7 @@ class PublicReader:
 
     def _get(self, url, robots=False):
         parsed = urlparse(url)
-        if parsed.scheme != 'https' or parsed.netloc != 'www.clearchoiceenterprises.com':
+        if parsed.scheme != 'https' or parsed.netloc != urlparse(self.origin).netloc:
             raise StopSource('unsupported_source_url')
         if not robots and (not self.robots or not self.robots.can_fetch(AGENT, url)):
             raise StopSource('robots_disallowed')
@@ -267,6 +279,8 @@ class PublicReader:
         req = Request(url, headers={'User-Agent': AGENT, 'Accept': 'text/html,text/plain;q=0.9'})
         try:
             with self.opener.open(req, timeout=25) as response:
+                if getattr(response, 'status', 200) != 200:
+                    raise StopSource('source_unavailable', response.status)
                 body = response.read(2_000_001)
                 if len(body) > 2_000_000:
                     raise StopSource('source_response_too_large')
@@ -280,7 +294,9 @@ class PublicReader:
     def initialize(self):
         if self.robots is not None:
             return
-        body = self._get(ORIGIN + '/robots.txt', robots=True)
+        body = self._get(self.origin + '/robots.txt', robots=True)
+        if re.search(r'<(?:!doctype|html|script|body)\b', body, re.I) or not re.search(r'^\s*user-agent\s*:', body, re.I | re.M):
+            raise StopSource('source_unavailable')
         rp = RobotFileParser()
         rp.parse(body.splitlines())
         delay = rp.crawl_delay(AGENT) or rp.crawl_delay('*') or 0
