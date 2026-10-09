@@ -1,4 +1,4 @@
-name: "Additional Property Source — Clear Choice Pilot"
+name: "Additional Property Source — Tarasa"
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ on:
         default: "PA-MLS-1778408"
         type: string
       source_url:
-        description: "Optional public Clear Choice /idx/.../..._spid/ URL. Leave empty for bounded discovery."
+        description: "Optional Tarasa /property-search/detail/56/MLS/.../ URL. Leave empty for the direct MLS route."
         required: false
         default: ""
         type: string
@@ -29,16 +29,18 @@ permissions:
   contents: write
 
 concurrency:
-  group: pa-property-sources-pilot
+  group: pa-repo-write-queue
   cancel-in-progress: false
 
 jobs:
   additional-source:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: main
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
@@ -46,7 +48,9 @@ jobs:
       - name: Install public HTML parser
         run: python -m pip install 'beautifulsoup4==4.15.0'
       - name: Verify identities, cache, blocks and source evidence
-        run: python -m unittest -v test_property_sources.py test_secondary_listing_source.py
+        run: |
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source
+          node test_secondary_sources.cjs
       - name: Inspect or enrich one requested property
         env:
           SOURCE_MODE: ${{ inputs.mode }}
@@ -59,7 +63,7 @@ jobs:
           mode = os.environ.get('SOURCE_MODE', 'check')
           if mode not in {'check', 'fetch'}:
               raise SystemExit('Invalid source mode')
-          subprocess.run([sys.executable, 'secondary_listing_source.py', mode,
+          subprocess.run([sys.executable, 'tarasa_listing_source.py', mode,
               '--property-id', os.environ.get('PROPERTY_ID', '').strip(),
               '--source-url', os.environ.get('SOURCE_URL', '').strip(),
               '--request-id', os.environ.get('REQUEST_ID', '')], check=True)
@@ -77,10 +81,9 @@ jobs:
             echo "Source cache is already current."
             exit 0
           fi
-          git commit -m "Save requested additional listing source and provenance"
-          if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
-            git rebase --abort || true
-            echo "::error::The branch changed incompatibly. No source result was pushed."
+          git fetch origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo "::error::Repository changed during enrichment. Nothing pushed; run again."
             exit 1
           fi
           python - <<'PY'
@@ -94,4 +97,5 @@ jobs:
           if inventory_sha != receipt['properties_sha256'] or any(current[k] != manifest[k] for k in ('properties_sha256', 'input_fingerprint')):
               raise SystemExit('Inventory or source inputs changed during the pilot. Nothing was pushed; run again.')
           PY
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git commit -m "Save requested Tarasa listing source and provenance"
+          git push origin HEAD:main

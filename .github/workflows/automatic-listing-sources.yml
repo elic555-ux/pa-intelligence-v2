@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check = no source requests; pilot = up to 3 properties; enable/disable = automatic completion after MLS scans'
+        description: 'check = no source requests; pilot = 3; batch = 100; enable/disable = 25 after actual MLS scans. Source: Tarasa.'
         type: choice
-        options: [check, pilot, enable, disable]
+        options: [check, pilot, batch, enable, disable]
         required: true
         default: check
   workflow_run:
@@ -30,7 +30,7 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
         with:
@@ -42,7 +42,9 @@ jobs:
       - name: Install public HTML parser
         run: python -m pip install 'beautifulsoup4==4.15.0'
       - name: Verify cache, identities, queue and request limits
-        run: python -m unittest -v test_property_sources test_secondary_listing_source test_automatic_listing_sources
+        run: |
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources
+          node test_secondary_sources.cjs
       - name: Complete a bounded group or change activation
         id: worker
         env:
@@ -53,7 +55,7 @@ jobs:
           python - <<'PY'
           import os, subprocess, sys
           mode = os.environ.get('AUTO_MODE', 'check') if os.environ['AUTO_EVENT'] == 'workflow_dispatch' else 'automatic'
-          if mode not in {'check', 'pilot', 'enable', 'disable', 'automatic'}:
+          if mode not in {'check', 'pilot', 'batch', 'enable', 'disable', 'automatic'}:
               raise SystemExit('Unsupported mode')
           subprocess.run([sys.executable, 'automatic_listing_sources.py', mode,
               '--upstream-sha', os.environ.get('UPSTREAM_SHA', '')], check=True)
