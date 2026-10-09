@@ -18,7 +18,7 @@ from pathlib import Path
 import re
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "property-sources-1.0.0-20261009"
+VERSION = "property-sources-1.1.0-20261009"
 ROOT = Path("COMPS_REPORTS/property_sources")
 SUFFIXES = {"street": "st", "avenue": "ave", "road": "rd", "drive": "dr",
             "place": "pl", "boulevard": "blvd", "lane": "ln", "court": "ct",
@@ -26,10 +26,10 @@ SUFFIXES = {"street": "st", "avenue": "ave", "road": "rd", "drive": "dr",
 STRUCTURE = ("beds", "baths", "sqft", "year_built", "lot_size", "property_type")
 TECHNICAL = ("occupancy", "roof_type", "roof_condition", "heating", "cooling",
              "hvac_type", "parking", "construction", "basement", "stories", "water", "sewer")
-FIELDS = STRUCTURE + TECHNICAL + ("price", "market_status")
-NUMERIC = {"beds", "baths", "sqft", "year_built", "lot_size", "price", "stories"}
+FIELDS = STRUCTURE + TECHNICAL + ("price", "market_status", "lot_area_acres", "parking_spaces", "total_rooms", "style")
+NUMERIC = {"beds", "baths", "sqft", "year_built", "lot_size", "price", "stories", "lot_area_acres", "parking_spaces", "total_rooms"}
 COUNTIES = {"allegheny": "Allegheny", "erie": "Erie"}
-UNITS = {"sqft": "sqft", "lot_size": "sqft", "price": "USD"}
+UNITS = {"sqft": "sqft", "lot_size": "sqft", "price": "USD", "lot_area_acres": "acre"}
 BAD_STATUS = re.compile(r"estimated|simulated|placeholder|unverified|default", re.I)
 
 
@@ -206,6 +206,27 @@ def read_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def secondary_source_url(value):
+    url = safe_url(value)
+    if not url:
+        return None
+    p = urlparse(url)
+    if (p.hostname == "www.clearchoiceenterprises.com" and not p.query
+            and re.fullmatch(r"/idx/[a-z0-9-]+/\d+_spid/", p.path)):
+        return url
+    return None
+
+
+def secondary_record_matches(row, record):
+    return bool(isinstance(record, dict) and record.get("provider") == "clearchoice"
+        and record.get("status") == "published" and record.get("property_id") == str(row.get("id"))
+        and record.get("listing_id") == listing_id(row)
+        and safe_url(row.get("url")) and safe_url(row.get("url")) == safe_url(record.get("inventory_source_url"))
+        and secondary_source_url(record.get("source_url"))
+        and identity(row)["complete"] and (record.get("subject") or {}).get("complete")
+        and address_key(identity(row)) == address_key(record["subject"]))
+
+
 def collect(repo):
     rows = read_json(repo / "properties.json")
     if not isinstance(rows, list):
@@ -301,9 +322,37 @@ def collect(repo):
         observations.append(make_observation(row, record.get("source_name"), record.get("source_url"),
             "county_record", record.get("fields") or {}, record.get("retrieved_at"),
             record.get("source_as_of"), record.get("parcel_id"), record.get("basis"), record.get("photos")))
+    secondary_bound, secondary_rejected = 0, 0
+    for path in sorted((repo / "COMPS_REPORTS/additional_sources/clearchoice").glob("*.json")):
+        record = read_json(path)
+        candidates = by_id.get(str(record.get("property_id") or ""), []) if isinstance(record, dict) else []
+        if len(candidates) != 1 or not secondary_record_matches(candidates[0], record):
+            secondary_rejected += 1
+            continue
+        row, facts, photos = candidates[0], {}, []
+        for field, entry in (record.get("facts") or {}).items():
+            if (isinstance(entry, dict) and entry.get("listing_id") == listing_id(row)
+                    and entry.get("property_id") == str(row["id"])
+                    and safe_url(entry.get("source_url")) == safe_url(record["source_url"])):
+                facts[field] = entry
+        for photo in record.get("photos") or []:
+            if not isinstance(photo, dict) or photo.get("listing_id") != listing_id(row):
+                continue
+            url = safe_url(photo.get("url"))
+            p = urlparse(url or "")
+            match = re.fullmatch(r"/(?:pics[123]x|large)/v\d+/\d+/\d+_(\d+)_(\d{2,3})\.jpg", p.path)
+            if (url and p.hostname == "cdn.listingphotos.sierrastatic.com" and not p.query
+                    and match and match[1] == listing_id(row)
+                    and safe_url(photo.get("source_url")) == safe_url(record["source_url"])):
+                photos.append(photo)
+        secondary_bound += 1
+        observations.append(make_observation(row, record.get("source_name"), record["source_url"],
+            "additional_listing_details", facts, record.get("retrieved_at"), record.get("source_updated_at"),
+            record["listing_id"], record.get("method"), photos[:3]))
     return observations, {"inventory_rows": len(rows), "out_of_scope_or_invalid_rows": skipped,
                            "bound_listing_snapshots": details_bound, "excluded_listing_snapshots": details_rejected,
-                           "excluded_county_snapshots": county_rejected}
+                           "excluded_county_snapshots": county_rejected,
+                           "bound_additional_snapshots": secondary_bound, "excluded_additional_snapshots": secondary_rejected}
 
 
 def fact_key(field, entry):
@@ -508,7 +557,7 @@ def summary_text(manifest, registry):
         f"- נכסים עם יותר מקישור מקור אחד: {manifest['multi_source_entities']}",
         f"- מזהים עמומים שהופרדו לבדיקה: {manifest['ambiguous_aliases']}",
         f"- שדות עם ערכים סותרים: {manifest['field_conflicts']}", "",
-        "המספרים מתייחסים למקורות שכבר שמורים בקבצים. אין כאן אתר חדש שחובר לסריקה.",
+        f"מקורות נוספים שהוזנו מקבצים שמורים: {manifest.get('bound_additional_snapshots', 0)}. ריצה זו אינה פונה לאתרי המקור.",
         "properties.json, חדר העסקאות, תקציב RentCast והדוחות הקיימים נשארים ללא כתיבה.", ""]
     examples = sorted((e for e in registry["entities"].values() if len(e["sources"]) > 1),
         key=lambda e: (not any(f["status"] == "conflicting_source_values" for f in e["fields"].values()),
