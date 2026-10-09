@@ -1,7 +1,10 @@
-/* Additional listing source pilot. Reads separate snapshots; no deal/cloud writes. */
+/* Tarasa and retained Clear Choice evidence. Reads separate snapshots; no deal/cloud writes. */
 (function (root) {
     'use strict';
-    const SOURCE = 'Clear Choice / MLS';
+    const PROVIDERS = {
+        tarasa:{name:'Tarasa / River Point Realty / MLS',host:'www.tarasa.com',pattern:/^\/property-search\/detail\/56\/\d+\/[a-z0-9-]+\/$/},
+        clearchoice:{name:'Clear Choice / MLS',host:'www.clearchoiceenterprises.com',pattern:/^\/idx\/[a-z0-9-]+\/\d+_spid\/$/}
+    };
     const ALLOWED = new Set(['roof_type','heating','cooling','parking','parking_spaces','construction','basement',
         'stories','water','sewer','beds','baths','sqft','year_built','total_rooms','style','lot_area_acres']);
     const ALIASES = {STREET:'ST',AVENUE:'AVE',ROAD:'RD',DRIVE:'DR',PLACE:'PL',BOULEVARD:'BLVD',LANE:'LN',COURT:'CT',TERRACE:'TER',
@@ -12,18 +15,19 @@
     }
     function identity(p) { return [norm(p.address),norm(p.city),String(p.state || p.source_state || 'PA').toUpperCase(),String(p.zip || '').trim().slice(0,5)]; }
     function listing(p) { return String(p.listing_id || p.docket_id || p.id || '').match(/^(?:(?:PA-)?MLS-)?(\d+)$/)?.[1] || null; }
-    function sourceUrl(value) {
-        try { const u = new URL(value); return u.protocol === 'https:' && u.hostname === 'www.clearchoiceenterprises.com' &&
-            !u.username && !u.password && (!u.port || u.port === '443') && !u.search && !u.hash &&
-            /^\/idx\/[a-z0-9-]+\/\d+_spid\/$/.test(u.pathname) ? u.href : null; } catch (_) { return null; }
+    function sourceUrl(value,provider) {
+        try { const u = new URL(value); return u.protocol === 'https:' &&
+            Object.entries(PROVIDERS).some(([name,s])=>(!provider || provider===name) && u.hostname===s.host && s.pattern.test(u.pathname)) &&
+            !u.username && !u.password && (!u.port || u.port === '443') && !u.search && !u.hash ? u.href : null; } catch (_) { return null; }
     }
     function inventoryUrl(value) {
         try { const u = new URL(value); return u.protocol === 'https:' && !u.username && !u.password && (!u.port || u.port === '443') ? u.href.replace(/#.*$/,'') : null; } catch (_) { return null; }
     }
     function matches(p, r) {
         const id = identity(p), county = String(p.county || '').toLowerCase().replace(/ county$/,'');
-        return Boolean(!p._idAmbiguous && p.source_type === 'mls' && r?.provider === 'clearchoice' && r.status === 'published' &&
-            r.property_id === String(p.id) && r.listing_id === listing(p) && sourceUrl(r.source_url) &&
+        return Boolean(!p._idAmbiguous && p.source_type === 'mls' && Object.hasOwn(PROVIDERS,r?.provider) && r.status === 'published' &&
+            r.property_id === String(p.id) && r.listing_id === listing(p) && sourceUrl(r.source_url,r.provider) &&
+            (r.provider!=='tarasa' || new URL(r.source_url).pathname.split('/')[4]===listing(p)) &&
             inventoryUrl(p.url) && r.inventory_source_url === inventoryUrl(p.url) &&
             JSON.stringify(r.identity) === JSON.stringify(id) && id[2] === 'PA' && /^\d{5}$/.test(id[3]) &&
             r.subject?.complete && ['allegheny','erie'].includes(county) && String(r.subject.county).toLowerCase() === county &&
@@ -38,9 +42,9 @@
     function fact(p, r, field) {
         if (!matches(p,r) || !ALLOWED.has(field)) return null;
         const e = r.facts?.[field];
-        return e && value(e.value) !== null && e.source === SOURCE && e.source_url === r.source_url &&
+        return e && value(e.value) !== null && e.source === PROVIDERS[r.provider].name && e.source_url === r.source_url &&
             e.property_id === String(p.id) && e.listing_id === listing(p) && e.status === 'reported_by_source'
-            ? {value:value(e.value),source:SOURCE,url:r.source_url,date:e.checked_at || r.retrieved_at,unit:e.unit || null} : null;
+            ? {value:value(e.value),source:PROVIDERS[r.provider].name,url:r.source_url,date:e.checked_at || r.retrieved_at,unit:e.unit || null} : null;
     }
     function photoUrl(url, mls) {
         try { const u = new URL(url), m = u.pathname.match(/^\/(?:pics[123]x|large)\/v\d+\/\d+\/\d+_(\d+)_(\d{2,3})\.jpg$/);
@@ -51,7 +55,7 @@
         if (!matches(p,r)) return [];
         const seen = new Set();
         return (Array.isArray(r.photos) ? r.photos : []).filter(e=>{
-            if (e?.source_url !== r.source_url || e.listing_id !== listing(p) || !photoUrl(e.url,listing(p))) return false;
+            if (e?.source !== PROVIDERS[r.provider].name || e.source_url !== r.source_url || e.listing_id !== listing(p) || !photoUrl(e.url,listing(p))) return false;
             const seq=e.url.match(/_(\d{2,3})\.jpg$/)[1]; if(seen.has(seq)) return false; seen.add(seq); return true;
         }).slice(0,3);
     }
@@ -63,7 +67,15 @@
         const t=String(v).trim(), n=Number(t.replace(/,/g,''));
         return t && Number.isFinite(n) ? String(n) : t.toLowerCase().replace(/\s+/g,' ');
     }
-    const api={identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable};
+    function ordered(p,items) {
+        return (Array.isArray(items)?items:[]).filter(r=>matches(p,r)).sort((a,b)=>
+            (Date.parse(b.retrieved_at)||0)-(Date.parse(a.retrieved_at)||0));
+    }
+    function bestFact(p,items,field) {
+        for(const r of ordered(p,items)) { const f=fact(p,r,field); if(f) return f; }
+        return null;
+    }
+    const api={identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact};
     if (typeof module !== 'undefined' && module.exports) { module.exports=api; return; }
     root.SecondarySourceEvidence=api;
     if (typeof document === 'undefined' || typeof openPropertyModal !== 'function') return;
@@ -76,7 +88,7 @@
     };
     propertyTechnicalFact=function(p,field) {
         const original=baseFact(p,field);
-        return original.source ? original : fact(p,records.get(p),field) || original;
+        return original.source ? original : bestFact(p,records.get(p),field) || original;
     };
     const labels={roof_type:'סוג הגג',heating:'חימום',cooling:'קירור',parking:'חניה',parking_spaces:'מספר חניות',construction:'חומרי בנייה',
         basement:'מרתף',stories:'קומות',water:'מים',sewer:'ביוב',beds:'חדרי שינה',baths:'חדרי רחצה',sqft:'שטח מגורים (SqFt)',
@@ -98,31 +110,37 @@
         const button=element('button','טען ממקור נוסף','bg-blue-900/80 border border-blue-400/40 rounded-lg p-2 text-sm font-bold');
         button.type='button'; button.id='modal-additional-source-request'; button.addEventListener('click',request); n.appendChild(button);
         const status=element('p','','text-xs text-gray-400 my-2'); status.id='modal-additional-source-notice'; n.appendChild(status);
-        const r=records.get(p);
-        if(!matches(p,r)) { status.textContent=message || 'אין פרטים שמורים ממקור נוסף לנכס זה. הניסוי מחפש במקור Clear Choice בלבד.'; return; }
+        const items=ordered(p,records.get(p)), r=items[0];
+        if(!r) { status.textContent=message || 'אין פרטים שמורים ממקור נוסף לנכס זה. ההשלמה בודקת את Tarasa לפי מספר MLS והכתובת.'; return; }
         const dated=parseDate(r.retrieved_at) ? displayDate(r.retrieved_at) : 'תאריך לא ידוע';
-        status.textContent=message || 'פרטים שמורים ממודעת Clear Choice · נאספו: '+dated+
+        status.textContent=message || 'פרטים שמורים ממודעת '+PROVIDERS[r.provider].name+' · נאספו: '+dated+
             (r.source_updated_at ? ' · עודכנו במקור: '+r.source_updated_at : '')+
             (parseDate(r.retrieved_at) && Date.now()-parseDate(r.retrieved_at)>7*86400000 ? ' · הנתונים בני יותר משבוע.' : '');
-        const link=element('a','פתח את המודעה ואת התיאור המלא במקור','text-blue-300 underline text-xs');
-        link.href=r.source_url; link.target='_blank'; link.rel='noopener noreferrer'; n.appendChild(link);
+        for(const item of items) {
+            const link=element('a','פתח את המודעה: '+PROVIDERS[item.provider].name,'block text-blue-300 underline text-xs');
+            link.href=item.source_url; link.target='_blank'; link.rel='noopener noreferrer'; n.appendChild(link);
+        }
         const table=document.createElement('table'); table.className='w-full mt-3 text-xs';
-        const head=document.createElement('tr'); ['נתון','במקור הקיים','Clear Choice'].forEach(t=>head.appendChild(element('th',t,'p-2 text-right text-gray-400'))); table.appendChild(head);
+        const head=document.createElement('tr'); ['נתון','במקור הקיים',...items.map(s=>PROVIDERS[s.provider].name)].forEach(t=>head.appendChild(element('th',t,'p-2 text-right text-gray-400'))); table.appendChild(head);
         for(const [field,label] of Object.entries(labels)) {
-            const f=fact(p,r,field); if(!f) continue;
+            const facts=items.map(s=>fact(p,s,field)); if(!facts.some(Boolean)) continue;
             const previous=baseFact(p,field), existing=previous.source ? previous.value : ['beds','baths','sqft','year_built','total_rooms'].includes(field) ? value(p[field]) : null;
-            const conflict=existing !== null && existing !== undefined && comparable(existing)!==comparable(f.value);
+            const compared=[existing,...facts.map(f=>f?.value)].filter(v=>v!==null && v!==undefined);
+            const conflict=new Set(compared.map(comparable)).size>1;
             const tr=document.createElement('tr'); tr.className='border-t border-gray-800'+(conflict?' text-amber-300':'');
-            tr.append(element('td',label,'p-2'),element('td',existing ? translateListingFact(existing) : 'לא פורסם','p-2'),
-                element('td',translateListingFact(f.value)+(conflict?' · הבדל לבדיקה':''),'p-2')); table.appendChild(tr);
+            tr.append(element('td',label,'p-2'),element('td',existing!==null && existing!==undefined ? translateListingFact(existing) : 'לא פורסם','p-2'));
+            facts.forEach(f=>tr.appendChild(element('td',f ? translateListingFact(f.value)+(conflict?' · הבדל לבדיקה':'') : 'לא פורסם','p-2')));
+            table.appendChild(tr);
         }
         const comparison=document.createElement('details');
         comparison.appendChild(element('summary','פרטים מלאים והשוואה למקור הקיים','cursor-pointer text-blue-200 mt-3 text-xs'));
         comparison.appendChild(table); n.appendChild(comparison);
-        n.appendChild(element('p','אכלוס ומצב הגג לא פורסמו במקור שנבדק. שטח מגרש ב־Acres נשמר ביחידה המקורית ללא המרה.','text-xs text-gray-400 mt-2'));
+        n.appendChild(element('p','סוג גג אינו בדיקה של מצב הגג; אין להסיק אכלוס מנתוני המפרט. שטח מגרש ב־Acres נשמר ביחידה המקורית ללא המרה.','text-xs text-gray-400 mt-2'));
         const gallery=element('div','','grid grid-cols-1 md:grid-cols-3 gap-2 mt-3'); gallery.id='modal-additional-source-photos';
-        for(const photo of photos(p,r)) {
-            const a=document.createElement('a'); a.href=r.source_url; a.target='_blank'; a.rel='noopener noreferrer';
+        const seen=new Set();
+        const images=items.flatMap(s=>photos(p,s)).filter(photo=>{const seq=photo.url.match(/_(\d{2,3})\.jpg$/)[1];if(seen.has(seq))return false;seen.add(seq);return true;}).slice(0,3);
+        for(const photo of images) {
+            const a=document.createElement('a'); a.href=photo.source_url; a.target='_blank'; a.rel='noopener noreferrer';
             const img=document.createElement('img'); img.src=photo.url; img.alt='תמונת המודעה של '+p.address;
             img.loading='lazy'; img.referrerPolicy='no-referrer'; img.className='w-full h-44 object-cover rounded-lg';
             img.addEventListener('error',()=>{img.hidden=true; a.appendChild(element('span','התמונה לא נטענה; פתח את המודעה במקור.','text-xs text-gray-400'));},{once:true});
@@ -133,9 +151,11 @@
     }
     async function load(p,generation) {
         try {
-            const r=await readBasicSourceJson('COMPS_REPORTS/additional_sources/clearchoice/'+await key(p.id)+'.json');
+            const cacheKey=await key(p.id);
+            const responses=await Promise.allSettled(Object.keys(PROVIDERS).map(provider=>
+                readBasicSourceJson('COMPS_REPORTS/additional_sources/'+provider+'/'+cacheKey+'.json')));
             if(generation!==basicSourceGeneration || currentSelectedProperty!==p) return;
-            if(matches(p,r)) records.set(p,r); else records.delete(p);
+            records.set(p,ordered(p,responses.filter(r=>r.status==='fulfilled').map(r=>r.value)));
             renderPropertyTechnicalFacts(p); render(p);
         } catch(_) { if(generation===basicSourceGeneration && currentSelectedProperty===p) render(p,'הפרטים השמורים מהמקור הנוסף לא נטענו.'); }
     }
@@ -166,7 +186,7 @@
                 const messages={cache_used:'נטענו פרטים שמורים. לא נעשתה פנייה נוספת למקור.',published:'נשמרו פרטים חדשים מהמקור הנוסף.',
                     source_blocked:'המקור חסם את הבקשה. נשמרה הפסקה של יום לפחות.',source_rate_limited:'המקור ביקש להמתין. המערכת עצרה.',
                     source_cooldown:'המקור נמצא בהמתנה אחרי בקשה קודמת. הפרטים השמורים נשארים זמינים.',robots_disallowed:'המקור אינו מתיר גישה אוטומטית לעמוד.',
-                    source_listing_not_found_in_pilot_pages:'הנכס לא נמצא בשלושת דפי הגילוי של הניסוי. אפשר להזין קישור Clear Choice ב־Actions.',
+                    listing_not_available:'המודעה לא זמינה ב־Tarasa. נכסים אחרים בתור נבדקים בנפרד.',
                     source_identity_mismatch:'המודעה הנוספת לא תאמה לזהות הנכס; הפרטים לא צורפו.',
                     ambiguous_property_identity:'זהות הנכס נמצאת בבדיקה; לא בוצעה פנייה למקור.',
                     ambiguous_or_missing_property_id:'מזהה הנכס חסר או שייך לכמה רשומות; לא בוצעה פנייה למקור.',
