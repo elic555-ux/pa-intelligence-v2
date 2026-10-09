@@ -1,0 +1,47 @@
+name: Alternative Property Source Access Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'probe = test three alternative sources; check = files only, no source requests'
+        type: choice
+        options: [probe, check]
+        required: true
+        default: probe
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pa-alternative-source-access-check
+  cancel-in-progress: false
+
+jobs:
+  check-access:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install existing public HTML parser
+        run: python -m pip install 'beautifulsoup4==4.15.0'
+      - name: Verify read-only checks and source identity guards
+        run: python -m unittest -v test_property_source_access_check
+      - name: Check alternative sources from GitHub Actions
+        env:
+          CHECK_MODE: ${{ inputs.mode }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          mode = os.environ.get('CHECK_MODE', 'check')
+          if mode not in {'check', 'probe'}:
+              raise SystemExit('Unsupported mode')
+          subprocess.run([sys.executable, 'property_source_access_check.py', mode], check=True)
+          PY
