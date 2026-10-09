@@ -14,8 +14,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+import rentcast_budget as budget
 
-VERSION = "2.8-documented-financials-20261007"
+VERSION = "2.9-shared-budget-cache-only-20261008"
 
 CKAN_SEARCH = "https://data.wprdc.org/api/3/action/datastore_search"
 ASSESSMENT_RESOURCE_ID = "65855e14-549e-4992-b5be-d629afc676fa"
@@ -1190,171 +1191,33 @@ def _rentcast_write_json(path, data):
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp.replace(path)
 
-def _rentcast_next_reset(now=None):
-    now = now or datetime.now(timezone.utc)
-    y, m = now.year, now.month
-    if now.day >= RENTCAST_BILLING_DAY:
-        if m == 12:
-            y, m = y + 1, 1
-        else:
-            m += 1
-    return date(y, m, RENTCAST_BILLING_DAY).isoformat()
-
-def _rentcast_cycle_start(now=None):
-    now = now or datetime.now(timezone.utc)
-    y, m = now.year, now.month
-    if now.day < RENTCAST_BILLING_DAY:
-        if m == 1:
-            y, m = y - 1, 12
-        else:
-            m -= 1
-    return date(y, m, RENTCAST_BILLING_DAY).isoformat()
-
-def _rentcast_infer_existing_calls():
-    if not RENTCAST_CACHE_DIR.exists():
-        return 0
-    calls = 0
-    for p in RENTCAST_CACHE_DIR.glob("*.json"):
-        data = _rentcast_read_json(p)
-        if data and data.get("response") is not None and data.get("endpoint"):
-            calls += 1
-    return calls
-
 def _rentcast_load_usage():
-    now = datetime.now(timezone.utc)
-    cycle_start = _rentcast_cycle_start(now)
-    next_reset = _rentcast_next_reset(now)
-    data = _rentcast_read_json(RENTCAST_USAGE_FILE) or {}
+    # Read the same ledger as expanded_report.py. Never reset from cache files.
+    try:
+        return budget.load(OUTPUT_DIR)
+    except ValueError as exc:
+        return {"budget_error": str(exc)}
 
-    if data.get("cycle_start") != cycle_start:
-        data = {
-            "provider": "RentCast",
-            "plan_limit": RENTCAST_MONTHLY_LIMIT,
-            "auto_stop_at": RENTCAST_AUTO_STOP_AT,
-            "warning_at": RENTCAST_WARNING_AT,
-            "billing_day": RENTCAST_BILLING_DAY,
-            "cycle_start": cycle_start,
-            "next_reset": next_reset,
-            "successful_api_calls": _rentcast_infer_existing_calls(),
-            "last_successful_call_at": None,
-            "updated_at": utc_now(),
-        }
-        _rentcast_write_json(RENTCAST_USAGE_FILE, data)
-    else:
-        data["next_reset"] = next_reset
-        data["plan_limit"] = RENTCAST_MONTHLY_LIMIT
-        data["auto_stop_at"] = RENTCAST_AUTO_STOP_AT
-        data["warning_at"] = RENTCAST_WARNING_AT
-    return data
 
 def _rentcast_usage_public(data):
-    used = int(data.get("successful_api_calls") or 0)
-    remaining = max(0, RENTCAST_MONTHLY_LIMIT - used)
-    if used >= RENTCAST_AUTO_STOP_AT:
-        level = "blocked"
-    elif used >= RENTCAST_WARNING_AT:
-        level = "warning"
-    else:
-        level = "ok"
-    return {
-        "used": used,
-        "limit": RENTCAST_MONTHLY_LIMIT,
-        "remaining": remaining,
-        "reserve": max(0, RENTCAST_MONTHLY_LIMIT - RENTCAST_AUTO_STOP_AT),
-        "warning_at": RENTCAST_WARNING_AT,
-        "auto_stop_at": RENTCAST_AUTO_STOP_AT,
-        "level": level,
-        "cycle_start": data.get("cycle_start"),
-        "next_reset": data.get("next_reset"),
-        "last_successful_call_at": data.get("last_successful_call_at"),
-    }
+    if data.get("budget_error"):
+        return {"used": None, "limit": 50, "auto_stop_at": 45,
+                "level": "blocked", "error": data["budget_error"]}
+    return budget.public(data)
+
 
 def _rentcast_can_call():
-    usage = _rentcast_load_usage()
-    used = int(usage.get("successful_api_calls") or 0)
-    return used < RENTCAST_AUTO_STOP_AT, usage
+    # Live requests now belong exclusively to the report workflow, where quota
+    # is committed before a request. This legacy diagnostic is cache-only.
+    return False, _rentcast_load_usage()
 
-def _rentcast_record_success(usage):
-    usage["successful_api_calls"] = int(usage.get("successful_api_calls") or 0) + 1
-    usage["last_successful_call_at"] = utc_now()
-    usage["updated_at"] = utc_now()
-    _rentcast_write_json(RENTCAST_USAGE_FILE, usage)
-    return usage
 
 def _rentcast_api_get(path, params, max_retries=3):
-    """
-    RentCast API query with Exponential Backoff retry to handle 429 Too Many Requests
-    and temporary connection issues without crashing.
-    """
-    allowed, usage = _rentcast_can_call()
-    if not allowed:
-        return None, {
-            "status": "usage_guard_blocked",
-            "http_status": None,
-            "message": f"Local safety guard blocked RentCast at {usage.get('successful_api_calls', 0)}/{RENTCAST_MONTHLY_LIMIT}.",
-            "counted_successful_call": False,
-            "usage": _rentcast_usage_public(usage),
-        }
+    usage = _rentcast_load_usage()
+    return None, {"status": "usage_guard_blocked", "http_status": None,
+        "message": "Legacy comps diagnostic uses saved RentCast data only. New requests use the expanded report workflow.",
+        "counted_successful_call": False, "usage": _rentcast_usage_public(usage)}
 
-    key = clean(os.getenv("RENTCAST_API_KEY"))
-    if not key:
-        return None, {
-            "status": "api_key_missing",
-            "http_status": None,
-            "message": "RENTCAST_API_KEY is not available.",
-            "counted_successful_call": False,
-            "usage": _rentcast_usage_public(usage),
-        }
-
-    for attempt in range(max_retries):
-        try:
-            r = requests.get(
-                RENTCAST_BASE + path,
-                params=params,
-                headers={
-                    "Accept": "application/json",
-                    "X-Api-Key": key,
-                    "User-Agent": HEADERS["User-Agent"],
-                },
-                timeout=TIMEOUT,
-            )
-            
-            if r.status_code == 429: 
-                if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt + 1)
-                    continue
-                    
-            if r.status_code >= 400:
-                return None, {
-                    "status": "authentication_failed" if r.status_code == 401 else "http_error",
-                    "http_status": r.status_code,
-                    "message": clean(r.text)[:500],
-                    "counted_successful_call": False,
-                    "usage": _rentcast_usage_public(usage),
-                }
-
-            payload = r.json()
-            if r.status_code == 200:
-                usage = _rentcast_record_success(usage)
-
-            return payload, {
-                "status": "success",
-                "http_status": r.status_code,
-                "message": None,
-                "counted_successful_call": r.status_code == 200,
-                "usage": _rentcast_usage_public(usage),
-            }
-        except Exception as exc:
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt + 1)
-                continue
-            return None, {
-                "status": "request_error",
-                "http_status": None,
-                "message": f"{type(exc).__name__}: {exc}",
-                "counted_successful_call": False,
-                "usage": _rentcast_usage_public(usage),
-            }
 
 def _rentcast_comp_address(c):
     if clean(c.get("formattedAddress")):
