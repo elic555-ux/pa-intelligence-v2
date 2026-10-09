@@ -1,0 +1,85 @@
+name: Automatic MLS Source Completion
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check = no source requests; pilot = up to 3 properties; enable/disable = automatic completion after MLS scans'
+        type: choice
+        options: [check, pilot, enable, disable]
+        required: true
+        default: check
+  workflow_run:
+    workflows: ['1. Central Scanner — V2.7']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  # Share the scanner's write queue; do not overlap its inventory commit.
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+
+jobs:
+  complete:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install public HTML parser
+        run: python -m pip install 'beautifulsoup4==4.15.0'
+      - name: Verify cache, identities, queue and request limits
+        run: python -m unittest -v test_property_sources test_secondary_listing_source test_automatic_listing_sources
+      - name: Complete a bounded group or change activation
+        id: worker
+        env:
+          AUTO_EVENT: ${{ github.event_name }}
+          AUTO_MODE: ${{ inputs.mode }}
+          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          mode = os.environ.get('AUTO_MODE', 'check') if os.environ['AUTO_EVENT'] == 'workflow_dispatch' else 'automatic'
+          if mode not in {'check', 'pilot', 'enable', 'disable', 'automatic'}:
+              raise SystemExit('Unsupported mode')
+          subprocess.run([sys.executable, 'automatic_listing_sources.py', mode,
+              '--upstream-sha', os.environ.get('UPSTREAM_SHA', '')], check=True)
+          PY
+      - name: Refresh registry from saved source evidence
+        if: steps.worker.outputs.save == 'true'
+        run: python property_sources.py build
+      - name: Save source snapshots and queue
+        if: steps.worker.outputs.save == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- COMPS_REPORTS/automatic_listing_sources COMPS_REPORTS/property_sources
+          if [ -d COMPS_REPORTS/additional_sources ]; then git add COMPS_REPORTS/additional_sources; fi
+          if git diff --cached --quiet; then exit 0; fi
+          git fetch origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo 'Repository changed during completion. Nothing pushed; queue can resume on the next run.'
+            exit 1
+          fi
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          receipt = json.loads(Path('COMPS_REPORTS/automatic_listing_sources/status.json').read_text())
+          if hashlib.sha256(Path('properties.json').read_bytes()).hexdigest() != receipt['properties_sha256']:
+              raise SystemExit('Inventory changed. Nothing pushed.')
+          PY
+          git commit -m 'Save bounded MLS source completion and resumable queue'
+          git push origin HEAD:main
