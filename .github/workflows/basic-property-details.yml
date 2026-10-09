@@ -1,0 +1,87 @@
+name: "Basic Property Source Details"
+run-name: "Source details ${{ inputs.property_id || 'Allegheny / Erie' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      property_id:
+        description: "Exact property ID, or leave empty for up to 20 saved MLS properties"
+        required: false
+        default: ""
+      refresh:
+        description: "Read source again even if a snapshot is fresh"
+        type: boolean
+        required: false
+        default: false
+      request_id:
+        description: "Optional request ID; the basic report fills this automatically"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+
+jobs:
+  source-details:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install public-page parser
+        run: python -m pip install beautifulsoup4
+      - name: Read saved facts then the exact source page
+        env:
+          PROPERTY_ID: ${{ inputs.property_id }}
+          REFRESH_SOURCE: ${{ inputs.refresh }}
+          SOURCE_REQUEST_ID: ${{ inputs.request_id }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          args = [sys.executable, 'listing_source.py', '--property-id', os.environ.get('PROPERTY_ID', ''), '--limit', '20']
+          if os.environ.get('REFRESH_SOURCE', '').lower() == 'true':
+              args.append('--refresh')
+          subprocess.run(args, check=True)
+          PY
+      - name: Save facts and dated source snapshots
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add properties.json COMPS_REPORTS/basic_source_status.json
+          if [ -d COMPS_REPORTS/listing_details ]; then git add COMPS_REPORTS/listing_details; fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Save basic property facts from listing sources"
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              echo '::error::Source facts could not be rebased safely; nothing was pushed.'
+              exit 1
+            fi
+            git push origin HEAD:main
+          fi
+      - name: Publish result
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path('COMPS_REPORTS/basic_source_status.json')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as out:
+              out.write('## Basic property source details\n\nNew RentCast calls: **0**\n\n')
+              if not p.exists():
+                  out.write('No result was created. Read the failed job step.\n')
+              else:
+                  result = json.loads(p.read_text(encoding='utf-8'))
+                  out.write(f"Version: {result.get('version')}\n\n")
+                  for status, count in result.get('statuses', {}).items():
+                      out.write(f'- {status}: {count}\n')
+                  out.write('\nA green job means the request was recorded. source_blocked means the website refused the automatic read; it does not mean all facts were found.\n')
+          PY

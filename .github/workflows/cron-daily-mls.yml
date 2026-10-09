@@ -55,6 +55,7 @@ jobs:
           for file in properties.json scan_log.json geo_catalog.json sheriff_listings.json scanner_status.json geocode_cache.json sheriff_property_cache.json; do
             if [ -f "$file" ]; then git add "$file"; fi
           done
+          if [ -d COMPS_REPORTS/listing_details ]; then git add COMPS_REPORTS/listing_details; fi
           if ! git diff --cached --quiet; then
             git commit -m "Update scanner data and source status"
             if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
