@@ -18,12 +18,14 @@ from pathlib import Path
 from typing import Any
 
 import requests
+import rentcast_budget as budget
+import internal_report_store as store
 
 ROOT = Path("COMPS_REPORTS")
 ENDPOINTS = {"value": "/avm/value", "rent": "/avm/rent/long-term"}
 DOCS = {"value": "https://developers.rentcast.io/reference/value-estimate",
         "rent": "https://developers.rentcast.io/reference/rent-estimate-long-term"}
-VERSION = "expanded-report-8.14.1-connection-20261008"
+VERSION = "expanded-report-8.15.0-internal-store-20261008"
 MULTI = {"Multi-Family", "Apartment"}
 
 
@@ -71,12 +73,7 @@ def text(value, limit=180):
 
 
 def norm(value):
-    # Preserve house fractions and unit separators; never merge two units.
-    s = re.sub(r"[^a-z0-9# /.-]", " ", str(value or "").lower())
-    aliases = {"street": "st", "avenue": "ave", "road": "rd", "drive": "dr", "place": "pl",
-               "boulevard": "blvd", "lane": "ln", "court": "ct", "north": "n", "south": "s",
-               "east": "e", "west": "w", "apartment": "unit", "apt": "unit", "suite": "unit"}
-    return " ".join(aliases.get(w, w) for w in s.replace("#", " unit ").split())
+    return store.norm(value)
 
 
 def type_name(value):
@@ -117,72 +114,38 @@ def validate_request(data):
         raise ValueError("A property ID and full street address are required")
     if p["state"] != "PA" or not re.fullmatch(r"\d{5}(?:-\d{4})?", p["zip"]):
         raise ValueError("A Pennsylvania address and ZIP code are required")
+    mode = data.get("mode")
+    if mode not in ("profile", "value", "rent", "both"):
+        raise ValueError("Invalid report mode")
+    p["county"] = text(raw.get("county", ""))
     p["property_type"] = type_name(raw.get("property_type"))
-    if p["property_type"] is None or p["property_type"] == "Land":
+    if mode != "profile" and (p["property_type"] is None or p["property_type"] == "Land"):
         raise ValueError("Residential property type is missing or unsupported")
     for key in ("beds", "baths", "sqft"):
         p[key] = number(raw.get(key))
+        if mode == "profile":
+            if p[key] is not None and ((key == "sqft" and not 100 <= p[key] <= 100000) or (key != "sqft" and p[key] > 100)):
+                p[key] = None
+            continue
         if raw.get(key) not in (None, "") and p[key] is None:
             raise ValueError("Invalid property attributes")
         if p[key] is not None and ((key == "sqft" and not 100 <= p[key] <= 100000) or (key != "sqft" and p[key] > 100)):
             raise ValueError("Invalid property attributes")
-    mode = data.get("mode")
-    if mode not in ("value", "rent", "both"):
-        raise ValueError("Invalid report mode")
-    if p["property_type"] in MULTI and mode != "value":
+    if p["property_type"] in MULTI and mode not in {"value", "profile"}:
         raise ValueError("Multi-family rent AVMs are per unit. Request a building value report; document building rent separately.")
     return {"request_id": request_id, "property": p, "mode": mode, "refresh": data.get("refresh") is True}
 
 
 def periods(day, current=None):
-    current = current or now()
-    year, month = current.year, current.month
-    if current.day < day:
-        month -= 1
-        if month == 0:
-            year, month = year - 1, 12
-    start = date(year, month, day)
-    next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
-    return start.isoformat(), date(next_year, next_month, day).isoformat()
+    return budget.period(day, current or now())
 
 
 def load_usage():
-    path = ROOT / "rentcast_usage.json"
-    ledger = read(path)
-    if not ledger:
-        raise ValueError("usage_ledger_missing")
-    day = ledger.get("billing_day")
-    if isinstance(day, bool) or not isinstance(day, int) or not 1 <= day <= 28:
-        raise ValueError("billing_cycle_not_configured")
-    start, reset = periods(day)
-    if ledger.get("cycle_start") != start:
-        # The shared counter needs a separate migration. Do not reset it here.
-        raise ValueError("usage_ledger_invalid_cycle")
-    used = number(ledger.get("successful_api_calls"))
-    if used is None or used != int(used):
-        raise ValueError("usage_ledger_invalid_count")
-    reserved = ledger.get("reserved_requests", {})
-    if not isinstance(reserved, dict):
-        raise ValueError("usage_ledger_invalid_count")
-    reserved_floor = 0
-    for reservation in reserved.values():
-        count = number(reservation.get("count")) if isinstance(reservation, dict) else None
-        if count is None or count != int(count):
-            raise ValueError("usage_ledger_invalid_count")
-        reserved_floor += int(count)
-    # Legacy successful_api_calls already includes reservations: do not add
-    # them twice, but reject an inconsistent counter instead of spending more.
-    if used < reserved_floor:
-        raise ValueError("usage_ledger_invalid_count")
-    ledger.update(plan_limit=50, auto_stop_at=45, warning_at=36, next_reset=reset)
-    return ledger
+    return budget.load(ROOT)
 
 
 def public_usage(ledger):
-    used = int(ledger["successful_api_calls"])
-    return {"used": used, "limit": 50, "auto_stop_at": 45, "remaining_safe": max(0, 45 - used),
-            "reserve": 5, "cycle_start": ledger["cycle_start"], "next_reset": ledger["next_reset"],
-            "count_basis": "legacy_calls_plus_conservative_reserved_requests"}
+    return budget.public(ledger)
 
 
 def parameters(p, kind):
@@ -225,7 +188,7 @@ def cached(p, kind):
         old_params = candidate.get("params") or {}
         if norm(candidate.get("address")) != norm(parameters(p, kind)["address"]):
             continue
-        if all(old_params.get(k) == v for k, v in parameters(p, kind).items() if k not in {"compCount", "maxRadius", "daysOld"}) and match_subject(p, candidate["response"].get("subjectProperty")):
+        if all(old_params.get(k) == v for k, v in parameters(p, kind).items() if k not in {"address", "compCount", "maxRadius", "daysOld"}) and match_subject(p, candidate["response"].get("subjectProperty")):
             matches.append((candidate, old))
     dated = [(candidate, old, age_days(candidate.get("cached_at"))) for candidate, old in matches]
     dated = [item for item in dated if item[2] is not None and item[2] >= 0]
@@ -322,6 +285,12 @@ def prepare(event_path: Path, run_id: str):
     if not isinstance(raw, str) or len(raw) > 6000:
         raise ValueError("Invalid workflow payload")
     req = validate_request(json.loads(raw))
+    inventory_path = ROOT.parent / "properties.json"
+    if inventory_path.is_file():
+        manifest = read(ROOT / "internal_data/manifest.json") or {}
+        digest = hashlib.sha256(inventory_path.read_bytes()).hexdigest()
+        if manifest.get("source_inventory_sha256") != digest:
+            store.build_inventory(ROOT.parent)
     existing = read(ROOT / "expanded_receipts" / (req["request_id"] + ".json"))
     if existing and existing.get("request_id") == req["request_id"]:
         if existing.get("subject_signature") != subject_signature(req["property"]):
@@ -339,7 +308,7 @@ def prepare(event_path: Path, run_id: str):
             write(ROOT / "expanded_requests" / (run_id + ".json"), old_job)
         return old_job
     job = {**req, "run_id": run_id, "status": "prepared", "slots": [], "generated_at": stamp(), "calls_reserved": 0}
-    kinds = ["value", "rent"] if req["mode"] == "both" else [req["mode"]]
+    kinds = [] if req["mode"] == "profile" else ["value", "rent"] if req["mode"] == "both" else [req["mode"]]
     for kind in kinds:
         prior, path = cached(req["property"], kind)
         fresh = prior and age_days(prior.get("cached_at")) is not None and 0 <= age_days(prior["cached_at"]) <= (30 if kind == "rent" else 60)
@@ -359,7 +328,7 @@ def prepare(event_path: Path, run_id: str):
     if needed:
         if not api_enabled():
             blocked = "usage_guard_blocked"
-            job["api_policy"] = "cache_only_during_connection_repair"
+            job["api_policy"] = "internal_data_and_free_county_sources"
         elif blocked:
             pass
         elif req["request_id"] in ledger.get("reserved_requests", {}):
@@ -371,13 +340,13 @@ def prepare(event_path: Path, run_id: str):
         elif int(ledger["successful_api_calls"]) + needed > 45:
             blocked = "usage_guard_blocked"
         else:
-            # A durable reservation, including failed attempts, is counted before HTTP.
-            ledger["successful_api_calls"] += needed
-            ledger.setdefault("reserved_requests", {})[req["request_id"]] = {"count": needed, "run_id": run_id, "at": stamp()}
-            ledger["updated_at"] = stamp()
-            write(ROOT / "rentcast_usage.json", ledger)
-            job["calls_reserved"] = needed
-            job["usage"] = public_usage(ledger)
+            try:
+                ledger = budget.reserve(ROOT, req["request_id"], run_id,
+                    [slot["kind"] for slot in job["slots"] if slot["mode"] == "api"])
+                job["calls_reserved"] = needed
+                job["usage"] = public_usage(ledger)
+            except ValueError as exc:
+                blocked = str(exc)
         if blocked:
             for slot in job["slots"]:
                 if slot["mode"] == "api":
@@ -403,6 +372,12 @@ def execute(run_id: str):
               "request_id": job["request_id"], "run_id": run_id, "generated_at": stamp(),
               "status": job["status"], "sources": dict(previous.get("sources", {})) if same_subject else {},
               "usage": job.get("usage"), "calls_reserved": job.get("calls_reserved", 0), "calls_sent": 0, "errors": {}}
+    result["internal_data"] = store.profile(p, ROOT,
+        allow_public=os.environ.get("FREE_COUNTY_LOOKUPS_ENABLED", "true").lower() == "true",
+        refresh=job.get("refresh") is True)
+    result["api_policy"] = "enabled" if api_enabled() else "internal_data_and_free_county_sources"
+    result["profile_only"] = job.get("mode") == "profile"
+
     if job["status"] == "prepared":
         for slot in job["slots"]:
             kind = slot["kind"]
@@ -422,9 +397,13 @@ def execute(run_id: str):
                 # Also prevents re-running execute locally in the same checkout.
                 write(job_path, job)
                 try:
+                    budget.mark_sent(ROOT, job["request_id"], kind, run_id)
                     result["calls_sent"] += 1
                     response = requests.get("https://api.rentcast.io/v1" + ENDPOINTS[kind],
                         params=parameters(p, kind), headers={"Accept": "application/json", "X-Api-Key": os.environ["RENTCAST_API_KEY"]}, timeout=30, allow_redirects=False)
+                    ledger = budget.record_response(ROOT, job["request_id"], kind, run_id,
+                        http_status=response.status_code, body_present=bool(response.content))
+                    result["usage"] = public_usage(ledger)
                     if response.status_code != 200:
                         result["errors"][kind] = "authentication_failed" if response.status_code in {401, 403} else "rate_limited" if response.status_code == 429 else "http_error_" + str(response.status_code)
                         if response.status_code in {401, 403, 429}:
@@ -443,6 +422,11 @@ def execute(run_id: str):
                     write(path, candidate)
                 except (requests.RequestException, ValueError, KeyError):
                     result["errors"][kind] = "request_failed_without_retry"
+                    try:
+                        ledger = budget.record_response(ROOT, job["request_id"], kind, run_id)
+                        result["usage"] = public_usage(ledger)
+                    except ValueError:
+                        result["usage_warning"] = "usage_ledger_invalid_count"
                     continue
             if candidate:
                 source = normalized(p, kind, candidate.get("response"), candidate.get("cached_at"), path, slot["mode"])
@@ -464,7 +448,8 @@ def check_installation():
     """Read local files only; never mutate the ledger or contact a provider."""
     base = ROOT.parent
     checks = {}
-    required = ("expanded_report.py", ".github/workflows/expanded-report.yml", "report.html", "deals.html")
+    required = ("expanded_report.py", "rentcast_budget.py", "internal_report_store.py",
+                ".github/workflows/expanded-report.yml", "report.html", "deals.html", "comps_engine.py")
     for relative in required:
         checks[relative] = "ok" if (base / relative).is_file() else "missing"
     report_path = base / "report.html"
@@ -482,12 +467,20 @@ def check_installation():
               "rentcast_api_enabled": api_enabled(), "new_rentcast_calls": 0,
               "usage": usage, "usage_warning": warning,
               "check_scope": "local_installation_only_not_browser_PAT_or_cloud_permissions"}
+    result["internal_inventory"] = read(ROOT / "internal_data/manifest.json")
+    result["quota_schema"] = (read(ROOT / "rentcast_usage.json") or {}).get("schema_version", "legacy")
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
         lines = ["## " + result["status"], "", "- New RentCast calls: **0**",
                  "- Report backend: " + VERSION,
                  "- New API requests enabled: " + str(api_enabled()).lower(), ""]
         lines += ["- " + key + ": " + status for key, status in checks.items()]
+        manifest = result.get("internal_inventory") or {}
+        lines += ["", "- Quota schema: " + str(result["quota_schema"]),
+                  "- Internal properties: " + str(manifest.get("properties", 0)),
+                  "- Ambiguous property IDs excluded from automatic reuse: " + str(manifest.get("ambiguous_ids", 0))]
+        if usage:
+            lines += ["- Preserved budget usage: " + str(usage["used"])]
         if warning:
             lines += ["", "Quota ledger warning: " + warning + ". Saved cache reads remain available."]
         lines += ["", "This check does not validate the browser GitHub token or Supabase permissions.", ""]
@@ -496,13 +489,29 @@ def check_installation():
     return result
 
 
+def maintain():
+    """Migrate the local budget and index existing inventory, with zero API calls."""
+    result = {"status": "INTERNAL_STORE_READY", "new_rentcast_calls": 0,
+              "inventory": store.build_inventory(ROOT.parent)}
+    try:
+        result["quota"] = budget.migrate(ROOT)
+    except ValueError as exc:
+        result["quota_warning"] = str(exc)
+    check_installation()
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Property-specific RentCast report")
-    parser.add_argument("action", choices=("check", "prepare", "execute"))
+    parser.add_argument("action", choices=("check", "maintain", "prepare", "execute"))
     parser.add_argument("--event-file", type=Path)
     parser.add_argument("--run-id")
     args = parser.parse_args()
     try:
+        if args.action == "maintain":
+            result = maintain()
+            print(json.dumps(result, ensure_ascii=False))
+            return
         if args.action == "check":
             result = check_installation()
             print(json.dumps(result, ensure_ascii=False))
