@@ -1,0 +1,73 @@
+name: "Property Sources — Offline Pilot"
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check = preview only; build = save separate source registry. No API requests."
+        required: true
+        type: choice
+        default: check
+        options:
+          - check
+          - build
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pa-property-sources-pilot
+  cancel-in-progress: false
+
+jobs:
+  identity-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Test identity, duplicates and source evidence
+        run: python -m unittest -v test_property_sources.py
+      - name: Inspect existing data without network requests
+        env:
+          PILOT_MODE: ${{ inputs.mode }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          mode = os.environ.get('PILOT_MODE', 'check')
+          if mode not in {'check', 'build'}:
+              raise SystemExit('Invalid pilot mode')
+          subprocess.run([sys.executable, 'property_sources.py', mode], check=True)
+          PY
+      - name: Save separate registry after successful checks
+        if: inputs.mode == 'build'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- COMPS_REPORTS/property_sources
+          if git diff --cached --quiet; then
+            echo "Registry is already current."
+            exit 0
+          fi
+          git commit -m "Build offline property identity and source registry"
+          if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+            git rebase --abort || true
+            echo "::error::Registry was not pushed because the branch changed incompatibly."
+            exit 1
+          fi
+          # A scan may update inputs during this short pilot. Do not push
+          # a registry built against a different inventory/source cache.
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import property_sources
+          manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text())
+          _, current = property_sources.prepare(Path('.'))
+          if any(current[k] != manifest[k] for k in ('properties_sha256', 'input_fingerprint')):
+              raise SystemExit('Inventory or source cache changed during the pilot. Run build again; nothing was pushed.')
+          PY
+          git push origin "HEAD:${GITHUB_REF_NAME}"
