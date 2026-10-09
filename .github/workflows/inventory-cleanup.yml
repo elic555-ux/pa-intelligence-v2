@@ -1,0 +1,57 @@
+name: One-time Inventory Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check = preview only; clean = remove unprotected properties outside Erie and Allegheny, with backup'
+        type: choice
+        options:
+          - check
+          - clean
+        default: check
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pa-one-time-inventory-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Preview or apply one-time inventory cleanup
+        env:
+          CLEANUP_MODE: ${{ inputs.mode }}
+        run: python inventory_cleanup.py --mode "$CLEANUP_MODE"
+      - name: Save inventory and complete backup
+        if: inputs.mode == 'clean'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add properties.json
+          if [ -f sheriff_listings.json ]; then git add sheriff_listings.json; fi
+          if [ -d COMPS_REPORTS/inventory_cleanup ]; then git add COMPS_REPORTS/inventory_cleanup; fi
+          if git diff --cached --quiet; then
+            echo 'No inventory change to save.'
+            exit 0
+          fi
+          git fetch origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo 'Repository changed during cleanup. Nothing pushed; run again.'
+            exit 1
+          fi
+          git commit -m 'One-time inventory cleanup outside Erie and Allegheny; preserve cloud selections and backup'
+          git push origin HEAD:main
