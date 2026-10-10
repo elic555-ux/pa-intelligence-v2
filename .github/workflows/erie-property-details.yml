@@ -1,0 +1,102 @@
+name: "Erie Property Details — Manual Pilot"
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check = saved files only; fetch = cache first, then one listing. No RentCast."
+        required: true
+        type: choice
+        default: check
+        options: [check, fetch]
+      property_id:
+        description: "Existing property ID. Pilot example: PA-MLS-193473"
+        required: true
+        default: "PA-MLS-193473"
+        type: string
+      source_url:
+        description: "Optional full ErieMoves listing URL. Leave empty for the Maxwell pilot only."
+        required: false
+        default: ""
+        type: string
+      request_id:
+        description: "Leave empty for a manual run. The property page sends this automatically."
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+
+jobs:
+  additional-source:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install public HTML parser
+        run: python -m pip install 'beautifulsoup4==4.15.0'
+      - name: Verify identities, cache, blocks and source evidence
+        run: |
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_erie_source_access_check test_eriemoves_listing_source
+          node test_secondary_sources.cjs
+          node test_eriemoves_browser.cjs
+      - name: Inspect or enrich one requested property
+        env:
+          SOURCE_MODE: ${{ inputs.mode }}
+          PROPERTY_ID: ${{ inputs.property_id }}
+          SOURCE_URL: ${{ inputs.source_url }}
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          mode = os.environ.get('SOURCE_MODE', 'check')
+          if mode not in {'check', 'fetch'}:
+              raise SystemExit('Invalid source mode')
+          subprocess.run([sys.executable, 'eriemoves_listing_source.py', mode,
+              '--property-id', os.environ.get('PROPERTY_ID', '').strip(),
+              '--source-url', os.environ.get('SOURCE_URL', '').strip(),
+              '--request-id', os.environ.get('REQUEST_ID', '')], check=True)
+          PY
+      - name: Update the separate registry from saved snapshots
+        if: inputs.mode == 'fetch'
+        run: python property_sources.py build
+      - name: Save source snapshots and registry
+        if: inputs.mode == 'fetch'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- COMPS_REPORTS/additional_sources COMPS_REPORTS/additional_source_status.json COMPS_REPORTS/property_sources
+          if git diff --cached --quiet; then
+            echo "Source cache is already current."
+            exit 0
+          fi
+          git fetch origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo "::error::Repository changed during enrichment. Nothing pushed; run again."
+            exit 1
+          fi
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          import property_sources
+          receipt = json.loads(Path('COMPS_REPORTS/additional_source_status.json').read_text())
+          manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text())
+          _, current = property_sources.prepare(Path('.'))
+          inventory_sha = hashlib.sha256(Path('properties.json').read_bytes()).hexdigest()
+          if inventory_sha != receipt['properties_sha256'] or any(current[k] != manifest[k] for k in ('properties_sha256', 'input_fingerprint')):
+              raise SystemExit('Inventory or source inputs changed during the pilot. Nothing was pushed; run again.')
+          PY
+          git commit -m "Save requested ErieMoves listing source and provenance"
+          git push origin HEAD:main
