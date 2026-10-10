@@ -18,7 +18,7 @@ from pathlib import Path
 import re
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "property-sources-1.3.0-20261010"
+VERSION = "property-sources-1.4.0-20261010"
 ROOT = Path("COMPS_REPORTS/property_sources")
 SUFFIXES = {"street": "st", "avenue": "ave", "road": "rd", "drive": "dr",
             "place": "pl", "boulevard": "blvd", "lane": "ln", "court": "ct",
@@ -207,6 +207,7 @@ def read_json(path):
 
 
 SECONDARY_PROVIDERS = {
+    "howardhanna": ("www.howardhanna.com", "Howard Hanna / Greater Erie MLS", r"/property/[a-z0-9-]+-\d{9,15}"),
     "eriemoves": ("eriemoves.com", "ErieMoves / Coldwell Banker Select / MLS", r"/listing/PA/[A-Za-z0-9-]+/[A-Za-z0-9-]+/\d+"),
     "clearchoice": ("www.clearchoiceenterprises.com", "Clear Choice / MLS", r"/idx/[a-z0-9-]+/\d+_spid/"),
     "tarasa": ("www.tarasa.com", "Tarasa / River Point Realty / MLS", r"/property-search/detail/56/\d+/[a-z0-9-]+/"),
@@ -246,6 +247,26 @@ def moxi_photo_url(value):
         and re.fullmatch(r"/img-pr-\d+/eri/[a-f0-9]+/\d+_\d+_full\.jpg", p.path))
 
 
+
+def hanna_url_matches(row, value):
+    url = secondary_source_url(value, 'howardhanna')
+    subject = identity(row)
+    if not url or subject['county'] != 'Erie':
+        return False
+    suffix = '-' + subject['city'].replace(' ', '-') + '-pa-' + subject['zip']
+    slug = re.sub(r'-\d{9,15}$', '', urlparse(url).path.removeprefix('/property/'))
+    return bool(slug.endswith(suffix) and parse_address(slug[:-len(suffix)].replace('-', ' '))[:2]
+        == (subject['street'], subject['unit']))
+
+
+def hanna_photo_url(value):
+    url = safe_url(value)
+    p = urlparse(url or '')
+    return bool(url and p.hostname == 'photos.prod.cirrussystem.net'
+        and not urlparse(str(value)).fragment and p.query == 'd=l'
+        and re.fullmatch(r'/\d+/[a-f0-9]{32}/\d+\.jpeg', p.path))
+
+
 def secondary_record_matches(row, record):
     return bool(isinstance(record, dict) and record.get("provider") in SECONDARY_PROVIDERS
         and record.get("status") == "published" and record.get("property_id") == str(row.get("id"))
@@ -253,6 +274,7 @@ def secondary_record_matches(row, record):
         and safe_url(row.get("url")) and safe_url(row.get("url")) == safe_url(record.get("inventory_source_url"))
         and secondary_source_url(record.get("source_url"), record["provider"])
         and (record["provider"] != "eriemoves" or erie_url_matches(row, record["source_url"]))
+        and (record["provider"] != "howardhanna" or hanna_url_matches(row, record["source_url"]))
         and (record["provider"] != "tarasa" or urlparse(record["source_url"]).path.split('/')[4] == listing_id(row))
         and identity(row)["complete"] and (record.get("subject") or {}).get("complete")
         and address_key(identity(row)) == address_key(record["subject"]))
@@ -378,7 +400,8 @@ def collect(repo):
             p = urlparse(url or "")
             match = re.fullmatch(r"/(?:pics[123]x|large)/v\d+/\d+/\d+_(\d+)_(\d{2,3})\.jpg", p.path)
             if (((record["provider"] == "eriemoves" and moxi_photo_url(url))
-                    or (url and p.hostname == "cdn.listingphotos.sierrastatic.com" and not p.query
+                    or (record["provider"] == "howardhanna" and hanna_photo_url(url))
+                    or (record["provider"] in {"tarasa", "clearchoice"} and url and p.hostname == "cdn.listingphotos.sierrastatic.com" and not p.query
                         and match and match[1] == listing_id(row)))
                     and safe_url(photo.get("source_url")) == safe_url(record["source_url"])):
                 photos.append(photo)
