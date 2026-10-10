@@ -1,7 +1,8 @@
-/* ErieMoves, Tarasa and retained Clear Choice evidence. Photo and city identity fixes 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
+/* Howard Hanna, ErieMoves, Tarasa and Clear Choice evidence. Version 1.4.0, 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
 (function (root) {
     'use strict';
     const PROVIDERS = {
+        howardhanna:{name:'Howard Hanna / Greater Erie MLS',host:'www.howardhanna.com',pattern:/^\/property\/[a-z0-9-]+-\d{9,15}$/},
         eriemoves:{name:'ErieMoves / Coldwell Banker Select / MLS',host:'eriemoves.com',pattern:/^\/listing\/PA\/[A-Za-z0-9-]+\/[A-Za-z0-9-]+\/\d+$/},
         tarasa:{name:'Tarasa / River Point Realty / MLS',host:'www.tarasa.com',pattern:/^\/property-search\/detail\/56\/\d+\/[a-z0-9-]+\/$/},
         clearchoice:{name:'Clear Choice / MLS',host:'www.clearchoiceenterprises.com',pattern:/^\/idx\/[a-z0-9-]+\/\d+_spid\/$/}
@@ -32,11 +33,22 @@
         const street=parts[4].replace(/-/g,' ');
         return cityNorm(parts[3].replace(/-/g,' '))===id[1] && street.endsWith(tail) && norm(street.slice(0,-tail.length))===id[0];
     }
+    function hannaUrlMatches(p,url) {
+        const id=identity(p), suffix='-'+id[1].toLowerCase().replace(/ /g,'-')+'-pa-'+id[3];
+        const slug=new URL(url).pathname.slice('/property/'.length).replace(/-\d{9,15}$/,'');
+        return slug.endsWith(suffix) && norm(slug.slice(0,-suffix.length).replace(/-/g,' '))===id[0];
+    }
+    function hannaPhoto(url) {
+        try { const u=new URL(url); return u.protocol==='https:' && u.hostname==='photos.prod.cirrussystem.net' &&
+            !u.username && !u.password && (!u.port || u.port==='443') && u.search==='?d=l' && !u.hash &&
+            /^\/\d+\/[a-f0-9]{32}\/\d+\.jpeg$/.test(u.pathname); } catch (_) { return false; }
+    }
     function matches(p, r) {
         const id = identity(p), county = String(p.county || '').toLowerCase().replace(/ county$/,'');
         return Boolean(!p._idAmbiguous && p.source_type === 'mls' && Object.hasOwn(PROVIDERS,r?.provider) && r.status === 'published' &&
             r.property_id === String(p.id) && r.listing_id === listing(p) && sourceUrl(r.source_url,r.provider) &&
             (r.provider!=='eriemoves' || (county==='erie' && erieUrlMatches(p,r.source_url))) &&
+            (r.provider!=='howardhanna' || (county==='erie' && hannaUrlMatches(p,r.source_url))) &&
             (r.provider!=='tarasa' || new URL(r.source_url).pathname.split('/')[4]===listing(p)) &&
             inventoryUrl(p.url) && r.inventory_source_url === inventoryUrl(p.url) &&
             JSON.stringify(r.identity) === JSON.stringify(id) && id[2] === 'PA' && /^\d{5}$/.test(id[3]) &&
@@ -70,8 +82,8 @@
         if (!matches(p,r)) return [];
         const seen = new Set();
         return (Array.isArray(r.photos) ? r.photos : []).filter(e=>{
-            if (e?.source !== PROVIDERS[r.provider].name || e.source_url !== r.source_url || e.listing_id !== listing(p) || !(r.provider==='eriemoves'?moxiPhoto(e.url):photoUrl(e.url,listing(p)))) return false;
-            const seq=r.provider==='eriemoves'?e.url:e.url.match(/_(\d{2,3})\.jpg$/)[1]; if(seen.has(seq)) return false; seen.add(seq); return true;
+            if (e?.source !== PROVIDERS[r.provider].name || e.source_url !== r.source_url || e.listing_id !== listing(p) || !(r.provider==='eriemoves'?moxiPhoto(e.url):r.provider==='howardhanna'?hannaPhoto(e.url):photoUrl(e.url,listing(p)))) return false;
+            const seq=['eriemoves','howardhanna'].includes(r.provider)?e.url:e.url.match(/_(\d{2,3})\.jpg$/)[1]; if(seen.has(seq)) return false; seen.add(seq); return true;
         }).slice(0,3);
     }
     async function key(propertyId, cryptoApi=root.crypto) {
