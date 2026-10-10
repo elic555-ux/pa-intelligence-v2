@@ -18,7 +18,7 @@ from pathlib import Path
 import re
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "property-sources-1.2.0-20261009"
+VERSION = "property-sources-1.3.0-20261010"
 ROOT = Path("COMPS_REPORTS/property_sources")
 SUFFIXES = {"street": "st", "avenue": "ave", "road": "rd", "drive": "dr",
             "place": "pl", "boulevard": "blvd", "lane": "ln", "court": "ct",
@@ -207,6 +207,7 @@ def read_json(path):
 
 
 SECONDARY_PROVIDERS = {
+    "eriemoves": ("eriemoves.com", "ErieMoves / Coldwell Banker Select / MLS", r"/listing/PA/[A-Za-z0-9-]+/[A-Za-z0-9-]+/\d+"),
     "clearchoice": ("www.clearchoiceenterprises.com", "Clear Choice / MLS", r"/idx/[a-z0-9-]+/\d+_spid/"),
     "tarasa": ("www.tarasa.com", "Tarasa / River Point Realty / MLS", r"/property-search/detail/56/\d+/[a-z0-9-]+/"),
 }
@@ -224,12 +225,34 @@ def secondary_source_url(value, provider=None):
     return None
 
 
+def erie_url_matches(row, url):
+    url = secondary_source_url(url, 'eriemoves')
+    if not url:
+        return False
+    parts = urlparse(url).path.split('/')
+    subject = identity(row)
+    street_zip = parts[4].replace('-', ' ')
+    suffix = ' ' + subject['zip']
+    return bool(subject['county'] == 'Erie' and norm(parts[3].replace('-', ' ')) == subject['city']
+        and street_zip.endswith(suffix)
+        and parse_address(street_zip[:-len(suffix)])[:2] == (subject['street'], subject['unit']))
+
+
+def moxi_photo_url(value):
+    url = safe_url(value)
+    p = urlparse(url or "")
+    return bool(url and re.fullmatch(r"i\d+\.moxi\.onl", p.hostname or "")
+        and not p.query and not urlparse(str(value)).fragment
+        and re.fullmatch(r"/img-pr-\d+/eri/[a-f0-9]+/\d+_\d+_full\.jpg", p.path))
+
+
 def secondary_record_matches(row, record):
     return bool(isinstance(record, dict) and record.get("provider") in SECONDARY_PROVIDERS
         and record.get("status") == "published" and record.get("property_id") == str(row.get("id"))
         and record.get("listing_id") == listing_id(row)
         and safe_url(row.get("url")) and safe_url(row.get("url")) == safe_url(record.get("inventory_source_url"))
         and secondary_source_url(record.get("source_url"), record["provider"])
+        and (record["provider"] != "eriemoves" or erie_url_matches(row, record["source_url"]))
         and (record["provider"] != "tarasa" or urlparse(record["source_url"]).path.split('/')[4] == listing_id(row))
         and identity(row)["complete"] and (record.get("subject") or {}).get("complete")
         and address_key(identity(row)) == address_key(record["subject"]))
@@ -354,8 +377,9 @@ def collect(repo):
             url = safe_url(photo.get("url"))
             p = urlparse(url or "")
             match = re.fullmatch(r"/(?:pics[123]x|large)/v\d+/\d+/\d+_(\d+)_(\d{2,3})\.jpg", p.path)
-            if (url and p.hostname == "cdn.listingphotos.sierrastatic.com" and not p.query
-                    and match and match[1] == listing_id(row)
+            if (((record["provider"] == "eriemoves" and moxi_photo_url(url))
+                    or (url and p.hostname == "cdn.listingphotos.sierrastatic.com" and not p.query
+                        and match and match[1] == listing_id(row)))
                     and safe_url(photo.get("source_url")) == safe_url(record["source_url"])):
                 photos.append(photo)
         secondary_bound += 1
