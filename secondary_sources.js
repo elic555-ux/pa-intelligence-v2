@@ -1,4 +1,4 @@
-/* Tarasa and retained Clear Choice evidence. Reads separate snapshots; no deal/cloud writes. */
+/* ErieMoves, Tarasa and retained Clear Choice evidence. Photo fix 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
 (function (root) {
     'use strict';
     const PROVIDERS = {
@@ -150,7 +150,12 @@
         n.appendChild(element('p','סוג גג אינו בדיקה של מצב הגג; אין להסיק אכלוס מנתוני המפרט. שטח מגרש ב־Acres נשמר ביחידה המקורית ללא המרה.','text-xs text-gray-400 mt-2'));
         const gallery=element('div','','grid grid-cols-1 md:grid-cols-3 gap-2 mt-3'); gallery.id='modal-additional-source-photos';
         const seen=new Set();
-        const images=items.flatMap(s=>photos(p,s)).filter(photo=>{const seq=photo.url.match(/_(\d{2,3})\.jpg$/)[1];if(seen.has(seq))return false;seen.add(seq);return true;}).slice(0,3);
+        const images=items.flatMap(s=>photos(p,s)).filter(photo=>{
+            // Sierra photos share a sequence; ErieMoves photos use distinct full URLs.
+            const seq=photo.url.match(/_(\d{2,3})\.jpg$/)?.[1] || photo.url;
+            if(seen.has(seq)) return false;
+            seen.add(seq); return true;
+        }).slice(0,3);
         for(const photo of images) {
             const a=document.createElement('a'); a.href=photo.source_url; a.target='_blank'; a.rel='noopener noreferrer';
             const img=document.createElement('img'); img.src=photo.url; img.alt='תמונת המודעה של '+p.address;
