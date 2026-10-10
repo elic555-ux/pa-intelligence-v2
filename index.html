@@ -1,87 +1,3 @@
-
-
-Pasted markdown(20261010-134020).md
-File
-
-אלי, הריצה נעצרה בשלב הבדיקות: הקובץ property_sources.py שנטען ב־GitHub חסר את הפונקציה החדשה erie_url_matches. עדיין לא הגענו לשאיבת הנכס.
-
-החלף בשורש המאגר את  בקובץ המלא הזה.
-
-אחרי השמירה, הפעל ריצה חדשה דרך Run workflow, עם main, מצב fetch ומזהה PA-MLS-193473.
-
-אל תלחץ Re-run all jobs בריצה הישנה — היא עלולה להשתמש בקבצים מהגרסה הקודמת. שלח לי את התוצאה החדשה.
-
-
-
-New RentCast calls: 0
-New source network requests: 2
-מקור פעיל: ErieMoves / Coldwell Banker Select
-מצב: published
-נכס: PA-MLS-193473
-שדות שמורים: 12
-תמונות שמורות: 3
-נשמר מטמון חדש: כן
-מקור המטמון: eriemoves
-נבדק מטמון תקין לפני פנייה למקור. כל שמירה מחייבת התאמה של MLS ושל הכתובת המלאה.
-זהו חיבור ידני לנכס אחד. התור וההשלמה האוטומטית אינם מופעלים או משתנים.
-properties.json, חדר העסקאות, הסריקה ותקציב RentCast אינם נכתבים.
-
-PROPERTY_SOURCES_PILOT_OK
-ניסוי זיהוי נכסים ותיעוד מקורות — ללא שאיבה מהרשת.
-
-New RentCast calls: 0
-New network requests: 0
-גרסה: property-sources-1.3.0-20261010
-רשומות שנבדקו במאגר: 1898
-תצפיות מקור במיפוי: 1739
-כרטיסי זיהוי בניסוי: 1245
-נכסים עם יותר מקישור מקור אחד: 490
-מזהים עמומים שהופרדו לבדיקה: 8
-שדות עם ערכים סותרים: 21
-מקורות נוספים שהוזנו מקבצים שמורים: 251. ריצה זו אינה פונה לאתרי המקור.
-properties.json, חדר העסקאות, תקציב RentCast והדוחות הקיימים נשארים ללא כתיבה.
-
-נכס	מספר קישורי מקור	שדות עם סתירה
-2817 shawhan ave	2	roof_type, parking, construction, stories, water, sewer
-3144 mcclure ave	3	beds, sqft, style, lot_size
-8013 saltsburg rd	3	lot_size, roof_type, heating, cooling, parking, construction, basement, stories, water, sewer, style
-100 constitution cir	2	אין
-100 scott way	2	אין
-מזהים שלא יקושרו אוטומטית:
-
-PA-MLS-1772710: 5201 glenwood ave; 5201 glenwwod ave
-PA-MLS-1775962: 1711 1/2 jancey st; 1711.5 jancey st
-PA-MLS-1776180: 322 & 320 w 6th ave
-PA-MLS-1776529: 2928 1/2 elroy ave; 2928 elroy ave
-PA-MLS-1777290: 266 harrison rd
-PA-MLS-1777513: 107 hillview rd; 107 hillview rd rd
-PA-MLS-193486: 9414/9410/tr 227 rt 8 wattsburg rd
-tax-erie-repository-15020035010100: 1122 wayne st
-
-אלי, שלב השאיבה הצליח: התקבלו 12 שדות ושלושה קישורי תמונות, בשתי בקשות בלבד וללא RentCast.
-
-עכשיו בדוק:
-
-שהריצה כולה ירוקה, כולל Save source snapshots and registry — זה מאשר שהשמירה ב־GitHub הצליחה.
-
-לאחר שפריסת האתר הסתיימה, רענן עם Ctrl+F5 ופתח את 4117 Maxwell Ave. הפרטים והתמונות אמורים להופיע בכרטיס הנכס הבסיסי.
-
-שלח לי צילום של הכרטיס כדי שנאמת גם את ההצגה. ההשלמה האוטומטית נשארת כבויה כרגע.
-
-
-איך אני יכול למצוא ברשימה כזאת ארוכה , אולי נוסיף כפתור חיפוש במערכת 
-
-אלי, הוספתי חיפוש לפי כתובת, מספר MLS, עיר ומיקוד, עם כפתורי חפש ו־נקה. בדקתי שהחיפוש עובד גם לנכס שמחוץ למסננים.
-
-
-שנה את שמו ל־ והחלף את הקובץ הקיים בשורש המאגר.
-
-אחרי שפריסת האתר מסתיימת, רענן עם Ctrl+F5.
-
-בשדה החיפוש החדש, מעל הרשימה, הקלד 193473 או Maxwell.
-
-ברירת המחדל היא חיפוש בכל המאגר. לחיצה על נקה מחזירה את המסננים הקיימים.
-
 <!DOCTYPE html>
 <!-- PA UI 8.15.1 / 2026-10-09: basic source facts, dates, photos and bounded source requests -->
 <html lang="he" dir="rtl">
@@ -298,15 +214,15 @@ tax-erie-repository-15020035010100: 1122 wayne st
             <div class="flex flex-wrap items-center gap-3"><strong id="filtered-result-count" class="text-blue-300">תוצאות לאחר סינון: 0</strong><span id="filtered-unknown-price" hidden class="text-gray-400"></span><span id="active-price-range" class="text-gray-400"></span><button id="reset-board-price-range" hidden onclick="restoreBoardScanPriceRange()" class="text-blue-300 underline text-xs">לטווח הסריקה</button></div>
             <label class="flex items-center gap-2 text-gray-300 cursor-pointer"><input type="checkbox" id="filter-unknown-price" checked onchange="applyFilters()" class="accent-blue-500">הצג גם נכסים ללא מחיר מבוקש</label>
         </section>
-        <section class="bg-gray-900 border border-gray-700 rounded-2xl p-4 space-y-3" aria-label="חיפוש נכס במאגר">
-            <label for="property-search" class="block text-sm font-bold text-white">חיפוש נכס</label>
-            <form onsubmit="event.preventDefault();applyFilters()" class="flex flex-wrap gap-2" role="search">
-                <input id="property-search" type="search" placeholder="כתובת, מספר MLS, עיר או מיקוד — למשל Maxwell או 193473" oninput="applyFilters()" class="flex-1 min-w-0 bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-blue-500" autocomplete="off">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-4 py-2">חפש</button>
-                <button type="button" onclick="clearPropertySearch()" class="bg-gray-800 hover:bg-gray-700 text-white rounded-xl px-4 py-2">נקה</button>
+        <section class="flex flex-wrap items-center gap-2" aria-label="חיפוש נכס במאגר">
+            <form onsubmit="event.preventDefault();applyFilters()" class="flex items-center gap-2 w-full sm:w-auto" role="search">
+                <label for="property-search" class="text-xs font-bold text-gray-300 whitespace-nowrap">חיפוש נכס</label>
+                <input id="property-search" type="search" placeholder="כתובת או MLS" oninput="applyFilters()" class="w-44 sm:w-60 min-w-0 bg-gray-950 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500" autocomplete="off">
+                <button type="submit" class="bg-blue-600 text-white rounded-lg px-3 py-1.5 text-xs">חפש</button>
+                <button type="button" onclick="clearPropertySearch()" class="bg-gray-800 text-gray-300 rounded-lg px-2 py-1.5 text-xs">נקה</button>
             </form>
-            <label class="flex items-center gap-2 text-xs text-gray-300"><input id="property-search-all" type="checkbox" checked onchange="applyFilters()" class="accent-blue-500">חפש בכל המאגר, גם מחוץ למסננים ובארכיון</label>
-            <p id="property-search-status" class="text-xs text-blue-200" aria-live="polite">הקלד כתובת או מספר MLS כדי למצוא נכס.</p>
+            <label class="flex items-center gap-1 text-xs text-gray-400"><input id="property-search-all" type="checkbox" checked onchange="applyFilters()" class="accent-blue-500">כל המאגר</label>
+            <span id="property-search-status" class="text-xs text-blue-200" aria-live="polite"></span>
         </section>
         <!-- Properties Container -->
         <section id="properties-container" class="w-full"></section>
@@ -1377,12 +1293,12 @@ tax-erie-repository-15020035010100: 1122 wayne st
         }
 
         function propertySearchTerms() {
-            return String(document.getElementById('property-search')?.value || '').normalize('NFKC').toLowerCase().trim().split(/\s+/).filter(Boolean);
+            return String(document.getElementById('property-search')?.value || '').normalize('NFKC').toLowerCase().trim().split(/\s+(?:או|or)\s+|\s*\|\s*/i).map(group => group.trim().split(/\s+/).filter(Boolean)).filter(group => group.length);
         }
         function propertyMatchesSearch(p, terms) {
             const text = [p.address,p.city,p.county,p.zip,p.id,p.listing_id,p.docket_id,p.parcel_id]
                 .map(v => String(v ?? '').normalize('NFKC').toLowerCase()).join(' ');
-            return terms.every(term => text.includes(term));
+            return !terms.length || terms.some(group => group.every(term => text.includes(term)));
         }
         function clearPropertySearch() {
             const input = document.getElementById('property-search');
@@ -1393,7 +1309,7 @@ tax-erie-repository-15020035010100: 1122 wayne st
             const terms = propertySearchTerms();
             const searchAll = terms.length > 0 && document.getElementById('property-search-all')?.checked !== false;
             const status = document.getElementById('property-search-status');
-            if (status) status.textContent = !terms.length ? 'הקלד כתובת או מספר MLS כדי למצוא נכס.' : searchAll ? 'החיפוש כולל את כל המאגר והארכיון; המסננים יחזרו לפעול לאחר ניקוי החיפוש.' : 'החיפוש מתבצע בתוך המסננים הנוכחיים.';
+            if (status) status.textContent = !terms.length ? '' : searchAll ? 'בכל המאגר, כולל ארכיון' : 'בתוך המסננים';
             if (searchAll) return rawProperties.filter(p => propertyMatchesSearch(p, terms));
             const value = id => document.getElementById(id)?.value || 'all';
             const strat = value('filter-strategy'), type = value('filter-type');
@@ -2690,7 +2606,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             else if (sortBy === 'price_asc') filtered.sort((a, b) => (getMarketAskingPrice(a) ?? Infinity) - (getMarketAskingPrice(b) ?? Infinity));
             updateResultSummary(filtered);
 
-            if (!filtered.length) { container.innerHTML = selectedCitiesFilter !== null && !selectedCitiesFilter.size ? '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">בחר מחוז, עיר או אזור מהרשימה, או לחץ ״הצג את כל הנכסים״.</div>' : '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
+            if (!filtered.length) { container.innerHTML = propertySearchTerms().length ? '<div class="text-center py-8 text-gray-300">לא נמצא נכס שתואם לחיפוש.</div>' : selectedCitiesFilter !== null && !selectedCitiesFilter.size ? '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">בחר מחוז, עיר או אזור מהרשימה, או לחץ ״הצג את כל הנכסים״.</div>' : '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
 
             if (currentViewMode === 'table') {
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">שכירות / תשואה ברוטו</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
