@@ -1,0 +1,94 @@
+name: Agresti Access Check — Erie
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pa-agresti-access-check
+  cancel-in-progress: false
+
+jobs:
+  access-check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check public access without changing repository data
+        run: |
+          python3 - <<'PY'
+          import json, os, re, time
+          from pathlib import Path
+          from urllib.error import HTTPError, URLError
+          from urllib.request import HTTPRedirectHandler, Request, build_opener
+          from urllib.robotparser import RobotFileParser
+
+          ORIGIN = 'https://tryagresti.com'
+          AGENT = 'PA-Property-SourceReader/1.0'
+          report = {'provider': 'Agresti', 'requests': 0, 'rentcast_calls': 0,
+                    'inventory_writes': 0, 'listing_identity_verified': False}
+
+          class Stop(Exception):
+              pass
+
+          class NoRedirect(HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  report['http_status'] = code
+                  raise Stop('redirect_stopped')
+
+          opener = build_opener(NoRedirect())
+
+          def get(path):
+              report['request_url'] = ORIGIN + path
+              report['requests'] += 1
+              request = Request(report['request_url'], headers={
+                  'User-Agent': AGENT, 'Accept': 'text/html,text/plain;q=0.9'})
+              with opener.open(request, timeout=25) as response:
+                  report['http_status'] = response.status
+                  if response.status != 200:
+                      raise Stop('unexpected_http_status')
+                  body = response.read(2_000_001)
+                  if len(body) > 2_000_000:
+                      raise Stop('response_too_large')
+                  return body.decode('utf-8', errors='replace')
+
+          try:
+              robots = get('/robots.txt')
+              if (re.search(r'<(?:!doctype|html|script|body)\b', robots, re.I)
+                      or not re.search(r'^\s*user-agent\s*:', robots, re.I | re.M)):
+                  raise Stop('invalid_robots_response')
+              rules = RobotFileParser()
+              rules.parse(robots.splitlines())
+              if not rules.can_fetch(AGENT, ORIGIN + '/'):
+                  raise Stop('robots_disallowed')
+              delay = max(10, rules.crawl_delay(AGENT) or rules.crawl_delay('*') or 0)
+              if delay > 60:
+                  raise Stop('required_delay_exceeds_check_limit')
+              time.sleep(delay)
+              html = get('/')
+              if re.search(r'cf-chl-|verify you are human|<title>\s*just a moment', html, re.I):
+                  raise Stop('challenge_detected_requires_review')
+              if not re.search(r'<html\b', html, re.I):
+                  raise Stop('not_a_public_html_page')
+              report['status'] = 'public_homepage_accessible_only'
+          except HTTPError as error:
+              report['http_status'] = error.code
+              report['status'] = ('source_blocked' if error.code in (401, 403)
+                                  else 'source_rate_limited' if error.code == 429
+                                  else 'source_unavailable')
+          except Stop as error:
+              report['status'] = str(error)
+          except (URLError, TimeoutError, OSError):
+              report['status'] = 'source_unavailable'
+
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          summary = ('## בדיקת גישה ראשונית ל־Agresti\n\n'
+                     'בדיקה מתוך GitHub; עד שתי בקשות, ללא ניסיונות חוזרים.\n\n'
+                     '```json\n' + json.dumps(report, ensure_ascii=False, indent=2)
+                     + '\n```\n\n'
+                     'HTTP 200 בדף הבית אינו מוכיח כיסוי נכסים או התאמה למודעות.\n'
+                     'לא נשמרו נכסים, לא הופעל תזמון ולא בוצעו פניות ל־RentCast.\n')
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as output:
+              output.write(summary)
+          PY
