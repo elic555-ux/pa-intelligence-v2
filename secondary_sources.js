@@ -1,4 +1,4 @@
-/* ErieMoves, Tarasa and retained Clear Choice evidence. Photo fix 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
+/* ErieMoves, Tarasa and retained Clear Choice evidence. Photo and city identity fixes 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
 (function (root) {
     'use strict';
     const PROVIDERS = {
@@ -14,7 +14,10 @@
         return String(value || '').toUpperCase().replace(/#\s*/g,' UNIT ').replace(/\b([A-Z]+)\.(?=\s|$)/g,'$1')
             .replace(/,/g,' ').trim().split(/\s+/).map(w=>ALIASES[w] || w).join(' ');
     }
-    function identity(p) { return [norm(p.address),norm(p.city),String(p.state || p.source_state || 'PA').toUpperCase(),String(p.zip || '').trim().slice(0,5)]; }
+    function cityNorm(value) {
+        return String(value || '').toUpperCase().replace(/([A-Z])\.(?=\s|$)/g,'$1').trim().replace(/\s+/g,' ');
+    }
+    function identity(p) { return [norm(p.address),cityNorm(p.city),String(p.state || p.source_state || 'PA').toUpperCase(),String(p.zip || '').trim().slice(0,5)]; }
     function listing(p) { return String(p.listing_id || p.docket_id || p.id || '').match(/^(?:(?:PA-)?MLS-)?(\d+)$/)?.[1] || null; }
     function sourceUrl(value,provider) {
         try { const u = new URL(value); return u.protocol === 'https:' &&
@@ -27,7 +30,7 @@
     function erieUrlMatches(p,url) {
         const parts=new URL(url).pathname.split('/'), id=identity(p), tail=' '+id[3];
         const street=parts[4].replace(/-/g,' ');
-        return norm(parts[3].replace(/-/g,' '))===id[1] && street.endsWith(tail) && norm(street.slice(0,-tail.length))===id[0];
+        return cityNorm(parts[3].replace(/-/g,' '))===id[1] && street.endsWith(tail) && norm(street.slice(0,-tail.length))===id[0];
     }
     function matches(p, r) {
         const id = identity(p), county = String(p.county || '').toLowerCase().replace(/ county$/,'');
@@ -39,7 +42,7 @@
             JSON.stringify(r.identity) === JSON.stringify(id) && id[2] === 'PA' && /^\d{5}$/.test(id[3]) &&
             r.subject?.complete && ['allegheny','erie'].includes(county) && String(r.subject.county).toLowerCase() === county &&
             norm(r.subject.street + (r.subject.unit ? ' unit ' + r.subject.unit : '')) === id[0] &&
-            norm(r.subject.city) === id[1] && r.subject.state === id[2] && r.subject.zip === id[3]);
+            cityNorm(r.subject.city) === id[1] && r.subject.state === id[2] && r.subject.zip === id[3]);
     }
     function value(v) {
         if (typeof v === 'number') return Number.isFinite(v) ? String(v) : null;
