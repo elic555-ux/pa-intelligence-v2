@@ -74,7 +74,7 @@ const ctx=vm.createContext({URL,TextEncoder,TextDecoder,Uint8Array,AbortControll
     window:{crypto:webcrypto,supabase:{createClient:()=>({from:()=>{throw Error('Unexpected cloud access');}})},addEventListener(){}},
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},navigator:{},lucide:{createIcons(){}},
     atob:x=>Buffer.from(x,'base64').toString('binary'),setTimeout:cb=>{queueMicrotask(cb);return 1;},clearTimeout(){},setInterval(){},clearInterval(){},
-    fetch:async(url,options)=>{calls.push([url,options]);const r=url.includes('/tarasa/')?tarasa:clear;
+    fetch:async(url,options)=>{calls.push([url,options]);const r=url.includes('/eriemoves/')?{}:url.includes('/tarasa/')?tarasa:clear;
         return {ok:true,json:async()=>({encoding:'base64',content:Buffer.from(JSON.stringify(r)).toString('base64')})};}});
 const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
 const script=html.match(/<script>\s*\/\/ Supabase Initialization([\s\S]*?)<\/script>/);
@@ -101,8 +101,8 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         assert.equal(section.children.filter(n=>n.tagName==='a').length,2);
     });
     check('all original property data and financial inputs remain unchanged',()=>assert.equal(JSON.stringify(ctx.p),before));
-    check('normal opening only reads two GitHub snapshots',()=>{
-        assert.equal(calls.length,2);assert.ok(calls.every(([url,options])=>url.startsWith('https://api.github.com/')&&!options?.method));
+    check('normal opening only reads three GitHub snapshots',()=>{
+        assert.equal(calls.length,3);assert.ok(calls.every(([url,options])=>url.startsWith('https://api.github.com/')&&!options?.method));
     });
     check('documented original fact still has precedence',()=>{
         ctx.p.technical_facts.roof_type={value:'Metal',source:'Contractor inspection'};
@@ -110,13 +110,13 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
     });
     const resolvers=[];let started;
     const ready=new Promise(resolve=>{started=resolve;});
-    ctx.fetch=()=>new Promise(resolve=>{resolvers.push(resolve);if(resolvers.length===2)started();});
+    ctx.fetch=()=>new Promise(resolve=>{resolvers.push(resolve);if(resolvers.length===3)started();});
     const pending=ctx.window.SecondarySourceEvidence.load(ctx.p,1);await ready;
     run('basicSourceGeneration=2;currentSelectedProperty=null');
     const prior=dom.getElementById('modal-additional-source-notice').textContent;
     resolvers.forEach(resolve=>resolve({ok:true,json:async()=>({encoding:'base64',content:Buffer.from(JSON.stringify(tarasa)).toString('base64')})}));
     await pending;
-    check('closed modal ignores both late cache responses',()=>assert.equal(dom.getElementById('modal-additional-source-notice').textContent,prior));
+    check('closed modal ignores all late cache responses',()=>assert.equal(dom.getElementById('modal-additional-source-notice').textContent,prior));
     check('shared GitHub token never modified',()=>assert.equal(storage.get('pa_github_token'),'test-token'));
     console.log(passed+' source UI checks passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -2,11 +2,12 @@
 (function (root) {
     'use strict';
     const PROVIDERS = {
+        eriemoves:{name:'ErieMoves / Coldwell Banker Select / MLS',host:'eriemoves.com',pattern:/^\/listing\/PA\/[A-Za-z0-9-]+\/[A-Za-z0-9-]+\/\d+$/},
         tarasa:{name:'Tarasa / River Point Realty / MLS',host:'www.tarasa.com',pattern:/^\/property-search\/detail\/56\/\d+\/[a-z0-9-]+\/$/},
         clearchoice:{name:'Clear Choice / MLS',host:'www.clearchoiceenterprises.com',pattern:/^\/idx\/[a-z0-9-]+\/\d+_spid\/$/}
     };
     const ALLOWED = new Set(['roof_type','heating','cooling','parking','parking_spaces','construction','basement',
-        'stories','water','sewer','beds','baths','sqft','year_built','total_rooms','style','lot_area_acres']);
+        'stories','water','sewer','beds','baths','sqft','year_built','total_rooms','style','lot_area_acres','hvac_type']);
     const ALIASES = {STREET:'ST',AVENUE:'AVE',ROAD:'RD',DRIVE:'DR',PLACE:'PL',BOULEVARD:'BLVD',LANE:'LN',COURT:'CT',TERRACE:'TER',
         NORTH:'N',SOUTH:'S',EAST:'E',WEST:'W',APARTMENT:'UNIT',APT:'UNIT',SUITE:'UNIT'};
     function norm(value) {
@@ -23,10 +24,16 @@
     function inventoryUrl(value) {
         try { const u = new URL(value); return u.protocol === 'https:' && !u.username && !u.password && (!u.port || u.port === '443') ? u.href.replace(/#.*$/,'') : null; } catch (_) { return null; }
     }
+    function erieUrlMatches(p,url) {
+        const parts=new URL(url).pathname.split('/'), id=identity(p), tail=' '+id[3];
+        const street=parts[4].replace(/-/g,' ');
+        return norm(parts[3].replace(/-/g,' '))===id[1] && street.endsWith(tail) && norm(street.slice(0,-tail.length))===id[0];
+    }
     function matches(p, r) {
         const id = identity(p), county = String(p.county || '').toLowerCase().replace(/ county$/,'');
         return Boolean(!p._idAmbiguous && p.source_type === 'mls' && Object.hasOwn(PROVIDERS,r?.provider) && r.status === 'published' &&
             r.property_id === String(p.id) && r.listing_id === listing(p) && sourceUrl(r.source_url,r.provider) &&
+            (r.provider!=='eriemoves' || (county==='erie' && erieUrlMatches(p,r.source_url))) &&
             (r.provider!=='tarasa' || new URL(r.source_url).pathname.split('/')[4]===listing(p)) &&
             inventoryUrl(p.url) && r.inventory_source_url === inventoryUrl(p.url) &&
             JSON.stringify(r.identity) === JSON.stringify(id) && id[2] === 'PA' && /^\d{5}$/.test(id[3]) &&
@@ -46,6 +53,11 @@
             e.property_id === String(p.id) && e.listing_id === listing(p) && e.status === 'reported_by_source'
             ? {value:value(e.value),source:PROVIDERS[r.provider].name,url:r.source_url,date:e.checked_at || r.retrieved_at,unit:e.unit || null} : null;
     }
+    function moxiPhoto(url) {
+        try { const u=new URL(url); return u.protocol==='https:' && /^i\d+\.moxi\.onl$/.test(u.hostname) &&
+            !u.username && !u.password && (!u.port || u.port==='443') && !u.search && !u.hash &&
+            /^\/img-pr-\d+\/eri\/[a-f0-9]+\/\d+_\d+_full\.jpg$/.test(u.pathname); } catch (_) { return false; }
+    }
     function photoUrl(url, mls) {
         try { const u = new URL(url), m = u.pathname.match(/^\/(?:pics[123]x|large)\/v\d+\/\d+\/\d+_(\d+)_(\d{2,3})\.jpg$/);
             return Boolean(u.protocol === 'https:' && u.hostname === 'cdn.listingphotos.sierrastatic.com' && !u.username && !u.password &&
@@ -55,8 +67,8 @@
         if (!matches(p,r)) return [];
         const seen = new Set();
         return (Array.isArray(r.photos) ? r.photos : []).filter(e=>{
-            if (e?.source !== PROVIDERS[r.provider].name || e.source_url !== r.source_url || e.listing_id !== listing(p) || !photoUrl(e.url,listing(p))) return false;
-            const seq=e.url.match(/_(\d{2,3})\.jpg$/)[1]; if(seen.has(seq)) return false; seen.add(seq); return true;
+            if (e?.source !== PROVIDERS[r.provider].name || e.source_url !== r.source_url || e.listing_id !== listing(p) || !(r.provider==='eriemoves'?moxiPhoto(e.url):photoUrl(e.url,listing(p)))) return false;
+            const seq=r.provider==='eriemoves'?e.url:e.url.match(/_(\d{2,3})\.jpg$/)[1]; if(seen.has(seq)) return false; seen.add(seq); return true;
         }).slice(0,3);
     }
     async function key(propertyId, cryptoApi=root.crypto) {
