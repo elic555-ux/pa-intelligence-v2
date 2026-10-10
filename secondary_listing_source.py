@@ -22,7 +22,7 @@ from urllib.robotparser import RobotFileParser
 from bs4 import BeautifulSoup
 import property_sources as registry
 
-VERSION = 'additional-source-1.3.0-20261010'
+VERSION = 'additional-source-1.4.0-20261010'
 ORIGIN = 'https://www.clearchoiceenterprises.com'
 PROVIDER = 'clearchoice'
 SOURCE = 'Clear Choice / MLS'
@@ -32,6 +32,7 @@ STATUS = Path('COMPS_REPORTS/additional_source_status.json')
 SOURCE_STATE = Path('COMPS_REPORTS/additional_sources/clearchoice_state.json')
 CACHE_DAYS = 7
 PROVIDERS = {
+    'howardhanna': ('https://www.howardhanna.com', 'Howard Hanna / Greater Erie MLS', r'/property/[a-z0-9-]+-\d{9,15}'),
     'eriemoves': ('https://eriemoves.com', 'ErieMoves / Coldwell Banker Select / MLS', r'/listing/PA/[A-Za-z0-9-]+/[A-Za-z0-9-]+/\d+'),
     'clearchoice': ('https://www.clearchoiceenterprises.com', 'Clear Choice / MLS', r'/idx/[a-z0-9-]+/\d+_spid/'),
     'tarasa': ('https://www.tarasa.com', 'Tarasa / River Point Realty / MLS', r'/property-search/detail/56/\d+/[a-z0-9-]+/'),
@@ -95,6 +96,7 @@ def bound(row, record, provider=PROVIDER):
         and registry.safe_url(record.get('inventory_source_url')) == registry.safe_url(row.get('url'))
         and source_url(record.get('source_url'), provider)
         and (provider != 'eriemoves' or registry.erie_url_matches(row, record['source_url']))
+        and (provider != 'howardhanna' or registry.hanna_url_matches(row, record['source_url']))
         and (provider != 'tarasa' or urlparse(record['source_url']).path.split('/')[4] == registry.listing_id(row))
         and registry.address_key(record.get('subject') or {}) == registry.address_key(registry.identity(row)))
 
