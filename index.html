@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.16.2 / 2026-10-11: manual scan saves and restores the complete form before dispatch -->
+<!-- PA UI 8.17.0 / 2026-10-11: scoped selections and independently confirmed scan profiles -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.16.2 · 11.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.17.0 · 11.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -585,11 +585,11 @@
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Adams" onchange="handleCountyScopeChange('setting','Adams',this.checked)"><span>Adams</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('setting','Allegheny',this.checked)"><span>Allegheny</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" class="setting-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('setting','Allegheny',this.checked)"><span>Allegheny</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Armstrong" onchange="handleCountyScopeChange('setting','Armstrong',this.checked)"><span>Armstrong</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Beaver" onchange="handleCountyScopeChange('setting','Beaver',this.checked)"><span>Beaver</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Bedford" onchange="handleCountyScopeChange('setting','Bedford',this.checked)"><span>Bedford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Berks" onchange="handleCountyScopeChange('setting','Berks',this.checked)"><span>Berks</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Berks" onchange="handleCountyScopeChange('setting','Berks',this.checked)"><span>Berks</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Blair" onchange="handleCountyScopeChange('setting','Blair',this.checked)"><span>Blair</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Bradford" onchange="handleCountyScopeChange('setting','Bradford',this.checked)"><span>Bradford</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Bucks" onchange="handleCountyScopeChange('setting','Bucks',this.checked)"><span>Bucks</span></label>
@@ -608,7 +608,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Dauphin" onchange="handleCountyScopeChange('setting','Dauphin',this.checked)"><span>Dauphin</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Delaware" onchange="handleCountyScopeChange('setting','Delaware',this.checked)"><span>Delaware</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Elk" onchange="handleCountyScopeChange('setting','Elk',this.checked)"><span>Elk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Erie" onchange="handleCountyScopeChange('setting','Erie',this.checked)"><span>Erie</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Erie" onchange="handleCountyScopeChange('setting','Erie',this.checked)"><span>Erie</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Fayette" onchange="handleCountyScopeChange('setting','Fayette',this.checked)"><span>Fayette</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Forest" onchange="handleCountyScopeChange('setting','Forest',this.checked)"><span>Forest</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Franklin" onchange="handleCountyScopeChange('setting','Franklin',this.checked)"><span>Franklin</span></label>
@@ -618,11 +618,11 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Indiana" onchange="handleCountyScopeChange('setting','Indiana',this.checked)"><span>Indiana</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Jefferson" onchange="handleCountyScopeChange('setting','Jefferson',this.checked)"><span>Jefferson</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Juniata" onchange="handleCountyScopeChange('setting','Juniata',this.checked)"><span>Juniata</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lackawanna" onchange="handleCountyScopeChange('setting','Lackawanna',this.checked)"><span>Lackawanna</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lancaster" onchange="handleCountyScopeChange('setting','Lancaster',this.checked)"><span>Lancaster</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lackawanna" onchange="handleCountyScopeChange('setting','Lackawanna',this.checked)"><span>Lackawanna</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lancaster" onchange="handleCountyScopeChange('setting','Lancaster',this.checked)"><span>Lancaster</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lawrence" onchange="handleCountyScopeChange('setting','Lawrence',this.checked)"><span>Lawrence</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lebanon" onchange="handleCountyScopeChange('setting','Lebanon',this.checked)"><span>Lebanon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Lehigh" onchange="handleCountyScopeChange('setting','Lehigh',this.checked)"><span>Lehigh</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lehigh" onchange="handleCountyScopeChange('setting','Lehigh',this.checked)"><span>Lehigh</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Luzerne" onchange="handleCountyScopeChange('setting','Luzerne',this.checked)"><span>Luzerne</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Lycoming" onchange="handleCountyScopeChange('setting','Lycoming',this.checked)"><span>Lycoming</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="McKean" onchange="handleCountyScopeChange('setting','McKean',this.checked)"><span>McKean</span></label>
@@ -631,10 +631,10 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Monroe" onchange="handleCountyScopeChange('setting','Monroe',this.checked)"><span>Monroe</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Montgomery" onchange="handleCountyScopeChange('setting','Montgomery',this.checked)"><span>Montgomery</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Montour" onchange="handleCountyScopeChange('setting','Montour',this.checked)"><span>Montour</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Northampton" onchange="handleCountyScopeChange('setting','Northampton',this.checked)"><span>Northampton</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Northampton" onchange="handleCountyScopeChange('setting','Northampton',this.checked)"><span>Northampton</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Northumberland" onchange="handleCountyScopeChange('setting','Northumberland',this.checked)"><span>Northumberland</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Perry" onchange="handleCountyScopeChange('setting','Perry',this.checked)"><span>Perry</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-county-box accent-amber-500" value="Philadelphia" onchange="handleCountyScopeChange('setting','Philadelphia',this.checked)"><span>Philadelphia</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Philadelphia" onchange="handleCountyScopeChange('setting','Philadelphia',this.checked)"><span>Philadelphia</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Pike" onchange="handleCountyScopeChange('setting','Pike',this.checked)"><span>Pike</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Potter" onchange="handleCountyScopeChange('setting','Potter',this.checked)"><span>Potter</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="Schuylkill" onchange="handleCountyScopeChange('setting','Schuylkill',this.checked)"><span>Schuylkill</span></label>
@@ -660,14 +660,14 @@
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Philadelphia" data-county="Philadelphia" onchange="handleSettingCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Pittsburgh" data-county="Allegheny" onchange="handleSettingCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Allentown" data-county="Lehigh" onchange="handleSettingCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Reading" data-county="Berks" onchange="handleSettingCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Erie" data-county="Erie" onchange="handleSettingCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Scranton" data-county="Lackawanna" onchange="handleSettingCityCheckboxChange('Scranton', this.checked)"><span>Scranton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Bethlehem" data-county="Northampton" onchange="handleSettingCityCheckboxChange('Bethlehem', this.checked)"><span>Bethlehem</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-city-box accent-blue-500" value="Lancaster" data-county="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Philadelphia" data-county="Philadelphia" onchange="handleSettingCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Pittsburgh" data-county="Allegheny" onchange="handleSettingCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Allentown" data-county="Lehigh" onchange="handleSettingCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Reading" data-county="Berks" onchange="handleSettingCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Erie" data-county="Erie" onchange="handleSettingCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Scranton" data-county="Lackawanna" onchange="handleSettingCityCheckboxChange('Scranton', this.checked)"><span>Scranton</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Bethlehem" data-county="Northampton" onchange="handleSettingCityCheckboxChange('Bethlehem', this.checked)"><span>Bethlehem</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Lancaster" data-county="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
                 </div>
             </div>
             
@@ -677,35 +677,35 @@
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
                     
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
 
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South"><span>Bethlehem South</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic"><span>Bethlehem Historic</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem"><span>West Bethlehem</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South"><span>Bethlehem South</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic"><span>Bethlehem Historic</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem"><span>West Bethlehem</span></label>
 
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill"><span>Cabbage Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut"><span>Lancaster Chestnut</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown"><span>Lancaster Downtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill"><span>Cabbage Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut"><span>Lancaster Chestnut</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown"><span>Lancaster Downtown</span></label>
 
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="West Bay"><span>West Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="East Bay"><span>East Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront"><span>Erie Bayfront</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="West Bay"><span>West Bay</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="East Bay"><span>East Bay</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront"><span>Erie Bayfront</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
                 </div>
             </div>
             
@@ -716,7 +716,7 @@
             
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
-                <button onclick="saveScanSettingsToServer()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-2"><i data-lucide="upload-cloud" class="w-4 h-4"></i> שדר לשרת ושמור</button>
+                <button id="btn-save-scan-settings" onclick="saveScanSettingsToServer()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-2"><i data-lucide="upload-cloud" class="w-4 h-4"></i> שדר לשרת ושמור</button>
             </div>
         </div>
     </div>
@@ -774,11 +774,11 @@
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Adams" onchange="handleCountyScopeChange('ondemand','Adams',this.checked)"><span>Adams</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('ondemand','Allegheny',this.checked)"><span>Allegheny</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-amber-500/30"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Allegheny" onchange="handleCountyScopeChange('ondemand','Allegheny',this.checked)"><span>Allegheny</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Armstrong" onchange="handleCountyScopeChange('ondemand','Armstrong',this.checked)"><span>Armstrong</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Beaver" onchange="handleCountyScopeChange('ondemand','Beaver',this.checked)"><span>Beaver</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Bedford" onchange="handleCountyScopeChange('ondemand','Bedford',this.checked)"><span>Bedford</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Berks" onchange="handleCountyScopeChange('ondemand','Berks',this.checked)"><span>Berks</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Berks" onchange="handleCountyScopeChange('ondemand','Berks',this.checked)"><span>Berks</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Blair" onchange="handleCountyScopeChange('ondemand','Blair',this.checked)"><span>Blair</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Bradford" onchange="handleCountyScopeChange('ondemand','Bradford',this.checked)"><span>Bradford</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Bucks" onchange="handleCountyScopeChange('ondemand','Bucks',this.checked)"><span>Bucks</span></label>
@@ -797,7 +797,7 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Dauphin" onchange="handleCountyScopeChange('ondemand','Dauphin',this.checked)"><span>Dauphin</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Delaware" onchange="handleCountyScopeChange('ondemand','Delaware',this.checked)"><span>Delaware</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Elk" onchange="handleCountyScopeChange('ondemand','Elk',this.checked)"><span>Elk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Erie" onchange="handleCountyScopeChange('ondemand','Erie',this.checked)"><span>Erie</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Erie" onchange="handleCountyScopeChange('ondemand','Erie',this.checked)"><span>Erie</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Fayette" onchange="handleCountyScopeChange('ondemand','Fayette',this.checked)"><span>Fayette</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Forest" onchange="handleCountyScopeChange('ondemand','Forest',this.checked)"><span>Forest</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Franklin" onchange="handleCountyScopeChange('ondemand','Franklin',this.checked)"><span>Franklin</span></label>
@@ -807,23 +807,23 @@
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Indiana" onchange="handleCountyScopeChange('ondemand','Indiana',this.checked)"><span>Indiana</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Jefferson" onchange="handleCountyScopeChange('ondemand','Jefferson',this.checked)"><span>Jefferson</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Juniata" onchange="handleCountyScopeChange('ondemand','Juniata',this.checked)"><span>Juniata</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lackawanna" onchange="handleCountyScopeChange('ondemand','Lackawanna',this.checked)"><span>Lackawanna</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lancaster" onchange="handleCountyScopeChange('ondemand','Lancaster',this.checked)"><span>Lancaster</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lackawanna" onchange="handleCountyScopeChange('ondemand','Lackawanna',this.checked)"><span>Lackawanna</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lancaster" onchange="handleCountyScopeChange('ondemand','Lancaster',this.checked)"><span>Lancaster</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lawrence" onchange="handleCountyScopeChange('ondemand','Lawrence',this.checked)"><span>Lawrence</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lebanon" onchange="handleCountyScopeChange('ondemand','Lebanon',this.checked)"><span>Lebanon</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Lehigh" onchange="handleCountyScopeChange('ondemand','Lehigh',this.checked)"><span>Lehigh</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lehigh" onchange="handleCountyScopeChange('ondemand','Lehigh',this.checked)"><span>Lehigh</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Luzerne" onchange="handleCountyScopeChange('ondemand','Luzerne',this.checked)"><span>Luzerne</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Lycoming" onchange="handleCountyScopeChange('ondemand','Lycoming',this.checked)"><span>Lycoming</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-county-box accent-amber-500" value="McKean" onchange="handleCountyScopeChange('ondemand','McKean',this.checked)"><span>McKean</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="McKean" onchange="handleCountyScopeChange('ondemand','McKean',this.checked)"><span>McKean</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Mercer" onchange="handleCountyScopeChange('ondemand','Mercer',this.checked)"><span>Mercer</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Mifflin" onchange="handleCountyScopeChange('ondemand','Mifflin',this.checked)"><span>Mifflin</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Monroe" onchange="handleCountyScopeChange('ondemand','Monroe',this.checked)"><span>Monroe</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Montgomery" onchange="handleCountyScopeChange('ondemand','Montgomery',this.checked)"><span>Montgomery</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Montour" onchange="handleCountyScopeChange('ondemand','Montour',this.checked)"><span>Montour</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Northampton" onchange="handleCountyScopeChange('ondemand','Northampton',this.checked)"><span>Northampton</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Northampton" onchange="handleCountyScopeChange('ondemand','Northampton',this.checked)"><span>Northampton</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Northumberland" onchange="handleCountyScopeChange('ondemand','Northumberland',this.checked)"><span>Northumberland</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Perry" onchange="handleCountyScopeChange('ondemand','Perry',this.checked)"><span>Perry</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-county-box accent-amber-500" value="Philadelphia" onchange="handleCountyScopeChange('ondemand','Philadelphia',this.checked)"><span>Philadelphia</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Philadelphia" onchange="handleCountyScopeChange('ondemand','Philadelphia',this.checked)"><span>Philadelphia</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Pike" onchange="handleCountyScopeChange('ondemand','Pike',this.checked)"><span>Pike</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Potter" onchange="handleCountyScopeChange('ondemand','Potter',this.checked)"><span>Potter</span></label>
                     <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-county-box accent-amber-500" value="Schuylkill" onchange="handleCountyScopeChange('ondemand','Schuylkill',this.checked)"><span>Schuylkill</span></label>
@@ -866,35 +866,35 @@
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="N. Liberties"><span>N. Liberties</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Fishtown"><span>Fishtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Center City"><span>Center City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Manayunk"><span>Manayunk</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="Chestnut Hill"><span>Chestnut Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="University City"><span>University City</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Philadelphia" value="South Philly"><span>South Philly</span></label>
                     
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Strip District"><span>Strip District</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="East Liberty"><span>East Liberty</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Oakland"><span>Oakland</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="South Side"><span>South Side</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Squirrel Hill"><span>Squirrel Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Lawrenceville"><span>Lawrenceville</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="Shadyside"><span>Shadyside</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Pittsburgh" value="PGH Downtown"><span>PGH Downtown</span></label>
 
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South"><span>Bethlehem South</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic"><span>Bethlehem Historic</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem"><span>West Bethlehem</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem South"><span>Bethlehem South</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="Bethlehem Historic"><span>Bethlehem Historic</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Bethlehem" value="West Bethlehem"><span>West Bethlehem</span></label>
 
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill"><span>Cabbage Hill</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut"><span>Lancaster Chestnut</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown"><span>Lancaster Downtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Cabbage Hill"><span>Cabbage Hill</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Chestnut"><span>Lancaster Chestnut</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Lancaster" value="Lancaster Downtown"><span>Lancaster Downtown</span></label>
 
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="West Bay"><span>West Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="East Bay"><span>East Bay</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront"><span>Erie Bayfront</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" checked class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="West Bay"><span>West Bay</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="East Bay"><span>East Bay</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Bayfront"><span>Erie Bayfront</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-hood-box accent-emerald-500" data-city="Erie" value="Erie Downtown"><span>Erie Downtown</span></label>
                 </div>
             </div>
             
@@ -949,7 +949,13 @@
         let scheduledProfileVerified = false;
         let manualProfileVerified = false;
         let confirmedManualScanProfile = null;
+        let confirmedScheduledScanProfile = null;
         let manualScanSaveInProgress = false;
+        let scheduledScanSaveInProgress = false;
+        const scanFormProfiles = {setting: null, ondemand: null};
+        const scanProfileLoadVersion = {setting: 0, ondemand: 0};
+        const scanSaveLocks = {};
+        let scanCatalogAreas = {};
         const staticScanLocationInputs = {};
         let boardScanPriceRange = initialBoardScanPriceRange();
         let boardPriceMinEdited = false;
@@ -1243,11 +1249,9 @@
         function scanConfigurationErrors(config) {
             const errors = [];
             if (!config.counties?.length && !config.cities?.length) errors.push('יש לבחור לפחות מחוז או עיר לסריקה.');
-            if (config.is_manual_scan && Array.isArray(config.uiSelections?.locations)) {
+            if (Array.isArray(config.uiSelections?.locations)) {
                 const inactiveAreas = [...new Set(config.uiSelections.locations.filter(location => {
-                    const countyArea = location.area === 'Allegheny' || location.area.endsWith(' County');
-                    return countyArea ? !config.counties?.includes(location.area.replace(/ County$/, '')) :
-                        !config.cities?.includes(location.area);
+                    return !scanAreaSelected(config, location.area);
                 }).map(location => location.area))];
                 if (inactiveAreas.length) errors.push('נבחרו מיקומים תחת אזור שלא סומן לסריקה: ' + inactiveAreas.join(', ') +
                     '. סמן גם את המחוז או העיר המתאימים, או בטל את המיקומים האלה.');
@@ -1627,6 +1631,17 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 document.querySelectorAll(`.${prefix}-county-box, .${prefix}-city-box, .${prefix}-hood-box`)
                     .forEach(input => { input.checked = false; input.indeterminate = false; });
             }
+            // Delegate to the modal so newly rendered catalog inputs also save
+            // the complete form. Register before the first asynchronous load.
+            for (const [id, save] of [['settings-modal', saveSettingsStateLocally], ['ondemand-modal', saveOnDemandStateLocally]]) {
+                const modal = document.getElementById(id);
+                modal.addEventListener('change', event => {
+                    if (event.target.matches('input, select')) save();
+                });
+                modal.addEventListener('input', event => {
+                    if (event.target.matches('input[type="text"]')) save();
+                });
+            }
             
             await loadCloudData();
             
@@ -1639,23 +1654,13 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             }
 
             migrateClosedScanSettings();
-            loadSettingsState();
-            loadOnDemandState();
-
-            document.querySelectorAll('#settings-modal input, #settings-modal select').forEach(el => {
-                el.addEventListener('change', saveSettingsStateLocally);
-                if(el.type === 'text') el.addEventListener('input', saveSettingsStateLocally);
-            });
-            document.querySelectorAll('#ondemand-modal input, #ondemand-modal select').forEach(el => {
-                el.addEventListener('change', saveOnDemandStateLocally);
-                if(el.type === 'text') el.addEventListener('input', saveOnDemandStateLocally);
-            });
+            if (!scheduledProfileVerified) loadSettingsState();
+            if (!manualProfileVerified) loadOnDemandState();
 
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
-            await loadAutomationState();
-            await loadScheduledScanProfile();
-            await loadManualScanProfile();
+            if (!scheduledProfileVerified) await loadScheduledScanProfile();
+            if (!manualProfileVerified) await loadManualScanProfile();
             await loadProperties();
             await loadGeoCatalog();
         }
@@ -1750,7 +1755,12 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 .find(cb => cb.value === city.dataset.county);
             if (!county) return;
             const siblings = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county="${city.dataset.county}"]`));
-            if (county.checked && siblings.some(cb => !cb.checked)) county.checked = false;
+            if (county.checked && siblings.some(cb => !cb.checked)) {
+                county.checked = false;
+                document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
+                    if (canonicalScanArea(hood.dataset.city) === `${city.dataset.county} County`) hood.checked = false;
+                });
+            }
             county.indeterminate = !county.checked && siblings.some(cb => cb.checked);
         }
 
@@ -1787,6 +1797,18 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 }).map(hood => hood.value);
         }
 
+        function canonicalScanArea(area) {
+            return area === 'Allegheny' ? 'Allegheny County' : area;
+        }
+
+        function scanAreaSelected(saved, area) {
+            const canonical = canonicalScanArea(area || '');
+            const selection = saved?.uiSelections || saved || {};
+            return canonical.endsWith(' County') ?
+                Boolean(selection.counties?.includes(canonical.replace(/ County$/, ''))) :
+                Boolean(selection.cities?.includes(canonical));
+        }
+
         function savedGeoScope(saved, area) {
             const scopes = saved?.geoAreas || {};
             // Legacy Allegheny used both spellings; city Erie and Erie County
@@ -1796,10 +1818,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function restoreGeoAreas(prefix, saved) {
-            if (!saved || !saved.geoAreas) return;
             document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                const scope = savedGeoScope(saved, hood.dataset.city);
-                if (scope) hood.checked = Boolean(scope.locations?.includes(hood.value));
+                hood.checked = savedScanLocationChecked(saved, hood.dataset.city, hood.value);
             });
         }
 
@@ -1808,38 +1828,68 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
                 locations: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`))
-                    .map(cb => ({area: cb.dataset.city, value: cb.value}))
+                    .map(cb => ({area: canonicalScanArea(cb.dataset.city), value: cb.value}))
             };
         }
 
         function savedScanLocationChecked(saved, area, value) {
+            const canonical = canonicalScanArea(area);
             if (Array.isArray(saved?.uiSelections?.locations)) {
-                return saved.uiSelections.locations.some(location => location.area === area && location.value === value);
+                return saved.uiSelections.locations.some(location =>
+                    canonicalScanArea(location.area) === canonical && location.value === value);
             }
+            // Legacy flat names must never tick locations under an unselected
+            // parent, or override an explicitly saved scope for another area.
+            if (!scanAreaSelected(saved, canonical)) return false;
             const scope = savedGeoScope(saved, area);
-            if (scope) return Boolean(scope.locations?.includes(value));
-            // Older saved profiles only had a flat list. Restore its existing
-            // choices without selecting newly discovered catalog locations.
-            return Boolean(saved?.neighborhoods?.includes(value));
+            if (scope) return scope.allLocations !== true && Boolean(scope.locations?.includes(value));
+            if (Object.keys(saved?.geoAreas || {}).length || !saved?.neighborhoods?.includes(value)) return false;
+            const activeAreas = [...new Set([
+                ...(saved.counties || []).map(county => `${county} County`), ...(saved.cities || [])
+            ].map(canonicalScanArea))];
+            const matchingAreas = activeAreas.filter(candidate => scanCatalogAreas[candidate]?.has(value) ||
+                Object.values(staticScanLocationInputs).some(inputs => inputs.some(input =>
+                    canonicalScanArea(input.dataset.city) === candidate && input.value === value)));
+            // An ambiguous legacy name cannot establish which source was chosen.
+            return matchingAreas.length === 1 && matchingAreas[0] === canonical;
         }
 
-        function cacheConfirmedManualScanProfile(config) {
-            confirmedManualScanProfile = JSON.parse(JSON.stringify(config));
-            manualProfileVerified = true;
+        function cacheConfirmedScanProfile(prefix, config) {
+            const copy = JSON.parse(JSON.stringify(config));
+            if (prefix === 'ondemand') {
+                confirmedManualScanProfile = copy;
+                manualProfileVerified = true;
+            } else {
+                confirmedScheduledScanProfile = copy;
+                scheduledProfileVerified = true;
+            }
             try {
                 const saved = JSON.stringify(config);
-                localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config));
-                localStorage.setItem('pa_ondemand_draft_v7', saved);
-                localStorage.setItem('pa_ondemand_confirmed_v1', saved);
+                if (prefix === 'ondemand') {
+                    localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config));
+                    localStorage.setItem('pa_ondemand_draft_v7', saved);
+                    localStorage.setItem('pa_ondemand_confirmed_v1', saved);
+                } else {
+                    localStorage.setItem('pa_settings_state_v7', saved);
+                    localStorage.setItem('pa_settings_draft_v1', saved);
+                    localStorage.setItem('pa_settings_confirmed_v1', saved);
+                }
             } catch (error) { /* The verified server copy still remains authoritative. */ }
         }
 
-        function lastConfirmedManualScanProfile() {
-            if (confirmedManualScanProfile) return confirmedManualScanProfile;
+        function cacheConfirmedManualScanProfile(config) { cacheConfirmedScanProfile('ondemand', config); }
+
+        function lastConfirmedScanProfile(prefix) {
+            const current = prefix === 'ondemand' ? confirmedManualScanProfile : confirmedScheduledScanProfile;
+            if (current) return current;
             try {
-                return JSON.parse(localStorage.getItem('pa_ondemand_confirmed_v1') || 'null');
+                const key = prefix === 'ondemand' ? 'pa_ondemand_confirmed_v1' : 'pa_settings_confirmed_v1';
+                const saved = JSON.parse(localStorage.getItem(key) || 'null');
+                return saved && Array.isArray(saved.counties) && Array.isArray(saved.cities) ? saved : null;
             } catch (error) { return null; }
         }
+
+        function lastConfirmedManualScanProfile() { return lastConfirmedScanProfile('ondemand'); }
 
         function buildServerConfig(isManual = false) {
             const prefix = isManual ? 'ondemand' : 'setting';
@@ -1857,7 +1907,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
                 neighborhoods: selectedScanLocations(prefix),
                 geoAreas: buildGeoAreas(prefix),
-                ...(isManual ? {uiSelections: captureScanSelections(prefix)} : {}),
+                uiSelections: captureScanSelections(prefix),
                 autoScanEnabled: document.getElementById('autoscan-master-switch') ? document.getElementById('autoscan-master-switch').checked : true,
                 schedules: {
                     mls: { day: document.getElementById('sched-day-mls') ? document.getElementById('sched-day-mls').value : 'Everyday', time: document.getElementById('sched-time-mls') ? document.getElementById('sched-time-mls').value : '08:00' },
@@ -1870,127 +1920,120 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             };
         }
 
-        function saveSettingsStateLocally() { localStorage.setItem('pa_settings_state_v7', JSON.stringify(buildServerConfig(false))); }
-
-        function loadSettingsState(savedConfig = null) {
+        function saveScanDraft(prefix) {
+            const config = buildServerConfig(prefix === 'ondemand');
+            scanFormProfiles[prefix] = config;
+            ++scanProfileLoadVersion[prefix];
             try {
-                const saved = savedConfig ? JSON.stringify(savedConfig) : localStorage.getItem('pa_settings_state_v7');
-                if (saved) {
-                    const st = cleanScanSettings(JSON.parse(saved));
-                    if(document.getElementById('setting-min-price') && st.minPrice !== undefined && st.minPrice !== null) document.getElementById('setting-min-price').value = st.minPrice.toLocaleString('en-US');
-                    if(document.getElementById('setting-max-price') && st.maxPrice !== undefined && st.maxPrice !== null) document.getElementById('setting-max-price').value = st.maxPrice.toLocaleString('en-US');
-                    if(document.getElementById('setting-min-sqft') && st.minSqft) document.getElementById('setting-min-sqft').value = st.minSqft;
-                    if(document.getElementById('setting-max-sqft') && st.maxSqft !== undefined) document.getElementById('setting-max-sqft').value = st.maxSqft;
-                    if(document.getElementById('setting-min-beds') && st.minBeds) document.getElementById('setting-min-beds').value = st.minBeds;
-                    if(document.getElementById('setting-max-beds') && st.maxBeds !== undefined) document.getElementById('setting-max-beds').value = st.maxBeds;
-                    if(document.getElementById('setting-min-baths') && st.minBaths) document.getElementById('setting-min-baths').value = st.minBaths;
-                    if(st.sectors) document.querySelectorAll('.setting-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
-                    if(st.propertyTypes) document.querySelectorAll('.setting-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
-                    if(st.counties) document.querySelectorAll('.setting-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
-                    if(st.cities) document.querySelectorAll('.setting-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
-                    if(st.neighborhoods) document.querySelectorAll('.setting-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
-                    restoreGeoAreas('setting', st);
-                }
-            } catch(e) {}
+                localStorage.setItem(prefix === 'ondemand' ? 'pa_ondemand_draft_v7' : 'pa_settings_draft_v1', JSON.stringify(config));
+            } catch (error) { /* The current form remains available in memory. */ }
         }
 
-        function saveOnDemandStateLocally() { localStorage.setItem('pa_ondemand_draft_v7', JSON.stringify(buildServerConfig(true))); }
+        function saveSettingsStateLocally() { saveScanDraft('setting'); }
+        function saveOnDemandStateLocally() { saveScanDraft('ondemand'); }
 
-        function loadOnDemandState(savedConfig = null) {
-            try {
-                const saved = savedConfig ? JSON.stringify(savedConfig) : localStorage.getItem('pa_ondemand_state_v7');
-                if (saved) {
-                    const st = cleanScanSettings(JSON.parse(saved));
-                    if(document.getElementById('ondemand-min-price') && st.minPrice !== undefined && st.minPrice !== null) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
-                    if(document.getElementById('ondemand-max-price') && st.maxPrice !== undefined && st.maxPrice !== null) document.getElementById('ondemand-max-price').value = st.maxPrice.toLocaleString('en-US');
-                    if(document.getElementById('ondemand-min-sqft') && st.minSqft !== undefined && st.minSqft !== null) document.getElementById('ondemand-min-sqft').value = st.minSqft;
-                    if(document.getElementById('ondemand-max-sqft') && st.maxSqft !== undefined) document.getElementById('ondemand-max-sqft').value = st.maxSqft;
-                    if(document.getElementById('ondemand-min-beds') && st.minBeds !== undefined && st.minBeds !== null) document.getElementById('ondemand-min-beds').value = st.minBeds;
-                    if(document.getElementById('ondemand-max-beds') && st.maxBeds !== undefined) document.getElementById('ondemand-max-beds').value = st.maxBeds;
-                    if(document.getElementById('ondemand-min-baths') && st.minBaths !== undefined && st.minBaths !== null) document.getElementById('ondemand-min-baths').value = st.minBaths;
-                    if(st.sectors) document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
-                    if(st.propertyTypes) document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
-                    if(st.counties) document.querySelectorAll('.ondemand-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
-                    if(st.cities) document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
-                    if(st.neighborhoods) document.querySelectorAll('.ondemand-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
-                    restoreGeoAreas('ondemand', st);
-                    const selection = st.uiSelections;
-                    if (selection) {
-                        if (Array.isArray(selection.counties)) document.querySelectorAll('.ondemand-county-box')
-                            .forEach(cb => { cb.checked = selection.counties.includes(cb.value); cb.indeterminate = false; });
-                        if (Array.isArray(selection.cities)) document.querySelectorAll('.ondemand-city-box')
-                            .forEach(cb => cb.checked = selection.cities.includes(cb.value));
+        function applyScanProfileToForm(prefix, config) {
+            const st = cleanScanSettings(config);
+            scanFormProfiles[prefix] = JSON.parse(JSON.stringify(st));
+            const fields = {'min-price':'minPrice', 'max-price':'maxPrice', 'min-sqft':'minSqft',
+                'max-sqft':'maxSqft', 'min-beds':'minBeds', 'max-beds':'maxBeds', 'min-baths':'minBaths'};
+            for (const [id, key] of Object.entries(fields)) {
+                const input = document.getElementById(`${prefix}-${id}`);
+                if (input && st[key] !== undefined && st[key] !== null) {
+                    input.value = key === 'minPrice' || key === 'maxPrice' ?
+                        (numericData(st[key]) ?? st[key]).toLocaleString('en-US') : st[key];
+                }
+            }
+            for (const [kind, key] of [['sector','sectors'], ['prop-type','propertyTypes'], ['county','counties'], ['city','cities']]) {
+                const chosen = (kind === 'county' || kind === 'city') ? (st.uiSelections?.[key] ?? st[key]) : st[key];
+                document.querySelectorAll(`.${prefix}-${kind}-box`).forEach(input => {
+                    input.checked = Array.isArray(chosen) && chosen.includes(input.value);
+                    input.indeterminate = false;
+                });
+            }
+            restoreGeoAreas(prefix, st);
+            if (prefix === 'setting') {
+                if (typeof st.autoScanEnabled === 'boolean') {
+                    const master = document.getElementById('autoscan-master-switch');
+                    if (master) master.checked = st.autoScanEnabled;
+                }
+                for (const [sector, schedule] of Object.entries(st.schedules || {})) {
+                    for (const part of ['day', 'time']) {
+                        const input = document.getElementById(`sched-${part}-${sector}`);
+                        if (input && schedule?.[part] !== undefined) input.value = schedule[part];
                     }
-                    document.querySelectorAll('.ondemand-hood-box')
-                        .forEach(cb => { cb.checked = savedScanLocationChecked(st, cb.dataset.city, cb.value); });
                 }
-            } catch(e) {}
+            }
         }
 
-        async function loadManualScanProfile(notifyOnFailure = false) {
-            manualProfileVerified = false;
+        function loadScanFormState(prefix, savedConfig = null) {
+            try {
+                const config = savedConfig || lastConfirmedScanProfile(prefix) ||
+                    JSON.parse(localStorage.getItem(prefix === 'ondemand' ? 'pa_ondemand_state_v7' : 'pa_settings_state_v7') || 'null');
+                if (config) applyScanProfileToForm(prefix, config);
+            } catch (error) { /* A malformed old cache cannot become a server profile. */ }
+        }
+
+        function loadSettingsState(savedConfig = null) { loadScanFormState('setting', savedConfig); }
+        function loadOnDemandState(savedConfig = null) { loadScanFormState('ondemand', savedConfig); }
+
+        function scanProfileIsVerified(prefix) { return prefix === 'ondemand' ? manualProfileVerified : scheduledProfileVerified; }
+        function scanProfileIsSaving(prefix) { return prefix === 'ondemand' ? manualScanSaveInProgress : scheduledScanSaveInProgress; }
+
+        function applyConfirmedScheduledState(profile) {
+            if (typeof profile.autoScanEnabled === 'boolean') {
+                isAutoScanEnabled = profile.autoScanEnabled;
+                automationStateVerified = true;
+                try { localStorage.setItem('pa_auto_scan_status', String(isAutoScanEnabled)); } catch (error) {}
+                updateAutoScanUI();
+            }
+            applyBoardScanPriceRange(profile, true);
+        }
+
+        async function loadScanProfile(prefix, notifyOnFailure = false) {
+            if (scanProfileIsSaving(prefix)) return scanProfileIsVerified(prefix);
+            const version = ++scanProfileLoadVersion[prefix];
+            const fileName = prefix === 'ondemand' ? 'manual_scan_config.json' : 'scan_config.json';
             try {
                 const token = localStorage.getItem('pa_github_token');
-                let profile;
-                if (token) {
-                    const response = await fetch('https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json?ref=main&t=' + Date.now(),
-                        {cache: 'no-store', headers: {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'}});
-                    if (!response.ok) throw new Error('manual profile unavailable');
-                    const file = await response.json();
-                    profile = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\s/g, '')))));
-                } else {
-                    const response = await fetch('manual_scan_config.json?t=' + Date.now(), {cache: 'no-store'});
-                    if (!response.ok) throw new Error('manual profile unavailable');
-                    profile = await response.json();
-                }
+                const url = token ? `https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/${fileName}?ref=main&t=${Date.now()}` :
+                    `${fileName}?t=${Date.now()}`;
+                const response = await fetch(url, {cache: 'no-store', ...(token ? {
+                    headers: {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'}
+                } : {})});
+                if (!response.ok) throw new Error('profile unavailable');
+                const data = await response.json();
+                let profile = token ? JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))))) : data;
                 if (!profile || !Array.isArray(profile.counties) || !Array.isArray(profile.cities) ||
-                    !profile.geoAreas || typeof profile.geoAreas !== 'object') throw new Error('invalid manual profile');
-                const confirmed = lastConfirmedManualScanProfile();
-                // GitHub Pages may still serve the preceding deployment immediately
-                // after a save. Do not replace a verified newer selection with it.
-                if (!token && confirmed && Date.parse(confirmed.updatedAt) > Date.parse(profile.updatedAt)) profile = confirmed;
-                cacheConfirmedManualScanProfile(profile);
-                loadOnDemandState(profile);
+                    !profile.geoAreas || typeof profile.geoAreas !== 'object' || Array.isArray(profile.geoAreas)) throw new Error('invalid profile');
+                // A read begun before a user edit/save must not overwrite it.
+                if (version !== scanProfileLoadVersion[prefix] || scanProfileIsSaving(prefix)) return scanProfileIsVerified(prefix);
+                const confirmed = lastConfirmedScanProfile(prefix);
+                if (confirmed && Date.parse(confirmed.updatedAt) > Date.parse(profile.updatedAt)) profile = confirmed;
+                profile = cleanScanSettings(profile);
+                cacheConfirmedScanProfile(prefix, profile);
+                applyScanProfileToForm(prefix, profile);
+                if (prefix === 'setting') applyConfirmedScheduledState(profile);
                 return true;
             } catch (error) {
-                const confirmed = lastConfirmedManualScanProfile();
+                if (version !== scanProfileLoadVersion[prefix] || scanProfileIsSaving(prefix)) return scanProfileIsVerified(prefix);
+                const confirmed = lastConfirmedScanProfile(prefix);
                 if (confirmed) {
-                    loadOnDemandState(confirmed);
-                    manualProfileVerified = true;
+                    cacheConfirmedScanProfile(prefix, confirmed);
+                    applyScanProfileToForm(prefix, confirmed);
+                    if (prefix === 'setting') applyConfirmedScheduledState(confirmed);
                     return true;
                 }
-                if (notifyOnFailure) alert('לא ניתן לטעון את הגדרות הסריקה היזומה מהשרת. החלון לא נפתח כדי למנוע שמירה של אזורים ישנים.');
+                if (prefix === 'ondemand') manualProfileVerified = false; else scheduledProfileVerified = false;
+                if (notifyOnFailure) alert(prefix === 'ondemand' ?
+                    'לא ניתן לטעון את הבחירה האחרונה לסריקה היזומה. לא נטענו אזורי ברירת מחדל.' :
+                    'לא ניתן לטעון את הגדרות הסריקה האחרונות. לא נטענו אזורי ברירת מחדל.');
                 return false;
             }
         }
 
-        async function loadScheduledScanProfile(notifyOnFailure = false) {
-            scheduledProfileVerified = false;
-            try {
-                const token = localStorage.getItem('pa_github_token');
-                let profile;
-                if (token) {
-                    const response = await fetch('https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json',
-                        {headers: {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'}});
-                    if (!response.ok) throw new Error('scheduled profile unavailable');
-                    const file = await response.json();
-                    profile = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\s/g, '')))));
-                } else {
-                    const response = await fetch('scan_config.json?t=' + Date.now());
-                    if (!response.ok) throw new Error('scheduled profile unavailable');
-                    profile = await response.json();
-                }
-                if (!profile || !Array.isArray(profile.counties) || !Array.isArray(profile.cities) ||
-                    !profile.geoAreas || typeof profile.geoAreas !== 'object') throw new Error('invalid scheduled profile');
-                localStorage.setItem('pa_settings_state_v7', JSON.stringify(profile));
-                loadSettingsState(profile);
-                scheduledProfileVerified = true;
-                return true;
-            } catch (error) {
-                if (notifyOnFailure) alert('לא ניתן לטעון את הגדרות הסריקה האחרונות מהשרת. נסה שוב לאחר שהחיבור יתחדש.');
-                return false;
-            }
-        }
+        async function loadManualScanProfile(notifyOnFailure = false) { return loadScanProfile('ondemand', notifyOnFailure); }
+        async function loadScheduledScanProfile(notifyOnFailure = false) { return loadScanProfile('setting', notifyOnFailure); }
 
         function setViewMode(mode) {
             currentViewMode = mode;
@@ -2627,7 +2670,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             // Retain saved source locations even if the catalog is temporarily
             // unavailable or no longer contains a previously selected location.
             for (const prefix of ['setting', 'ondemand']) {
-                let saved = prefix === 'ondemand' ? confirmedManualScanProfile : null;
+                let saved = scanFormProfiles[prefix] || lastConfirmedScanProfile(prefix);
                 if (!saved) {
                     try {
                         saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
@@ -2641,7 +2684,13 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                         (areas[location.area] ||= new Set()).add(location.value);
                 }
             }
-            for (const prefix of ['setting', 'ondemand']) renderGeoCatalog(prefix, areas);
+            const canonicalAreas = {};
+            for (const [area, locations] of Object.entries(areas)) {
+                const canonical = canonicalScanArea(area);
+                for (const location of locations) (canonicalAreas[canonical] ||= new Set()).add(location);
+            }
+            scanCatalogAreas = canonicalAreas;
+            for (const prefix of ['setting', 'ondemand']) renderGeoCatalog(prefix, canonicalAreas);
         }
 
         function renderGeoCatalog(prefix, areas) {
@@ -2653,11 +2702,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 staticScanLocationInputs[prefix] = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
                     .filter(input => !input.closest(`#${prefix}-dynamic-neighborhoods`));
             }
-            const currentSelections = new Map(Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
-                .map(input => [JSON.stringify([input.dataset.city, input.value]), input.checked]));
             container.replaceChildren();
-            const saved = prefix === 'ondemand' && confirmedManualScanProfile ? confirmedManualScanProfile :
-                JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
+            const saved = scanFormProfiles[prefix] || lastConfirmedScanProfile(prefix) || {};
             const staticInputs = staticScanLocationInputs[prefix];
             const staticGrid = document.getElementById(`${prefix}-static-neighborhoods`) || staticInputs[0]?.closest('.grid');
             if (staticGrid) {
@@ -2665,7 +2711,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 staticGrid.classList.add('hidden');
             }
             const byArea = {};
-            for (const input of staticInputs) (byArea[input.dataset.city] ||= []).push(input);
+            for (const input of staticInputs) {
+                input.dataset.city = canonicalScanArea(input.dataset.city);
+                (byArea[input.dataset.city] ||= []).push(input);
+            }
             const names = new Set([...Object.keys(areas), ...Object.keys(byArea)]);
             for (const area of Array.from(names).sort((a,b) => a.localeCompare(b))) {
                 const countyName = area.replace(/ County$/, '');
@@ -2688,6 +2737,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 for (const input of oldInputs) {
                     const label = input.closest('label');
                     if (!label) continue;
+                    input.checked = savedScanLocationChecked(saved, area, input.value);
                     if (!sourceNames.has(input.value.toLowerCase())) { label.title = 'שם מהרשימה הישנה; טרם נמצא בשם זהה בנתוני המקור'; label.classList.add('border-amber-700/50'); }
                     grid.append(label);
                 }
@@ -2695,10 +2745,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                     const label = document.createElement('label'); label.dir = 'ltr'; label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
                     const input = document.createElement('input'); input.type = 'checkbox'; input.value = location; input.className = `${prefix}-hood-box accent-emerald-500`; input.dataset.city = area;
                     // An enlarged source catalog must never enlarge a saved scan.
-                    const selectionKey = JSON.stringify([area, location]);
-                    input.checked = currentSelections.has(selectionKey) ? currentSelections.get(selectionKey) :
-                        savedScanLocationChecked(saved, area, location);
-                    input.addEventListener('change', prefix === 'setting' ? saveSettingsStateLocally : saveOnDemandStateLocally);
+                    input.checked = savedScanLocationChecked(saved, area, location);
                     const name = document.createElement('span'); name.textContent = location;
                     label.append(input, name); grid.append(label);
                 }
@@ -3337,12 +3384,15 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         function toggleAllSettingCities(state) {
             document.querySelectorAll('.setting-city-box').forEach(cb => { cb.checked = state; });
-            document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state; });
-            if (!state) document.querySelectorAll('.setting-county-box').forEach(cb => { cb.checked = false; cb.indeterminate = false; });
+            document.querySelectorAll('.setting-hood-box').forEach(cb => {
+                if (!canonicalScanArea(cb.dataset.city).endsWith(' County')) cb.checked = state;
+            });
+            document.querySelectorAll('.setting-city-box').forEach(cb => updateCountyAfterCityChange('setting', cb.value));
             saveSettingsStateLocally();
         }
         function toggleAllSettingNeighborhoods(state) {
-            document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state; });
+            const profile = buildServerConfig(false);
+            document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state && scanAreaSelected(profile, cb.dataset.city); });
             saveSettingsStateLocally();
         }
         function handleSettingCityCheckboxChange(cityName, isChecked) {
@@ -3354,12 +3404,15 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
         function toggleAllOnDemandCities(state) {
             document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = state; });
-            document.querySelectorAll('.ondemand-hood-box').forEach(cb => { cb.checked = state; });
-            if (!state) document.querySelectorAll('.ondemand-county-box').forEach(cb => { cb.checked = false; cb.indeterminate = false; });
+            document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
+                if (!canonicalScanArea(cb.dataset.city).endsWith(' County')) cb.checked = state;
+            });
+            document.querySelectorAll('.ondemand-city-box').forEach(cb => updateCountyAfterCityChange('ondemand', cb.value));
             saveOnDemandStateLocally();
         }
         function toggleAllOnDemandNeighborhoods(state) {
-            document.querySelectorAll('.ondemand-hood-box').forEach(cb => { cb.checked = state; });
+            const profile = buildServerConfig(true);
+            document.querySelectorAll('.ondemand-hood-box').forEach(cb => { cb.checked = state && scanAreaSelected(profile, cb.dataset.city); });
             saveOnDemandStateLocally();
         }
         function handleCityCheckboxChange(cityName, isChecked) {
@@ -3386,73 +3439,67 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
         async function saveScanSettingsToServer() {
+            if (scheduledScanSaveInProgress) return;
             const config = validatedScanConfig(false);
             if (!config) return;
             const token = document.getElementById('setting-token-input').value.trim() || localStorage.getItem('pa_github_token');
             if (!token) { alert('כדי לשדר את ההגדרות לשרת, חובה להזין מפתח GitHub בחלק העליון של החלון.'); return; }
             localStorage.setItem('pa_github_token', token);
-
-            document.getElementById('scan-progress-toast').classList.remove('hidden');
-            document.getElementById('scan-toast-subtitle').textContent = "ההגדרות משודרות לשרת...";
-            
-            const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
-            let sha = '';
-
+            setScheduledScanSaving(true);
             try {
-                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
-            } catch(e) {}
-
-            try {
-                const putRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: "Update scan config from UI", content: contentBase64, sha: sha || undefined })
-                });
-                if(putRes.ok) {
-                    localStorage.setItem('pa_settings_state_v7', JSON.stringify(config));
-                    scheduledProfileVerified = true;
-                    isAutoScanEnabled = config.autoScanEnabled; automationStateVerified = true; updateAutoScanUI();
-                    applyBoardScanPriceRange(config, true, true);
-                    alert("ההגדרות נשמרו בשרת.");
-                    closeSettingsModal();
-                } else { 
-                    const errTxt = await putRes.text();
-                    alert(`שגיאה בשמירת ההגדרות בשרת.\nקוד: ${putRes.status}\nפרטים: ${errTxt}`); 
-                }
-            } catch(e) { alert("שגיאת רשת בחיבור לגיטהאב."); }
-            document.getElementById('scan-progress-toast').classList.add('hidden');
+                await putScanConfig('setting', config, token);
+                applyBoardScanPriceRange(config, true, true);
+                closeSettingsModal();
+                alert('הגדרות הסריקה נשמרו ואומתו. הן ישמשו לסריקות המתוזמנות הבאות.');
+            } catch (error) { alert(error.message + '\nלא התקבל אישור מלא לשמירת ההגדרות.'); }
+            finally { setScheduledScanSaving(false); }
         }
 
-        async function putManualScanConfig(config, token) {
-            const path = 'https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json';
+        async function putScanConfig(prefix, config, token) {
+            const path = prefix === 'ondemand' ?
+                'https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json' :
+                'https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json';
             const headers = {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'};
             const getRes = await fetch(path + '?ref=main&t=' + Date.now(), {cache: 'no-store', headers});
-            if (!getRes.ok && getRes.status !== 404) throw new Error('קריאת פרופיל הסריקה היזומה נכשלה: HTTP ' + getRes.status);
+            if (!getRes.ok && getRes.status !== 404) throw new Error('קריאת פרופיל הסריקה נכשלה: HTTP ' + getRes.status);
             const sha = getRes.ok ? (await getRes.json()).sha : undefined;
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
             const putRes = await fetch(path, {
                 method: 'PUT',
                 headers: {...headers, 'Content-Type': 'application/json'},
-                body: JSON.stringify({message: 'Save manual scan parameters from UI', content, sha, branch: 'main'})
+                body: JSON.stringify({message: prefix === 'ondemand' ? 'Save manual scan parameters from UI' :
+                    'Save scheduled scan parameters from UI', content, sha, branch: 'main'})
             });
-            if (!putRes.ok) throw new Error('שמירת הגדרות הסריקה היזומה נכשלה: HTTP ' + putRes.status);
+            if (!putRes.ok) throw new Error('שמירת הגדרות הסריקה נכשלה: HTTP ' + putRes.status);
             const verifyRes = await fetch(path + '?ref=main&t=' + Date.now(), {cache: 'no-store', headers});
-            if (!verifyRes.ok) throw new Error('השרת קיבל את השמירה, אך לא ניתן לאמת את הפרמטרים שנשמרו: HTTP ' + verifyRes.status);
+            if (!verifyRes.ok) throw new Error('השרת קיבל את השמירה, אך לא ניתן לאמת אותה: HTTP ' + verifyRes.status);
             const verifiedFile = await verifyRes.json();
             if (typeof verifiedFile.content !== 'string' || verifiedFile.content.replace(/\s/g, '') !== content) {
-                throw new Error('הפרמטרים שנקראו מהשרת אינם תואמים לבחירה. הסריקה לא הופעלה.');
+                throw new Error('הפרמטרים שנקראו מהשרת אינם תואמים לבחירה.');
             }
-            cacheConfirmedManualScanProfile(config);
+            cacheConfirmedScanProfile(prefix, config);
+            applyScanProfileToForm(prefix, config);
+            if (prefix === 'setting') applyConfirmedScheduledState(config);
         }
 
-        function setManualScanSaving(busy) {
-            manualScanSaveInProgress = busy;
-            for (const id of ['btn-trigger-scan', 'btn-save-manual-scan']) {
-                const button = document.getElementById(id);
-                if (button) button.disabled = busy;
+        async function putManualScanConfig(config, token) { return putScanConfig('ondemand', config, token); }
+
+        function setScanSaving(prefix, busy) {
+            if (prefix === 'ondemand') manualScanSaveInProgress = busy; else scheduledScanSaveInProgress = busy;
+            if (busy) {
+                ++scanProfileLoadVersion[prefix];
+                const selector = prefix === 'ondemand' ? '#ondemand-modal input, #ondemand-modal select, #ondemand-modal button' :
+                    '#settings-modal input, #settings-modal select, #settings-modal button, #autoscan-modal input, #autoscan-modal select, #autoscan-modal button';
+                scanSaveLocks[prefix] = Array.from(document.querySelectorAll(selector)).map(input => [input, input.disabled]);
+                for (const [input] of scanSaveLocks[prefix]) input.disabled = true;
+            } else {
+                for (const [input, disabled] of scanSaveLocks[prefix] || []) input.disabled = disabled;
+                delete scanSaveLocks[prefix];
             }
         }
+
+        function setManualScanSaving(busy) { setScanSaving('ondemand', busy); }
+        function setScheduledScanSaving(busy) { setScanSaving('setting', busy); }
 
         async function saveManualScanSettings() {
             if (manualScanSaveInProgress) return;
@@ -3563,51 +3610,31 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         async function saveScheduleSettings() {
-            const config = validatedScanConfig(false);
-            if (!config) return;
+            if (scheduledScanSaveInProgress) return;
+            // The schedule dialog changes only timing. Always reuse the last
+            // confirmed scheduled filters, never an unrelated form or draft.
+            const confirmed = lastConfirmedScanProfile('setting');
+            if (!scheduledProfileVerified || !confirmed) { alert('לא נטענו הגדרות סריקה מאומתות. פתח את התזמון מחדש.'); return; }
+            const current = buildServerConfig(false);
+            const config = {...confirmed, autoScanEnabled: current.autoScanEnabled, schedules: current.schedules,
+                updatedAt: new Date().toISOString(), is_manual_scan: false};
             const token = document.getElementById('setting-token-input')?.value.trim() || localStorage.getItem('pa_github_token');
             if (!token) { alert('כדי לשמור את התזמון לשרת, חסר מפתח GitHub. הזן אותו בחלון "הגדרות סריקה".'); return; }
-
-            const isEnabled = document.getElementById('autoscan-master-switch').checked;
-            // The server setting changes only after the PUT has succeeded.
-
-            saveSettingsStateLocally();
-
             const btn = document.getElementById('btn-save-schedule');
             const origHtml = btn.innerHTML;
+            setScheduledScanSaving(true);
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> שומר בשרת...';
-            btn.disabled = true;
             lucide.createIcons();
-
-
             try {
-                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
-                let sha = '';
-                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
-
-                const putRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: "Update 4 Sectors Auto-Scan Schedule", content: contentBase64, sha: sha || undefined })
-                });
-
-                if(putRes.ok) {
-                    localStorage.setItem('pa_settings_state_v7', JSON.stringify(config));
-                    scheduledProfileVerified = true;
-                    localStorage.setItem('pa_auto_scan_status', String(isEnabled));
-                    isAutoScanEnabled = isEnabled; automationStateVerified = true; updateAutoScanUI();
-                    applyBoardScanPriceRange(config, true, true);
-                    alert("התזמון נשמר בשרת. מצב הריצות בפועל מוצג בדוח הסריקה.");
-                    closeAutoScanModal();
-                } else { 
-                    alert("שגיאה בשמירת התזמון בשרת. ודא שהטוקן תקין."); 
-                }
-            } catch(e) { alert("שגיאת רשת בחיבור לגיטהאב."); }
-
-            btn.innerHTML = origHtml;
-            btn.disabled = false;
-            lucide.createIcons();
+                await putScanConfig('setting', config, token);
+                closeAutoScanModal();
+                alert('התזמון נשמר ואומת. פרמטרי הסריקה נשמרו כפי שבחרת בהגדרות הסריקה.');
+            } catch (error) { alert(error.message + '\nלא התקבל אישור מלא לשמירת התזמון.'); }
+            finally {
+                btn.innerHTML = origHtml;
+                setScheduledScanSaving(false);
+                lucide.createIcons();
+            }
         }
 
         function startBackgroundScanMonitor(requestId) {
