@@ -1,4 +1,4 @@
-/* Howard Hanna, ErieMoves, Tarasa and Clear Choice evidence. Version 1.4.2, 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
+/* Howard Hanna, ErieMoves, Tarasa and Clear Choice evidence. Version 1.4.3, 2026-10-11. Reads separate snapshots; no deal/cloud writes. */
 (function (root) {
     'use strict';
     const PROVIDERS = {
@@ -170,10 +170,18 @@
         const supported=!p._idAmbiguous && p.source_type==='mls' && listing(p) && ['Allegheny','Erie'].includes(p.county);
         n.hidden=!supported; if(!supported) return;
         n.appendChild(element('h4','פרטים ממקור נוסף — ללא RentCast','text-blue-300 font-bold mb-2'));
+        const items=ordered(p,records.get(p)), r=items[0];
+        const origin=p.listing_identifier_origin;
+        const originText=origin==='redfin_csv_mls_column' ? 'מספר המודעה התקבל מקובץ הסריקה של Redfin.' :
+            origin==='address_fallback' ? 'מזהה הנכס נוצר מהכתובת כי מספר MLS לא הופיע בסריקה.' :
+            'מקור מספר המודעה לא תועד בסריקה קודמת.';
+        const verified=items.length ? ' נמצאה מודעת מקור שנבדקה מול זהות הנכס: '+items.map(item=>PROVIDERS[item.provider].name).join(' / ')+'.' :
+            ' טרם נמצאה במערכת מודעת מקור נוספת שאומתה לזהות הנכס.';
+        const identityStatus=element('p',originText+verified,'text-sm text-gray-300 my-2');
+        identityStatus.id='modal-listing-identity-status'; n.appendChild(identityStatus);
         const button=element('button','טען ממקור נוסף','bg-blue-900/80 border border-blue-400/40 rounded-lg p-2 text-sm font-bold');
         button.type='button'; button.id='modal-additional-source-request'; button.addEventListener('click',request); n.appendChild(button);
         const status=element('p','','text-xs text-gray-400 my-2'); status.id='modal-additional-source-notice'; n.appendChild(status);
-        const items=ordered(p,records.get(p)), r=items[0];
         if(!r) { status.textContent=message || 'אין פרטים שמורים ממקור נוסף לנכס זה. ההשלמה בודקת את Tarasa לפי מספר MLS והכתובת.'; return; }
         const dated=parseDate(r.retrieved_at) ? displayDate(r.retrieved_at) : 'תאריך לא ידוע';
         status.textContent=message || 'פרטים שמורים ממודעת '+PROVIDERS[r.provider].name+' · נאספו: '+dated+
