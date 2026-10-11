@@ -1,0 +1,87 @@
+name: "1. Central Scanner — V2.7"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  # Shared by every workflow that writes repository data files.
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install scanner dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils tesseract-ocr
+          python -m pip install --upgrade pip
+          # מתקין את כל הספריות מקובץ הדרישות, ומוודא שגם pytz מותקן
+          python -m pip install -r requirements.txt pytz
+      - name: Print code identity
+        run: |
+          git log -1 --format='%h %s'
+          sha256sum orchestrator.py
+          python -m py_compile orchestrator.py analyzer.py
+          python -m unittest -q test_scan_controls
+      - name: Run selected scanners
+        id: scanner
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          SHERIFF_PDF_URL: ${{ vars.SHERIFF_PDF_URL }}
+        run: python orchestrator.py
+        
+      - name: Analyze changed MLS properties
+        if: steps.scanner.outputs.analyze == 'true'
+        run: python analyzer.py
+      - name: Save data and source status
+        if: always() && steps.scanner.outcome == 'success'
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          for file in properties.json scan_log.json geo_catalog.json sheriff_listings.json scanner_status.json geocode_cache.json sheriff_property_cache.json; do
+            if [ -f "$file" ]; then git add "$file"; fi
+          done
+          if [ -d COMPS_REPORTS/listing_details ]; then git add COMPS_REPORTS/listing_details; fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Update scanner data and source status"
+            if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+              # Never leave conflict markers in JSON files for the summary step.
+              git rebase --abort || true
+              echo "::error::Could not safely rebase scanner data. No conflicted files were pushed."
+              exit 1
+            fi
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+      - name: Publish scan summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = Path('scanner_status.json')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as out:
+              if not report.exists():
+                  out.write('לא נוצר דוח סריקה. בדוק את שגיאת הריצה.\n')
+              else:
+                  data = json.loads(report.read_text(encoding='utf-8'))
+                  event = data.get('last_event', {})
+                  out.write(f"## מצב הסריקה: {event.get('status', 'unknown')}\n\n")
+                  out.write(f"גרסה: {data.get('version')} | ריצה: {event.get('scan_id')}\n\n")
+                  for item in data.get('sources', {}).values():
+                      out.write(f"- {item.get('label')}: {item.get('status')} | {item.get('rows', 0)} רשומות\n")
+          PY
