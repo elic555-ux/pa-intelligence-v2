@@ -1,4 +1,4 @@
-/* Howard Hanna, ErieMoves, Tarasa and Clear Choice evidence. Version 1.4.0, 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
+/* Howard Hanna, ErieMoves, Tarasa and Clear Choice evidence. Version 1.4.2, 2026-10-10. Reads separate snapshots; no deal/cloud writes. */
 (function (root) {
     'use strict';
     const PROVIDERS = {
@@ -107,6 +107,25 @@
     root.SecondarySourceEvidence=api;
     if (typeof document === 'undefined' || typeof openPropertyModal !== 'function') return;
 
+    const technicalPanel=document.getElementById('modal-listing-source-controls')?.parentNode;
+    if(technicalPanel) {
+        technicalPanel.className+=' pa-technical-readable';
+        const style=document.createElement('style');
+        style.textContent=`
+            .pa-technical-readable { font-size:14px; line-height:1.6; }
+            .pa-technical-readable .text-xs { font-size:14px; line-height:1.6; }
+            .pa-technical-readable .text-sm,
+            .pa-technical-readable strong { font-size:16px; line-height:1.6; }
+            .pa-technical-readable [class*="text-[10px]"],
+            .pa-technical-readable [class*="text-[11px]"] {
+                font-size:13px; line-height:1.6; overflow-wrap:anywhere;
+            }
+            .pa-technical-readable button { white-space:normal; }
+            .pa-technical-readable td { overflow-wrap:anywhere; }
+        `;
+        technicalPanel.appendChild(style);
+    }
+
     const records=new WeakMap(), baseFact=propertyTechnicalFact, baseOpen=openPropertyModal, baseTranslate=translateListingFact;
     translateListingFact=function(v) {
         const translations={'composition':'גג מחומר מרוכב','forced air, gas':'חימום אוויר מאולץ בגז','wall/window unit(s)':'יחידות קיר/חלון',
@@ -120,6 +139,23 @@
     const labels={roof_type:'סוג הגג',heating:'חימום',cooling:'קירור',parking:'חניה',parking_spaces:'מספר חניות',construction:'חומרי בנייה',
         basement:'מרתף',stories:'קומות',water:'מים',sewer:'ביוב',beds:'חדרי שינה',baths:'חדרי רחצה',sqft:'שטח מגורים (SqFt)',
         year_built:'שנת בנייה',total_rooms:'סך חדרים',style:'סגנון',lot_area_acres:'מגרש כפי שפורסם (Acres)'};
+    const baseSourceStatus=renderListingSourceStatus;
+    renderListingSourceStatus=function(p,override='') {
+        baseSourceStatus(p,override);
+        if(override) return;
+        const node=document.getElementById('modal-listing-source-status');
+        if(!node) return;
+        const items=ordered(p,records.get(p));
+        const count=Object.keys(labels).filter(field=>items.some(r=>fact(p,r,field))).length;
+        if(!count) return;
+        const details=p.listing_source_details || {}, latest=details.last_attempt || {};
+        const failures={source_unavailable:'עמוד המקור הראשי לא היה זמין.',
+            source_blocked:'המקור הראשי חסם את הבקשה.',
+            source_identity_mismatch:'המודעה במקור הראשי לא תאמה לזהות הנכס.'};
+        const failure=failures[latest.status || details.status];
+        node.textContent=`פרטים שמורים ממקור נוסף זמינים (${count} שדות).`+
+            (failure ? ' ניסיון הרענון של המקור הראשי: '+failure+' הפרטים השמורים נשארים זמינים.' : '');
+    };
     function element(tag,text,className='') { const n=document.createElement(tag); n.textContent=text; n.className=className; return n; }
     function panel() {
         let n=document.getElementById('modal-additional-source');
@@ -188,7 +224,7 @@
                 readBasicSourceJson('COMPS_REPORTS/additional_sources/'+provider+'/'+cacheKey+'.json')));
             if(generation!==basicSourceGeneration || currentSelectedProperty!==p) return;
             records.set(p,ordered(p,responses.filter(r=>r.status==='fulfilled').map(r=>r.value)));
-            renderPropertyTechnicalFacts(p); render(p);
+            renderPropertyTechnicalFacts(p); renderListingSourceStatus(p); render(p);
         } catch(_) { if(generation===basicSourceGeneration && currentSelectedProperty===p) render(p,'הפרטים השמורים מהמקור הנוסף לא נטענו.'); }
     }
     openPropertyModal=function(id) {
