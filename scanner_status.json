@@ -1,10 +1,10 @@
 {
-  "version": "3.8.8-ui-scan-settings-20261011",
+  "version": "3.9.0-separate-scan-profiles-20261011",
   "last_event": {
-    "scan_id": "SCAN-20261011-095004",
-    "started_at": "2026-10-11T09:50:04-04:00",
+    "scan_id": "SCAN-20261011-102559",
+    "started_at": "2026-10-11T10:25:59-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.8.8-ui-scan-settings-20261011",
+    "orchestrator_version": "3.9.0-separate-scan-profiles-20261011",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -13,35 +13,41 @@
       "tax"
     ],
     "cities": [],
-    "source_results": 416,
-    "after_filters": 108,
-    "new": 26,
-    "updated": 5,
-    "unchanged": 77,
+    "source_results": 1029,
+    "after_filters": 106,
+    "new": 1,
+    "updated": 1,
+    "unchanged": 104,
     "off_market_candidates": 0,
-    "errors": [],
-    "code_sha256": "2fdd37f24caf",
-    "github_sha": "bcb1d3b7886e2197d378a428fc7d4d1a215f5659",
-    "request_id": "d70d801d-63a4-42ec-ab30-95bf26bd23c2",
+    "errors": [
+      "sheriff Allegheny source unavailable: לא ניתן לקרוא PDF שריף עדכני: https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; /home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf: תאריך מכירה אינו בטווח עתידי: 2026-10-05"
+    ],
+    "code_sha256": "67e5f75bf562",
+    "github_sha": "ba74b57db0de65d055af821c658a421e67b898a2",
+    "request_id": "1a4d6c30-bcfb-4697-aff0-7d541a7b4e8a",
     "out_of_scope_tax_records_removed": 0,
     "incomplete_existing_removed": 0,
     "counties": [
-      "Erie"
+      "Erie",
+      "Allegheny",
+      "Lackawanna"
     ],
     "mls_scan_areas": [
-      "Erie County"
+      "Allegheny County",
+      "Erie County",
+      "Lackawanna County"
     ],
     "property_types": [
       "Single Family",
       "Duplex / Triplex"
     ],
     "min_baths": 0.0,
-    "config_source": "scan_config.json",
+    "config_source": "manual_scan_config.json",
     "applied_filters": {
       "min_price": 50000.0,
       "max_price": 190000.0,
       "min_sqft": 700,
-      "max_sqft": 2150,
+      "max_sqft": 1600,
       "min_beds": 1,
       "max_beds": 3,
       "min_baths": 0.0
@@ -62,33 +68,94 @@
       "Erie Downtown",
       "Pitcairn",
       "Pittsburgh",
-      "Verona"
+      "Verona",
+      "Albion",
+      "Asbury Woods Estate",
+      "Brandy Run",
+      "Canadohta",
+      "Conneaut Lake",
+      "Corry",
+      "Country Club Estate",
+      "Countryside",
+      "Cranesville",
+      "East Springfield",
+      "Edinboro",
+      "Erie",
+      "Erie City",
+      "Fair Weather Farms",
+      "Fairview",
+      "Forest Hills",
+      "Girard",
+      "Girard Borough",
+      "Glenwood Estates",
+      "Glenwood Hills",
+      "GreenGateVillage",
+      "Harborcreek",
+      "Hunter Ridge",
+      "Imperial Point",
+      "Lake City Boro",
+      "Lakecliff",
+      "Lakeside",
+      "Lawrence Park",
+      "McKean",
+      "McKean Boro",
+      "Meadow Green Acres",
+      "Millcreek",
+      "North East",
+      "Old Orchard",
+      "Quail Ridge",
+      "Rainbow Valley",
+      "Rolling Meadows",
+      "Shenango Heights",
+      "Summit Heights",
+      "The Retreat",
+      "Union City",
+      "Union City Borough",
+      "Waterford",
+      "Wattsburg Boro",
+      "Wesleyville Boro",
+      "West Springfield",
+      "Wood Meadows"
     ],
-    "neighborhood_filter_status": "county_wide_no_neighborhood_rule",
+    "neighborhood_filter_status": "enforced_per_scan_area",
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "success",
-        "rows": 227,
+        "rows": 835,
         "areas": [
+          {
+            "area": "Allegheny County",
+            "status": "success",
+            "rows": 349,
+            "coverage": "not_proven_complete",
+            "limit_reached": false
+          },
           {
             "area": "Erie County",
             "status": "success",
             "rows": 227,
             "coverage": "not_proven_complete",
             "limit_reached": false
+          },
+          {
+            "area": "Lackawanna County",
+            "status": "success",
+            "rows": 259,
+            "coverage": "not_proven_complete",
+            "limit_reached": false
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 107,
-        "minimum_data_rejected": 40
+        "passed_filters": 104,
+        "minimum_data_rejected": 225
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "partial",
-        "rows": 0,
+        "rows": 5,
         "providers": {
           "freddie_mac_homesteps": {
             "jsonld_listings": 12,
@@ -101,14 +168,28 @@
             "provider": "freddie_mac_homesteps",
             "coverage": "partial_single_provider",
             "status": "partial",
-            "rows": 0,
-            "geography_dropped": 8,
+            "rows": 1,
+            "geography_dropped": 7,
             "scope": "selected_counties_only"
           },
           "hud_home_store": {
             "provider": "hud_home_store",
             "status": "success",
             "counties": {
+              "Allegheny": {
+                "provider": "hud_home_store",
+                "county": "Allegheny",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Allegheny+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 4,
+                "active_rows": 4,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              },
               "Erie": {
                 "provider": "hud_home_store",
                 "county": "Erie",
@@ -122,9 +203,23 @@
                   "past_bid_deadline": 0,
                   "invalid_price": 0
                 }
+              },
+              "Lackawanna": {
+                "provider": "hud_home_store",
+                "county": "Lackawanna",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Lackawanna+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 0,
+                "active_rows": 0,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
               }
             },
-            "rows": 0,
+            "rows": 4,
             "source_url": "https://www.hudhomestore.gov/searchresult"
           }
         },
@@ -146,15 +241,20 @@
           }
         ],
         "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
-        "passed_filters": 0,
-        "minimum_data_rejected": 0
+        "passed_filters": 1,
+        "minimum_data_rejected": 1
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "partial",
         "rows": 25,
         "counties": {
+          "Lackawanna": {
+            "status": "not_connected",
+            "rows": 0,
+            "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
+          },
           "Erie": {
             "status": "partial",
             "rows": 25,
@@ -166,6 +266,11 @@
             "non_active_rows": 11,
             "mode": "live",
             "source_url": "https://public.eriecountypa.gov/sheriffsalelisting/"
+          },
+          "Allegheny": {
+            "status": "failed",
+            "rows": 0,
+            "error": "לא ניתן לקרוא PDF שריף עדכני: https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; /home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf: תאריך מכירה אינו בטווח עתידי: 2026-10-05"
           }
         },
         "investment_filters": "unavailable",
@@ -175,10 +280,17 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "partial",
         "rows": 164,
         "counties": {
+          "Allegheny": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no verified current tax feed connected for this county",
+            "sheriff_tax_lien_rows": 0,
+            "note": "אין פיד עצמאי מאומת לחובות מס. מספר מכירות השריף שסוג המכירה שלהן מציין במפורש Tax Lien: 0. זו סיווגת מכירה, לא סכום חוב."
+          },
           "Erie": {
             "status": "success",
             "rows": 164,
@@ -247,13 +359,32 @@
         },
         "scope": "Allegheny_and_Erie_only",
         "requested_counties": [
-          "erie"
+          "allegheny",
+          "erie",
+          "lackawanna"
         ],
         "scanned_counties": [
+          "Allegheny",
           "Erie"
         ],
-        "excluded_by_scope_guard": [],
+        "excluded_by_scope_guard": [
+          "lackawanna"
+        ],
         "manual_sources": [
+          {
+            "id": "allegheny_property_search",
+            "county": "Allegheny",
+            "label": "Allegheny — חיפוש רשומות נכס ומידע מס",
+            "url": "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "allegheny_real_estate_portal",
+            "county": "Allegheny",
+            "label": "Allegheny — פורטל רשומות מקרקעין",
+            "url": "https://realestate.alleghenycounty.us/search",
+            "status": "manual_link_only"
+          },
           {
             "id": "erie_tax_sales",
             "county": "Erie",
@@ -296,13 +427,18 @@
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-11T09:50:13-04:00",
+        "checked_at": "2026-10-11T10:26:06-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
     "sheriff_cache_incomplete_removed": 0,
     "sheriff_active_lots": 25,
     "sheriff_sources_by_county": {
+      "Lackawanna": {
+        "status": "not_connected",
+        "rows": 0,
+        "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
+      },
       "Erie": {
         "status": "partial",
         "rows": 25,
@@ -314,9 +450,181 @@
         "non_active_rows": 11,
         "mode": "live",
         "source_url": "https://public.eriecountypa.gov/sheriffsalelisting/"
+      },
+      "Allegheny": {
+        "status": "failed",
+        "rows": 0,
+        "error": "לא ניתן לקרוא PDF שריף עדכני: https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; /home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf: תאריך מכירה אינו בטווח עתידי: 2026-10-05"
       }
     },
     "geography_qa": {
+      "Allegheny County": {
+        "region_type": "5",
+        "rows": 349,
+        "city_mismatch_count": 0,
+        "actual_cities": {
+          "Pittsburgh": 163,
+          "West Mifflin": 18,
+          "Mc Kees Rocks": 12,
+          "Cheswick": 5,
+          "Pitcairn": 5,
+          "North Versailles": 6,
+          "Homestead": 12,
+          "Carnegie": 7,
+          "Harwick": 2,
+          "Monroeville": 6,
+          "Mckeesport": 22,
+          "Imperial": 1,
+          "Glassport": 3,
+          "East Pittsburgh": 3,
+          "Duquesne": 6,
+          "Verona": 6,
+          "Springdale": 5,
+          "Clairton": 9,
+          "Dravosburg": 2,
+          "City Of But Ne": 1,
+          "Coraopolis": 9,
+          "Wilmerding": 2,
+          "Tarentum": 6,
+          "Crafton": 1,
+          "Creighton": 2,
+          "Elizabeth": 2,
+          "Braddock": 2,
+          "White Oak": 1,
+          "Baden": 1,
+          "New Kensington": 3,
+          "Gibsonia": 2,
+          "Bethel Park": 3,
+          "Millvale": 1,
+          "Bloomfield": 1,
+          "Bridgeville": 2,
+          "Natrona Heights": 4,
+          "East Mc Keesport": 1,
+          "Turtle Creek": 3,
+          "West Elizabeth": 1,
+          "Oakdale": 1,
+          "Wilkinsburg": 1,
+          "Sewickley": 1,
+          "Oakmont": 1,
+          "Frazer Township": 1,
+          "Allison Park": 1,
+          "Brackenridge": 2
+        },
+        "source_locations": {
+          "Brookline": 3,
+          "West Mifflin": 17,
+          "McKees Rocks": 9,
+          "Penn Hills": 22,
+          "Harmar": 2,
+          "Pitcairn": 5,
+          "N Versailles": 6,
+          "Mt Oliver": 3,
+          "Cheswick": 2,
+          "Whitaker": 3,
+          "Carnegie": 6,
+          "Observatory Hill": 2,
+          "Springdale Twp": 3,
+          "Monroeville": 6,
+          "South Side": 4,
+          "Carrick": 7,
+          "Sharpsburg": 2,
+          "E Pittsburgh": 4,
+          "Perry Hilltop": 2,
+          "Port Vue": 5,
+          "Downtown Pgh": 2,
+          "North Fayette": 1,
+          "Wilkins Twp": 4,
+          "Liberty Boro": 2,
+          "Glassport": 3,
+          "Duquesne": 6,
+          "McKeesport": 14,
+          "Crafton": 3,
+          "Springdale Boro": 3,
+          "Beechview": 6,
+          "Jefferson Hills": 4,
+          "Clairton": 6,
+          "Homestead": 3,
+          "Dravosburg": 2,
+          "Plum Boro": 8,
+          "Munhall": 5,
+          "Stowe Twp": 3,
+          "Whitehall": 2,
+          "Forest Hills Boro": 4,
+          "City of But NE": 1,
+          "Brentwood": 7,
+          "Spring Hill": 3,
+          "Manchester": 1,
+          "Shaler": 1,
+          "Robinson Twp - NWA": 1,
+          "Mt Washington": 4,
+          "Oakland": 5,
+          "Hazelwood": 6,
+          "Bellevue": 4,
+          "Coraopolis": 5,
+          "West Deer": 2,
+          "Wilmerding": 2,
+          "Versailles Boro": 1,
+          "Ingram": 2,
+          "Sheraden": 5,
+          "Marshall Shadeland": 2,
+          "Tarentum": 6,
+          "Scott Twp - SAL": 2,
+          "East Deer": 2,
+          "Elizabeth Twp/Boro": 2,
+          "Braddock": 1,
+          "White Oak": 1,
+          "Verona": 2,
+          "Wilkinsburg": 5,
+          "Marshall": 1,
+          "Hill District": 4,
+          "East Hills": 1,
+          "Overbrook": 3,
+          "Richland": 1,
+          "Millvale": 5,
+          "Bethel Park": 3,
+          "Swissvale": 4,
+          "Moon/Crescent Twp": 3,
+          "McCandless": 1,
+          "Castle Shannon": 2,
+          "ALLEGHENY": 2,
+          "Hampton": 2,
+          "Bloomfield": 3,
+          "West End": 1,
+          "South Fayette": 2,
+          "Homewood-Brushton": 2,
+          "Braddock Hills": 1,
+          "East Liberty": 1,
+          "Natrona Hts/Harrison Twp.": 4,
+          "Lincoln-Larimer": 3,
+          "Knoxville": 2,
+          "Squirrel Hill": 1,
+          "East McKeesport": 1,
+          "Brighton Heights": 1,
+          "Fineview": 1,
+          "Heidelberg": 1,
+          "N Braddock": 1,
+          "Arlington": 2,
+          "Allentown": 2,
+          "Turtle Creek": 2,
+          "Bon Air": 1,
+          "Pittsburgh": 1,
+          "Lawrenceville": 1,
+          "North Oakland": 1,
+          "Sewickley": 1,
+          "Oakmont": 1,
+          "Frazer": 1,
+          "Shadyside": 2,
+          "Reserve": 1,
+          "Point Breeze": 1,
+          "Polish Hill": 1,
+          "Baldwin Boro": 1,
+          "Elliott": 1,
+          "Troy Hill": 1,
+          "Pleasant Hills": 1,
+          "Brackenridge": 2,
+          "Woods Run": 1
+        }
+      },
       "Erie County": {
         "region_type": "5",
         "rows": 227,
@@ -374,6 +682,118 @@
           "The Retreat": 5,
           "Hunter Ridge": 2
         }
+      },
+      "Lackawanna County": {
+        "region_type": "5",
+        "rows": 259,
+        "city_mismatch_count": 0,
+        "actual_cities": {
+          "Gouldsboro": 4,
+          "Carbondale": 22,
+          "Scranton": 85,
+          "Pittston": 2,
+          "Covington Township": 21,
+          "Olyphant": 5,
+          "Factoryville": 1,
+          "Clarks Summit": 7,
+          "Waverly": 1,
+          "Roaring Brook Township": 2,
+          "Moosic": 11,
+          "Dickson City": 3,
+          "Thornhurst": 1,
+          "Madison Township": 1,
+          "Mayfield": 4,
+          "Vandling": 2,
+          "Taylor": 9,
+          "Dunmore": 6,
+          "Elmhurst": 1,
+          "Jermyn": 2,
+          "Clifton Township": 2,
+          "Jefferson Township": 3,
+          "Simpson": 1,
+          "Jessup": 1,
+          "Thornhurst Township": 3,
+          "Archbald": 13,
+          "Ransom Township": 1,
+          "Old Forge": 8,
+          "Moscow": 1,
+          "Dalton": 4,
+          "Eagle Lake": 4,
+          "South Abington Township": 2,
+          "Waverly Twp": 1,
+          "Covington Twp": 3,
+          "Scott Township": 3,
+          "Throop": 1,
+          "Jefferson Twp": 2,
+          "Peckville": 4,
+          "South Abington Towns": 1,
+          "Spring Brook Township": 1,
+          "Eynon": 3,
+          "Benton Township": 1,
+          "Greenfild Twp": 3,
+          "Lake Ariel": 1,
+          "Clifford Township": 1,
+          "Blakely": 1
+        },
+        "source_locations": {
+          "Eagle Lake": 16,
+          "Carbondale": 20,
+          "Scranton": 82,
+          "Hidden Village": 3,
+          "Olyphant": 5,
+          "Lake Sheridan": 1,
+          "Covington Twp": 14,
+          "Clarks Summit": 6,
+          "Waverly": 1,
+          "Summit Woods": 1,
+          "Moosic": 7,
+          "Dickson City": 3,
+          "Thornhurst Country Club Es": 1,
+          "William Swetland Plot": 1,
+          "Madison Twp": 1,
+          "Big Bass Lake": 1,
+          "Mayfield": 3,
+          "Greenwood Plot": 3,
+          "Simpson": 3,
+          "Vandling": 2,
+          "Taylor": 8,
+          "Dunmore": 6,
+          "Elmhurst": 1,
+          "Jermyn": 2,
+          "Ransom Township": 2,
+          "Clifton Township": 1,
+          "Jefferson Township": 3,
+          "Jessup": 1,
+          "Archbald": 12,
+          "Old Forge": 8,
+          "Clifton Twp": 1,
+          "Spring Brook Twp": 2,
+          "Roaring Brook Twp": 1,
+          "Lackawanna": 1,
+          "Dalton": 3,
+          "Thornhurst Country Club Estates": 1,
+          "Waverly Twp": 1,
+          "Moscow": 1,
+          "Scott Twp": 4,
+          "Throop": 1,
+          "Jefferson Twp": 1,
+          "Blakely": 2,
+          "South Abington Twp": 3,
+          "Moosic Lake": 1,
+          "Highlands of Archbald": 1,
+          "Peckville": 3,
+          "Eynon": 1,
+          "Nicholson": 1,
+          "Greenfield Township": 3,
+          "Pineapple Estates": 1,
+          "COVINGTON LAKES EST": 1,
+          "Covington Lake Estates": 1,
+          "Lake Ariel": 1,
+          "Greenfield Twp": 1,
+          "Loral Estates": 2,
+          "Woodwind Hills": 1,
+          "South Side": 1
+        }
       }
     },
     "erie_tax_mls_cross_source_enrichment": {
@@ -395,112 +815,129 @@
       "passed_required_gate_after_match": 1,
       "rejected_details_stored": 0
     },
-    "raw_mls_seen": 225,
+    "raw_mls_seen": 830,
     "duplicates_removed": 0,
     "filter_rejections": {
       "price": 0,
-      "sqft": 21,
-      "beds": 44,
+      "sqft": 61,
+      "beds": 21,
       "baths": 0,
-      "property_type": 4,
+      "property_type": 11,
       "property_type_unknown": 11,
       "city_mismatch": 0,
-      "location": 0,
-      "incomplete_required_data": 228
+      "location": 405,
+      "incomplete_required_data": 414
     },
     "required_data_rejections_by_field": {
-      "beds": 226,
-      "sqft": 202
+      "sqft": 387,
+      "beds": 358
     },
     "required_data_rejections_by_source": {
-      "mls": 40,
+      "mls": 225,
       "sheriff": 25,
-      "tax": 163
+      "tax": 163,
+      "reo": 1
     },
     "source_property_type_counts": {
-      "Single Family Residential": 141,
-      "Mobile/Manufactured Home": 10,
-      "Multi-Family (2-4 Unit)": 26,
-      "Condo/Co-op": 4,
+      "Single Family Residential": 504,
+      "Townhouse": 8,
+      "Condo/Co-op": 22,
+      "Mobile/Manufactured Home": 27,
+      "Multi-Family (2-4 Unit)": 40,
       "Multi-Family (5+ Unit)": 1,
       "Vacant Land": 2,
-      "Unknown": 3,
-      "TWO FAMILY": 1
+      "Unknown": 6,
+      "TWO FAMILY": 1,
+      "UNKNOWN": 4
     },
     "source_passed_filters": {
-      "mls": 107,
-      "reo": 0,
+      "mls": 104,
+      "reo": 1,
       "sheriff": 0,
       "tax": 1
     },
     "redfin_location_top25": {
       "Erie": 142,
+      "Scranton": 82,
+      "Penn Hills": 22,
+      "Carbondale": 20,
+      "West Mifflin": 17,
+      "Eagle Lake": 16,
+      "Covington Twp": 14,
+      "McKeesport": 14,
+      "Archbald": 12,
       "Edinboro": 10,
       "North East": 10,
+      "McKees Rocks": 9,
+      "Old Forge": 8,
+      "Plum Boro": 8,
+      "Taylor": 8,
+      "Brentwood": 7,
+      "Carrick": 7,
       "Lake City Boro": 7,
-      "Corry": 5,
-      "Summit Heights": 5,
-      "The Retreat": 5,
-      "Girard": 4,
-      "Asbury Woods Estate": 3,
-      "East Springfield": 3,
-      "Fairview": 3,
-      "McKean": 3,
-      "Waterford": 3,
-      "Wattsburg Boro": 3,
-      "West Springfield": 3,
-      "Albion": 2,
-      "Cranesville": 2,
-      "Erie City": 2,
-      "Harborcreek": 2,
-      "Hunter Ridge": 2,
-      "Canadohta": 1,
-      "Countryside": 1,
-      "GreenGateVillage": 1,
-      "Meadow Green Acres": 1,
-      "Millcreek": 1
+      "Moosic": 7,
+      "Beechview": 6,
+      "Carnegie": 6,
+      "Clairton": 6,
+      "Clarks Summit": 6,
+      "Dunmore": 6,
+      "Duquesne": 6
     },
     "listing_source_details": {
       "version": "basic-source-1.0-20261009",
       "new_rentcast_calls": 0,
       "statuses": {
         "source_unavailable": 20,
-        "not_requested": 83,
-        "cache_used": 1
+        "cache_used": 3,
+        "not_requested": 78
       },
-      "rows": 104
+      "rows": 101
     },
     "off_market_detection": "disabled_without_verified_listing_status",
     "price_drop_events": 0,
     "price_drop_properties": 0,
     "persistence_guard_removed": 0,
-    "total_properties": 852,
-    "finished_at": "2026-10-11T09:50:13-04:00"
+    "total_properties": 853,
+    "finished_at": "2026-10-11T10:26:06-04:00"
   },
   "sources": {
     "mls": {
       "label": "MLS",
-      "checked_at": "2026-10-11T09:50:04-04:00",
+      "checked_at": "2026-10-11T10:25:59-04:00",
       "status": "success",
-      "rows": 227,
+      "rows": 835,
       "areas": [
+        {
+          "area": "Allegheny County",
+          "status": "success",
+          "rows": 349,
+          "coverage": "not_proven_complete",
+          "limit_reached": false
+        },
         {
           "area": "Erie County",
           "status": "success",
           "rows": 227,
           "coverage": "not_proven_complete",
           "limit_reached": false
+        },
+        {
+          "area": "Lackawanna County",
+          "status": "success",
+          "rows": 259,
+          "coverage": "not_proven_complete",
+          "limit_reached": false
         }
       ],
       "coverage": "not_proven_complete",
-      "passed_filters": 107,
-      "minimum_data_rejected": 40
+      "passed_filters": 104,
+      "minimum_data_rejected": 225
     },
     "reo": {
       "label": "בנקים וכינוס",
-      "checked_at": "2026-10-11T09:50:04-04:00",
+      "checked_at": "2026-10-11T10:25:59-04:00",
       "status": "partial",
-      "rows": 0,
+      "rows": 5,
       "providers": {
         "freddie_mac_homesteps": {
           "jsonld_listings": 12,
@@ -513,14 +950,28 @@
           "provider": "freddie_mac_homesteps",
           "coverage": "partial_single_provider",
           "status": "partial",
-          "rows": 0,
-          "geography_dropped": 8,
+          "rows": 1,
+          "geography_dropped": 7,
           "scope": "selected_counties_only"
         },
         "hud_home_store": {
           "provider": "hud_home_store",
           "status": "success",
           "counties": {
+            "Allegheny": {
+              "provider": "hud_home_store",
+              "county": "Allegheny",
+              "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Allegheny+County%2C+PA",
+              "status": "success",
+              "result_payload_rows": 4,
+              "active_rows": 4,
+              "excluded": {
+                "wrong_county_or_state": 0,
+                "missing_required_fields": 0,
+                "past_bid_deadline": 0,
+                "invalid_price": 0
+              }
+            },
             "Erie": {
               "provider": "hud_home_store",
               "county": "Erie",
@@ -534,9 +985,23 @@
                 "past_bid_deadline": 0,
                 "invalid_price": 0
               }
+            },
+            "Lackawanna": {
+              "provider": "hud_home_store",
+              "county": "Lackawanna",
+              "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Lackawanna+County%2C+PA",
+              "status": "success",
+              "result_payload_rows": 0,
+              "active_rows": 0,
+              "excluded": {
+                "wrong_county_or_state": 0,
+                "missing_required_fields": 0,
+                "past_bid_deadline": 0,
+                "invalid_price": 0
+              }
             }
           },
-          "rows": 0,
+          "rows": 4,
           "source_url": "https://www.hudhomestore.gov/searchresult"
         }
       },
@@ -558,15 +1023,22 @@
         }
       ],
       "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
-      "passed_filters": 0,
-      "minimum_data_rejected": 0
+      "passed_filters": 1,
+      "minimum_data_rejected": 1
     },
     "tax": {
       "label": "חובות מס",
-      "checked_at": "2026-10-11T09:50:04-04:00",
+      "checked_at": "2026-10-11T10:25:59-04:00",
       "status": "partial",
       "rows": 164,
       "counties": {
+        "Allegheny": {
+          "status": "not_connected",
+          "rows": 0,
+          "reason": "no verified current tax feed connected for this county",
+          "sheriff_tax_lien_rows": 0,
+          "note": "אין פיד עצמאי מאומת לחובות מס. מספר מכירות השריף שסוג המכירה שלהן מציין במפורש Tax Lien: 0. זו סיווגת מכירה, לא סכום חוב."
+        },
         "Erie": {
           "status": "success",
           "rows": 164,
@@ -635,13 +1107,32 @@
       },
       "scope": "Allegheny_and_Erie_only",
       "requested_counties": [
-        "erie"
+        "allegheny",
+        "erie",
+        "lackawanna"
       ],
       "scanned_counties": [
+        "Allegheny",
         "Erie"
       ],
-      "excluded_by_scope_guard": [],
+      "excluded_by_scope_guard": [
+        "lackawanna"
+      ],
       "manual_sources": [
+        {
+          "id": "allegheny_property_search",
+          "county": "Allegheny",
+          "label": "Allegheny — חיפוש רשומות נכס ומידע מס",
+          "url": "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search",
+          "status": "manual_link_only"
+        },
+        {
+          "id": "allegheny_real_estate_portal",
+          "county": "Allegheny",
+          "label": "Allegheny — פורטל רשומות מקרקעין",
+          "url": "https://realestate.alleghenycounty.us/search",
+          "status": "manual_link_only"
+        },
         {
           "id": "erie_tax_sales",
           "county": "Erie",
@@ -684,15 +1175,20 @@
     "offmarket": {
       "label": "OFF MARKET",
       "status": "needs_verification",
-      "checked_at": "2026-10-11T09:50:13-04:00",
+      "checked_at": "2026-10-11T10:26:06-04:00",
       "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
     },
     "sheriff": {
       "label": "מכירות שריף",
-      "checked_at": "2026-10-11T09:50:04-04:00",
+      "checked_at": "2026-10-11T10:25:59-04:00",
       "status": "partial",
       "rows": 25,
       "counties": {
+        "Lackawanna": {
+          "status": "not_connected",
+          "rows": 0,
+          "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
+        },
         "Erie": {
           "status": "partial",
           "rows": 25,
@@ -704,6 +1200,11 @@
           "non_active_rows": 11,
           "mode": "live",
           "source_url": "https://public.eriecountypa.gov/sheriffsalelisting/"
+        },
+        "Allegheny": {
+          "status": "failed",
+          "rows": 0,
+          "error": "לא ניתן לקרוא PDF שריף עדכני: https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; /home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf: תאריך מכירה אינו בטווח עתידי: 2026-10-05"
         }
       },
       "investment_filters": "unavailable",
@@ -713,10 +1214,10 @@
     }
   },
   "last_scan": {
-    "scan_id": "SCAN-20261011-095004",
-    "started_at": "2026-10-11T09:50:04-04:00",
+    "scan_id": "SCAN-20261011-102559",
+    "started_at": "2026-10-11T10:25:59-04:00",
     "trigger": "manual",
-    "orchestrator_version": "3.8.8-ui-scan-settings-20261011",
+    "orchestrator_version": "3.9.0-separate-scan-profiles-20261011",
     "status": "partial",
     "active_sectors": [
       "mls",
@@ -725,35 +1226,41 @@
       "tax"
     ],
     "cities": [],
-    "source_results": 416,
-    "after_filters": 108,
-    "new": 26,
-    "updated": 5,
-    "unchanged": 77,
+    "source_results": 1029,
+    "after_filters": 106,
+    "new": 1,
+    "updated": 1,
+    "unchanged": 104,
     "off_market_candidates": 0,
-    "errors": [],
-    "code_sha256": "2fdd37f24caf",
-    "github_sha": "bcb1d3b7886e2197d378a428fc7d4d1a215f5659",
-    "request_id": "d70d801d-63a4-42ec-ab30-95bf26bd23c2",
+    "errors": [
+      "sheriff Allegheny source unavailable: לא ניתן לקרוא PDF שריף עדכני: https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; /home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf: תאריך מכירה אינו בטווח עתידי: 2026-10-05"
+    ],
+    "code_sha256": "67e5f75bf562",
+    "github_sha": "ba74b57db0de65d055af821c658a421e67b898a2",
+    "request_id": "1a4d6c30-bcfb-4697-aff0-7d541a7b4e8a",
     "out_of_scope_tax_records_removed": 0,
     "incomplete_existing_removed": 0,
     "counties": [
-      "Erie"
+      "Erie",
+      "Allegheny",
+      "Lackawanna"
     ],
     "mls_scan_areas": [
-      "Erie County"
+      "Allegheny County",
+      "Erie County",
+      "Lackawanna County"
     ],
     "property_types": [
       "Single Family",
       "Duplex / Triplex"
     ],
     "min_baths": 0.0,
-    "config_source": "scan_config.json",
+    "config_source": "manual_scan_config.json",
     "applied_filters": {
       "min_price": 50000.0,
       "max_price": 190000.0,
       "min_sqft": 700,
-      "max_sqft": 2150,
+      "max_sqft": 1600,
       "min_beds": 1,
       "max_beds": 3,
       "min_baths": 0.0
@@ -774,33 +1281,94 @@
       "Erie Downtown",
       "Pitcairn",
       "Pittsburgh",
-      "Verona"
+      "Verona",
+      "Albion",
+      "Asbury Woods Estate",
+      "Brandy Run",
+      "Canadohta",
+      "Conneaut Lake",
+      "Corry",
+      "Country Club Estate",
+      "Countryside",
+      "Cranesville",
+      "East Springfield",
+      "Edinboro",
+      "Erie",
+      "Erie City",
+      "Fair Weather Farms",
+      "Fairview",
+      "Forest Hills",
+      "Girard",
+      "Girard Borough",
+      "Glenwood Estates",
+      "Glenwood Hills",
+      "GreenGateVillage",
+      "Harborcreek",
+      "Hunter Ridge",
+      "Imperial Point",
+      "Lake City Boro",
+      "Lakecliff",
+      "Lakeside",
+      "Lawrence Park",
+      "McKean",
+      "McKean Boro",
+      "Meadow Green Acres",
+      "Millcreek",
+      "North East",
+      "Old Orchard",
+      "Quail Ridge",
+      "Rainbow Valley",
+      "Rolling Meadows",
+      "Shenango Heights",
+      "Summit Heights",
+      "The Retreat",
+      "Union City",
+      "Union City Borough",
+      "Waterford",
+      "Wattsburg Boro",
+      "Wesleyville Boro",
+      "West Springfield",
+      "Wood Meadows"
     ],
-    "neighborhood_filter_status": "county_wide_no_neighborhood_rule",
+    "neighborhood_filter_status": "enforced_per_scan_area",
     "sources": {
       "mls": {
         "label": "MLS",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "success",
-        "rows": 227,
+        "rows": 835,
         "areas": [
+          {
+            "area": "Allegheny County",
+            "status": "success",
+            "rows": 349,
+            "coverage": "not_proven_complete",
+            "limit_reached": false
+          },
           {
             "area": "Erie County",
             "status": "success",
             "rows": 227,
             "coverage": "not_proven_complete",
             "limit_reached": false
+          },
+          {
+            "area": "Lackawanna County",
+            "status": "success",
+            "rows": 259,
+            "coverage": "not_proven_complete",
+            "limit_reached": false
           }
         ],
         "coverage": "not_proven_complete",
-        "passed_filters": 107,
-        "minimum_data_rejected": 40
+        "passed_filters": 104,
+        "minimum_data_rejected": 225
       },
       "reo": {
         "label": "בנקים וכינוס",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "partial",
-        "rows": 0,
+        "rows": 5,
         "providers": {
           "freddie_mac_homesteps": {
             "jsonld_listings": 12,
@@ -813,14 +1381,28 @@
             "provider": "freddie_mac_homesteps",
             "coverage": "partial_single_provider",
             "status": "partial",
-            "rows": 0,
-            "geography_dropped": 8,
+            "rows": 1,
+            "geography_dropped": 7,
             "scope": "selected_counties_only"
           },
           "hud_home_store": {
             "provider": "hud_home_store",
             "status": "success",
             "counties": {
+              "Allegheny": {
+                "provider": "hud_home_store",
+                "county": "Allegheny",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Allegheny+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 4,
+                "active_rows": 4,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              },
               "Erie": {
                 "provider": "hud_home_store",
                 "county": "Erie",
@@ -834,9 +1416,23 @@
                   "past_bid_deadline": 0,
                   "invalid_price": 0
                 }
+              },
+              "Lackawanna": {
+                "provider": "hud_home_store",
+                "county": "Lackawanna",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Lackawanna+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 0,
+                "active_rows": 0,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
               }
             },
-            "rows": 0,
+            "rows": 4,
             "source_url": "https://www.hudhomestore.gov/searchresult"
           }
         },
@@ -858,15 +1454,20 @@
           }
         ],
         "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
-        "passed_filters": 0,
-        "minimum_data_rejected": 0
+        "passed_filters": 1,
+        "minimum_data_rejected": 1
       },
       "sheriff": {
         "label": "מכירות שריף",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "partial",
         "rows": 25,
         "counties": {
+          "Lackawanna": {
+            "status": "not_connected",
+            "rows": 0,
+            "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
+          },
           "Erie": {
             "status": "partial",
             "rows": 25,
@@ -878,6 +1479,11 @@
             "non_active_rows": 11,
             "mode": "live",
             "source_url": "https://public.eriecountypa.gov/sheriffsalelisting/"
+          },
+          "Allegheny": {
+            "status": "failed",
+            "rows": 0,
+            "error": "לא ניתן לקרוא PDF שריף עדכני: https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; /home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf: תאריך מכירה אינו בטווח עתידי: 2026-10-05"
           }
         },
         "investment_filters": "unavailable",
@@ -887,10 +1493,17 @@
       },
       "tax": {
         "label": "חובות מס",
-        "checked_at": "2026-10-11T09:50:04-04:00",
+        "checked_at": "2026-10-11T10:25:59-04:00",
         "status": "partial",
         "rows": 164,
         "counties": {
+          "Allegheny": {
+            "status": "not_connected",
+            "rows": 0,
+            "reason": "no verified current tax feed connected for this county",
+            "sheriff_tax_lien_rows": 0,
+            "note": "אין פיד עצמאי מאומת לחובות מס. מספר מכירות השריף שסוג המכירה שלהן מציין במפורש Tax Lien: 0. זו סיווגת מכירה, לא סכום חוב."
+          },
           "Erie": {
             "status": "success",
             "rows": 164,
@@ -959,13 +1572,32 @@
         },
         "scope": "Allegheny_and_Erie_only",
         "requested_counties": [
-          "erie"
+          "allegheny",
+          "erie",
+          "lackawanna"
         ],
         "scanned_counties": [
+          "Allegheny",
           "Erie"
         ],
-        "excluded_by_scope_guard": [],
+        "excluded_by_scope_guard": [
+          "lackawanna"
+        ],
         "manual_sources": [
+          {
+            "id": "allegheny_property_search",
+            "county": "Allegheny",
+            "label": "Allegheny — חיפוש רשומות נכס ומידע מס",
+            "url": "https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Property-Record-Search",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "allegheny_real_estate_portal",
+            "county": "Allegheny",
+            "label": "Allegheny — פורטל רשומות מקרקעין",
+            "url": "https://realestate.alleghenycounty.us/search",
+            "status": "manual_link_only"
+          },
           {
             "id": "erie_tax_sales",
             "county": "Erie",
@@ -1008,13 +1640,18 @@
       "offmarket": {
         "label": "OFF MARKET",
         "status": "needs_verification",
-        "checked_at": "2026-10-11T09:50:13-04:00",
+        "checked_at": "2026-10-11T10:26:06-04:00",
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
       }
     },
     "sheriff_cache_incomplete_removed": 0,
     "sheriff_active_lots": 25,
     "sheriff_sources_by_county": {
+      "Lackawanna": {
+        "status": "not_connected",
+        "rows": 0,
+        "error": "אין עדיין מתאם מקור שריף מאומת למחוז Lackawanna"
+      },
       "Erie": {
         "status": "partial",
         "rows": 25,
@@ -1026,9 +1663,181 @@
         "non_active_rows": 11,
         "mode": "live",
         "source_url": "https://public.eriecountypa.gov/sheriffsalelisting/"
+      },
+      "Allegheny": {
+        "status": "failed",
+        "rows": 0,
+        "error": "לא ניתן לקרוא PDF שריף עדכני: https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; https://sheriffalleghenycounty.com/wp-content/uploads/2026/10/November-Sale-List.pdf: פענוח חלקי: זוהו 425/425 סטטוסים; 2 כתובות פעילות לא זוהו; /home/runner/work/pa-intelligence-v2/pa-intelligence-v2/October-Sale-List-Updated-9-24.pdf: תאריך מכירה אינו בטווח עתידי: 2026-10-05"
       }
     },
     "geography_qa": {
+      "Allegheny County": {
+        "region_type": "5",
+        "rows": 349,
+        "city_mismatch_count": 0,
+        "actual_cities": {
+          "Pittsburgh": 163,
+          "West Mifflin": 18,
+          "Mc Kees Rocks": 12,
+          "Cheswick": 5,
+          "Pitcairn": 5,
+          "North Versailles": 6,
+          "Homestead": 12,
+          "Carnegie": 7,
+          "Harwick": 2,
+          "Monroeville": 6,
+          "Mckeesport": 22,
+          "Imperial": 1,
+          "Glassport": 3,
+          "East Pittsburgh": 3,
+          "Duquesne": 6,
+          "Verona": 6,
+          "Springdale": 5,
+          "Clairton": 9,
+          "Dravosburg": 2,
+          "City Of But Ne": 1,
+          "Coraopolis": 9,
+          "Wilmerding": 2,
+          "Tarentum": 6,
+          "Crafton": 1,
+          "Creighton": 2,
+          "Elizabeth": 2,
+          "Braddock": 2,
+          "White Oak": 1,
+          "Baden": 1,
+          "New Kensington": 3,
+          "Gibsonia": 2,
+          "Bethel Park": 3,
+          "Millvale": 1,
+          "Bloomfield": 1,
+          "Bridgeville": 2,
+          "Natrona Heights": 4,
+          "East Mc Keesport": 1,
+          "Turtle Creek": 3,
+          "West Elizabeth": 1,
+          "Oakdale": 1,
+          "Wilkinsburg": 1,
+          "Sewickley": 1,
+          "Oakmont": 1,
+          "Frazer Township": 1,
+          "Allison Park": 1,
+          "Brackenridge": 2
+        },
+        "source_locations": {
+          "Brookline": 3,
+          "West Mifflin": 17,
+          "McKees Rocks": 9,
+          "Penn Hills": 22,
+          "Harmar": 2,
+          "Pitcairn": 5,
+          "N Versailles": 6,
+          "Mt Oliver": 3,
+          "Cheswick": 2,
+          "Whitaker": 3,
+          "Carnegie": 6,
+          "Observatory Hill": 2,
+          "Springdale Twp": 3,
+          "Monroeville": 6,
+          "South Side": 4,
+          "Carrick": 7,
+          "Sharpsburg": 2,
+          "E Pittsburgh": 4,
+          "Perry Hilltop": 2,
+          "Port Vue": 5,
+          "Downtown Pgh": 2,
+          "North Fayette": 1,
+          "Wilkins Twp": 4,
+          "Liberty Boro": 2,
+          "Glassport": 3,
+          "Duquesne": 6,
+          "McKeesport": 14,
+          "Crafton": 3,
+          "Springdale Boro": 3,
+          "Beechview": 6,
+          "Jefferson Hills": 4,
+          "Clairton": 6,
+          "Homestead": 3,
+          "Dravosburg": 2,
+          "Plum Boro": 8,
+          "Munhall": 5,
+          "Stowe Twp": 3,
+          "Whitehall": 2,
+          "Forest Hills Boro": 4,
+          "City of But NE": 1,
+          "Brentwood": 7,
+          "Spring Hill": 3,
+          "Manchester": 1,
+          "Shaler": 1,
+          "Robinson Twp - NWA": 1,
+          "Mt Washington": 4,
+          "Oakland": 5,
+          "Hazelwood": 6,
+          "Bellevue": 4,
+          "Coraopolis": 5,
+          "West Deer": 2,
+          "Wilmerding": 2,
+          "Versailles Boro": 1,
+          "Ingram": 2,
+          "Sheraden": 5,
+          "Marshall Shadeland": 2,
+          "Tarentum": 6,
+          "Scott Twp - SAL": 2,
+          "East Deer": 2,
+          "Elizabeth Twp/Boro": 2,
+          "Braddock": 1,
+          "White Oak": 1,
+          "Verona": 2,
+          "Wilkinsburg": 5,
+          "Marshall": 1,
+          "Hill District": 4,
+          "East Hills": 1,
+          "Overbrook": 3,
+          "Richland": 1,
+          "Millvale": 5,
+          "Bethel Park": 3,
+          "Swissvale": 4,
+          "Moon/Crescent Twp": 3,
+          "McCandless": 1,
+          "Castle Shannon": 2,
+          "ALLEGHENY": 2,
+          "Hampton": 2,
+          "Bloomfield": 3,
+          "West End": 1,
+          "South Fayette": 2,
+          "Homewood-Brushton": 2,
+          "Braddock Hills": 1,
+          "East Liberty": 1,
+          "Natrona Hts/Harrison Twp.": 4,
+          "Lincoln-Larimer": 3,
+          "Knoxville": 2,
+          "Squirrel Hill": 1,
+          "East McKeesport": 1,
+          "Brighton Heights": 1,
+          "Fineview": 1,
+          "Heidelberg": 1,
+          "N Braddock": 1,
+          "Arlington": 2,
+          "Allentown": 2,
+          "Turtle Creek": 2,
+          "Bon Air": 1,
+          "Pittsburgh": 1,
+          "Lawrenceville": 1,
+          "North Oakland": 1,
+          "Sewickley": 1,
+          "Oakmont": 1,
+          "Frazer": 1,
+          "Shadyside": 2,
+          "Reserve": 1,
+          "Point Breeze": 1,
+          "Polish Hill": 1,
+          "Baldwin Boro": 1,
+          "Elliott": 1,
+          "Troy Hill": 1,
+          "Pleasant Hills": 1,
+          "Brackenridge": 2,
+          "Woods Run": 1
+        }
+      },
       "Erie County": {
         "region_type": "5",
         "rows": 227,
@@ -1086,6 +1895,118 @@
           "The Retreat": 5,
           "Hunter Ridge": 2
         }
+      },
+      "Lackawanna County": {
+        "region_type": "5",
+        "rows": 259,
+        "city_mismatch_count": 0,
+        "actual_cities": {
+          "Gouldsboro": 4,
+          "Carbondale": 22,
+          "Scranton": 85,
+          "Pittston": 2,
+          "Covington Township": 21,
+          "Olyphant": 5,
+          "Factoryville": 1,
+          "Clarks Summit": 7,
+          "Waverly": 1,
+          "Roaring Brook Township": 2,
+          "Moosic": 11,
+          "Dickson City": 3,
+          "Thornhurst": 1,
+          "Madison Township": 1,
+          "Mayfield": 4,
+          "Vandling": 2,
+          "Taylor": 9,
+          "Dunmore": 6,
+          "Elmhurst": 1,
+          "Jermyn": 2,
+          "Clifton Township": 2,
+          "Jefferson Township": 3,
+          "Simpson": 1,
+          "Jessup": 1,
+          "Thornhurst Township": 3,
+          "Archbald": 13,
+          "Ransom Township": 1,
+          "Old Forge": 8,
+          "Moscow": 1,
+          "Dalton": 4,
+          "Eagle Lake": 4,
+          "South Abington Township": 2,
+          "Waverly Twp": 1,
+          "Covington Twp": 3,
+          "Scott Township": 3,
+          "Throop": 1,
+          "Jefferson Twp": 2,
+          "Peckville": 4,
+          "South Abington Towns": 1,
+          "Spring Brook Township": 1,
+          "Eynon": 3,
+          "Benton Township": 1,
+          "Greenfild Twp": 3,
+          "Lake Ariel": 1,
+          "Clifford Township": 1,
+          "Blakely": 1
+        },
+        "source_locations": {
+          "Eagle Lake": 16,
+          "Carbondale": 20,
+          "Scranton": 82,
+          "Hidden Village": 3,
+          "Olyphant": 5,
+          "Lake Sheridan": 1,
+          "Covington Twp": 14,
+          "Clarks Summit": 6,
+          "Waverly": 1,
+          "Summit Woods": 1,
+          "Moosic": 7,
+          "Dickson City": 3,
+          "Thornhurst Country Club Es": 1,
+          "William Swetland Plot": 1,
+          "Madison Twp": 1,
+          "Big Bass Lake": 1,
+          "Mayfield": 3,
+          "Greenwood Plot": 3,
+          "Simpson": 3,
+          "Vandling": 2,
+          "Taylor": 8,
+          "Dunmore": 6,
+          "Elmhurst": 1,
+          "Jermyn": 2,
+          "Ransom Township": 2,
+          "Clifton Township": 1,
+          "Jefferson Township": 3,
+          "Jessup": 1,
+          "Archbald": 12,
+          "Old Forge": 8,
+          "Clifton Twp": 1,
+          "Spring Brook Twp": 2,
+          "Roaring Brook Twp": 1,
+          "Lackawanna": 1,
+          "Dalton": 3,
+          "Thornhurst Country Club Estates": 1,
+          "Waverly Twp": 1,
+          "Moscow": 1,
+          "Scott Twp": 4,
+          "Throop": 1,
+          "Jefferson Twp": 1,
+          "Blakely": 2,
+          "South Abington Twp": 3,
+          "Moosic Lake": 1,
+          "Highlands of Archbald": 1,
+          "Peckville": 3,
+          "Eynon": 1,
+          "Nicholson": 1,
+          "Greenfield Township": 3,
+          "Pineapple Estates": 1,
+          "COVINGTON LAKES EST": 1,
+          "Covington Lake Estates": 1,
+          "Lake Ariel": 1,
+          "Greenfield Twp": 1,
+          "Loral Estates": 2,
+          "Woodwind Hills": 1,
+          "South Side": 1
+        }
       }
     },
     "erie_tax_mls_cross_source_enrichment": {
@@ -1107,87 +2028,90 @@
       "passed_required_gate_after_match": 1,
       "rejected_details_stored": 0
     },
-    "raw_mls_seen": 225,
+    "raw_mls_seen": 830,
     "duplicates_removed": 0,
     "filter_rejections": {
       "price": 0,
-      "sqft": 21,
-      "beds": 44,
+      "sqft": 61,
+      "beds": 21,
       "baths": 0,
-      "property_type": 4,
+      "property_type": 11,
       "property_type_unknown": 11,
       "city_mismatch": 0,
-      "location": 0,
-      "incomplete_required_data": 228
+      "location": 405,
+      "incomplete_required_data": 414
     },
     "required_data_rejections_by_field": {
-      "beds": 226,
-      "sqft": 202
+      "sqft": 387,
+      "beds": 358
     },
     "required_data_rejections_by_source": {
-      "mls": 40,
+      "mls": 225,
       "sheriff": 25,
-      "tax": 163
+      "tax": 163,
+      "reo": 1
     },
     "source_property_type_counts": {
-      "Single Family Residential": 141,
-      "Mobile/Manufactured Home": 10,
-      "Multi-Family (2-4 Unit)": 26,
-      "Condo/Co-op": 4,
+      "Single Family Residential": 504,
+      "Townhouse": 8,
+      "Condo/Co-op": 22,
+      "Mobile/Manufactured Home": 27,
+      "Multi-Family (2-4 Unit)": 40,
       "Multi-Family (5+ Unit)": 1,
       "Vacant Land": 2,
-      "Unknown": 3,
-      "TWO FAMILY": 1
+      "Unknown": 6,
+      "TWO FAMILY": 1,
+      "UNKNOWN": 4
     },
     "source_passed_filters": {
-      "mls": 107,
-      "reo": 0,
+      "mls": 104,
+      "reo": 1,
       "sheriff": 0,
       "tax": 1
     },
     "redfin_location_top25": {
       "Erie": 142,
+      "Scranton": 82,
+      "Penn Hills": 22,
+      "Carbondale": 20,
+      "West Mifflin": 17,
+      "Eagle Lake": 16,
+      "Covington Twp": 14,
+      "McKeesport": 14,
+      "Archbald": 12,
       "Edinboro": 10,
       "North East": 10,
+      "McKees Rocks": 9,
+      "Old Forge": 8,
+      "Plum Boro": 8,
+      "Taylor": 8,
+      "Brentwood": 7,
+      "Carrick": 7,
       "Lake City Boro": 7,
-      "Corry": 5,
-      "Summit Heights": 5,
-      "The Retreat": 5,
-      "Girard": 4,
-      "Asbury Woods Estate": 3,
-      "East Springfield": 3,
-      "Fairview": 3,
-      "McKean": 3,
-      "Waterford": 3,
-      "Wattsburg Boro": 3,
-      "West Springfield": 3,
-      "Albion": 2,
-      "Cranesville": 2,
-      "Erie City": 2,
-      "Harborcreek": 2,
-      "Hunter Ridge": 2,
-      "Canadohta": 1,
-      "Countryside": 1,
-      "GreenGateVillage": 1,
-      "Meadow Green Acres": 1,
-      "Millcreek": 1
+      "Moosic": 7,
+      "Beechview": 6,
+      "Carnegie": 6,
+      "Clairton": 6,
+      "Clarks Summit": 6,
+      "Dunmore": 6,
+      "Duquesne": 6
     },
     "listing_source_details": {
       "version": "basic-source-1.0-20261009",
       "new_rentcast_calls": 0,
       "statuses": {
         "source_unavailable": 20,
-        "not_requested": 83,
-        "cache_used": 1
+        "cache_used": 3,
+        "not_requested": 78
       },
-      "rows": 104
+      "rows": 101
     },
     "off_market_detection": "disabled_without_verified_listing_status",
     "price_drop_events": 0,
     "price_drop_properties": 0,
     "persistence_guard_removed": 0,
-    "total_properties": 852,
-    "finished_at": "2026-10-11T09:50:13-04:00"
+    "total_properties": 853,
+    "finished_at": "2026-10-11T10:26:06-04:00"
   },
   "sheriff": {
     "status": "עודכן",
