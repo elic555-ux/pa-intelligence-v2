@@ -3211,11 +3211,18 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             config.requestId = window.crypto?.randomUUID ? window.crypto.randomUUID() : 'manual-' + Date.now();
 
             try {
-                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
                 let sha = '';
                 const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${tk}` } });
-                if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
-                else if(getRes.status !== 404) throw new Error('קריאת ההגדרות נכשלה: HTTP ' + getRes.status);
+                if (!getRes.ok) throw new Error('קריאת ההגדרות השמורות נכשלה: HTTP ' + getRes.status);
+                const savedFile = await getRes.json();
+                sha = savedFile.sha;
+                const savedConfig = JSON.parse(decodeURIComponent(escape(atob(savedFile.content.replace(/\s/g, '')))));
+                if (typeof savedConfig.autoScanEnabled !== 'boolean' || !savedConfig.schedules || typeof savedConfig.schedules !== 'object') {
+                    throw new Error('ההגדרות השמורות אינן תקינות; הסריקה לא שוגרה.');
+                }
+                config.autoScanEnabled = savedConfig.autoScanEnabled;
+                config.schedules = savedConfig.schedules;
+                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
 
                 const configResponse = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
                     method: 'PUT',
@@ -3391,5 +3398,4 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
     <script src="secondary_sources.js?v=1.0.0-20261009"></script>
 </body>
 </html>
-
 
