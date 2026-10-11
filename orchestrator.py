@@ -26,13 +26,14 @@ from listing_source import enrich_rows as enrich_listing_source_rows
 
 EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
-CONFIG_FILE = "scan_config.json"
+CONFIG_FILE = ("manual_scan_config.json" if os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch") == "workflow_dispatch"
+               else "scan_config.json")
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.8-ui-scan-settings-20261011"
+ORCHESTRATOR_VERSION = "3.9.0-separate-scan-profiles-20261011"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס"}
@@ -2121,8 +2122,8 @@ def load_server_config():
     data = load_json_file(CONFIG_FILE, None)
     if not isinstance(data, dict):
         return None
-    # The UI writes a flat scan_config.json. Do not fall back to the old
-    # config.json, whose broad county and price settings are no longer edited.
+    # Each UI mode writes a flat profile. Never fall back to the old config.json,
+    # whose broad county and price settings are no longer edited.
     required = {"minPrice", "maxPrice", "minSqft", "maxSqft", "minBeds", "maxBeds",
                 "minBaths", "sectors", "propertyTypes", "counties", "cities",
                 "geoAreas", "autoScanEnabled"}
@@ -2202,8 +2203,9 @@ def geography_rejection(prop, geo_areas):
     if str(target.get("region_type")) == "6" and city.casefold() != area.casefold():
         return "city_mismatch"
     location = " ".join(str(prop.get("source_location") or "").split()).casefold()
-    scopes = [geo_areas.get(area)]
-    if str(target.get("region_type")) == "5" and city != area:
+    county_scope = geo_areas.get(area) or geo_areas.get(str(target.get("county_name") or ""))
+    scopes = [county_scope]
+    if str(target.get("region_type")) == "5" and city != area and not isinstance(county_scope, dict):
         scopes.append(geo_areas.get(city))
     for scope in scopes:
         if not isinstance(scope, dict) or scope.get("allLocations") is not False:
@@ -2688,7 +2690,7 @@ def run_orchestrator():
 
     if not server_config_raw:
         log_entry["status"] = "failed"
-        log_entry["errors"].append("scan_config.json missing or invalid; no source requests or inventory writes")
+        log_entry["errors"].append(f"{CONFIG_FILE} missing or invalid; no source requests or inventory writes")
         log_entry["finished_at"] = iso_now_est()
         append_scan_log(log_entry)
         print("⚠️ קובץ תצורה לא נמצא או אינו תקין. מסיים ריצה.")
@@ -2859,7 +2861,9 @@ def run_orchestrator():
     selected_geo_areas = scan_settings.get("geo_areas")
     if isinstance(selected_geo_areas, dict):
         selected_geo_areas = {area: spec for area, spec in selected_geo_areas.items()
-                              if area in cities_list and isinstance(spec, dict)}
+                              if (area in cities_list or area in counties_list
+                                  or area.removesuffix(" County") in counties_list)
+                              and isinstance(spec, dict)}
         log_entry["neighborhood_filter_status"] = (
             "enforced_per_scan_area" if selected_geo_areas
             else "county_wide_no_neighborhood_rule"

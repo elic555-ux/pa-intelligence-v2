@@ -1613,6 +1613,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
             await loadAutomationState();
+            await loadManualScanProfile();
             await loadProperties();
             await loadGeoCatalog();
         }
@@ -1711,7 +1712,25 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`)).filter(hood => hood.dataset.city === city.value);
                 scopes[city.value] = { allLocations: locations.length === 0 || locations.every(hood => hood.checked), locations: [...new Set(locations.filter(hood => hood.checked).map(hood => hood.value))] };
             });
+            document.querySelectorAll(`.${prefix}-county-box`).forEach(county => {
+                const area = county.value;
+                const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
+                    .filter(hood => hood.dataset.city === area || hood.dataset.city === `${area} County`);
+                if (!locations.length || (!county.checked && !locations.some(hood => hood.checked))) return;
+                scopes[area] = {allLocations: locations.every(hood => hood.checked),
+                    locations: [...new Set(locations.filter(hood => hood.checked).map(hood => hood.value))]};
+            });
             return scopes;
+        }
+
+        function selectedScanCounties(prefix) {
+            const counties = new Set(Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value));
+            document.querySelectorAll(`.${prefix}-hood-box:checked`).forEach(hood => {
+                const area = String(hood.dataset.city || '').replace(/ County$/, '');
+                const county = document.querySelector(`.${prefix}-county-box[value="${CSS.escape(area)}"]`);
+                if (county) counties.add(county.value);
+            });
+            return [...counties];
         }
 
         function restoreGeoAreas(prefix, saved) {
@@ -1734,7 +1753,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 minBaths: document.getElementById(`${prefix}-min-baths`).value,
                 sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value).filter(value => AVAILABLE_SCAN_SECTORS.has(value)),
                 propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
-                counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
+                counties: selectedScanCounties(prefix),
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
                 neighborhoods: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`)).map(cb => cb.value),
                 geoAreas: buildGeoAreas(prefix),
@@ -1774,11 +1793,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             } catch(e) {}
         }
 
-        function saveOnDemandStateLocally() { localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(buildServerConfig(true))); }
+        function saveOnDemandStateLocally() { localStorage.setItem('pa_ondemand_draft_v7', JSON.stringify(buildServerConfig(true))); }
 
-        function loadOnDemandState() {
+        function loadOnDemandState(savedConfig = null) {
             try {
-                const saved = localStorage.getItem('pa_ondemand_state_v7');
+                const saved = savedConfig ? JSON.stringify(savedConfig) : localStorage.getItem('pa_ondemand_state_v7');
                 if (saved) {
                     const st = cleanScanSettings(JSON.parse(saved));
                     if(document.getElementById('ondemand-min-price') && st.minPrice !== undefined && st.minPrice !== null) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
@@ -1796,6 +1815,32 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                     restoreGeoAreas('ondemand', st);
                 }
             } catch(e) {}
+        }
+
+        async function loadManualScanProfile(notifyOnFailure = false) {
+            try {
+                const token = localStorage.getItem('pa_github_token');
+                let profile;
+                if (token) {
+                    const response = await fetch('https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json',
+                        {headers: {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'}});
+                    if (!response.ok) throw new Error('manual profile unavailable');
+                    const file = await response.json();
+                    profile = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\s/g, '')))));
+                } else {
+                    const response = await fetch('manual_scan_config.json?t=' + Date.now());
+                    if (!response.ok) throw new Error('manual profile unavailable');
+                    profile = await response.json();
+                }
+                if (!profile || !Array.isArray(profile.counties) || !Array.isArray(profile.cities) ||
+                    !profile.geoAreas || typeof profile.geoAreas !== 'object') throw new Error('invalid manual profile');
+                localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(profile));
+                loadOnDemandState(profile);
+                return true;
+            } catch (error) {
+                if (notifyOnFailure) alert('לא ניתן לטעון את הסריקה היזומה האחרונה מהשרת. מוצגת הבחירה האחרונה שנשמרה בדפדפן.');
+                return false;
+            }
         }
 
         function setViewMode(mode) {
@@ -2446,8 +2491,9 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             for (const input of staticInputs) (byArea[input.dataset.city] ||= []).push(input);
             const names = new Set([...Object.keys(areas), ...Object.keys(byArea)]);
             for (const area of Array.from(names).sort((a,b) => a.localeCompare(b))) {
-                const countyArea = area === 'Allegheny';
-                const parent = document.querySelector(countyArea ? `.${prefix}-county-box[value="Allegheny"]` : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
+                const countyName = area.replace(/ County$/, '');
+                const countyArea = area === 'Allegheny' || area.endsWith(' County');
+                const parent = document.querySelector(countyArea ? `.${prefix}-county-box[value="${CSS.escape(countyName)}"]` : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
                 if (!parent) continue;
                 const fromSource = Array.from(areas[area] || []).sort((a,b) => a.localeCompare(b));
                 const sourceNames = new Set(fromSource.map(v => v.toLowerCase()));
@@ -3149,7 +3195,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function closeTelegramModal() { document.getElementById('telegram-modal').classList.add('hidden'); }
         function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); }
         function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
-        function openOnDemandScanModal() { document.getElementById('ondemand-modal').classList.remove('hidden'); }
+        async function openOnDemandScanModal() {
+            await loadManualScanProfile(true);
+            await loadGeoCatalog();
+            document.getElementById('ondemand-modal').classList.remove('hidden');
+        }
         function closeOnDemandScanModal() { document.getElementById('ondemand-modal').classList.add('hidden'); }
 
         async function saveScanSettingsToServer() {
@@ -3212,24 +3262,18 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
             try {
                 let sha = '';
-                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, { headers: { 'Authorization': `Bearer ${tk}` } });
-                if (!getRes.ok) throw new Error('קריאת ההגדרות השמורות נכשלה: HTTP ' + getRes.status);
-                const savedFile = await getRes.json();
-                sha = savedFile.sha;
-                const savedConfig = JSON.parse(decodeURIComponent(escape(atob(savedFile.content.replace(/\s/g, '')))));
-                if (typeof savedConfig.autoScanEnabled !== 'boolean' || !savedConfig.schedules || typeof savedConfig.schedules !== 'object') {
-                    throw new Error('ההגדרות השמורות אינן תקינות; הסריקה לא שוגרה.');
-                }
-                config.autoScanEnabled = savedConfig.autoScanEnabled;
-                config.schedules = savedConfig.schedules;
+                const getRes = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json`, { headers: { 'Authorization': `Bearer ${tk}` } });
+                if (getRes.ok) { const savedFile = await getRes.json(); sha = savedFile.sha; }
+                else if (getRes.status !== 404) throw new Error('קריאת פרופיל הסריקה היזומה נכשלה: HTTP ' + getRes.status);
                 const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
 
-                const configResponse = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json`, {
+                const configResponse = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${tk}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: "Update config for On-Demand Scan", content: contentBase64, sha: sha || undefined })
                 });
                 if (!configResponse.ok) throw new Error('שמירת ההגדרות נכשלה: HTTP ' + configResponse.status);
+                localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config));
                 applyBoardScanPriceRange(config, true, true);
             } catch(e) {
                 alert(e.message + '\nהסריקה לא שוגרה. שמור את ההגדרות ונסה שוב.');
@@ -3398,4 +3442,5 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
     <script src="secondary_sources.js?v=1.0.0-20261009"></script>
 </body>
 </html>
+
 

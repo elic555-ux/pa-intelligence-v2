@@ -19,6 +19,15 @@ def config_loader():
     return scope
 
 
+def geography_filter():
+    tree = ast.parse((ROOT / "orchestrator.py").read_text(encoding="utf-8"))
+    function = next(node for node in tree.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "geography_rejection")
+    scope = {"REGION_MAP": {"Allegheny County": {"region_type": "5", "county_name": "Allegheny"}}}
+    exec(compile(ast.Module(body=[function], type_ignores=[]), "orchestrator.py", "exec"), scope)
+    return scope["geography_rejection"]
+
+
 class ScanControlsTests(unittest.TestCase):
     def setUp(self):
         self.config = json.loads((ROOT / "scan_config.json").read_text(encoding="utf-8"))
@@ -42,6 +51,14 @@ class ScanControlsTests(unittest.TestCase):
         self.assertEqual(result["autoScanEnabled"], self.config["autoScanEnabled"])
         self.assertEqual(result["schedules"], self.config["schedules"])
 
+    def test_manual_profile_is_separately_readable(self):
+        manual = json.loads((ROOT / "manual_scan_config.json").read_text(encoding="utf-8"))
+        self.scope["CONFIG_FILE"] = "manual_scan_config.json"
+        result = self.load(manual)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["config_source"], "manual_scan_config.json")
+        self.assertEqual(result["scan_settings"]["target_counties"], manual["counties"])
+
     def test_missing_or_legacy_config_fails_closed(self):
         self.assertIsNone(self.load(None))
         self.assertIsNone(self.load(json.loads((ROOT / "config.json").read_text(encoding="utf-8"))))
@@ -57,10 +74,23 @@ class ScanControlsTests(unittest.TestCase):
         start = html.index("async function triggerOnDemandExecution()")
         end = html.index("function openAutoScanModal()", start)
         manual = html[start:end]
-        self.assertLess(manual.index("config.schedules = savedConfig.schedules"),
-                        manual.index("const contentBase64 ="))
-        self.assertLess(manual.index("config.autoScanEnabled = savedConfig.autoScanEnabled"),
-                        manual.index("const contentBase64 ="))
+        self.assertIn("contents/manual_scan_config.json", manual)
+        self.assertNotIn("contents/scan_config.json", manual)
+        self.assertIn("localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config))", manual)
+        self.assertIn("await loadManualScanProfile()", html)
+        self.assertTrue((ROOT / "manual_scan_config.json").is_file())
+        scanner = (ROOT / "orchestrator.py").read_text(encoding="utf-8")
+        self.assertIn('"manual_scan_config.json" if os.environ.get("GITHUB_EVENT_NAME"', scanner)
+
+    def test_county_source_locations_are_enforced(self):
+        reject = geography_filter()
+        chosen = {"Allegheny": {"allLocations": False,
+                                 "locations": ["Pitcairn", "Pittsburgh", "Verona"]}}
+        for location in ("Pitcairn", "Pittsburgh", "Verona"):
+            self.assertIsNone(reject({"source_scan_area": "Allegheny County",
+                                      "city": location, "source_location": location}, chosen))
+        self.assertEqual(reject({"source_scan_area": "Allegheny County",
+                                 "city": "McKeesport", "source_location": "McKeesport"}, chosen), "location")
 
 
 if __name__ == "__main__":
