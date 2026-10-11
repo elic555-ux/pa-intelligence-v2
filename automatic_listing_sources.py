@@ -10,7 +10,7 @@ from pathlib import Path
 import property_sources as registry
 import tarasa_listing_source as source
 
-VERSION = 'automatic-mls-sources-1.2.0-20261011'
+VERSION = 'automatic-mls-sources-1.3.0-20261011'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -19,6 +19,7 @@ STOP_BATCH = {'source_blocked', 'source_rate_limited', 'robots_disallowed',
     'source_cooldown', 'source_request_budget_exhausted', 'batch_time_limit',
     'source_redirect_stopped', 'source_unavailable', 'source_response_too_large',
     'robots_delay_exceeds_pilot_limit'}
+REVIEW_STATUSES = {'listing_not_available', 'source_identity_mismatch'}
 
 
 def fingerprint(row):
@@ -49,6 +50,10 @@ def eligible_rows(repo):
             # listings. Keep their existing snapshots in the shared registry,
             # but do not spend new Tarasa requests on this unverified route.
             excluded['outside_tarasa_request_scope'] += 1
+        elif len(registry.listing_id(row) or '') > 10:
+            # This inventory contains 19-digit IDs that cannot be treated as
+            # verified broker MLS numbers for a guessed Tarasa detail route.
+            excluded['unverified_tarasa_listing_id'] += 1
         elif not registry.identity(row)['complete'] or not registry.listing_id(row) or not registry.safe_url(row.get('url')):
             excluded['incomplete_identity'] += 1
         elif row.get('market_status') not in (None, '', 'active'):
@@ -75,7 +80,8 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         'max_properties_per_run': caps[0], 'max_source_requests_per_run': caps[1], 'max_seconds_per_run': caps[2],
         'properties_sha256': hashlib.sha256((repo / 'properties.json').read_bytes()).hexdigest(),
         'scan_id': None, 'cached_properties': 0, 'attempted_properties': 0,
-        'new_snapshots': 0, 'results': [], 'pending': 0, 'due': 0, 'migrated_provider_entries': 0}
+        'new_snapshots': 0, 'results': [], 'pending': 0, 'due': 0,
+        'review_required': 0, 'migrated_provider_entries': 0}
     if mode == 'automatic':
         if not state.get('enabled'):
             report['status'] = 'automatic_disabled'
@@ -125,7 +131,9 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
                 entry['source_url'] = own['source_url']
         entries[key] = entry
     state['entries'] = entries
-    pending = {k: rows[k] for k, e in entries.items() if e.get('status') != 'cache_used'}
+    pending = {k: rows[k] for k, e in entries.items()
+               if e.get('status') not in REVIEW_STATUSES | {'cache_used'}}
+    report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
     due = {k: row for k, row in pending.items() if not source.parse_date(entries[k].get('retry_after_at'))
            or source.parse_date(entries[k].get('retry_after_at')) <= now}
     report.update(pending=len(pending), due=len(due))
@@ -170,7 +178,8 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
                 report['status'] = 'batch_complete'
     else:
         report['status'] = 'waiting_for_retry' if pending else 'queue_current'
-    report['pending'] = sum(e.get('status') != 'cache_used' for e in entries.values())
+    report['pending'] = sum(e.get('status') not in REVIEW_STATUSES | {'cache_used'} for e in entries.values())
+    report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
     state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER)
     report['should_save'] = True
     registry.atomic_json(repo / STATE, state)
@@ -187,6 +196,8 @@ def summary(report):
         '- מטמונים חדשים: ' + str(report['new_snapshots']),
         '- נכסים שהשתמשו במטמון שמור: ' + str(report['cached_properties']),
         '- נכסים שממתינים בתור: ' + str(report['pending']), '',
+        '- נכסים שדורשים בדיקת התאמה ידנית לפני ניסיון חוזר: ' + str(report.get('review_required', 0)),
+        '- מזהים שאינם מאומתים לנתיב Tarasa: ' + str(report.get('excluded', {}).get('unverified_tarasa_listing_id', 0)),
         'בקשות חדשות ל־Tarasa מוגבלות כעת למחוז Allegheny. מודעות Erie מוחרגות מתור זה בלבד; מפרטים שמורים ממקורות אחרים ממשיכים להיות זמינים.',
         '- נכסי Erie שהוחרגו מתור Tarasa: ' + str(report.get('excluded', {}).get('outside_tarasa_request_scope', 0)),
         'מגבלה בריצה זו: עד ' + str(report['max_properties_per_run']) + ' נכסים ועד ' + str(report['max_source_requests_per_run']) + ' בקשות.',
