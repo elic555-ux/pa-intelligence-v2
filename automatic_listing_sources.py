@@ -10,7 +10,7 @@ from pathlib import Path
 import property_sources as registry
 import tarasa_listing_source as source
 
-VERSION = 'automatic-mls-sources-1.1.0-20261009'
+VERSION = 'automatic-mls-sources-1.2.0-20261011'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -44,6 +44,11 @@ def eligible_rows(repo):
             excluded['ambiguous_identity'] += 1
         elif registry.norm(row.get('county')).removesuffix(' county') not in registry.COUNTIES:
             excluded['outside_initial_source_coverage'] += 1
+        elif registry.norm(row.get('county')).removesuffix(' county') != 'allegheny':
+            # The guessed Tarasa detail route returned 404 for current Erie
+            # listings. Keep their existing snapshots in the shared registry,
+            # but do not spend new Tarasa requests on this unverified route.
+            excluded['outside_tarasa_request_scope'] += 1
         elif not registry.identity(row)['complete'] or not registry.listing_id(row) or not registry.safe_url(row.get('url')):
             excluded['incomplete_identity'] += 1
         elif row.get('market_status') not in (None, '', 'active'):
@@ -182,6 +187,8 @@ def summary(report):
         '- מטמונים חדשים: ' + str(report['new_snapshots']),
         '- נכסים שהשתמשו במטמון שמור: ' + str(report['cached_properties']),
         '- נכסים שממתינים בתור: ' + str(report['pending']), '',
+        'בקשות חדשות ל־Tarasa מוגבלות כעת למחוז Allegheny. מודעות Erie מוחרגות מתור זה בלבד; מפרטים שמורים ממקורות אחרים ממשיכים להיות זמינים.',
+        '- נכסי Erie שהוחרגו מתור Tarasa: ' + str(report.get('excluded', {}).get('outside_tarasa_request_scope', 0)),
         'מגבלה בריצה זו: עד ' + str(report['max_properties_per_run']) + ' נכסים ועד ' + str(report['max_source_requests_per_run']) + ' בקשות.',
         'לפחות 10 שניות בין בקשות. אין המתנה של יום בין נכסים; חסימה עוצרת את המקור ומוצגת עם זמן ניסיון נוסף.',
         'התור ממשיך מהמקום שנשמר. מטמוני Clear Choice התקינים נשמרים ונבדקים לפני גישה למקור.',
