@@ -2279,10 +2279,13 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
                 home_url = f"https://www.redfin.com{home_url}"
 
             strategy_data = classify_strategy("MLS", price, beds, property_type=property_type)
-            mls_number = row.get("MLS#") or normalize_addr_key(addr, row_city, zip_code)
+            csv_mls_number = str(row.get("MLS#") or "").strip()
+            mls_number = csv_mls_number or normalize_addr_key(addr, row_city, zip_code)
             discovered.append({
                 "id": f"PA-MLS-{mls_number}",
                 "docket_id": f"MLS-{mls_number}",
+                "listing_identifier_origin": "redfin_csv_mls_column" if csv_mls_number else "address_fallback",
+                "scanner_broker_listing_verified": False,
                 "address": addr,
                 "city": row_city,
                 "county": target.get("county_name") or CITY_COUNTY.get(clean_city) or "",
