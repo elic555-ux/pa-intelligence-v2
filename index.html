@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.16.1 / 2026-10-11: explicit scan areas and one-way county hierarchy -->
+<!-- PA UI 8.16.2 / 2026-10-11: manual scan saves and restores the complete form before dispatch -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.16.1 · 11.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.16.2 · 11.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -843,6 +843,23 @@
                 </div>
             </div>
             
+            <div class="space-y-1.5 pt-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-blue-400">2. עיר / יישוב (Municipality):</span>
+                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Philadelphia" data-county="Philadelphia" onchange="handleCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Pittsburgh" data-county="Allegheny" onchange="handleCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Allentown" data-county="Lehigh" onchange="handleCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Reading" data-county="Berks" onchange="handleCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Erie" data-county="Erie" onchange="handleCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Scranton" data-county="Lackawanna" onchange="handleCityCheckboxChange('Scranton', this.checked)"><span>Scranton</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Bethlehem" data-county="Northampton" onchange="handleCityCheckboxChange('Bethlehem', this.checked)"><span>Bethlehem</span></label>
+                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Lancaster" data-county="Lancaster" onchange="handleCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
+                </div>
+            </div>
+            
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-emerald-400">3. שכונה / אזור (Neighborhood):</span>
@@ -889,7 +906,7 @@
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
                 <button id="btn-save-manual-scan" onclick="saveManualScanSettings()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-bold">שמור בחירה ללא סריקה</button>
-                <button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5"><i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שגר סריקה כעת</button>
+                <button id="btn-trigger-scan" onclick="triggerOnDemandExecution()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5"><i data-lucide="zap" class="w-4 h-4 text-amber-300"></i> שמור פרמטרים והפעל סריקה</button>
             </div>
         </div>
     </div>
@@ -931,6 +948,8 @@
         let automationStateVerified = false;
         let scheduledProfileVerified = false;
         let manualProfileVerified = false;
+        let confirmedManualScanProfile = null;
+        let manualScanSaveInProgress = false;
         const staticScanLocationInputs = {};
         let boardScanPriceRange = initialBoardScanPriceRange();
         let boardPriceMinEdited = false;
@@ -1224,6 +1243,15 @@
         function scanConfigurationErrors(config) {
             const errors = [];
             if (!config.counties?.length && !config.cities?.length) errors.push('יש לבחור לפחות מחוז או עיר לסריקה.');
+            if (config.is_manual_scan && Array.isArray(config.uiSelections?.locations)) {
+                const inactiveAreas = [...new Set(config.uiSelections.locations.filter(location => {
+                    const countyArea = location.area === 'Allegheny' || location.area.endsWith(' County');
+                    return countyArea ? !config.counties?.includes(location.area.replace(/ County$/, '')) :
+                        !config.cities?.includes(location.area);
+                }).map(location => location.area))];
+                if (inactiveAreas.length) errors.push('נבחרו מיקומים תחת אזור שלא סומן לסריקה: ' + inactiveAreas.join(', ') +
+                    '. סמן גם את המחוז או העיר המתאימים, או בטל את המיקומים האלה.');
+            }
             if (config.minPrice === null || config.maxPrice === null || config.minPrice < 0 || config.maxPrice <= 0) errors.push('יש להזין מחיר מינימום של אפס ומעלה ומחיר מקסימום חיובי.');
             else if (config.minPrice > config.maxPrice) errors.push('מחיר המינימום גבוה ממחיר המקסימום.');
             for (const [minField, maxField, label] of [['minSqft', 'maxSqft', 'שטח'], ['minBeds', 'maxBeds', 'חדרי שינה']]) {
@@ -1775,6 +1803,44 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             });
         }
 
+        function captureScanSelections(prefix) {
+            return {
+                counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
+                cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
+                locations: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`))
+                    .map(cb => ({area: cb.dataset.city, value: cb.value}))
+            };
+        }
+
+        function savedScanLocationChecked(saved, area, value) {
+            if (Array.isArray(saved?.uiSelections?.locations)) {
+                return saved.uiSelections.locations.some(location => location.area === area && location.value === value);
+            }
+            const scope = savedGeoScope(saved, area);
+            if (scope) return Boolean(scope.locations?.includes(value));
+            // Older saved profiles only had a flat list. Restore its existing
+            // choices without selecting newly discovered catalog locations.
+            return Boolean(saved?.neighborhoods?.includes(value));
+        }
+
+        function cacheConfirmedManualScanProfile(config) {
+            confirmedManualScanProfile = JSON.parse(JSON.stringify(config));
+            manualProfileVerified = true;
+            try {
+                const saved = JSON.stringify(config);
+                localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config));
+                localStorage.setItem('pa_ondemand_draft_v7', saved);
+                localStorage.setItem('pa_ondemand_confirmed_v1', saved);
+            } catch (error) { /* The verified server copy still remains authoritative. */ }
+        }
+
+        function lastConfirmedManualScanProfile() {
+            if (confirmedManualScanProfile) return confirmedManualScanProfile;
+            try {
+                return JSON.parse(localStorage.getItem('pa_ondemand_confirmed_v1') || 'null');
+            } catch (error) { return null; }
+        }
+
         function buildServerConfig(isManual = false) {
             const prefix = isManual ? 'ondemand' : 'setting';
             return {
@@ -1791,6 +1857,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
                 neighborhoods: selectedScanLocations(prefix),
                 geoAreas: buildGeoAreas(prefix),
+                ...(isManual ? {uiSelections: captureScanSelections(prefix)} : {}),
                 autoScanEnabled: document.getElementById('autoscan-master-switch') ? document.getElementById('autoscan-master-switch').checked : true,
                 schedules: {
                     mls: { day: document.getElementById('sched-day-mls') ? document.getElementById('sched-day-mls').value : 'Everyday', time: document.getElementById('sched-time-mls') ? document.getElementById('sched-time-mls').value : '08:00' },
@@ -1836,17 +1903,26 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                     const st = cleanScanSettings(JSON.parse(saved));
                     if(document.getElementById('ondemand-min-price') && st.minPrice !== undefined && st.minPrice !== null) document.getElementById('ondemand-min-price').value = st.minPrice.toLocaleString('en-US');
                     if(document.getElementById('ondemand-max-price') && st.maxPrice !== undefined && st.maxPrice !== null) document.getElementById('ondemand-max-price').value = st.maxPrice.toLocaleString('en-US');
-                    if(document.getElementById('ondemand-min-sqft') && st.minSqft) document.getElementById('ondemand-min-sqft').value = st.minSqft;
+                    if(document.getElementById('ondemand-min-sqft') && st.minSqft !== undefined && st.minSqft !== null) document.getElementById('ondemand-min-sqft').value = st.minSqft;
                     if(document.getElementById('ondemand-max-sqft') && st.maxSqft !== undefined) document.getElementById('ondemand-max-sqft').value = st.maxSqft;
-                    if(document.getElementById('ondemand-min-beds') && st.minBeds) document.getElementById('ondemand-min-beds').value = st.minBeds;
+                    if(document.getElementById('ondemand-min-beds') && st.minBeds !== undefined && st.minBeds !== null) document.getElementById('ondemand-min-beds').value = st.minBeds;
                     if(document.getElementById('ondemand-max-beds') && st.maxBeds !== undefined) document.getElementById('ondemand-max-beds').value = st.maxBeds;
-                    if(document.getElementById('ondemand-min-baths') && st.minBaths) document.getElementById('ondemand-min-baths').value = st.minBaths;
+                    if(document.getElementById('ondemand-min-baths') && st.minBaths !== undefined && st.minBaths !== null) document.getElementById('ondemand-min-baths').value = st.minBaths;
                     if(st.sectors) document.querySelectorAll('.ondemand-sector-box').forEach(cb => cb.checked = st.sectors.includes(cb.value));
                     if(st.propertyTypes) document.querySelectorAll('.ondemand-prop-type-box').forEach(cb => cb.checked = st.propertyTypes.includes(cb.value));
                     if(st.counties) document.querySelectorAll('.ondemand-county-box').forEach(cb => cb.checked = st.counties.includes(cb.value));
                     if(st.cities) document.querySelectorAll('.ondemand-city-box').forEach(cb => cb.checked = st.cities.includes(cb.value));
                     if(st.neighborhoods) document.querySelectorAll('.ondemand-hood-box').forEach(cb => cb.checked = st.neighborhoods.includes(cb.value));
                     restoreGeoAreas('ondemand', st);
+                    const selection = st.uiSelections;
+                    if (selection) {
+                        if (Array.isArray(selection.counties)) document.querySelectorAll('.ondemand-county-box')
+                            .forEach(cb => { cb.checked = selection.counties.includes(cb.value); cb.indeterminate = false; });
+                        if (Array.isArray(selection.cities)) document.querySelectorAll('.ondemand-city-box')
+                            .forEach(cb => cb.checked = selection.cities.includes(cb.value));
+                    }
+                    document.querySelectorAll('.ondemand-hood-box')
+                        .forEach(cb => { cb.checked = savedScanLocationChecked(st, cb.dataset.city, cb.value); });
                 }
             } catch(e) {}
         }
@@ -1857,23 +1933,32 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 const token = localStorage.getItem('pa_github_token');
                 let profile;
                 if (token) {
-                    const response = await fetch('https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json',
-                        {headers: {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'}});
+                    const response = await fetch('https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json?ref=main&t=' + Date.now(),
+                        {cache: 'no-store', headers: {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'}});
                     if (!response.ok) throw new Error('manual profile unavailable');
                     const file = await response.json();
                     profile = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\s/g, '')))));
                 } else {
-                    const response = await fetch('manual_scan_config.json?t=' + Date.now());
+                    const response = await fetch('manual_scan_config.json?t=' + Date.now(), {cache: 'no-store'});
                     if (!response.ok) throw new Error('manual profile unavailable');
                     profile = await response.json();
                 }
                 if (!profile || !Array.isArray(profile.counties) || !Array.isArray(profile.cities) ||
                     !profile.geoAreas || typeof profile.geoAreas !== 'object') throw new Error('invalid manual profile');
-                localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(profile));
+                const confirmed = lastConfirmedManualScanProfile();
+                // GitHub Pages may still serve the preceding deployment immediately
+                // after a save. Do not replace a verified newer selection with it.
+                if (!token && confirmed && Date.parse(confirmed.updatedAt) > Date.parse(profile.updatedAt)) profile = confirmed;
+                cacheConfirmedManualScanProfile(profile);
                 loadOnDemandState(profile);
-                manualProfileVerified = true;
                 return true;
             } catch (error) {
+                const confirmed = lastConfirmedManualScanProfile();
+                if (confirmed) {
+                    loadOnDemandState(confirmed);
+                    manualProfileVerified = true;
+                    return true;
+                }
                 if (notifyOnFailure) alert('לא ניתן לטעון את הגדרות הסריקה היזומה מהשרת. החלון לא נפתח כדי למנוע שמירה של אזורים ישנים.');
                 return false;
             }
@@ -2539,6 +2624,23 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                     }
                 }
             } catch (err) {}
+            // Retain saved source locations even if the catalog is temporarily
+            // unavailable or no longer contains a previously selected location.
+            for (const prefix of ['setting', 'ondemand']) {
+                let saved = prefix === 'ondemand' ? confirmedManualScanProfile : null;
+                if (!saved) {
+                    try {
+                        saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
+                    } catch (error) { saved = {}; }
+                }
+                for (const [area, scope] of Object.entries(saved.geoAreas || {})) {
+                    for (const location of scope.locations || []) if (typeof location === 'string') (areas[area] ||= new Set()).add(location);
+                }
+                for (const location of saved.uiSelections?.locations || []) {
+                    if (typeof location.area === 'string' && typeof location.value === 'string')
+                        (areas[location.area] ||= new Set()).add(location.value);
+                }
+            }
             for (const prefix of ['setting', 'ondemand']) renderGeoCatalog(prefix, areas);
         }
 
@@ -2551,8 +2653,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 staticScanLocationInputs[prefix] = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
                     .filter(input => !input.closest(`#${prefix}-dynamic-neighborhoods`));
             }
+            const currentSelections = new Map(Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
+                .map(input => [JSON.stringify([input.dataset.city, input.value]), input.checked]));
             container.replaceChildren();
-            const saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
+            const saved = prefix === 'ondemand' && confirmedManualScanProfile ? confirmedManualScanProfile :
+                JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
             const staticInputs = staticScanLocationInputs[prefix];
             const staticGrid = document.getElementById(`${prefix}-static-neighborhoods`) || staticInputs[0]?.closest('.grid');
             if (staticGrid) {
@@ -2589,9 +2694,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 for (const location of newLocations) {
                     const label = document.createElement('label'); label.dir = 'ltr'; label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
                     const input = document.createElement('input'); input.type = 'checkbox'; input.value = location; input.className = `${prefix}-hood-box accent-emerald-500`; input.dataset.city = area;
-                    const scope = savedGeoScope(saved, area);
                     // An enlarged source catalog must never enlarge a saved scan.
-                    input.checked = Boolean(scope?.locations?.includes(location));
+                    const selectionKey = JSON.stringify([area, location]);
+                    input.checked = currentSelections.has(selectionKey) ? currentSelections.get(selectionKey) :
+                        savedScanLocationChecked(saved, area, location);
                     input.addEventListener('change', prefix === 'setting' ? saveSettingsStateLocally : saveOnDemandStateLocally);
                     const name = document.createElement('span'); name.textContent = location;
                     label.append(input, name); grid.append(label);
@@ -3320,38 +3426,53 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         async function putManualScanConfig(config, token) {
             const path = 'https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json';
-            const getRes = await fetch(path, {headers: {'Authorization': `Bearer ${token}`}});
+            const headers = {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'};
+            const getRes = await fetch(path + '?ref=main&t=' + Date.now(), {cache: 'no-store', headers});
             if (!getRes.ok && getRes.status !== 404) throw new Error('קריאת פרופיל הסריקה היזומה נכשלה: HTTP ' + getRes.status);
             const sha = getRes.ok ? (await getRes.json()).sha : undefined;
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
             const putRes = await fetch(path, {
                 method: 'PUT',
-                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
-                body: JSON.stringify({message: 'Update manual scan profile from UI', content, sha})
+                headers: {...headers, 'Content-Type': 'application/json'},
+                body: JSON.stringify({message: 'Save manual scan parameters from UI', content, sha, branch: 'main'})
             });
             if (!putRes.ok) throw new Error('שמירת הגדרות הסריקה היזומה נכשלה: HTTP ' + putRes.status);
-            localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config));
-            manualProfileVerified = true;
+            const verifyRes = await fetch(path + '?ref=main&t=' + Date.now(), {cache: 'no-store', headers});
+            if (!verifyRes.ok) throw new Error('השרת קיבל את השמירה, אך לא ניתן לאמת את הפרמטרים שנשמרו: HTTP ' + verifyRes.status);
+            const verifiedFile = await verifyRes.json();
+            if (typeof verifiedFile.content !== 'string' || verifiedFile.content.replace(/\s/g, '') !== content) {
+                throw new Error('הפרמטרים שנקראו מהשרת אינם תואמים לבחירה. הסריקה לא הופעלה.');
+            }
+            cacheConfirmedManualScanProfile(config);
+        }
+
+        function setManualScanSaving(busy) {
+            manualScanSaveInProgress = busy;
+            for (const id of ['btn-trigger-scan', 'btn-save-manual-scan']) {
+                const button = document.getElementById(id);
+                if (button) button.disabled = busy;
+            }
         }
 
         async function saveManualScanSettings() {
+            if (manualScanSaveInProgress) return;
             const config = validatedScanConfig(true);
             if (!config) return;
             const token = document.getElementById('ondemand-token-input')?.value.trim() || localStorage.getItem('pa_github_token');
             if (!token) { alert('כדי לשמור את הבחירה, יש להזין מפתח GitHub.'); return; }
             localStorage.setItem('pa_github_token', token);
-            const btn = document.getElementById('btn-save-manual-scan');
-            btn.disabled = true;
+            setManualScanSaving(true);
             try {
                 await putManualScanConfig(config, token);
                 closeOnDemandScanModal();
                 alert('הבחירה נשמרה לסריקה היזומה הבאה. לא הופעלה סריקה.');
             } catch (error) {
-                alert(error.message + '\nהבחירה לא נשמרה.');
-            } finally { btn.disabled = false; }
+                alert(error.message + '\nלא התקבל אישור מלא לשמירת הבחירה.');
+            } finally { setManualScanSaving(false); }
         }
 
         async function triggerOnDemandExecution() {
+            if (manualScanSaveInProgress) return;
             const config = validatedScanConfig(true);
             if (!config) return;
             const tokenInput = document.getElementById('ondemand-token-input');
@@ -3366,19 +3487,21 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
             const btn = document.getElementById('btn-trigger-scan'); 
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> מתקשר עם השרת...'; 
-            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> שומר את הפרמטרים...';
+            setManualScanSaving(true);
             lucide.createIcons();
 
             config.requestId = window.crypto?.randomUUID ? window.crypto.randomUUID() : 'manual-' + Date.now();
 
             try {
                 await putManualScanConfig(config, tk);
+                btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> הפרמטרים נשמרו; מפעיל סריקה...';
+                lucide.createIcons();
                 applyBoardScanPriceRange(config, true, true);
             } catch(e) {
-                alert(e.message + '\nהסריקה לא שוגרה. שמור את ההגדרות ונסה שוב.');
+                alert(e.message + '\nהסריקה לא הופעלה כי השמירה לא אומתה. הבחירה נשארת בחלון לניסיון נוסף.');
                 btn.innerHTML = originalHtml;
-                btn.disabled = false;
+                setManualScanSaving(false);
                 lucide.createIcons();
                 return;
             }
@@ -3396,14 +3519,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 } else {
                     const errorText = await res.text();
                     console.error(errorText);
-                    alert(`שגיאה בשיגור הסריקה!\nקוד שגיאה: ${res.status}\nפרטים: ${errorText}\n\nצלם לי הודעה זו.`);
+                    alert(`הפרמטרים נשמרו, אך הסריקה לא הופעלה.\nקוד שגיאה: ${res.status}\nפרטים: ${errorText}`);
                 }
             } catch(e) {
-                alert(`שגיאת רשת מול גיטהאב: ${e.message}`);
+                alert(`הפרמטרים נשמרו, אך לא התקבל אישור להפעלת הסריקה: ${e.message}`);
             }
             
             btn.innerHTML = originalHtml; 
-            btn.disabled = false;
+            setManualScanSaving(false);
             lucide.createIcons();
         }
 
@@ -3547,5 +3670,4 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
     <script src="secondary_sources.js?v=1.0.0-20261009"></script>
 </body>
 </html>
-
 
