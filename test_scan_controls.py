@@ -23,7 +23,11 @@ def geography_filter():
     tree = ast.parse((ROOT / "orchestrator.py").read_text(encoding="utf-8"))
     function = next(node for node in tree.body
                     if isinstance(node, ast.FunctionDef) and node.name == "geography_rejection")
-    scope = {"REGION_MAP": {"Allegheny County": {"region_type": "5", "county_name": "Allegheny"}}}
+    scope = {"REGION_MAP": {
+        "Allegheny County": {"region_type": "5", "county_name": "Allegheny"},
+        "Erie County": {"region_type": "5", "county_name": "Erie"},
+        "Erie": {"region_type": "6", "county_name": "Erie"},
+    }}
     exec(compile(ast.Module(body=[function], type_ignores=[]), "orchestrator.py", "exec"), scope)
     return scope["geography_rejection"]
 
@@ -69,14 +73,30 @@ class ScanControlsTests(unittest.TestCase):
             with self.subTest(changes=changes):
                 self.assertIsNone(self.load({**self.config, **changes}))
 
+    def test_legacy_hidden_county_city_cannot_start_county_scan(self):
+        self.assertIsNone(self.load({**self.config, "counties": [], "cities": ["Allegheny"]}))
+        result = self.load({**self.config, "counties": ["Erie"],
+                            "cities": ["Allegheny", "Pittsburgh"]})
+        self.assertEqual(result["scan_settings"]["target_cities"], ["Pittsburgh"])
+
+        tree = ast.parse((ROOT / "orchestrator.py").read_text(encoding="utf-8"))
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                        and node.name == "build_mls_scan_areas")
+        scope = {"COUNTY_REGION_KEYS": {"Allegheny": "Allegheny County", "Erie": "Erie County"},
+                 "CITY_COUNTY": {"Pittsburgh": "Allegheny", "Erie": "Erie"}}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), "orchestrator.py", "exec"), scope)
+        self.assertEqual(scope["build_mls_scan_areas"](["Allegheny", "Pittsburgh"], ["Erie"]),
+                         ["Erie County", "Pittsburgh"])
+
     def test_manual_dispatch_preserves_schedule(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
         start = html.index("async function triggerOnDemandExecution()")
         end = html.index("function openAutoScanModal()", start)
         manual = html[start:end]
-        self.assertIn("contents/manual_scan_config.json", manual)
+        self.assertIn("contents/manual_scan_config.json", html)
         self.assertNotIn("contents/scan_config.json", manual)
-        self.assertIn("localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config))", manual)
+        self.assertIn("await putManualScanConfig(config, tk)", manual)
+        self.assertIn("localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config))", html)
         self.assertIn("await loadManualScanProfile()", html)
         self.assertTrue((ROOT / "manual_scan_config.json").is_file())
         scanner = (ROOT / "orchestrator.py").read_text(encoding="utf-8")
@@ -91,6 +111,15 @@ class ScanControlsTests(unittest.TestCase):
                                       "city": location, "source_location": location}, chosen))
         self.assertEqual(reject({"source_scan_area": "Allegheny County",
                                  "city": "McKeesport", "source_location": "McKeesport"}, chosen), "location")
+
+    def test_city_scope_does_not_restrict_same_named_county(self):
+        reject = geography_filter()
+        scopes = {"Erie": {"allLocations": False, "locations": ["West Bay"]},
+                  "Erie County": {"allLocations": True, "locations": []}}
+        self.assertIsNone(reject({"source_scan_area": "Erie County", "city": "Millcreek",
+                                  "source_location": "Millcreek"}, scopes))
+        self.assertEqual(reject({"source_scan_area": "Erie", "city": "Erie",
+                                 "source_location": "Millcreek"}, scopes), "location")
 
 
 if __name__ == "__main__":

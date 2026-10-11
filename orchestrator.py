@@ -33,7 +33,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.9.0-separate-scan-profiles-20261011"
+ORCHESTRATOR_VERSION = "3.9.1-explicit-scan-areas-20261011"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס"}
@@ -1881,6 +1881,10 @@ def build_mls_scan_areas(cities, counties):
             selected_names.add(county.casefold())
     for city in cities or []:
         name = str(city).strip()
+        # This was a hidden legacy UI checkbox for a county-wide search.
+        # County scans now require the explicit counties field.
+        if name == "Allegheny":
+            continue
         parent = CITY_COUNTY.get(name)
         if parent and parent.casefold() in selected_names:
             continue
@@ -2151,7 +2155,10 @@ def load_server_config():
         for key in ("sectors", "propertyTypes", "counties", "cities"):
             if not isinstance(data[key], list) or any(not isinstance(v, str) for v in data[key]):
                 return None
-        if (not data["counties"] and not data["cities"]) or not isinstance(data["geoAreas"], dict):
+        # Older profiles can contain a hidden "Allegheny" city input. It is
+        # not a city: never let it authorize an unselected county scan.
+        explicit_cities = [city for city in data["cities"] if city != "Allegheny"]
+        if (not data["counties"] and not explicit_cities) or not isinstance(data["geoAreas"], dict):
             return None
         if not isinstance(data["autoScanEnabled"], bool):
             return None
@@ -2162,7 +2169,7 @@ def load_server_config():
             return None
         return {
             "scan_settings": {
-                "target_counties": data["counties"], "target_cities": data["cities"],
+                "target_counties": data["counties"], "target_cities": explicit_cities,
                 "price_range": {"min": min_price, "max": max_price},
                 "min_sqft": min_sqft, "max_sqft": max_sqft,
                 "min_beds": min_beds, "max_beds": max_beds, "min_baths": min_baths,
