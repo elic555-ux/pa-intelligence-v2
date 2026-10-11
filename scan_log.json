@@ -88950,5 +88950,514 @@
     "persistence_guard_removed": 0,
     "total_properties": 1034,
     "finished_at": "2026-10-11T11:08:18-04:00"
+  },
+  {
+    "scan_id": "SCAN-20261011-111451",
+    "started_at": "2026-10-11T11:14:51-04:00",
+    "trigger": "manual",
+    "orchestrator_version": "3.9.1-explicit-scan-areas-20261011",
+    "status": "partial",
+    "active_sectors": [
+      "mls",
+      "reo",
+      "sheriff",
+      "tax"
+    ],
+    "cities": [],
+    "source_results": 416,
+    "after_filters": 101,
+    "new": 0,
+    "updated": 0,
+    "unchanged": 101,
+    "off_market_candidates": 0,
+    "errors": [],
+    "code_sha256": "f248552e01e1",
+    "github_sha": "731c9034d198fdfb0ea293919f1adf9992ca9287",
+    "request_id": "93d8b7d4-3970-49a2-a188-641b3d690aaf",
+    "out_of_scope_tax_records_removed": 0,
+    "incomplete_existing_removed": 0,
+    "counties": [
+      "Erie"
+    ],
+    "mls_scan_areas": [
+      "Erie County"
+    ],
+    "property_types": [
+      "Single Family",
+      "Duplex / Triplex"
+    ],
+    "min_baths": 0.0,
+    "config_source": "manual_scan_config.json",
+    "applied_filters": {
+      "min_price": 50000.0,
+      "max_price": 190000.0,
+      "min_sqft": 700,
+      "max_sqft": 1600,
+      "min_beds": 1,
+      "max_beds": 3,
+      "min_baths": 0.0
+    },
+    "market_state_basis": "raw_live_mls_before_user_filters",
+    "selected_neighborhoods": [
+      "Albion",
+      "Asbury Woods Estate",
+      "Brandy Run",
+      "Canadohta",
+      "Conneaut Lake",
+      "Corry",
+      "Country Club Estate",
+      "Countryside",
+      "Cranesville",
+      "East Springfield",
+      "Edinboro",
+      "Erie",
+      "Erie City",
+      "Fair Weather Farms",
+      "Fairview",
+      "Forest Hills",
+      "Girard",
+      "Girard Borough",
+      "Glenwood Estates",
+      "Glenwood Hills",
+      "GreenGateVillage",
+      "Harborcreek",
+      "Hunter Ridge",
+      "Imperial Point",
+      "Lake City Boro",
+      "Lakecliff",
+      "Lakeside",
+      "Lawrence Park",
+      "McKean",
+      "McKean Boro",
+      "Meadow Green Acres",
+      "Millcreek",
+      "North East",
+      "Old Orchard",
+      "Quail Ridge",
+      "Rainbow Valley",
+      "Rolling Meadows",
+      "Shenango Heights",
+      "Summit Heights",
+      "The Retreat",
+      "Union City",
+      "Union City Borough",
+      "Waterford",
+      "Wattsburg Boro",
+      "Wesleyville Boro",
+      "West Springfield",
+      "Wood Meadows"
+    ],
+    "neighborhood_filter_status": "enforced_per_scan_area",
+    "sources": {
+      "mls": {
+        "label": "MLS",
+        "checked_at": "2026-10-11T11:14:51-04:00",
+        "status": "success",
+        "rows": 227,
+        "areas": [
+          {
+            "area": "Erie County",
+            "status": "success",
+            "rows": 227,
+            "coverage": "not_proven_complete",
+            "limit_reached": false
+          }
+        ],
+        "coverage": "not_proven_complete",
+        "passed_filters": 100,
+        "minimum_data_rejected": 40
+      },
+      "reo": {
+        "label": "בנקים וכינוס",
+        "checked_at": "2026-10-11T11:14:51-04:00",
+        "status": "partial",
+        "rows": 0,
+        "providers": {
+          "freddie_mac_homesteps": {
+            "jsonld_listings": 12,
+            "status_counts": {
+              "Active": 8,
+              "Under Contract": 4
+            },
+            "active_rows": 8,
+            "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
+            "provider": "freddie_mac_homesteps",
+            "coverage": "partial_single_provider",
+            "status": "partial",
+            "rows": 0,
+            "geography_dropped": 8,
+            "scope": "selected_counties_only"
+          },
+          "hud_home_store": {
+            "provider": "hud_home_store",
+            "status": "success",
+            "counties": {
+              "Erie": {
+                "provider": "hud_home_store",
+                "county": "Erie",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Erie+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 0,
+                "active_rows": 0,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              }
+            },
+            "rows": 0,
+            "source_url": "https://www.hudhomestore.gov/searchresult"
+          }
+        },
+        "provider_count": 2,
+        "coverage": "partial_multi_provider",
+        "scope": "selected_counties_only",
+        "manual_sources": [
+          {
+            "id": "fannie_mae_homepath",
+            "label": "Fannie Mae HomePath (בדיקה ידנית)",
+            "url": "https://homepath.fanniemae.com/property-finder",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "bank_of_america_reo",
+            "label": "Bank of America REO בפנסילבניה (בדיקה ידנית)",
+            "url": "https://foreclosures.bankofamerica.com/pennsylvania",
+            "status": "manual_link_only"
+          }
+        ],
+        "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
+        "passed_filters": 0,
+        "minimum_data_rejected": 0
+      },
+      "sheriff": {
+        "label": "מכירות שריף",
+        "checked_at": "2026-10-11T11:14:51-04:00",
+        "status": "partial",
+        "rows": 25,
+        "counties": {
+          "Erie": {
+            "status": "partial",
+            "rows": 25,
+            "parsed_rows": 36,
+            "active_rows": 25,
+            "skipped_active_addresses": 0,
+            "incomplete_active_rows": 1,
+            "invalid_zip_rows": 1,
+            "non_active_rows": 11,
+            "mode": "live",
+            "source_url": "https://public.eriecountypa.gov/sheriffsalelisting/"
+          }
+        },
+        "investment_filters": "unavailable",
+        "passed_filters": 0,
+        "minimum_data_rejected": 25,
+        "status_detail": "המקור החזיר 25 מועמדים; 25 נפסלו כי חסרו כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
+      },
+      "tax": {
+        "label": "חובות מס",
+        "checked_at": "2026-10-11T11:14:51-04:00",
+        "status": "partial",
+        "rows": 164,
+        "counties": {
+          "Erie": {
+            "status": "success",
+            "rows": 164,
+            "source_url": "https://eriecountypa.gov/wp-content/uploads/2026/07/2026-Repository-List-PUBLIC.xlsx",
+            "page_url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
+            "list_label": "Repository List",
+            "excluded_unavailable": true,
+            "note": "Repository candidates only; availability must be confirmed with Erie County.",
+            "property_enrichment": {
+              "candidates": 164,
+              "residential_parcels": 20,
+              "profiles_fetched": 19,
+              "cache_hits": 1,
+              "profile_failures": 0,
+              "eligible_after_required_data_gate": 1,
+              "rejected_by_required_data_gate": 19,
+              "profile_status_counts": {
+                "partial": 19,
+                "success": 1
+              },
+              "profile_field_presence_counts": {
+                "address": 20,
+                "sqft": 1,
+                "beds": 1,
+                "baths": 1,
+                "municipality": 1,
+                "source_property_type": 20
+              },
+              "gis_field_presence_counts": {
+                "gis_address": 6,
+                "municipality": 6
+              },
+              "required_missing_field_counts": {
+                "sqft": 19,
+                "beds": 19
+              },
+              "required_missing_pattern_counts": {
+                "sqft+beds": 19,
+                "passed": 1
+              },
+              "rejected_property_details_stored": 0,
+              "gis_status": "success",
+              "gis_matches": 6,
+              "source_url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search/parcel-profile/print-view.aspx"
+            },
+            "mls_cross_source_enrichment": {
+              "status": "completed",
+              "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+              "price_copied": false,
+              "tax_candidates": 164,
+              "complete_before_match": 1,
+              "missing_required_data_candidates": 163,
+              "eligible_complete_erie_mls_rows": 186,
+              "unique_matches": 0,
+              "ambiguous_matches": 0,
+              "no_exact_match": 5,
+              "missing_address": 0,
+              "missing_municipality": 158,
+              "property_type_conflicts": 0,
+              "beds_filled": 0,
+              "sqft_filled": 0,
+              "passed_required_gate_after_match": 1,
+              "rejected_details_stored": 0
+            }
+          }
+        },
+        "scope": "Allegheny_and_Erie_only",
+        "requested_counties": [
+          "erie"
+        ],
+        "scanned_counties": [
+          "Erie"
+        ],
+        "excluded_by_scope_guard": [],
+        "manual_sources": [
+          {
+            "id": "erie_tax_sales",
+            "county": "Erie",
+            "label": "Erie — רשימות מכירות חוב מס",
+            "url": "https://eriecountypa.gov/departments/tax-claim-and-revenue/tax-sales/",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "erie_property_search",
+            "county": "Erie",
+            "label": "Erie — חיפוש נכס לפי כתובת/חלקה",
+            "url": "https://public.eriecountypa.gov/property-tax-records/property-records/property-tax-search.aspx",
+            "status": "manual_link_only"
+          }
+        ],
+        "note": "המקור מוגבל ל-Allegheny ו-Erie. Erie Repository מציג חלקות מועמדות ומועשר מפרופיל חלקה ציבורי כשזמינים שטח/חדרי שינה/כתובת. הרף המינימלי הכללי אינו מחיר הנכס. ב-Allegheny מכירות שריף עם סוג Tax Lien מפורש מסווגות גם תחת פיגורי מס; אין פיד עצמאי מאומת ליתרות חוב. רשומות חסרות פרטי נכס לא נשמרות. הצלבת MLS מדויקת ל-Erie: 0 התאמות יחידות; 0 עמומות; 5 ללא התאמה. הושלמו רק שטח וחדרי שינה, בלי העתקת מחיר.",
+        "erie_mls_cross_source_enrichment": {
+          "status": "completed",
+          "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+          "price_copied": false,
+          "tax_candidates": 164,
+          "complete_before_match": 1,
+          "missing_required_data_candidates": 163,
+          "eligible_complete_erie_mls_rows": 186,
+          "unique_matches": 0,
+          "ambiguous_matches": 0,
+          "no_exact_match": 5,
+          "missing_address": 0,
+          "missing_municipality": 158,
+          "property_type_conflicts": 0,
+          "beds_filled": 0,
+          "sqft_filled": 0,
+          "passed_required_gate_after_match": 1,
+          "rejected_details_stored": 0
+        },
+        "passed_filters": 1,
+        "minimum_data_rejected": 163,
+        "status_detail": "המקור החזיר 164 מועמדים; 163 נפסלו כי חסרו כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
+      },
+      "offmarket": {
+        "label": "OFF MARKET",
+        "status": "needs_verification",
+        "checked_at": "2026-10-11T11:14:58-04:00",
+        "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
+      }
+    },
+    "sheriff_cache_incomplete_removed": 0,
+    "sheriff_active_lots": 25,
+    "sheriff_sources_by_county": {
+      "Erie": {
+        "status": "partial",
+        "rows": 25,
+        "parsed_rows": 36,
+        "active_rows": 25,
+        "skipped_active_addresses": 0,
+        "incomplete_active_rows": 1,
+        "invalid_zip_rows": 1,
+        "non_active_rows": 11,
+        "mode": "live",
+        "source_url": "https://public.eriecountypa.gov/sheriffsalelisting/"
+      }
+    },
+    "geography_qa": {
+      "Erie County": {
+        "region_type": "5",
+        "rows": 227,
+        "city_mismatch_count": 0,
+        "actual_cities": {
+          "Erie": 158,
+          "Corry": 5,
+          "Waterford": 3,
+          "Edinboro": 10,
+          "North East": 11,
+          "Lake City": 7,
+          "Girard": 4,
+          "Harborcreek": 2,
+          "Wattsburg": 3,
+          "East Springfield": 3,
+          "Mckean": 2,
+          "West Springfield": 3,
+          "Albion": 4,
+          "Fairview": 3,
+          "Millcreek Township": 1,
+          "Cranesville": 2,
+          "Union City": 1,
+          "North East Township": 1,
+          "Canadohta Lake": 1,
+          "Mc Kean": 2,
+          "Waterford Township": 1
+        },
+        "source_locations": {
+          "Erie": 142,
+          "Summit Heights": 5,
+          "Corry": 5,
+          "Erie City": 2,
+          "Rainbow Valley": 1,
+          "Edinboro": 10,
+          "Meadow Green Acres": 1,
+          "North East": 10,
+          "Lake City Boro": 7,
+          "Millcreek": 1,
+          "Girard": 4,
+          "Harborcreek": 2,
+          "Wattsburg Boro": 3,
+          "East Springfield": 3,
+          "Countryside": 1,
+          "West Springfield": 3,
+          "GreenGateVillage": 1,
+          "Albion": 2,
+          "Fairview": 3,
+          "Rolling Meadows": 1,
+          "Asbury Woods Estate": 3,
+          "Cranesville": 2,
+          "Union City": 1,
+          "Waterford": 3,
+          "Canadohta": 1,
+          "McKean": 3,
+          "The Retreat": 5,
+          "Hunter Ridge": 2
+        }
+      }
+    },
+    "erie_tax_mls_cross_source_enrichment": {
+      "status": "completed",
+      "method": "same_county_exact_normalized_street_address_and_municipality_unique_match",
+      "price_copied": false,
+      "tax_candidates": 164,
+      "complete_before_match": 1,
+      "missing_required_data_candidates": 163,
+      "eligible_complete_erie_mls_rows": 186,
+      "unique_matches": 0,
+      "ambiguous_matches": 0,
+      "no_exact_match": 5,
+      "missing_address": 0,
+      "missing_municipality": 158,
+      "property_type_conflicts": 0,
+      "beds_filled": 0,
+      "sqft_filled": 0,
+      "passed_required_gate_after_match": 1,
+      "rejected_details_stored": 0
+    },
+    "raw_mls_seen": 225,
+    "duplicates_removed": 0,
+    "filter_rejections": {
+      "price": 0,
+      "sqft": 52,
+      "beds": 20,
+      "baths": 0,
+      "property_type": 4,
+      "property_type_unknown": 11,
+      "city_mismatch": 0,
+      "location": 0,
+      "incomplete_required_data": 228
+    },
+    "required_data_rejections_by_field": {
+      "beds": 226,
+      "sqft": 202
+    },
+    "required_data_rejections_by_source": {
+      "mls": 40,
+      "sheriff": 25,
+      "tax": 163
+    },
+    "source_property_type_counts": {
+      "Single Family Residential": 141,
+      "Mobile/Manufactured Home": 10,
+      "Multi-Family (2-4 Unit)": 26,
+      "Condo/Co-op": 4,
+      "Multi-Family (5+ Unit)": 1,
+      "Vacant Land": 2,
+      "Unknown": 3,
+      "TWO FAMILY": 1
+    },
+    "source_passed_filters": {
+      "mls": 100,
+      "reo": 0,
+      "sheriff": 0,
+      "tax": 1
+    },
+    "redfin_location_top25": {
+      "Erie": 142,
+      "Edinboro": 10,
+      "North East": 10,
+      "Lake City Boro": 7,
+      "Corry": 5,
+      "Summit Heights": 5,
+      "The Retreat": 5,
+      "Girard": 4,
+      "Asbury Woods Estate": 3,
+      "East Springfield": 3,
+      "Fairview": 3,
+      "McKean": 3,
+      "Waterford": 3,
+      "Wattsburg Boro": 3,
+      "West Springfield": 3,
+      "Albion": 2,
+      "Cranesville": 2,
+      "Erie City": 2,
+      "Harborcreek": 2,
+      "Hunter Ridge": 2,
+      "Canadohta": 1,
+      "Countryside": 1,
+      "GreenGateVillage": 1,
+      "Meadow Green Acres": 1,
+      "Millcreek": 1
+    },
+    "listing_source_details": {
+      "version": "basic-source-1.0-20261009",
+      "new_rentcast_calls": 0,
+      "statuses": {
+        "source_unavailable": 20,
+        "not_requested": 76,
+        "cache_used": 1
+      },
+      "rows": 97
+    },
+    "off_market_detection": "disabled_without_verified_listing_status",
+    "price_drop_events": 0,
+    "price_drop_properties": 0,
+    "persistence_guard_removed": 0,
+    "total_properties": 1034,
+    "finished_at": "2026-10-11T11:14:59-04:00"
   }
 ]
