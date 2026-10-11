@@ -37,6 +37,7 @@ jobs:
           git log -1 --format='%h %s'
           sha256sum orchestrator.py
           python -m py_compile orchestrator.py analyzer.py
+          python -m unittest -q test_scan_controls
       - name: Run selected scanners
         id: scanner
         env:
