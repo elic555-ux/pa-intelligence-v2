@@ -8,6 +8,7 @@ import random
 import subprocess
 import tempfile
 import hashlib
+import math
 import html
 import posixpath
 import zipfile
@@ -25,13 +26,13 @@ from listing_source import enrich_rows as enrich_listing_source_rows
 
 EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
-CONFIG_FILE = "config.json"
+CONFIG_FILE = "scan_config.json"
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.8.7-listing-source-facts-20261009"
+ORCHESTRATOR_VERSION = "3.8.8-ui-scan-settings-20261011"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס"}
@@ -2118,7 +2119,60 @@ def atomic_write_json(path, data):
 
 def load_server_config():
     data = load_json_file(CONFIG_FILE, None)
-    return data if isinstance(data, dict) else None
+    if not isinstance(data, dict):
+        return None
+    # The UI writes a flat scan_config.json. Do not fall back to the old
+    # config.json, whose broad county and price settings are no longer edited.
+    required = {"minPrice", "maxPrice", "minSqft", "maxSqft", "minBeds", "maxBeds",
+                "minBaths", "sectors", "propertyTypes", "counties", "cities",
+                "geoAreas", "autoScanEnabled"}
+    if not required.issubset(data):
+        return None
+    try:
+        def number(field, empty=None):
+            value = data[field]
+            if value in ("", "all"):
+                if empty is None:
+                    raise ValueError(field)
+                return empty
+            parsed = float(str(value).replace(",", ""))
+            if not math.isfinite(parsed) or parsed < 0:
+                raise ValueError(field)
+            return parsed
+
+        min_price, max_price = number("minPrice"), number("maxPrice")
+        min_sqft, max_sqft = number("minSqft", 0), number("maxSqft", 99999)
+        min_beds, max_beds = number("minBeds", 0), number("maxBeds", 99)
+        min_baths = number("minBaths", 0)
+        if (max_price <= 0 or min_price > max_price or min_sqft > max_sqft
+                or min_beds > max_beds):
+            return None
+        for key in ("sectors", "propertyTypes", "counties", "cities"):
+            if not isinstance(data[key], list) or any(not isinstance(v, str) for v in data[key]):
+                return None
+        if (not data["counties"] and not data["cities"]) or not isinstance(data["geoAreas"], dict):
+            return None
+        if not isinstance(data["autoScanEnabled"], bool):
+            return None
+        allowed_sectors = {"mls", "reo", "sheriff", "tax"}
+        if not data["sectors"] or any(v not in allowed_sectors for v in data["sectors"]):
+            return None
+        if "mls" in data["sectors"] and not data["propertyTypes"]:
+            return None
+        return {
+            "scan_settings": {
+                "target_counties": data["counties"], "target_cities": data["cities"],
+                "price_range": {"min": min_price, "max": max_price},
+                "min_sqft": min_sqft, "max_sqft": max_sqft,
+                "min_beds": min_beds, "max_beds": max_beds, "min_baths": min_baths,
+                "property_types": data["propertyTypes"], "deal_categories": data["sectors"],
+                "neighborhoods": data.get("neighborhoods", []), "geo_areas": data["geoAreas"]},
+            "autoScanEnabled": data["autoScanEnabled"],
+            "schedules": data.get("schedules", {}), "requestId": data.get("requestId"),
+            "config_source": CONFIG_FILE,
+        }
+    except (ValueError, TypeError, OverflowError):
+        return None
 
 
 def load_existing_properties():
@@ -2634,7 +2688,7 @@ def run_orchestrator():
 
     if not server_config_raw:
         log_entry["status"] = "failed"
-        log_entry["errors"].append("config.json missing or invalid")
+        log_entry["errors"].append("scan_config.json missing or invalid; no source requests or inventory writes")
         log_entry["finished_at"] = iso_now_est()
         append_scan_log(log_entry)
         print("⚠️ קובץ תצורה לא נמצא או אינו תקין. מסיים ריצה.")
@@ -2795,6 +2849,10 @@ def run_orchestrator():
     log_entry["mls_scan_areas"] = mls_scan_areas
     log_entry["property_types"] = selected_property_types
     log_entry["min_baths"] = min_baths
+    log_entry["config_source"] = server_config_raw["config_source"]
+    log_entry["applied_filters"] = {"min_price": min_price, "max_price": max_price,
+        "min_sqft": min_sqft, "max_sqft": max_sqft, "min_beds": min_beds,
+        "max_beds": max_beds, "min_baths": min_baths}
     log_entry["market_state_basis"] = "raw_live_mls_before_user_filters"
     log_entry["selected_neighborhoods"] = selected_neighborhoods
     
@@ -2802,7 +2860,10 @@ def run_orchestrator():
     if isinstance(selected_geo_areas, dict):
         selected_geo_areas = {area: spec for area, spec in selected_geo_areas.items()
                               if area in cities_list and isinstance(spec, dict)}
-        log_entry["neighborhood_filter_status"] = "enforced_per_scan_area"
+        log_entry["neighborhood_filter_status"] = (
+            "enforced_per_scan_area" if selected_geo_areas
+            else "county_wide_no_neighborhood_rule"
+        )
     else:
         selected_geo_areas = None
         log_entry["neighborhood_filter_status"] = "audit_only_legacy_config"
