@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.17.0 / 2026-10-11: scoped selections and independently confirmed scan profiles -->
+<!-- PA UI 8.18.0 / 2026-10-11: server-only scan profiles and location-scoped saving -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.17.0 · 11.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.18.0 · 11.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -714,6 +714,7 @@
                 <div id="setting-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
             </div>
             
+            <p id="setting-save-status" role="status" aria-live="polite" class="text-sm leading-relaxed text-gray-300" hidden></p>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
                 <button id="btn-save-scan-settings" onclick="saveScanSettingsToServer()" class="px-6 py-2 bg-blue-600 text-white rounded-xl text-xs font-black flex items-center gap-2"><i data-lucide="upload-cloud" class="w-4 h-4"></i> שדר לשרת ושמור</button>
@@ -903,6 +904,7 @@
                 <div id="ondemand-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
             </div>
             
+            <p id="ondemand-save-status" role="status" aria-live="polite" class="text-sm leading-relaxed text-gray-300" hidden></p>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeOnDemandScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
                 <button id="btn-save-manual-scan" onclick="saveManualScanSettings()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-bold">שמור בחירה ללא סריקה</button>
@@ -1162,17 +1164,6 @@
             return clean;
         }
 
-        function migrateClosedScanSettings() {
-            for (const key of ['pa_settings_state_v7', 'pa_ondemand_state_v7']) {
-                try {
-                    const saved = localStorage.getItem(key);
-                    if (!saved) continue;
-                    const original = JSON.parse(saved), clean = cleanScanSettings(original);
-                    if (JSON.stringify(original) !== JSON.stringify(clean)) localStorage.setItem(key, JSON.stringify(clean));
-                } catch (error) {}
-            }
-        }
-
         function configuredPriceRange(config) {
             const nested = config?.scan_settings?.price_range;
             const min = numericData(config?.minPrice ?? nested?.min);
@@ -1181,12 +1172,6 @@
         }
 
         function initialBoardScanPriceRange() {
-            for (const key of ['pa_confirmed_scan_price_v1', 'pa_settings_state_v7', 'pa_ondemand_state_v7']) {
-                try {
-                    const range = configuredPriceRange(JSON.parse(localStorage.getItem(key) || 'null'));
-                    if (range) return range;
-                } catch (error) {}
-            }
             return {min: 50000, max: 190000};
         }
 
@@ -1194,10 +1179,6 @@
             const range = configuredPriceRange(config);
             if (!range) return false;
             boardScanPriceRange = range;
-            if (confirmed) {
-                try { localStorage.setItem('pa_confirmed_scan_price_v1', JSON.stringify({minPrice: range.min, maxPrice: range.max})); }
-                catch (error) {}
-            }
             if (resetView) boardPriceMinEdited = false;
             const minInput = document.getElementById('filter-min-price');
             if (minInput && !boardPriceMinEdited) minInput.value = range.min.toLocaleString('en-US');
@@ -1270,32 +1251,25 @@
         }
 
         function validatedScanConfig(isManual) {
+            const prefix = isManual ? 'ondemand' : 'setting';
             if (isManual ? !manualProfileVerified : !scheduledProfileVerified) {
-                alert('לא ניתן לאמת את הגדרות הסריקה האחרונות מול השרת. פתח את החלון מחדש לפני שמירה או סריקה.');
+                showScanSaveError(prefix, 'לא ניתן לאמת את הגדרות הסריקה האחרונות מול השרת. פתח את החלון מחדש לפני שמירה או סריקה.');
                 return null;
             }
+            // A selected source location activates only its own parent scope.
+            // Never use the county click handler here: it selects all siblings.
+            document.querySelectorAll(`.${prefix}-hood-box:checked`).forEach(input => {
+                if (!scanParentForArea(prefix, input.dataset.city)?.checked) updateScanLocationParent(prefix, input.dataset.city);
+            });
             const config = cleanScanSettings(buildServerConfig(isManual));
             const errors = scanConfigurationErrors(config);
-            if (errors.length) { alert(errors.join('\n')); return null; }
+            if (errors.length) { showScanSaveError(prefix, errors.join('\n')); return null; }
             return config;
         }
 
 
         async function loadAutomationState() {
-            applyBoardScanPriceRange({minPrice: boardScanPriceRange.min, maxPrice: boardScanPriceRange.max});
-            try {
-                const response = await fetch('scan_config.json?t=' + Date.now());
-                if (!response.ok) throw new Error('config unavailable');
-                const config = await response.json();
-                applyBoardScanPriceRange(config, true);
-                if (typeof config.autoScanEnabled !== 'boolean') throw new Error('config missing state');
-                isAutoScanEnabled = config.autoScanEnabled;
-                automationStateVerified = true;
-                localStorage.setItem('pa_auto_scan_status', String(isAutoScanEnabled));
-                const master = document.getElementById('autoscan-master-switch');
-                if (master) master.checked = isAutoScanEnabled;
-            } catch (error) { automationStateVerified = false; }
-            updateAutoScanUI();
+            return loadScheduledScanProfile();
         }
 
         function renderDataHealth() {
@@ -1633,13 +1607,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             }
             // Delegate to the modal so newly rendered catalog inputs also save
             // the complete form. Register before the first asynchronous load.
-            for (const [id, save] of [['settings-modal', saveSettingsStateLocally], ['ondemand-modal', saveOnDemandStateLocally]]) {
+            for (const [id, prefix] of [['settings-modal', 'setting'], ['ondemand-modal', 'ondemand']]) {
                 const modal = document.getElementById(id);
                 modal.addEventListener('change', event => {
-                    if (event.target.matches('input, select')) save();
+                    if (event.target.matches(`.${prefix}-hood-box`)) updateScanLocationParent(prefix, event.target.dataset.city);
+                    if (event.target.matches('input, select')) saveScanDraft(prefix);
                 });
                 modal.addEventListener('input', event => {
-                    if (event.target.matches('input[type="text"]')) save();
+                    if (event.target.matches('input[type="text"]')) saveScanDraft(prefix);
                 });
             }
             
@@ -1653,11 +1628,6 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 if(st) st.value = savedToken;
             }
 
-            migrateClosedScanSettings();
-            if (!scheduledProfileVerified) loadSettingsState();
-            if (!manualProfileVerified) loadOnDemandState();
-
-            isAutoScanEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
             updateAutoScanUI();
             if (!scheduledProfileVerified) await loadScheduledScanProfile();
             if (!manualProfileVerified) await loadManualScanProfile();
@@ -1728,11 +1698,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function toggleAllCounties(prefix, state) {
             document.querySelectorAll(`.${prefix}-county-box`).forEach(cb => { cb.checked = state; cb.indeterminate = false; });
             document.querySelectorAll(`.${prefix}-city-box, .${prefix}-hood-box`).forEach(cb => { cb.checked = state; });
-            if (prefix === 'setting') saveSettingsStateLocally(); else saveOnDemandStateLocally();
+            if (prefix === 'setting') rememberSettingsDraft(); else rememberOnDemandDraft();
         }
 
         function handleCountyScopeChange(prefix, county, checked) {
-            // A deliberate county click cascades downward, but children never select a county.
+            // Only an explicit county click cascades downward.
             document.querySelectorAll(`.${prefix}-city-box[data-county="${county}"]`).forEach(city => {
                 city.checked = checked;
                 document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
@@ -1743,8 +1713,53 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 if (hood.dataset.city === county || hood.dataset.city === `${county} County`) hood.checked = checked;
             });
             const countyBox = Array.from(document.querySelectorAll(`.${prefix}-county-box`)).find(cb => cb.value === county);
-            if (countyBox) countyBox.indeterminate = false;
-            if (prefix === 'setting') saveSettingsStateLocally(); else saveOnDemandStateLocally();
+            if (countyBox) { countyBox.indeterminate = false; countyBox.dataset.locationScope = 'false'; }
+            if (prefix === 'setting') rememberSettingsDraft(); else rememberOnDemandDraft();
+        }
+
+        function scanParentForArea(prefix, area) {
+            const canonical = canonicalScanArea(area || '');
+            const isCounty = canonical.endsWith(' County');
+            const name = isCounty ? canonical.replace(/ County$/, '') : canonical;
+            return Array.from(document.querySelectorAll(`.${prefix}-${isCounty ? 'county' : 'city'}-box`))
+                .find(input => input.value === name);
+        }
+
+        function updateScanLocationParent(prefix, area) {
+            const parent = scanParentForArea(prefix, area);
+            if (!parent) return;
+            const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
+                .filter(input => canonicalScanArea(input.dataset.city) === canonicalScanArea(area));
+            const selected = locations.filter(input => input.checked).length;
+            // Do not dispatch change on the parent: that would select unrelated places.
+            parent.checked = selected > 0;
+            parent.indeterminate = selected > 0 && selected < locations.length;
+            parent.dataset.locationScope = String(selected > 0);
+            if (parent.classList.contains(`${prefix}-city-box`)) updateCountyAfterCityChange(prefix, parent.value);
+        }
+
+        function refreshScanScopeIndicators(prefix) {
+            document.querySelectorAll(`.${prefix}-county-box, .${prefix}-city-box`).forEach(parent => {
+                const area = parent.classList.contains(`${prefix}-county-box`) ? `${parent.value} County` : parent.value;
+                const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
+                    .filter(input => canonicalScanArea(input.dataset.city) === area);
+                const selected = locations.filter(input => input.checked).length;
+                parent.dataset.locationScope = String(parent.checked && selected > 0);
+                parent.indeterminate = parent.checked && selected > 0 && selected < locations.length;
+            });
+        }
+
+        function toggleScanLocations(prefix, state) {
+            const profile = buildServerConfig(prefix === 'ondemand');
+            const previousAreas = new Set(Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`))
+                .map(input => canonicalScanArea(input.dataset.city)));
+            document.querySelectorAll(`.${prefix}-hood-box`).forEach(input => {
+                input.checked = state && scanAreaSelected(profile, input.dataset.city);
+            });
+            // Clearing a selected subset must not turn it into a whole-region scan.
+            if (!state) previousAreas.forEach(area => updateScanLocationParent(prefix, area));
+            refreshScanScopeIndicators(prefix);
+            saveScanDraft(prefix);
         }
 
         function updateCountyAfterCityChange(prefix, cityName) {
@@ -1755,13 +1770,13 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 .find(cb => cb.value === city.dataset.county);
             if (!county) return;
             const siblings = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county="${city.dataset.county}"]`));
-            if (county.checked && siblings.some(cb => !cb.checked)) {
+            if (county.checked && county.dataset.locationScope !== 'true' && siblings.some(cb => !cb.checked)) {
                 county.checked = false;
                 document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
                     if (canonicalScanArea(hood.dataset.city) === `${city.dataset.county} County`) hood.checked = false;
                 });
             }
-            county.indeterminate = !county.checked && siblings.some(cb => cb.checked);
+            if (!county.checked) county.indeterminate = siblings.some(cb => cb.checked);
         }
 
         function buildGeoAreas(prefix) {
@@ -1821,6 +1836,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
                 hood.checked = savedScanLocationChecked(saved, hood.dataset.city, hood.value);
             });
+            refreshScanScopeIndicators(prefix);
         }
 
         function captureScanSelections(prefix) {
@@ -1863,30 +1879,13 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 confirmedScheduledScanProfile = copy;
                 scheduledProfileVerified = true;
             }
-            try {
-                const saved = JSON.stringify(config);
-                if (prefix === 'ondemand') {
-                    localStorage.setItem('pa_ondemand_state_v7', JSON.stringify(config));
-                    localStorage.setItem('pa_ondemand_draft_v7', saved);
-                    localStorage.setItem('pa_ondemand_confirmed_v1', saved);
-                } else {
-                    localStorage.setItem('pa_settings_state_v7', saved);
-                    localStorage.setItem('pa_settings_draft_v1', saved);
-                    localStorage.setItem('pa_settings_confirmed_v1', saved);
-                }
-            } catch (error) { /* The verified server copy still remains authoritative. */ }
+            // This is an in-memory copy of a server read, never persistent browser storage.
         }
 
         function cacheConfirmedManualScanProfile(config) { cacheConfirmedScanProfile('ondemand', config); }
 
         function lastConfirmedScanProfile(prefix) {
-            const current = prefix === 'ondemand' ? confirmedManualScanProfile : confirmedScheduledScanProfile;
-            if (current) return current;
-            try {
-                const key = prefix === 'ondemand' ? 'pa_ondemand_confirmed_v1' : 'pa_settings_confirmed_v1';
-                const saved = JSON.parse(localStorage.getItem(key) || 'null');
-                return saved && Array.isArray(saved.counties) && Array.isArray(saved.cities) ? saved : null;
-            } catch (error) { return null; }
+            return prefix === 'ondemand' ? confirmedManualScanProfile : confirmedScheduledScanProfile;
         }
 
         function lastConfirmedManualScanProfile() { return lastConfirmedScanProfile('ondemand'); }
@@ -1924,13 +1923,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const config = buildServerConfig(prefix === 'ondemand');
             scanFormProfiles[prefix] = config;
             ++scanProfileLoadVersion[prefix];
-            try {
-                localStorage.setItem(prefix === 'ondemand' ? 'pa_ondemand_draft_v7' : 'pa_settings_draft_v1', JSON.stringify(config));
-            } catch (error) { /* The current form remains available in memory. */ }
+            setScanSaveStatus(prefix, 'draft', 'יש שינויים שלא נשמרו בשרת. לחץ על שמירה כדי לשמור אותם.');
         }
 
-        function saveSettingsStateLocally() { saveScanDraft('setting'); }
-        function saveOnDemandStateLocally() { saveScanDraft('ondemand'); }
+        function rememberSettingsDraft() { saveScanDraft('setting'); }
+        function rememberOnDemandDraft() { saveScanDraft('ondemand'); }
 
         function applyScanProfileToForm(prefix, config) {
             const st = cleanScanSettings(config);
@@ -1967,11 +1964,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function loadScanFormState(prefix, savedConfig = null) {
-            try {
-                const config = savedConfig || lastConfirmedScanProfile(prefix) ||
-                    JSON.parse(localStorage.getItem(prefix === 'ondemand' ? 'pa_ondemand_state_v7' : 'pa_settings_state_v7') || 'null');
-                if (config) applyScanProfileToForm(prefix, config);
-            } catch (error) { /* A malformed old cache cannot become a server profile. */ }
+            const config = savedConfig || lastConfirmedScanProfile(prefix);
+            if (config) applyScanProfileToForm(prefix, config);
         }
 
         function loadSettingsState(savedConfig = null) { loadScanFormState('setting', savedConfig); }
@@ -1980,11 +1974,53 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function scanProfileIsVerified(prefix) { return prefix === 'ondemand' ? manualProfileVerified : scheduledProfileVerified; }
         function scanProfileIsSaving(prefix) { return prefix === 'ondemand' ? manualScanSaveInProgress : scheduledScanSaveInProgress; }
 
+        function scanProfileFileName(prefix) { return prefix === 'ondemand' ? 'manual_scan_config.json' : 'scan_config.json'; }
+
+        function setScanSaveStatus(prefix, state, message) {
+            const status = document.getElementById(`${prefix}-save-status`);
+            if (!status) return;
+            status.hidden = false;
+            status.dataset.state = state;
+            status.textContent = message;
+            status.className = 'text-sm leading-relaxed ' + (state === 'success' ? 'text-emerald-300' :
+                state === 'error' ? 'text-rose-300' : state === 'draft' ? 'text-amber-300' : 'text-blue-300');
+        }
+
+        function showScanSaveError(prefix, message) {
+            const text = 'לא התקבל אישור שמירה בשרת.\n' + message;
+            setScanSaveStatus(prefix, 'error', text);
+            document.getElementById(`${prefix}-save-status`)?.scrollIntoView?.({block: 'nearest'});
+            alert(text);
+        }
+
+        function scanSaveReceiptMessage(receipt) {
+            return `נשמר בשרת ואומת · ${receipt.fileName} · גרסה ${receipt.sha.slice(0, 12)}. ` +
+                'החלון ייטען לפי הבחירה הזאת גם לאחר רענון או במכשיר אחר.';
+        }
+
+        async function githubScanError(response, action) {
+            let detail = '';
+            try { detail = String((await response.json()).message || ''); } catch (error) {}
+            const hint = response.status === 401 ? 'בדוק שמפתח GitHub תקין.' :
+                response.status === 403 ? 'בדוק הרשאת Contents: Read and write למאגר, ותוקף או מגבלת שימוש של המפתח.' :
+                response.status === 409 ? 'הקובץ השתנה בשרת. טען מחדש את ההגדרות ונסה שוב.' : '';
+            return new Error(`${action}: HTTP ${response.status}. ${hint}${detail ? ' ' + detail : ''}`);
+        }
+
+        function decodeScanProfile(data) {
+            if (typeof data?.content !== 'string' || typeof data?.sha !== 'string') throw new Error('השרת לא החזיר קובץ הגדרות תקין.');
+            const profile = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g, '')))));
+            if (!profile || !Array.isArray(profile.counties) || !Array.isArray(profile.cities) ||
+                !profile.geoAreas || typeof profile.geoAreas !== 'object' || Array.isArray(profile.geoAreas)) {
+                throw new Error('מבנה הגדרות הסריקה בשרת אינו תקין.');
+            }
+            return cleanScanSettings(profile);
+        }
+
         function applyConfirmedScheduledState(profile) {
             if (typeof profile.autoScanEnabled === 'boolean') {
                 isAutoScanEnabled = profile.autoScanEnabled;
                 automationStateVerified = true;
-                try { localStorage.setItem('pa_auto_scan_status', String(isAutoScanEnabled)); } catch (error) {}
                 updateAutoScanUI();
             }
             applyBoardScanPriceRange(profile, true);
@@ -1993,41 +2029,36 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         async function loadScanProfile(prefix, notifyOnFailure = false) {
             if (scanProfileIsSaving(prefix)) return scanProfileIsVerified(prefix);
             const version = ++scanProfileLoadVersion[prefix];
-            const fileName = prefix === 'ondemand' ? 'manual_scan_config.json' : 'scan_config.json';
+            const fileName = scanProfileFileName(prefix);
             try {
                 const token = localStorage.getItem('pa_github_token');
-                const url = token ? `https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/${fileName}?ref=main&t=${Date.now()}` :
-                    `${fileName}?t=${Date.now()}`;
-                const response = await fetch(url, {cache: 'no-store', ...(token ? {
-                    headers: {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'}
-                } : {})});
-                if (!response.ok) throw new Error('profile unavailable');
+                const url = `https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/${fileName}?ref=main&t=${Date.now()}`;
+                let response = await fetch(url, {cache: 'no-store', headers: {
+                    'Accept': 'application/vnd.github+json', ...(token ? {'Authorization': `Bearer ${token}`} : {})
+                }});
+                // The repository is public. An expired write token must not
+                // prevent opening the form where the user can replace it.
+                if (token && (response.status === 401 || response.status === 403)) {
+                    const publicRead = await fetch(url, {cache: 'no-store', headers: {'Accept': 'application/vnd.github+json'}});
+                    if (publicRead.ok) response = publicRead;
+                }
+                if (!response.ok) throw await githubScanError(response, 'טעינת הגדרות הסריקה מהשרת נכשלה');
                 const data = await response.json();
-                let profile = token ? JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))))) : data;
-                if (!profile || !Array.isArray(profile.counties) || !Array.isArray(profile.cities) ||
-                    !profile.geoAreas || typeof profile.geoAreas !== 'object' || Array.isArray(profile.geoAreas)) throw new Error('invalid profile');
+                const profile = decodeScanProfile(data);
                 // A read begun before a user edit/save must not overwrite it.
                 if (version !== scanProfileLoadVersion[prefix] || scanProfileIsSaving(prefix)) return scanProfileIsVerified(prefix);
-                const confirmed = lastConfirmedScanProfile(prefix);
-                if (confirmed && Date.parse(confirmed.updatedAt) > Date.parse(profile.updatedAt)) profile = confirmed;
-                profile = cleanScanSettings(profile);
                 cacheConfirmedScanProfile(prefix, profile);
                 applyScanProfileToForm(prefix, profile);
                 if (prefix === 'setting') applyConfirmedScheduledState(profile);
+                setScanSaveStatus(prefix, 'loaded', `נטענה הבחירה השמורה בשרת · ${fileName} · גרסה ${data.sha.slice(0, 12)}.`);
                 return true;
             } catch (error) {
                 if (version !== scanProfileLoadVersion[prefix] || scanProfileIsSaving(prefix)) return scanProfileIsVerified(prefix);
-                const confirmed = lastConfirmedScanProfile(prefix);
-                if (confirmed) {
-                    cacheConfirmedScanProfile(prefix, confirmed);
-                    applyScanProfileToForm(prefix, confirmed);
-                    if (prefix === 'setting') applyConfirmedScheduledState(confirmed);
-                    return true;
-                }
                 if (prefix === 'ondemand') manualProfileVerified = false; else scheduledProfileVerified = false;
-                if (notifyOnFailure) alert(prefix === 'ondemand' ?
-                    'לא ניתן לטעון את הבחירה האחרונה לסריקה היזומה. לא נטענו אזורי ברירת מחדל.' :
-                    'לא ניתן לטעון את הגדרות הסריקה האחרונות. לא נטענו אזורי ברירת מחדל.');
+                if (prefix === 'setting') { automationStateVerified = false; updateAutoScanUI(); }
+                const message = 'לא ניתן לטעון ולאמת את הבחירה האחרונה מהשרת. ' + error.message;
+                setScanSaveStatus(prefix, 'error', message);
+                if (notifyOnFailure) alert(message);
                 return false;
             }
         }
@@ -2670,12 +2701,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             // Retain saved source locations even if the catalog is temporarily
             // unavailable or no longer contains a previously selected location.
             for (const prefix of ['setting', 'ondemand']) {
-                let saved = scanFormProfiles[prefix] || lastConfirmedScanProfile(prefix);
-                if (!saved) {
-                    try {
-                        saved = JSON.parse(localStorage.getItem(prefix === 'setting' ? 'pa_settings_state_v7' : 'pa_ondemand_state_v7') || '{}');
-                    } catch (error) { saved = {}; }
-                }
+                const saved = scanFormProfiles[prefix] || lastConfirmedScanProfile(prefix) || {};
                 for (const [area, scope] of Object.entries(saved.geoAreas || {})) {
                     for (const location of scope.locations || []) if (typeof location === 'string') (areas[area] ||= new Set()).add(location);
                 }
@@ -2752,6 +2778,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 group.append(summary, grid); container.append(group);
             }
             if (!container.children.length) container.textContent = 'אין עדיין אזורים זמינים עבור הערים האלה.';
+            refreshScanScopeIndicators(prefix);
         }
 
         function isOffMarketProperty(p) {
@@ -3388,19 +3415,17 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 if (!canonicalScanArea(cb.dataset.city).endsWith(' County')) cb.checked = state;
             });
             document.querySelectorAll('.setting-city-box').forEach(cb => updateCountyAfterCityChange('setting', cb.value));
-            saveSettingsStateLocally();
+            rememberSettingsDraft();
         }
         function toggleAllSettingNeighborhoods(state) {
-            const profile = buildServerConfig(false);
-            document.querySelectorAll('.setting-hood-box').forEach(cb => { cb.checked = state && scanAreaSelected(profile, cb.dataset.city); });
-            saveSettingsStateLocally();
+            toggleScanLocations('setting', state);
         }
         function handleSettingCityCheckboxChange(cityName, isChecked) {
             document.querySelectorAll('.setting-hood-box').forEach(cb => {
                 if (cb.dataset.city === cityName) cb.checked = isChecked;
             });
             updateCountyAfterCityChange('setting', cityName);
-            saveSettingsStateLocally();
+            rememberSettingsDraft();
         }
         function toggleAllOnDemandCities(state) {
             document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = state; });
@@ -3408,19 +3433,17 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 if (!canonicalScanArea(cb.dataset.city).endsWith(' County')) cb.checked = state;
             });
             document.querySelectorAll('.ondemand-city-box').forEach(cb => updateCountyAfterCityChange('ondemand', cb.value));
-            saveOnDemandStateLocally();
+            rememberOnDemandDraft();
         }
         function toggleAllOnDemandNeighborhoods(state) {
-            const profile = buildServerConfig(true);
-            document.querySelectorAll('.ondemand-hood-box').forEach(cb => { cb.checked = state && scanAreaSelected(profile, cb.dataset.city); });
-            saveOnDemandStateLocally();
+            toggleScanLocations('ondemand', state);
         }
         function handleCityCheckboxChange(cityName, isChecked) {
             document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
                 if (cb.dataset.city === cityName) cb.checked = isChecked;
             });
             updateCountyAfterCityChange('ondemand', cityName);
-            saveOnDemandStateLocally();
+            rememberOnDemandDraft();
         }
 
         function openTelegramModal() { document.getElementById('telegram-modal').classList.remove('hidden'); }
@@ -3443,15 +3466,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const config = validatedScanConfig(false);
             if (!config) return;
             const token = document.getElementById('setting-token-input').value.trim() || localStorage.getItem('pa_github_token');
-            if (!token) { alert('כדי לשדר את ההגדרות לשרת, חובה להזין מפתח GitHub בחלק העליון של החלון.'); return; }
+            if (!token) { showScanSaveError('setting', 'כדי לשדר את ההגדרות לשרת, יש להזין מפתח GitHub בחלק העליון של החלון.'); return; }
             localStorage.setItem('pa_github_token', token);
             setScheduledScanSaving(true);
             try {
-                await putScanConfig('setting', config, token);
+                const receipt = await putScanConfig('setting', config, token);
                 applyBoardScanPriceRange(config, true, true);
-                closeSettingsModal();
-                alert('הגדרות הסריקה נשמרו ואומתו. הן ישמשו לסריקות המתוזמנות הבאות.');
-            } catch (error) { alert(error.message + '\nלא התקבל אישור מלא לשמירת ההגדרות.'); }
+                setScanSaveStatus('setting', 'success', scanSaveReceiptMessage(receipt));
+            } catch (error) { showScanSaveError('setting', error.message); }
             finally { setScheduledScanSaving(false); }
         }
 
@@ -3459,9 +3481,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const path = prefix === 'ondemand' ?
                 'https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/manual_scan_config.json' :
                 'https://api.github.com/repos/elic555-ux/pa-intelligence-v2/contents/scan_config.json';
+            setScanSaveStatus(prefix, 'saving', 'שומר את הבחירה בשרת ומאמת בקריאה חוזרת...');
             const headers = {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json'};
             const getRes = await fetch(path + '?ref=main&t=' + Date.now(), {cache: 'no-store', headers});
-            if (!getRes.ok && getRes.status !== 404) throw new Error('קריאת פרופיל הסריקה נכשלה: HTTP ' + getRes.status);
+            if (!getRes.ok && getRes.status !== 404) throw await githubScanError(getRes, 'קריאת הגדרות הסריקה נכשלה');
             const sha = getRes.ok ? (await getRes.json()).sha : undefined;
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
             const putRes = await fetch(path, {
@@ -3470,16 +3493,20 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 body: JSON.stringify({message: prefix === 'ondemand' ? 'Save manual scan parameters from UI' :
                     'Save scheduled scan parameters from UI', content, sha, branch: 'main'})
             });
-            if (!putRes.ok) throw new Error('שמירת הגדרות הסריקה נכשלה: HTTP ' + putRes.status);
+            if (!putRes.ok) throw await githubScanError(putRes, 'שמירת הגדרות הסריקה נכשלה');
+            const savedFile = await putRes.json();
             const verifyRes = await fetch(path + '?ref=main&t=' + Date.now(), {cache: 'no-store', headers});
-            if (!verifyRes.ok) throw new Error('השרת קיבל את השמירה, אך לא ניתן לאמת אותה: HTTP ' + verifyRes.status);
+            if (!verifyRes.ok) throw await githubScanError(verifyRes, 'השרת קיבל את השמירה, אך לא ניתן לאמת אותה');
             const verifiedFile = await verifyRes.json();
-            if (typeof verifiedFile.content !== 'string' || verifiedFile.content.replace(/\s/g, '') !== content) {
+            if (typeof verifiedFile.content !== 'string' || verifiedFile.content.replace(/\s/g, '') !== content ||
+                !savedFile.content?.sha || verifiedFile.sha !== savedFile.content.sha) {
                 throw new Error('הפרמטרים שנקראו מהשרת אינם תואמים לבחירה.');
             }
-            cacheConfirmedScanProfile(prefix, config);
-            applyScanProfileToForm(prefix, config);
-            if (prefix === 'setting') applyConfirmedScheduledState(config);
+            const serverProfile = decodeScanProfile(verifiedFile);
+            cacheConfirmedScanProfile(prefix, serverProfile);
+            applyScanProfileToForm(prefix, serverProfile);
+            if (prefix === 'setting') applyConfirmedScheduledState(serverProfile);
+            return {fileName: scanProfileFileName(prefix), sha: verifiedFile.sha, profile: serverProfile};
         }
 
         async function putManualScanConfig(config, token) { return putScanConfig('ondemand', config, token); }
@@ -3506,15 +3533,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const config = validatedScanConfig(true);
             if (!config) return;
             const token = document.getElementById('ondemand-token-input')?.value.trim() || localStorage.getItem('pa_github_token');
-            if (!token) { alert('כדי לשמור את הבחירה, יש להזין מפתח GitHub.'); return; }
+            if (!token) { showScanSaveError('ondemand', 'כדי לשמור את הבחירה, יש להזין מפתח GitHub.'); return; }
             localStorage.setItem('pa_github_token', token);
             setManualScanSaving(true);
             try {
-                await putManualScanConfig(config, token);
-                closeOnDemandScanModal();
-                alert('הבחירה נשמרה לסריקה היזומה הבאה. לא הופעלה סריקה.');
+                const receipt = await putManualScanConfig(config, token);
+                setScanSaveStatus('ondemand', 'success', scanSaveReceiptMessage(receipt) + ' לא הופעלה סריקה.');
             } catch (error) {
-                alert(error.message + '\nלא התקבל אישור מלא לשמירת הבחירה.');
+                showScanSaveError('ondemand', error.message);
             } finally { setManualScanSaving(false); }
         }
 
@@ -3527,7 +3553,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             if (!tk) tk = localStorage.getItem('pa_github_token') || '';
             
             if (!tk) {
-                alert("אנא הדבק את מפתח ה-GitHub שלך בתיבה המיועדת לכך.");
+                showScanSaveError('ondemand', 'יש להזין מפתח GitHub בתיבה המיועדת לכך.');
                 return;
             }
             localStorage.setItem('pa_github_token', tk);
@@ -3541,12 +3567,13 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             config.requestId = window.crypto?.randomUUID ? window.crypto.randomUUID() : 'manual-' + Date.now();
 
             try {
-                await putManualScanConfig(config, tk);
+                const receipt = await putManualScanConfig(config, tk);
+                setScanSaveStatus('ondemand', 'success', scanSaveReceiptMessage(receipt));
                 btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> הפרמטרים נשמרו; מפעיל סריקה...';
                 lucide.createIcons();
                 applyBoardScanPriceRange(config, true, true);
             } catch(e) {
-                alert(e.message + '\nהסריקה לא הופעלה כי השמירה לא אומתה. הבחירה נשארת בחלון לניסיון נוסף.');
+                showScanSaveError('ondemand', e.message + '\nהסריקה לא הופעלה כי השמירה לא אומתה. הבחירה נשארת בחלון לניסיון נוסף.');
                 btn.innerHTML = originalHtml;
                 setManualScanSaving(false);
                 lucide.createIcons();
@@ -3590,23 +3617,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function loadScheduleSettings() {
-            const isEnabled = localStorage.getItem('pa_auto_scan_status') !== 'false';
-            document.getElementById('autoscan-master-switch').checked = isEnabled;
-            
-            try {
-                const st = cleanScanSettings(JSON.parse(localStorage.getItem('pa_settings_state_v7') || '{}'));
-                if (st.schedules) {
-                    if (st.schedules.mls) { document.getElementById('sched-day-mls').value = st.schedules.mls.day || 'Everyday'; document.getElementById('sched-time-mls').value = st.schedules.mls.time || '08:00'; }
-                    if (st.schedules.reo) { document.getElementById('sched-day-reo').value = st.schedules.reo.day || 'Wednesday'; document.getElementById('sched-time-reo').value = st.schedules.reo.time || '08:00'; }
-                    if (st.schedules.sheriff) { document.getElementById('sched-day-sheriff').value = st.schedules.sheriff.day || 'Wednesday'; document.getElementById('sched-time-sheriff').value = st.schedules.sheriff.time || '08:00'; }
-                    if (st.schedules.tax) { document.getElementById('sched-day-tax').value = st.schedules.tax.day || 'Wednesday'; document.getElementById('sched-time-tax').value = st.schedules.tax.time || '08:00'; }
-                } else {
-                    document.getElementById('sched-day-mls').value = 'Everyday'; document.getElementById('sched-time-mls').value = '08:00';
-                    document.getElementById('sched-day-reo').value = 'Wednesday'; document.getElementById('sched-time-reo').value = '08:00';
-                    document.getElementById('sched-day-sheriff').value = 'Wednesday'; document.getElementById('sched-time-sheriff').value = '08:00';
-                    document.getElementById('sched-day-tax').value = 'Wednesday'; document.getElementById('sched-time-tax').value = '08:00';
-                }
-            } catch(e){}
+            const profile = lastConfirmedScanProfile('setting');
+            if (!scheduledProfileVerified || !profile) return;
+            document.getElementById('autoscan-master-switch').checked = profile.autoScanEnabled !== false;
+            for (const sector of AVAILABLE_SCAN_SECTORS) {
+                const schedule = profile.schedules?.[sector];
+                document.getElementById(`sched-day-${sector}`).value = schedule?.day || (sector === 'mls' ? 'Everyday' : 'Wednesday');
+                document.getElementById(`sched-time-${sector}`).value = schedule?.time || '08:00';
+            }
         }
 
         async function saveScheduleSettings() {
@@ -3626,10 +3644,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> שומר בשרת...';
             lucide.createIcons();
             try {
-                await putScanConfig('setting', config, token);
+                const receipt = await putScanConfig('setting', config, token);
+                setScanSaveStatus('setting', 'success', scanSaveReceiptMessage(receipt));
                 closeAutoScanModal();
-                alert('התזמון נשמר ואומת. פרמטרי הסריקה נשמרו כפי שבחרת בהגדרות הסריקה.');
-            } catch (error) { alert(error.message + '\nלא התקבל אישור מלא לשמירת התזמון.'); }
+                alert(scanSaveReceiptMessage(receipt) + '\nפרמטרי הסריקה נשמרו כפי שבחרת בהגדרות הסריקה.');
+            } catch (error) { showScanSaveError('setting', error.message); }
             finally {
                 btn.innerHTML = origHtml;
                 setScheduledScanSaving(false);
