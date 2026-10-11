@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.18.0 / 2026-10-11: server-only scan profiles and location-scoped saving -->
+<!-- PA UI 8.18.1 / 2026-10-11: partial scan selections read by checked property in Chrome -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.18.0 · 11.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.18.1 · 11.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -1258,7 +1258,7 @@
             }
             // A selected source location activates only its own parent scope.
             // Never use the county click handler here: it selects all siblings.
-            document.querySelectorAll(`.${prefix}-hood-box:checked`).forEach(input => {
+            checkedScanInputs(prefix, 'hood').forEach(input => {
                 if (!scanParentForArea(prefix, input.dataset.city)?.checked) updateScanLocationParent(prefix, input.dataset.city);
             });
             const config = cleanScanSettings(buildServerConfig(isManual));
@@ -1751,7 +1751,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         function toggleScanLocations(prefix, state) {
             const profile = buildServerConfig(prefix === 'ondemand');
-            const previousAreas = new Set(Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`))
+            const previousAreas = new Set(checkedScanInputs(prefix, 'hood')
                 .map(input => canonicalScanArea(input.dataset.city)));
             document.querySelectorAll(`.${prefix}-hood-box`).forEach(input => {
                 input.checked = state && scanAreaSelected(profile, input.dataset.city);
@@ -1781,7 +1781,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         function buildGeoAreas(prefix) {
             const scopes = {};
-            document.querySelectorAll(`.${prefix}-city-box:checked`).forEach(city => {
+            checkedScanInputs(prefix, 'city').forEach(city => {
                 const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`)).filter(hood => hood.dataset.city === city.value);
                 const selected = [...new Set(locations.filter(hood => hood.checked).map(hood => hood.value))];
                 scopes[city.value] = {allLocations: selected.length === 0, locations: selected};
@@ -1798,12 +1798,18 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             return scopes;
         }
 
+        function checkedScanInputs(prefix, kind) {
+            // Chrome's :checked omits indeterminate controls even when checked
+            // is true. Partial county/city choices are active scan scopes.
+            return Array.from(document.querySelectorAll(`.${prefix}-${kind}-box`)).filter(input => input.checked);
+        }
+
         function selectedScanCounties(prefix) {
-            return Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value);
+            return checkedScanInputs(prefix, 'county').map(cb => cb.value);
         }
 
         function selectedScanLocations(prefix) {
-            return Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`))
+            return checkedScanInputs(prefix, 'hood')
                 .filter(hood => {
                     const area = hood.dataset.city || '';
                     const isCounty = area === 'Allegheny' || area.endsWith(' County');
@@ -1841,9 +1847,9 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         function captureScanSelections(prefix) {
             return {
-                counties: Array.from(document.querySelectorAll(`.${prefix}-county-box:checked`)).map(cb => cb.value),
-                cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
-                locations: Array.from(document.querySelectorAll(`.${prefix}-hood-box:checked`))
+                counties: checkedScanInputs(prefix, 'county').map(cb => cb.value),
+                cities: checkedScanInputs(prefix, 'city').map(cb => cb.value),
+                locations: checkedScanInputs(prefix, 'hood')
                     .map(cb => ({area: canonicalScanArea(cb.dataset.city), value: cb.value}))
             };
         }
@@ -1900,10 +1906,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 minBeds: document.getElementById(`${prefix}-min-beds`).value,
                 maxBeds: document.getElementById(`${prefix}-max-beds`) ? document.getElementById(`${prefix}-max-beds`).value : 'all',
                 minBaths: document.getElementById(`${prefix}-min-baths`).value,
-                sectors: Array.from(document.querySelectorAll(`.${prefix}-sector-box:checked`)).map(cb => cb.value).filter(value => AVAILABLE_SCAN_SECTORS.has(value)),
-                propertyTypes: Array.from(document.querySelectorAll(`.${prefix}-prop-type-box:checked`)).map(cb => cb.value),
+                sectors: checkedScanInputs(prefix, 'sector').map(cb => cb.value).filter(value => AVAILABLE_SCAN_SECTORS.has(value)),
+                propertyTypes: checkedScanInputs(prefix, 'prop-type').map(cb => cb.value),
                 counties: selectedScanCounties(prefix),
-                cities: Array.from(document.querySelectorAll(`.${prefix}-city-box:checked`)).map(cb => cb.value),
+                cities: checkedScanInputs(prefix, 'city').map(cb => cb.value),
                 neighborhoods: selectedScanLocations(prefix),
                 geoAreas: buildGeoAreas(prefix),
                 uiSelections: captureScanSelections(prefix),
@@ -3716,5 +3722,4 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
     <script src="secondary_sources.js?v=1.0.0-20261009"></script>
 </body>
 </html>
-
 
