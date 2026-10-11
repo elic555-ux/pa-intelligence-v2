@@ -195,6 +195,38 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(report['excluded']['outside_initial_source_coverage'],1)
         self.assertEqual(report['excluded']['unconfirmed_or_inactive_listing'],1)
 
+    def test_erie_rows_leave_tarasa_queue_without_network_or_inventory_edits(self):
+        erie={**copy.deepcopy(self.rows[0]),'id':'PA-MLS-193460',
+            'docket_id':'MLS-193460','county':'Erie','city':'Erie',
+            'url':'https://www.redfin.com/PA/Erie/x/home/193460'}
+        self.rows=[erie]
+        self.put_inventory()
+        # A previously queued Erie property must disappear from the Tarasa
+        # queue even when the earlier request was already attempted.
+        registry.atomic_json(self.repo/worker.STATE,{'schema':1,'enabled':False,
+            'entries':{erie['id']:{'fingerprint':worker.fingerprint(erie),
+                'active_provider':source.PROVIDER,'status':'listing_not_available'}}})
+        reader=self.reader()
+        report=worker.run(self.repo,'pilot',reader=reader,now=self.now)
+        self.assertEqual(report['excluded']['outside_tarasa_request_scope'],1)
+        self.assertEqual(report['eligible_properties'],0)
+        self.assertEqual(report['pending'],0)
+        self.assertEqual(report['new_source_network_requests'],0)
+        self.assertEqual(reader.requests,0)
+        self.assertEqual(registry.read_json(self.repo/worker.STATE)['entries'],{})
+        self.assertEqual((self.repo/'properties.json').read_bytes(),self.inventory_before)
+
+    def test_allegheny_still_fetches_when_erie_is_excluded(self):
+        self.rows=[self.rows[0],{**copy.deepcopy(self.rows[1]),
+            'county':'Erie','city':'Erie'}]
+        self.put_inventory()
+        report=worker.run(self.repo,'pilot',reader=self.reader(),now=self.now)
+        self.assertEqual(report['excluded']['outside_tarasa_request_scope'],1)
+        self.assertEqual(report['attempted_properties'],1)
+        self.assertEqual(report['new_snapshots'],1)
+        self.assertEqual(report['new_source_network_requests'],2)
+        self.assertEqual(report['results'][0]['property_id'],self.rows[0]['id'])
+
     def test_relisting_cannot_reuse_saved_cache_or_previous_url(self):
         worker.run(self.repo,'batch',reader=self.reader(),now=self.now)
         self.rows[0]['docket_id']='MLS-9911'
