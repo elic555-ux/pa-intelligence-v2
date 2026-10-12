@@ -17,6 +17,7 @@ from test_tarasa_listing_source import tarasa_page
 def make_rows(count=5):
     return [{**copy.deepcopy(ROW),'id':'PA-MLS-'+str(1001+i),'docket_id':'MLS-'+str(1001+i),
         'address':str(12+i*2)+' First St','url':'https://www.redfin.com/PA/Pittsburgh/x/home/'+str(1001+i),
+        'listed_date':datetime.now(timezone.utc).date().isoformat(),
         'last_scan_id':'S1','market_status':'active'} for i in range(count)]
 
 
@@ -96,20 +97,20 @@ class QueueTests(unittest.TestCase):
         self.rows=make_rows(105)
         self.put_inventory()
         report=worker.run(self.repo,'batch',reader=self.reader(),now=self.now)
-        self.assertEqual(report['new_snapshots'],100)
-        self.assertEqual(report['pending'],5)
-        self.assertEqual(report['new_source_network_requests'],101)
+        self.assertEqual(report['new_snapshots'],10)
+        self.assertEqual(report['pending'],95)
+        self.assertEqual(report['new_source_network_requests'],11)
         self.assertFalse(report['enabled'])
         self.assertEqual((self.repo/'properties.json').read_bytes(),self.inventory_before)
 
-    def test_enabled_automatic_caps_at_twenty_five(self):
+    def test_enabled_automatic_caps_at_ten(self):
         self.rows=make_rows(30)
         self.put_inventory()
         worker.run(self.repo,'enable',now=self.now)
         report=worker.run(self.repo,'automatic','abc',reader=self.reader(),now=self.now)
-        self.assertEqual(report['new_snapshots'],25)
-        self.assertEqual(report['new_source_network_requests'],26)
-        self.assertEqual(report['pending'],5)
+        self.assertEqual(report['new_snapshots'],10)
+        self.assertEqual(report['new_source_network_requests'],11)
+        self.assertEqual(report['pending'],20)
 
     def test_legacy_queue_membership_activation_and_cached_facts_survive_migration(self):
         entries={r['id']:{'fingerprint':worker.fingerprint(r),'status':'waiting_for_discovery',
@@ -259,14 +260,14 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(entry['status'],'queued')
         self.assertNotIn('source_url',entry)
 
-    def test_only_actual_scan_adds_new_rows_but_old_queue_resumes(self):
+    def test_recent_inventory_enters_queue_independent_of_last_scan(self):
         self.rows[0]['last_scan_id']='older'
         self.put_inventory()
-        self.assertEqual(worker.run(self.repo,'check')['pending'],4)
+        self.assertEqual(worker.run(self.repo,'check')['pending'],5)
         worker.run(self.repo,'enable',now=self.now)
         self.rows[1]['last_scan_id']='older'
         self.put_inventory()
-        self.assertEqual(worker.run(self.repo,'check')['pending'],4)
+        self.assertEqual(worker.run(self.repo,'check')['pending'],5)
 
     def test_toggle_changes_no_source_cache_or_network(self):
         reader=self.reader()
