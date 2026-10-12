@@ -1,4 +1,5 @@
-name: Run Allegheny Sheriff Scraper
+name: "סריקת שריף בלבד — מנוע מרכזי"
+run-name: "סריקת שריף בלבד לפי ההגדרות הידניות השמורות"
 
 on:
   workflow_dispatch:
@@ -6,43 +7,161 @@ on:
 permissions:
   contents: write
 
-# Use the same repository-wide writer queue as the central scanner.
 concurrency:
+  # Shared by every workflow that writes repository data files.
   group: pa-repo-write-queue
   cancel-in-progress: false
 
 jobs:
-  run-scraper:
+  scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PA_SCAN_CONFIG_FILE: sheriff_runtime_config.json
     steps:
-      - name: Checkout Repository
+      - name: Checkout current branch
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
-      - name: Install Dependencies
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Set up Node.js for offline UI guard
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install scanner dependencies
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y poppler-utils tesseract-ocr
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run Sheriff Scraper
+          # מתקין את כל הספריות מקובץ הדרישות, ומוודא שגם pytz מותקן
+          python -m pip install -r requirements.txt pytz
+      - name: Print code identity
+        id: checks
         run: |
-          python scrapers/04_allegheny_sheriff.py October-Sale-List-Updated-9-24.pdf
-
-      - name: Commit and Push Changes
+          # Copy the saved server profile for this run only. Never overwrite it.
+          python - <<'PYCONFIG'
+          import json
+          from pathlib import Path
+          config = json.loads(Path('manual_scan_config.json').read_text(encoding='utf-8'))
+          if not isinstance(config, dict):
+              raise ValueError('ההגדרות הידניות השמורות אינן תקינות')
+          config['sectors'] = ['sheriff']
+          config['is_manual_scan'] = True
+          Path('sheriff_runtime_config.json').write_text(
+              json.dumps(config, ensure_ascii=False, indent=2), encoding='utf-8')
+          PYCONFIG
+          git log -1 --format='%h %s'
+          sha256sum orchestrator.py
+          python -m py_compile orchestrator.py analyzer.py
+          python -m unittest -q test_scan_controls test_scan_scope
+      - name: Run Sheriff through the central scanner
+        id: scanner
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_TOKEN: ${{ github.token }}
+          SHERIFF_PDF_URL: ${{ vars.SHERIFF_PDF_URL }}
+        run: python orchestrator.py
+        
+      - name: Analyze changed MLS properties
+        id: analyzer
+        if: steps.scanner.outputs.analyze == 'true'
+        env:
+          PA_SCAN_CONTEXT_FILE: scan_run_context.json
+        run: python analyzer.py
+      - name: Record failed stage for the UI
+        if: always() && (steps.checks.outcome == 'failure' || steps.scanner.outcome == 'failure' || steps.analyzer.outcome == 'failure')
+        env:
+          FAILED_STAGE: ${{ steps.checks.outcome == 'failure' && 'checks' || steps.scanner.outcome == 'failure' && 'scanner' || 'analyzer' }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add properties.json scanner_status.json
-          if ! git diff --staged --quiet; then
-            git commit -m "Auto-update properties from Sheriff PDF"
+          python - <<'PY'
+          import hashlib, json, os, re
+          from datetime import datetime, timezone
+          from pathlib import Path
+          def read(path, default):
+              try:
+                  return json.loads(Path(path).read_text(encoding='utf-8'))
+              except (OSError, ValueError):
+                  return default
+          def write(path, value):
+              temporary = Path(str(path) + '.tmp')
+              temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+              temporary.replace(path)
+          stage = os.environ['FAILED_STAGE']
+          run_id = os.environ['GITHUB_RUN_ID']
+          report = read('scanner_status.json', {})
+          if not isinstance(report, dict): report = {}
+          event = report.get('last_event', {})
+          if not isinstance(event, dict) or event.get('github_run_id') != run_id:
+              config = read(os.environ['PA_SCAN_CONFIG_FILE'], {})
+              if not isinstance(config, dict): config = {}
+              code = Path('orchestrator.py').read_bytes()
+              match = re.search(rb'ORCHESTRATOR_VERSION\s*=\s*"([^"]+)"', code)
+              version = match.group(1).decode('utf-8') if match else 'unknown'
+              timestamp = datetime.now(timezone.utc).isoformat()
+              event = {'scan_id': 'RUN-' + run_id, 'started_at': timestamp,
+                  'trigger': 'manual' if os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' else 'scheduled',
+                  'github_run_id': run_id, 'github_sha': os.environ['GITHUB_SHA'],
+                  'request_id': (os.environ.get('PA_SCAN_REQUEST_ID') or config.get('requestId')) if os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' else None,
+                  'config_commit': os.environ.get('PA_SCAN_CONFIG_COMMIT') or None,
+                  'config_source': os.environ['PA_SCAN_CONFIG_FILE'], 'orchestrator_version': version,
+                  'code_sha256': hashlib.sha256(code).hexdigest(), 'sources': {}, 'errors': []}
+              report['version'] = version
+          event['status'] = 'failed'
+          event['failure_stage'] = stage
+          event['finished_at'] = datetime.now(timezone.utc).isoformat()
+          message = {'checks': 'בדיקות הקוד נכשלו לפני הפעלת מקורות הסריקה.',
+              'scanner': 'שלב הסריקה נכשל; יש לבדוק את פרטי הריצה.',
+              'analyzer': 'שלב הניתוח נכשל אחרי הסריקה; אין אישור להשלמת כל הריצה.'}[stage]
+          event.setdefault('errors', []).append(message)
+          report.update({'last_event': event, 'last_scan': event})
+          log = read('scan_log.json', [])
+          if not isinstance(log, list): log = []
+          if log and isinstance(log[-1], dict) and log[-1].get('github_run_id') == run_id:
+              log[-1] = event
+          else:
+              log.append(event)
+          write('scan_log.json', log[-1000:])
+          write('scanner_status.json', report)
+          PY
+      - name: Save data and source status
+        if: always() && (steps.scanner.outcome == 'success' || steps.scanner.outcome == 'failure' || steps.checks.outcome == 'failure')
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          for file in properties.json scan_log.json geo_catalog.json sheriff_listings.json scanner_status.json geocode_cache.json sheriff_property_cache.json; do
+            if [ -f "$file" ]; then git add "$file"; fi
+          done
+          if [ -d COMPS_REPORTS/listing_details ]; then git add COMPS_REPORTS/listing_details; fi
+          if [ -d COMPS_REPORTS/scan_review ]; then git add COMPS_REPORTS/scan_review; fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Update Sheriff data and source status"
             if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+              # Never leave conflict markers in JSON files for the summary step.
               git rebase --abort || true
-              echo "::error::Could not safely rebase Sheriff data. No conflicted files were pushed."
+              echo "::error::Could not safely rebase scanner data. No conflicted files were pushed."
               exit 1
             fi
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
+      - name: Publish scan summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = Path('scanner_status.json')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as out:
+              if not report.exists():
+                  out.write('לא נוצר דוח סריקה. בדוק את שגיאת הריצה.\n')
+              else:
+                  data = json.loads(report.read_text(encoding='utf-8'))
+                  event = data.get('last_event', {})
+                  out.write(f"## מצב הסריקה: {event.get('status', 'unknown')}\n\n")
+                  out.write(f"גרסה: {data.get('version')} | ריצה: {event.get('scan_id')}\n\n")
+                  if event.get('failure_stage'):
+                      out.write(f"שלב שנכשל: {event['failure_stage']}\n\n")
+                  for item in event.get('sources', {}).values():
+                      out.write(f"- {item.get('label')}: {item.get('status')} | {item.get('rows', 0)} רשומות\n")
+          PY
