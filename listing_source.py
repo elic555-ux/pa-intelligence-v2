@@ -18,7 +18,7 @@ from urllib.request import Request, HTTPRedirectHandler, build_opener
 
 from bs4 import BeautifulSoup
 
-VERSION = "basic-source-1.0-20261009"
+VERSION = "basic-source-1.1-request-budget-20261012"
 DETAILS_DIR = Path("COMPS_REPORTS/listing_details")
 MAX_BYTES = 5_000_000
 FRESH_DAYS = 7
@@ -346,7 +346,7 @@ def enrich(p, root=Path("."), refresh=False, allow_network=True):
         return "cache_used" if record else "not_requested"
     # Blocked/failed requests have a separate timestamp; it cannot freshen old facts.
     if not refresh and record and fresh({"retrieved_at": (record.get("last_attempt") or {}).get("checked_at")}, days=1):
-        return (record.get("last_attempt") or {}).get("status", "cached_failure")
+        return "source_blocked" if (record.get("last_attempt") or {}).get("http_status") == 405 else (record.get("last_attempt") or {}).get("status", "cached_failure")
     try:
         new_record = parse_listing(get_html(source_url(p)), p)
         new_record["last_attempt"] = {"status": new_record["status"], "checked_at": now()}
@@ -354,7 +354,7 @@ def enrich(p, root=Path("."), refresh=False, allow_network=True):
         attach(p, new_record)
         return new_record["status"]
     except HTTPError as exc:
-        status = "source_blocked" if exc.code in {401, 403, 429} else "source_unavailable"
+        status = "source_blocked" if exc.code in {401, 403, 405, 429} else "source_unavailable"
         info = {"status": status, "checked_at": now(), "http_status": exc.code}
     except (URLError, TimeoutError, OSError, ValueError) as exc:
         info = {"status": "source_identity_mismatch" if "mismatch" in str(exc) else "source_unavailable",
@@ -371,7 +371,7 @@ def enrich(p, root=Path("."), refresh=False, allow_network=True):
 
 def enrich_rows(rows, root=Path("."), limit=20, allow_network=True):
     """At most 50 unique detail pages, after investment filters. Scope is explicit."""
-    result = {"version": VERSION, "new_rentcast_calls": 0, "statuses": {}, "rows": 0}
+    result = {"version": VERSION, "new_rentcast_calls": 0, "statuses": {}, "rows": 0, "external_page_requests": 0, "cached_attempts": 0}
     id_counts = {}
     for p in rows:
         ident = str(p.get("id"))
@@ -386,8 +386,13 @@ def enrich_rows(rows, root=Path("."), limit=20, allow_network=True):
             continue
         cached = read_record(p, root)
         use_net = allow_network and budget > 0
-        if use_net and not (cached and fresh(cached) and cached.get("status") == "published"):
+        cached_success = bool(cached and fresh(cached) and cached.get("status") == "published")
+        cached_attempt = bool(cached and fresh({"retrieved_at": (cached.get("last_attempt") or {}).get("checked_at")}, days=1))
+        if use_net and not cached_success and not cached_attempt:
             budget -= 1
+            result["external_page_requests"] += 1
+        elif cached_attempt and not cached_success:
+            result["cached_attempts"] += 1
         status = enrich(p, root, allow_network=use_net)
         result["rows"] += 1
         result["statuses"][status] = result["statuses"].get(status, 0) + 1
