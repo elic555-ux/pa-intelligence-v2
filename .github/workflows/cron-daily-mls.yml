@@ -1,7 +1,17 @@
-name: "1. Central Scanner — V2.8 (manual validation)"
+name: "1. Central Scanner — V2.9 (manual validation)"
+run-name: ${{ inputs.request_id && format('סריקה יזומה {0}', inputs.request_id) || 'Central Scanner' }}
 
 on:
   workflow_dispatch:
+    inputs:
+      request_id:
+        description: "UI request identifier (leave blank for direct manual runs)"
+        required: false
+        type: string
+      config_commit:
+        description: "Commit containing this request's saved parameters"
+        required: false
+        type: string
   # התזמון מושהה עד להשלמת תיקוני ההיקף והמסננים ואימות ההגדרות בשרת.
   # שמירת autoScanEnabled בממשק אינה מפעילה תזמון כל עוד הטריגר מושהה כאן.
   # אין להחזיר את הטריגר לפני סיום האימות; יש לעדכן גם את בדיקת ההשהיה.
@@ -20,6 +30,10 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      PA_SCAN_CONFIG_FILE: ${{ github.event_name == 'workflow_dispatch' && 'manual_scan_config.json' || 'scan_config.json' }}
+      PA_SCAN_REQUEST_ID: ${{ inputs.request_id }}
+      PA_SCAN_CONFIG_COMMIT: ${{ inputs.config_commit }}
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v4
@@ -40,23 +54,83 @@ jobs:
           # מתקין את כל הספריות מקובץ הדרישות, ומוודא שגם pytz מותקן
           python -m pip install -r requirements.txt pytz
       - name: Print code identity
+        id: checks
         run: |
           git log -1 --format='%h %s'
           sha256sum orchestrator.py
           python -m py_compile orchestrator.py analyzer.py
-          python -m unittest -q test_scan_controls
+          python -m unittest -q test_scan_controls test_scan_scope
       - name: Run selected scanners
         id: scanner
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_TOKEN: ${{ github.token }}
           SHERIFF_PDF_URL: ${{ vars.SHERIFF_PDF_URL }}
         run: python orchestrator.py
         
       - name: Analyze changed MLS properties
+        id: analyzer
         if: steps.scanner.outputs.analyze == 'true'
+        env:
+          PA_SCAN_CONTEXT_FILE: scan_run_context.json
         run: python analyzer.py
+      - name: Record failed stage for the UI
+        if: always() && (steps.checks.outcome == 'failure' || steps.scanner.outcome == 'failure' || steps.analyzer.outcome == 'failure')
+        env:
+          FAILED_STAGE: ${{ steps.checks.outcome == 'failure' && 'checks' || steps.scanner.outcome == 'failure' && 'scanner' || 'analyzer' }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, re
+          from datetime import datetime, timezone
+          from pathlib import Path
+          def read(path, default):
+              try:
+                  return json.loads(Path(path).read_text(encoding='utf-8'))
+              except (OSError, ValueError):
+                  return default
+          def write(path, value):
+              temporary = Path(str(path) + '.tmp')
+              temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+              temporary.replace(path)
+          stage = os.environ['FAILED_STAGE']
+          run_id = os.environ['GITHUB_RUN_ID']
+          report = read('scanner_status.json', {})
+          if not isinstance(report, dict): report = {}
+          event = report.get('last_event', {})
+          if not isinstance(event, dict) or event.get('github_run_id') != run_id:
+              config = read(os.environ['PA_SCAN_CONFIG_FILE'], {})
+              if not isinstance(config, dict): config = {}
+              code = Path('orchestrator.py').read_bytes()
+              match = re.search(rb'ORCHESTRATOR_VERSION\s*=\s*"([^"]+)"', code)
+              version = match.group(1).decode('utf-8') if match else 'unknown'
+              timestamp = datetime.now(timezone.utc).isoformat()
+              event = {'scan_id': 'RUN-' + run_id, 'started_at': timestamp,
+                  'trigger': 'manual' if os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' else 'scheduled',
+                  'github_run_id': run_id, 'github_sha': os.environ['GITHUB_SHA'],
+                  'request_id': (os.environ.get('PA_SCAN_REQUEST_ID') or config.get('requestId')) if os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' else None,
+                  'config_commit': os.environ.get('PA_SCAN_CONFIG_COMMIT') or None,
+                  'config_source': os.environ['PA_SCAN_CONFIG_FILE'], 'orchestrator_version': version,
+                  'code_sha256': hashlib.sha256(code).hexdigest(), 'sources': {}, 'errors': []}
+              report['version'] = version
+          event['status'] = 'failed'
+          event['failure_stage'] = stage
+          event['finished_at'] = datetime.now(timezone.utc).isoformat()
+          message = {'checks': 'בדיקות הקוד נכשלו לפני הפעלת מקורות הסריקה.',
+              'scanner': 'שלב הסריקה נכשל; יש לבדוק את פרטי הריצה.',
+              'analyzer': 'שלב הניתוח נכשל אחרי הסריקה; אין אישור להשלמת כל הריצה.'}[stage]
+          event.setdefault('errors', []).append(message)
+          report.update({'last_event': event, 'last_scan': event})
+          log = read('scan_log.json', [])
+          if not isinstance(log, list): log = []
+          if log and isinstance(log[-1], dict) and log[-1].get('github_run_id') == run_id:
+              log[-1] = event
+          else:
+              log.append(event)
+          write('scan_log.json', log[-1000:])
+          write('scanner_status.json', report)
+          PY
       - name: Save data and source status
-        if: always() && steps.scanner.outcome == 'success'
+        if: always() && (steps.scanner.outcome == 'success' || steps.scanner.outcome == 'failure' || steps.checks.outcome == 'failure')
         run: |
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
@@ -64,6 +138,7 @@ jobs:
             if [ -f "$file" ]; then git add "$file"; fi
           done
           if [ -d COMPS_REPORTS/listing_details ]; then git add COMPS_REPORTS/listing_details; fi
+          if [ -d COMPS_REPORTS/scan_review ]; then git add COMPS_REPORTS/scan_review; fi
           if ! git diff --cached --quiet; then
             git commit -m "Update scanner data and source status"
             if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
@@ -89,6 +164,8 @@ jobs:
                   event = data.get('last_event', {})
                   out.write(f"## מצב הסריקה: {event.get('status', 'unknown')}\n\n")
                   out.write(f"גרסה: {data.get('version')} | ריצה: {event.get('scan_id')}\n\n")
-                  for item in data.get('sources', {}).values():
+                  if event.get('failure_stage'):
+                      out.write(f"שלב שנכשל: {event['failure_stage']}\n\n")
+                  for item in event.get('sources', {}).values():
                       out.write(f"- {item.get('label')}: {item.get('status')} | {item.get('rows', 0)} רשומות\n")
           PY
