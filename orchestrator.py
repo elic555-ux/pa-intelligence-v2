@@ -34,7 +34,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.2-sheriff-municipality-and-type-20261012"
+ORCHESTRATOR_VERSION = "3.10.3-sheriff-status-refresh-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -1092,8 +1092,12 @@ def parse_sheriff_text(body, source_url, imported=False):
     if not blocks:
         raise ValueError("לא זוהו בלוקים של נכסים במסמך")
     rows, seen = [], set()
+    status_records = []
     unparsed_records = []
     def preserve_unparsed(block):
+        block_status = re.search(r"(?m)^\s*(Active|Stayed|Postponed[^\n]*|Cancelled|Canceled|Sold|Continued[^\n]*|Withdrawn|Settled|Money Made)[ \t]*$", block.split("Comments:")[0], re.I)
+        if block_status and block_status.group(1).casefold() != "active":
+            return
         docket = re.search(r"\b(?:GD|MG|AR)-\d{2}-\d{5,6}\b", block.split('Comments:')[0], re.I)
         identity = f"{source_url}|{sale_day.isoformat()}|{block}"
         unparsed_records.append({
@@ -1116,11 +1120,12 @@ def parse_sheriff_text(body, source_url, imported=False):
             unrecognized_blocks += 1
             continue
         recognized += 1
-        if status.group(1).casefold() != "active":
-            continue
+        source_status = status.group(1).strip()
         docket = re.search(r"\b(?:GD|MG|AR)-\d{2}-\d{5,6}\b", facts, re.I)
         address = re.search(r"(?m)^\s*([A-Z][A-Z .'-]+),\s*PA\s+(\d{5})(?:-\d{4})?\b", facts, re.I)
         if not docket or not address:
+            if source_status.casefold() != "active":
+                continue
             skipped_active += 1
             preserve_unparsed(block)
             continue
@@ -1203,7 +1208,7 @@ def parse_sheriff_text(body, source_url, imported=False):
             "parcel_id": parcel_match.group(1) if parcel_match else None,
             "municipality": municipality or None,
             "data_status": "imported_official_document" if imported else "live",
-            "market_status": "scheduled_sheriff_sale", "sheriff_status": "Active",
+            "market_status": "scheduled_sheriff_sale", "sheriff_status": source_status,
             "sale_date": sale_day.isoformat(), "source_published_date": printed_day.isoformat(),
             "listed_date": printed_day.strftime("%d/%m/%Y"),
             "source_document": source_document,
@@ -1213,13 +1218,60 @@ def parse_sheriff_text(body, source_url, imported=False):
             "last_source_check": iso_now_est(), "deal_score": None,
             "filter_status": "investment_fields_unavailable",
         })
-    if recognized < int(len(blocks) * 0.95) or not rows:
+    status_records = [row for row in rows if row.get("sheriff_status", "").casefold() != "active"]
+    rows = [row for row in rows if row.get("sheriff_status", "").casefold() == "active"]
+    if recognized < int(len(blocks) * 0.95) or not (rows or status_records):
         raise ValueError(f"פענוח חלקי: זוהו {recognized}/{len(blocks)} סטטוסים; {skipped_active} כתובות פעילות לא זוהו")
     return rows, {"published_date": printed_day.isoformat(), "sale_date": sale_day.isoformat(),
                   "parsed_blocks": len(blocks), "skipped_active_addresses": skipped_active,
                   "unrecognized_blocks": unrecognized_blocks,
                   "unparsed_records": unparsed_records,
+                  "status_records": status_records,
                   "mode": "imported" if imported else "live"}
+
+
+def refresh_sheriff_inventory_status(rows, county_audits, scan_id, today=None):
+    """Apply explicit same-sale evidence; a past date alone never proves sale."""
+    today = today or now_est().date()
+    changed = 0
+    for row in rows:
+        if row.get("source_type") != "sheriff":
+            continue
+        audit = county_audits.get(str(row.get("county") or ""), {})
+        if not audit:
+            continue
+        candidates = []
+        for fact in audit.get("status_records", []):
+            # Docket alone may cover several tracts. Require parcel and sale date.
+            if (row.get("docket_id") and row.get("parcel_id") and row.get("sale_date")
+                    and str(row["docket_id"]).casefold() == str(fact.get("docket_id") or "").casefold()
+                    and str(row["parcel_id"]).casefold() == str(fact.get("parcel_id") or "").casefold()
+                    and row["sale_date"] == fact.get("sale_date")):
+                candidates.append(fact)
+        statuses = {str(fact.get("sheriff_status") or "").casefold() for fact in candidates}
+        new_status = None
+        if len(statuses) == 1 and candidates:
+            fact = candidates[0]
+            new_status = fact["sheriff_status"]
+            row["sheriff_status_source_url"] = fact.get("source_url")
+            row["sheriff_status_source_date"] = fact.get("source_published_date")
+            row["sheriff_status_verified_at"] = iso_now_est()
+        else:
+            try:
+                past = datetime.strptime(str(row.get("sale_date")), "%Y-%m-%d").date() < today
+            except (ValueError, TypeError):
+                past = False
+            if past and str(row.get("sheriff_status") or "").casefold() in {"active", "scheduled", "needs_verification"}:
+                new_status = "needs_verification"
+        if new_status and row.get("sheriff_status") != new_status:
+            previous = row.get("sheriff_status")
+            row["sheriff_status"] = new_status
+            row["market_status"] = "sheriff_" + new_status.casefold().replace(" ", "_")
+            row["status_history"] = append_status_event(row.get("status_history"), row["market_status"], iso_now_est(), scan_id,
+                "explicit same-sale source status" if candidates and len(statuses) == 1 else "sale date passed; outcome unverified")
+            row["previous_sheriff_status"] = previous
+            changed += 1
+    return changed
 
 
 def preserve_sheriff_pdf_review(audit, scan_id):
@@ -3233,6 +3285,7 @@ def run_orchestrator():
                     county_status = sheriff_county_results.get(county, {}).get("status")
                     if county_status not in ("success", "imported"):
                         persisted_sheriff_rows.append(cached)
+                refresh_sheriff_inventory_status(persisted_sheriff_rows, sheriff_county_results, scan_id)
                 # Both old and new Sheriff rows pass the same gate as properties.json.
                 persisted_sheriff_rows.extend(sheriff_rows)
                 accepted_sheriff_cache, rejected_sheriff_cache = [], []
@@ -3735,6 +3788,8 @@ def run_orchestrator():
         "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"}
 
     final_merged_list = list(existing_props_dict.values())
+    log_entry["sheriff_status_updates"] = refresh_sheriff_inventory_status(
+        final_merged_list, sheriff_county_results, scan_id) if "sheriff" in active_sectors_now else 0
     # Remove cached unsupported financial results, including rows outside today's scan.
     for stored_prop in final_merged_list:
         if isinstance(stored_prop, dict):
