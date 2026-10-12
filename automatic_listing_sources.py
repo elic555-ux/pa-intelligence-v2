@@ -1,7 +1,7 @@
 """Cache-first, resumable Tarasa completion of the existing MLS scan queue."""
 import argparse
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -9,12 +9,14 @@ from pathlib import Path
 
 import property_sources as registry
 import tarasa_listing_source as source
+from scan_schedule import completion_due
+from zoneinfo import ZoneInfo
 
-VERSION = 'automatic-mls-sources-1.3.0-20261011'
+VERSION = 'automatic-mls-sources-1.4.0-recent-ten-20261012'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
-PROFILES = {'pilot': (3, 8, 240), 'automatic': (25, 30, 600), 'batch': (100, 110, 1500)}
+PROFILES = {'pilot': (3, 8, 240), 'group10': (10, 13, 240), 'automatic': (10, 13, 240), 'batch': (10, 13, 240)}
 STOP_BATCH = {'source_blocked', 'source_rate_limited', 'robots_disallowed',
     'source_cooldown', 'source_request_budget_exhausted', 'batch_time_limit',
     'source_redirect_stopped', 'source_unavailable', 'source_response_too_large',
@@ -29,7 +31,20 @@ def fingerprint(row):
     return hashlib.sha256(json.dumps(binding, sort_keys=True).encode()).hexdigest()
 
 
-def eligible_rows(repo):
+def published_day(row):
+    """Use a saved listing date, never first_seen or last_source_check."""
+    value = str(row.get('listed_date') or '').strip()
+    try:
+        if len(value) == 10 and value[4] == '-' and value[7] == '-':
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        if '/' in value:
+            return datetime.strptime(value, '%d/%m/%Y').date()
+        return datetime.fromisoformat(value.replace('Z', '+00:00')).date()
+    except (ValueError, TypeError):
+        return None
+
+
+def eligible_rows(repo, start_day=None, today=None):
     inventory = registry.read_json(repo / 'properties.json')
     if not isinstance(inventory, list):
         raise ValueError('Inventory must be an array.')
@@ -58,6 +73,12 @@ def eligible_rows(repo):
             excluded['incomplete_identity'] += 1
         elif row.get('market_status') not in (None, '', 'active'):
             excluded['unconfirmed_or_inactive_listing'] += 1
+        elif start_day is not None and published_day(row) is None:
+            excluded['listing_date_unknown'] += 1
+        elif start_day is not None and published_day(row) < start_day:
+            excluded['older_than_completion_scope'] += 1
+        elif today is not None and published_day(row) is not None and published_day(row) > today:
+            excluded['future_listing_date'] += 1
         else:
             rows[key] = row
     return rows, dict(excluded)
@@ -65,7 +86,7 @@ def eligible_rows(repo):
 
 def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     repo = Path(repo)
-    if mode not in {'check', 'pilot', 'batch', 'enable', 'disable', 'automatic'}:
+    if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'}:
         raise ValueError('Unsupported mode.')
     now = now or datetime.now(timezone.utc)
     state = registry.read_json(repo / STATE) if (repo / STATE).exists() else {'schema': 1, 'enabled': False, 'entries': {}}
@@ -73,9 +94,13 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         raise ValueError('Invalid queue state.')
     scan_report = registry.read_json(repo / 'scanner_status.json') if (repo / 'scanner_status.json').exists() else {}
     event = scan_report.get('last_event', {})
+    profile = registry.read_json(repo / 'scan_config.json') if (repo / 'scan_config.json').exists() else {}
+    controlled = profile.get('scheduleControlVersion') == 2
+    completion = profile.get('completionSettings') or {}
+    enabled = bool(profile.get('autoScanEnabled') is True and completion.get('enabled') is True) if controlled else bool(state.get('enabled'))
     caps = PROFILES.get(mode, PROFILES['automatic'])
     report = {'version': VERSION, 'mode': mode, 'provider': source.PROVIDER, 'source_name': source.SOURCE,
-        'enabled': bool(state.get('enabled')), 'status': 'ready', 'should_save': False,
+        'enabled': enabled, 'status': 'ready', 'should_save': False,
         'new_rentcast_calls': 0, 'new_source_network_requests': 0,
         'max_properties_per_run': caps[0], 'max_source_requests_per_run': caps[1], 'max_seconds_per_run': caps[2],
         'properties_sha256': hashlib.sha256((repo / 'properties.json').read_bytes()).hexdigest(),
@@ -83,27 +108,37 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         'new_snapshots': 0, 'results': [], 'pending': 0, 'due': 0,
         'review_required': 0, 'migrated_provider_entries': 0}
     if mode == 'automatic':
-        if not state.get('enabled'):
+        if not enabled:
             report['status'] = 'automatic_disabled'
             return report
         if upstream_sha and event.get('github_sha') != upstream_sha:
             report['status'] = 'upstream_scan_no_longer_current'
             return report
-        if event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', []):
+        if upstream_sha and (event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', [])):
             report['status'] = 'no_new_mls_scan'
+            return report
+        if controlled and not completion_due(profile, state, now):
+            report['status'] = 'not_due_or_daily_limit'
             return report
         scan = event
     else:
         scan = scan_report.get('last_scan', {})
     report['scan_id'] = scan.get('scan_id')
-    rows, excluded = eligible_rows(repo)
+    start_text = completion.get('startDate') if controlled else state.get('completion_start_date')
+    if start_text:
+        try:
+            start_day = datetime.strptime(start_text, '%Y-%m-%d').date()
+        except (ValueError, TypeError) as exc:
+            raise ValueError('Invalid saved completion start date.') from exc
+    else:
+        start_day = now.date() - timedelta(days=30)
+    report['completion_start_date'] = start_day.isoformat()
+    report['date_basis'] = 'saved_listing_publication_date'
+    rows, excluded = eligible_rows(repo, start_day, now.date())
     report.update(eligible_properties=len(rows), excluded=excluded)
     entries = {}
     for key, row in rows.items():
         old = state['entries'].get(key)
-        is_current = bool(scan.get('scan_id') and row.get('last_scan_id') == scan['scan_id'])
-        if not old and not is_current:
-            continue
         signature = fingerprint(row)
         entry = dict(old) if old and old.get('fingerprint') == signature else {'fingerprint': signature}
         if entry.get('active_provider') != source.PROVIDER:
@@ -144,9 +179,17 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         state['enabled'] = mode == 'enable'
         report.update(enabled=state['enabled'], status='automatic_enabled' if state['enabled'] else 'automatic_disabled')
     elif due:
+        remaining = caps[0]
+        if controlled:
+            budget_day = now.astimezone(ZoneInfo(completion.get('timezone', 'America/New_York'))).date().isoformat()
+            used = int(state.get('daily_attempted', 0)) if state.get('budget_day') == budget_day else 0
+            remaining = max(0, min(remaining, int(completion.get('dailyLimit', 60)) - used))
+            state.update(budget_day=budget_day, daily_attempted=used)
         provider_state = registry.read_json(repo / source.SOURCE_STATE) if (repo / source.SOURCE_STATE).exists() else {}
         cooldown = source.parse_date(provider_state.get('retry_after_at'))
-        if cooldown and cooldown > now:
+        if remaining <= 0:
+            report['status'] = 'daily_limit_reached'
+        elif cooldown and cooldown > now:
             report.update(status='source_cooldown', retry_after_at=cooldown.isoformat(),
                 http_status=provider_state.get('http_status'), request_url=provider_state.get('request_url'))
         else:
@@ -157,7 +200,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             before = reader.requests
             # Unattempted listings first, then oldest attempts: missing listings
             # cannot keep taking all slots in subsequent batches.
-            candidates = sorted(due, key=lambda k: (entries[k].get('last_attempt_at', ''), -int(registry.listing_id(due[k]))))[:caps[0]]
+            candidates = sorted(due, key=lambda k: (entries[k].get('last_attempt_at', ''), -int(registry.listing_id(due[k]))))[:remaining]
             for key in candidates:
                 result = source.run(repo, 'fetch', key, reader=reader, write_status=False, now=now)
                 report['results'].append(result)
@@ -180,7 +223,12 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         report['status'] = 'waiting_for_retry' if pending else 'queue_current'
     report['pending'] = sum(e.get('status') not in REVIEW_STATUSES | {'cache_used'} for e in entries.values())
     report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
-    state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER)
+    if controlled:
+        state['daily_attempted'] = int(state.get('daily_attempted', 0)) + report['attempted_properties']
+    if mode == 'automatic':
+        state['last_automatic_run'] = now.isoformat()
+    state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER,
+                 completion_start_date=start_day.isoformat())
     report['should_save'] = True
     registry.atomic_json(repo / STATE, state)
     registry.atomic_json(repo / STATUS, report)
@@ -191,6 +239,10 @@ def summary(report):
     lines = ['## AUTOMATIC_MLS_SOURCES', '', '- New RentCast calls: **0**',
         '- New source network requests: **' + str(report['new_source_network_requests']) + '**',
         '- מקור פעיל: Tarasa / River Point Realty', '- מצב: ' + report['status'],
+        '- השלמה מתאריך פרסום: ' + str(report.get('completion_start_date', 'טרם נקבע')),
+        '- קבוצה: עד 10 נכסים; עד 13 בקשות למקור בכל ריצה',
+        '- תאריך פרסום חסר: ' + str(report.get('excluded', {}).get('listing_date_unknown', 0)),
+        '- לפני תחילת ההשלמה: ' + str(report.get('excluded', {}).get('older_than_completion_scope', 0)),
         '- השלמה אוטומטית מופעלת: ' + ('כן' if report['enabled'] else 'לא'),
         '- נכסים שנבדקו מול המקור בריצה: ' + str(report['attempted_properties']),
         '- מטמונים חדשים: ' + str(report['new_snapshots']),
@@ -217,7 +269,7 @@ def summary(report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('check', 'pilot', 'batch', 'enable', 'disable', 'automatic'))
+    parser.add_argument('mode', choices=('check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'))
     parser.add_argument('--repo', type=Path, default=Path('.'))
     parser.add_argument('--upstream-sha', default='')
     args = parser.parse_args()
