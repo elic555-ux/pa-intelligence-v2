@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.20.0 / 2026-10-12: city checkboxes select only themselves; saved scopes remain independent -->
+<!-- PA UI 8.20.1 / 2026-10-12: verify scan saves against their immutable commit; saved scopes remain independent -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.20.0 · 12.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.20.1 · 12.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -3449,19 +3449,27 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             });
             if (!putRes.ok) throw await githubScanError(putRes, 'שמירת הגדרות הסריקה נכשלה');
             const savedFile = await putRes.json();
-            const verifyRes = await fetch(path + '?ref=main&t=' + Date.now(), {cache: 'no-store', headers});
+            const commitSha = savedFile.commit?.sha;
+            if (typeof commitSha !== 'string' || !/^[0-9a-f]{40}$/i.test(commitSha) ||
+                typeof savedFile.content?.sha !== 'string' || !savedFile.content.sha) {
+                throw new Error('השרת קיבל את הכתיבה, אך לא החזיר זיהוי גרסה תקין לאימות.');
+            }
+            // A main read immediately after PUT can still return an older file.
+            // Verify the exact commit returned by the write, including its bytes
+            // and blob SHA, before confirming or dispatching a manual scan.
+            const verifyRes = await fetch(path + '?ref=' + commitSha + '&t=' + Date.now(), {cache: 'no-store', headers});
             if (!verifyRes.ok) throw await githubScanError(verifyRes, 'השרת קיבל את השמירה, אך לא ניתן לאמת אותה');
             const verifiedFile = await verifyRes.json();
             if (typeof verifiedFile.content !== 'string' || verifiedFile.content.replace(/\s/g, '') !== content ||
-                !savedFile.content?.sha || verifiedFile.sha !== savedFile.content.sha) {
-                throw new Error('הפרמטרים שנקראו מהשרת אינם תואמים לבחירה.');
+                verifiedFile.sha !== savedFile.content.sha) {
+                throw new Error('הכתיבה התקבלה בשרת, אך תוכן הגרסה שנשמרה לא תאם לבחירה ולא אומת.');
             }
             const serverProfile = decodeScanProfile(verifiedFile);
             cacheConfirmedScanProfile(prefix, serverProfile);
             applyScanProfileToForm(prefix, serverProfile);
             if (prefix === 'setting') applyConfirmedScheduledState(serverProfile);
             return {fileName: scanProfileFileName(prefix), sha: verifiedFile.sha,
-                commitSha: savedFile.commit?.sha || null, profile: serverProfile};
+                commitSha, profile: serverProfile};
         }
 
         async function putManualScanConfig(config, token) { return putScanConfig('ondemand', config, token); }
