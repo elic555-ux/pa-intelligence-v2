@@ -281,11 +281,12 @@ class ScanControlsTests(unittest.TestCase):
             with self.subTest(failure=failure):
                 self.run_ui_case("manual-dispatch", failure)
 
-    def test_workflow_keeps_offline_guard_and_pauses_schedule(self):
+    def test_workflow_checks_ui_schedule_before_source_setup(self):
         workflow = (ROOT / ".github/workflows/cron-daily-mls.yml").read_text(encoding="utf-8")
         self.assertIn("python -m unittest -q test_scan_controls", workflow)
         self.assertIn("actions/setup-node@v4", workflow)
-        self.assertNotRegex(workflow, r"(?m)^  schedule\s*:")
+        self.assertIn("python3 scan_schedule.py scan", workflow)
+        self.assertIn("if: steps.timing.outputs.due == 'true'", workflow)
 
     def test_county_source_locations_are_enforced(self):
         reject = geography_filter()
