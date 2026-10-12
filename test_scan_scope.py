@@ -1,6 +1,7 @@
 """Offline scope, common-filter, retention, workflow and analysis regressions."""
 from contextlib import ExitStack, contextmanager, redirect_stdout
 from copy import deepcopy
+from datetime import datetime
 import io
 import base64
 import json
@@ -25,7 +26,7 @@ def property_row(source="mls", **changes):
            "county": "Allegheny", "state": "PA", "zip": "15147", "source_type": source,
            "price": 100000, "sqft": 1200, "beds": 2, "baths": 1,
            "property_type": "Single Family", "market_status": "active"}
-    return {**row, **changes}
+    return {**row, "municipality": changes.get("city", row["city"]), **changes}
 
 
 def scope(counties=("Allegheny",), cities=(), rules=None):
@@ -111,7 +112,8 @@ class ScopeTests(unittest.TestCase):
         row = property_row("tax", county="Erie", city="City of Erie", source_location="West Bay")
         self.assertIsNone(scanner.scan_property_rejection(row, SETTINGS, chosen))
         self.assertEqual(scanner.scan_property_rejection({**row, "source_location": None}, SETTINGS, chosen), "location_unverified")
-        self.assertIsNone(scanner.scan_property_rejection({**row, "city": "Millcreek", "source_location": None}, SETTINGS, chosen))
+        self.assertIsNone(scanner.scan_property_rejection({**row, "city": "Millcreek", "municipality": "Millcreek", "source_location": None}, SETTINGS, chosen))
+        self.assertIsNone(scanner.scan_property_rejection({**row, "city": "Erie", "municipality": "Millcreek", "source_location": None}, SETTINGS, chosen))
 
     def test_known_city_label_cannot_hide_another_municipality(self):
         chosen = scope(counties=("Erie",), rules={"Erie County": {"allLocations": False, "locations": ["Erie"]}})
@@ -310,6 +312,162 @@ class SavedRequestTests(unittest.TestCase):
                 patch.object(scanner.requests, "get", side_effect=AssertionError("No network")), \
                 patch.object(scanner, "load_json_file", side_effect=AssertionError("No fallback")), redirect_stdout(io.StringIO()):
             self.assertIsNone(scanner.load_run_profile())
+
+
+class SheriffLocationAndTypeTests(unittest.TestCase):
+    def test_documented_municipality_controls_scope_instead_of_postal_city(self):
+        selection = scope(rules={"Allegheny County": {"allLocations": False, "locations": ["Penn Hills"]}})
+        row = property_row("sheriff", city="Pittsburgh", municipality="Penn Hills")
+        self.assertIsNone(scanner.scan_property_rejection(row, SETTINGS, selection))
+        verona = scope(rules={"Allegheny County": {"allLocations": False, "locations": ["Verona"]}})
+        row["city"] = "Verona"
+        self.assertEqual(scanner.scan_property_rejection(row, SETTINGS, verona), "location")
+
+    def test_whole_city_label_does_not_require_a_neighborhood_but_city_must_be_verified(self):
+        selection = scope(counties=(), cities=("Pittsburgh",), rules={"Pittsburgh": {"allLocations": False, "locations": ["Pittsburgh"]}})
+        row = property_row("sheriff", city="Pittsburgh", municipality="Pittsburgh")
+        self.assertIsNone(scanner.scan_property_rejection(row, SETTINGS, selection))
+        self.assertEqual(scanner.scan_property_rejection({**row, "municipality": "Sharpsburg"}, SETTINGS, selection), "outside_scope")
+        self.assertEqual(scanner.scan_property_rejection({**row, "municipality": None}, SETTINGS, selection), "geography_unverified")
+
+    def test_neighborhood_only_selection_still_requires_neighborhood_facts(self):
+        selection = scope(counties=(), cities=("Pittsburgh",), rules={"Pittsburgh": {"allLocations": False, "locations": ["Oakland"]}})
+        row = property_row("sheriff", city="Pittsburgh", municipality="Pittsburgh")
+        self.assertEqual(scanner.scan_property_rejection(row, SETTINGS, selection), "location_unverified")
+        self.assertIsNone(scanner.scan_property_rejection({**row, "neighborhood": "Oakland"}, SETTINGS, selection))
+
+    def test_known_county_use_descriptions_are_mapped_without_guessing(self):
+        for raw, expected in [("SINGLE FAMILY", "Single Family"), ("TWO FAMILY", "Duplex / Triplex"),
+                              ("THREE FAMILY", "Duplex / Triplex"), ("FOUR FAMILY", "Multi-Family")]:
+            self.assertEqual(scanner.county_use_property_type(raw), expected)
+        for unknown in [None, "RESIDENTIAL", "ROWHOUSE", "100", "RETL/APT'S OVER"]:
+            self.assertIsNone(scanner.county_use_property_type(unknown))
+        selection = scope(rules={"Allegheny County": {"allLocations": False, "locations": ["Verona"]}})
+        self.assertEqual(scanner.scan_property_rejection(property_row("sheriff", property_type=scanner.county_use_property_type("FOUR FAMILY")), SETTINGS, selection), "property_type")
+
+    def test_lookup_limit_remains_effective_after_initial_backfill(self):
+        with temporary_repo():
+            write_json(scanner.SHERIFF_PROPERTY_CACHE_FILE, {"_meta": {"initial_backfill_complete": True}})
+            rows = [property_row("sheriff", parcel_id="123-A-" + str(i)) for i in range(1, 6)]
+            with patch.object(scanner, "fetch_county_building_data", return_value=None) as fetch:
+                scanner.enrich_sheriff_rows_from_county(rows, max_lookups=2)
+            self.assertEqual(fetch.call_count, 2)
+            self.assertEqual(sum(r["county_property_status"] == "pending_backfill" for r in rows), 3)
+            with patch.object(scanner, "fetch_county_building_data", side_effect=AssertionError("Zero lookups means no HTTP")):
+                scanner.enrich_sheriff_rows_from_county(rows, max_lookups=0)
+
+    def test_cached_type_is_attached_with_provenance_without_changing_other_facts(self):
+        with temporary_repo():
+            row = property_row("sheriff", property_type=None, type=None, parcel_id="123-A-1", price=None)
+            original = deepcopy(row)
+            pin = scanner.county_pin_from_sheriff_parcel(row["parcel_id"])
+            data = {"pin": pin, "use_code": "SINGLE FAMILY", "source": "Allegheny County Real Estate Portal",
+                    "source_url": "https://realestate.alleghenycounty.us/BuildingInfo?ID=" + pin,
+                    "retrieved_at": "2026-10-12T10:00:00-04:00"}
+            write_json(scanner.SHERIFF_PROPERTY_CACHE_FILE, {pin: data})
+            with patch.object(scanner, "fetch_county_building_data", side_effect=AssertionError("Cached facts require no HTTP")):
+                scanner.enrich_sheriff_rows_from_county([row], max_lookups=0)
+            self.assertEqual(row["property_type"], "Single Family")
+            self.assertEqual(row["source_property_type"], "SINGLE FAMILY")
+            self.assertEqual(row["property_type_source_url"], data["source_url"])
+            for field in ["price", "address", "city", "municipality", "sqft", "beds", "baths"]:
+                self.assertEqual(row[field], original[field])
+            row["property_type"] = "Land / Lot"
+            scanner.enrich_sheriff_rows_from_county([row], max_lookups=0)
+            self.assertEqual(row["property_type"], "Land / Lot")
+
+
+class SheriffPdfReviewTests(unittest.TestCase):
+    def document(self):
+        header = "SHERIFF'S SALE PROPERTY LISTING\nDate of Sale: Monday, November 2, 2026\nPrinted: 10/12/2026\n"
+        def block(number, address):
+            return (f"Tracts\nStatus\n1\nCase Number\nGD-26-{number:06d} $1,000.00\n"
+                    f"Sale Type\nReal Estate Sale\n{address}\nPittsburgh 123-A-{number}\nActive\nComments:\n")
+        return header + block(1, "12 EXAMPLE ST\nPITTSBURGH, PA 15201") + \
+            block(2, "UNREADABLE ADDRESS") + block(3, "SECOND UNREADABLE ADDRESS")
+
+    def parsed(self):
+        clock = scanner.EST_TZ.localize(datetime(2026, 10, 12, 12))
+        with patch.object(scanner, "now_est", return_value=clock):
+            return scanner.parse_sheriff_text(self.document(), scanner.SHERIFF_PAGE + "November-Sale-List.pdf")
+
+    def test_two_unreadable_addresses_do_not_discard_a_valid_record(self):
+        rows, audit = self.parsed()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["address"], "12 Example St")
+        self.assertEqual(audit["skipped_active_addresses"], 2)
+        self.assertEqual(len(audit["unparsed_records"]), 2)
+        for record in audit["unparsed_records"]:
+            self.assertIsNone(record["address"])
+            self.assertNotIn("price", record)
+            self.assertIn("UNREADABLE ADDRESS", record["raw_source_text"])
+
+    def test_raw_records_are_preserved_separately_and_repeated_reads_deduplicate(self):
+        _, audit = self.parsed()
+        originals = deepcopy(audit["unparsed_records"])
+        with temporary_repo():
+            scanner.preserve_sheriff_pdf_review(audit, "one")
+            _, repeated = self.parsed()
+            scanner.preserve_sheriff_pdf_review(repeated, "two")
+            items = json.loads(Path(scanner.SCAN_REVIEW_FILE).read_text())["items"]
+            self.assertEqual(len(items), 2)
+            self.assertEqual({item["status"] for item in items.values()}, {"needs_details"})
+            self.assertEqual({item["record"]["id"] for item in items.values()}, {r["id"] for r in originals})
+            for original in originals:
+                self.assertIn(original, [item["record"] for item in items.values()])
+            self.assertNotIn("unparsed_records", audit)
+            self.assertEqual(audit["unparsed_records_retained_for_review"], 2)
+
+    def test_expired_document_and_unrecognized_statuses_still_fail(self):
+        clock = scanner.EST_TZ.localize(datetime(2026, 12, 1, 12))
+        with patch.object(scanner, "now_est", return_value=clock), self.assertRaises(ValueError):
+            scanner.parse_sheriff_text(self.document(), scanner.SHERIFF_PAGE)
+        clock = scanner.EST_TZ.localize(datetime(2026, 10, 12, 12))
+        with patch.object(scanner, "now_est", return_value=clock), self.assertRaises(ValueError):
+            scanner.parse_sheriff_text(self.document().replace("\nActive\n", "\nUNVERIFIED\n"), scanner.SHERIFF_PAGE)
+
+    def run_pipeline(self, broken_review=False):
+        _, audit = self.parsed()
+        profile = json.loads((ROOT / "manual_scan_config.json").read_text())
+        profile.update({"counties": ["Allegheny"], "cities": [], "geoAreas": {}, "sectors": ["sheriff"]})
+        write_json("manual_scan_config.json", profile)
+        write_json("properties.json", [])
+        if broken_review:
+            Path(scanner.SCAN_REVIEW_FILE).parent.mkdir(parents=True, exist_ok=True)
+            Path(scanner.SCAN_REVIEW_FILE).write_text("broken review")
+        row = property_row("sheriff", city="Pittsburgh", zip="15201")
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_RUN_ID": "pdf-test",
+                                    "PA_SCAN_CONFIG_COMMIT": "", "PA_SCAN_REQUEST_ID": ""}), \
+                patch.object(scanner, "CONFIG_FILE", "manual_scan_config.json"), \
+                patch.object(scanner, "fetch_allegheny_sheriff_listings", return_value=([row], scanner.SHERIFF_PAGE, audit)), \
+                patch.object(scanner, "enrich_sheriff_rows_from_county", return_value=0) as enrich, \
+                patch.object(scanner, "enrich_listing_source_rows", return_value={"status": "offline"}), \
+                patch.object(scanner.requests.sessions.Session, "send", side_effect=AssertionError("No live HTTP")), \
+                redirect_stdout(io.StringIO()):
+            scanner.run_orchestrator()
+        return row, enrich
+
+    def test_valid_rows_continue_but_unreadable_rows_stay_out_of_inventory(self):
+        with temporary_repo():
+            row, enrich = self.run_pipeline()
+            enrich.assert_called_once()
+            records = json.loads(Path("properties.json").read_text())
+            self.assertEqual([r["id"] for r in records], [row["id"]])
+            event = json.loads(Path("scanner_status.json").read_text())["last_event"]
+            self.assertEqual(event["status"], "partial")
+            self.assertEqual(event["sources"]["sheriff"]["pdf_records_retained_for_review"], 2)
+            self.assertNotIn("tax", event["sources"], "An unselected source must not appear as disconnected in the current run")
+            self.assertEqual(len(json.loads(Path(scanner.SCAN_REVIEW_FILE).read_text())["items"]), 2)
+
+    def test_review_write_failure_stops_before_enrichment_and_inventory_write(self):
+        with temporary_repo():
+            _, enrich = self.run_pipeline(broken_review=True)
+            enrich.assert_not_called()
+            self.assertEqual(json.loads(Path("properties.json").read_text()), [])
+            self.assertEqual(Path(scanner.SCAN_REVIEW_FILE).read_text(), "broken review")
+            event = json.loads(Path("scanner_status.json").read_text())["last_event"]
+            self.assertEqual(event["status"], "failed")
+            self.assertIn("Could not preserve unresolved Sheriff", event["errors"][-1])
 
 
 class WorkflowTests(unittest.TestCase):
