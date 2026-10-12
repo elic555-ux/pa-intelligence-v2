@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.19.1 / 2026-10-12: one county catalog; each manual request uses its saved profile commit -->
+<!-- PA UI 8.19.2 / 2026-10-12: city checkboxes select only themselves; saved scopes remain independent -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.18.1 · 11.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.19.2 · 12.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -1701,14 +1701,15 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function scanCityChosen(input) {
-            return input.checked && (input.dataset.citySelection === undefined || input.dataset.citySelection === 'true');
+            if (input.dataset.citySelection === undefined) return input.checked;
+            const prefix = input.classList.contains('ondemand-city-box') ? 'ondemand' : 'setting';
+            return input.dataset.citySelection === 'true' || scanAreaLocations(prefix, input.value).length > 0;
         }
 
         function handleUnifiedScanPlaceChange(prefix, input) {
             const checked = input.checked;
             if (input.classList.contains(`${prefix}-city-box`)) {
                 input.dataset.citySelection = String(checked);
-                for (const child of scanAreaInputs(prefix, input.value)) setScanInputBindings(child, input.value, checked);
             }
             setScanInputBindings(input, null, checked);
             const areas = [...new Set(scanInputBindings(input).map(binding => binding.area))];
@@ -1754,9 +1755,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const selected = inputs.filter(input => selectedScanInputBindings(input).some(binding =>
                 canonicalScanArea(binding.area) === canonicalScanArea(area))).length;
             const isCity = parent.classList.contains(`${prefix}-city-box`);
-            if (isCity) parent.dataset.citySelection = String(selected > 0);
-            parent.checked = selected > 0 || (isCity && selectedScanInputBindings(parent).length > 0);
-            parent.indeterminate = selected > 0 && selected < inputs.length;
+            // A city is a place in the list, not a select-all checkbox.
+            // Child locations authorize its scan scope without ticking the city.
+            parent.checked = isCity ? parent.dataset.citySelection === 'true' || selectedScanInputBindings(parent).length > 0 : selected > 0;
+            parent.indeterminate = !isCity && selected > 0 && selected < inputs.length;
             parent.dataset.locationScope = String(selected > 0);
             if (isCity) updateCountyAfterCityChange(prefix, parent.value);
         }
@@ -1770,7 +1772,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                     canonicalScanArea(binding.area) === area)).length;
                 const active = isCity ? scanCityChosen(parent) : parent.checked;
                 parent.dataset.locationScope = String(active && selected > 0);
-                parent.indeterminate = active && selected > 0 && selected < inputs.length;
+                parent.indeterminate = !isCity && active && selected > 0 && selected < inputs.length;
                 if (!isCity && !parent.checked) parent.indeterminate = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county="${parent.value}"]`)).some(scanCityChosen);
             });
         }
@@ -1778,6 +1780,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function toggleScanLocations(prefix, state) {
             const profile = buildServerConfig(prefix === 'ondemand');
             const affected = new Set();
+            if (!state) document.querySelectorAll(`.${prefix}-city-box`).forEach(input => { input.dataset.citySelection = 'false'; });
             document.querySelectorAll(`.${prefix}-hood-box`).forEach(input => {
                 for (const binding of scanInputBindings(input)) {
                     if (scanAreaSelected(profile, binding.area) || !state) {
@@ -1797,10 +1800,6 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const county = scanParentForArea(prefix, `${city.dataset.county} County`);
             if (!county) return;
             const siblings = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county="${city.dataset.county}"]`));
-            if (county.checked && county.dataset.locationScope !== 'true' && siblings.some(cb => !scanCityChosen(cb))) {
-                county.checked = false;
-                for (const input of scanAreaInputs(prefix, `${city.dataset.county} County`)) setScanInputBindings(input, `${city.dataset.county} County`, false);
-            }
             if (!county.checked) county.indeterminate = siblings.some(scanCityChosen);
         }
 
@@ -1855,8 +1854,18 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 area === 'Allegheny County' ? scopes.Allegheny : null);
         }
 
+        function savedExplicitScanCities(saved) {
+            if (Array.isArray(saved.uiSelections?.explicitCities)) return saved.uiSelections.explicitCities;
+            // Legacy city lists also included parents inferred from neighborhoods.
+            // Only a whole-city scope needs an otherwise unbound city checkbox.
+            return (saved.uiSelections?.cities ?? saved.cities ?? []).filter(city => {
+                const scope = savedGeoScope(saved, city);
+                return !scope || scope.allLocations === true;
+            });
+        }
+
         function restoreGeoAreas(prefix, saved) {
-            const cityChoices = saved.uiSelections?.cities ?? saved.cities ?? [];
+            const cityChoices = savedExplicitScanCities(saved);
             document.querySelectorAll(`.${prefix}-city-box`).forEach(input => { input.dataset.citySelection = String(cityChoices.includes(input.value)); });
             document.querySelectorAll(`.${prefix}-hood-box`).forEach(input => {
                 const active = scanInputBindings(input).filter(binding => savedScanLocationChecked(saved, binding.area, binding.value));
@@ -1870,6 +1879,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             return {
                 counties: checkedScanInputs(prefix, 'county').map(cb => cb.value),
                 cities: checkedScanInputs(prefix, 'city').map(cb => cb.value),
+                explicitCities: Array.from(document.querySelectorAll(`.${prefix}-city-box`))
+                    .filter(input => input.dataset.citySelection === 'true').map(input => input.value),
                 locations: checkedScanInputs(prefix, 'hood').flatMap(selectedScanInputBindings)
                     .map(binding => ({area: canonicalScanArea(binding.area), value: binding.value}))
             };
@@ -2778,7 +2789,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             for (const [area, values] of Object.entries(areas)) for (const value of values) add(area, value, true);
             for (const input of staticScanLocationInputs[prefix]) add(input.dataset.city, input.value);
             for (const [city, county] of Object.entries(scanCityCounties)) add(`${county} County`, city, true, city);
-            const cityChoices = saved.uiSelections?.cities ?? saved.cities ?? [];
+            const cityChoices = savedExplicitScanCities(saved);
             for (const [county, places] of [...grouped].sort(([a], [b]) => a.localeCompare(b))) {
                 const group = document.createElement('details');
                 group.className = 'bg-gray-950 border border-gray-800 rounded-xl px-3 py-2';
