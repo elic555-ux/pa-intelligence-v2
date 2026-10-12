@@ -66,6 +66,8 @@ const context = vm.createContext({
             assert.equal(method, 'POST');
             assert.equal(verified, true, 'dispatch must wait for server readback');
             assert.equal(JSON.parse(options.body).ref, 'main');
+            assert.deepEqual(JSON.parse(options.body).inputs,
+                {request_id: 'guard-request-id', config_commit: 'a'.repeat(40)});
             if (input.failure === 'dispatch-network') throw new Error('simulated dispatch failure');
             return response(input.failure === 'dispatch-http' ? 403 : 204, {});
         }
@@ -81,7 +83,8 @@ const context = vm.createContext({
             assert.equal(body.branch, 'main');
             entry.profile = JSON.parse(Buffer.from(body.content, 'base64').toString('utf8'));
             entry.sha = 'saved-profile-sha';
-            return response(200, {content: input.failure === 'missing-save-sha' ? {} : {sha: entry.sha}});
+            return response(200, {content: input.failure === 'missing-save-sha' ? {} : {sha: entry.sha},
+                commit: {sha: 'a'.repeat(40)}});
         }
         assert.equal(method, 'GET');
         assert.equal(options.cache, 'no-store');
@@ -170,22 +173,17 @@ def config_loader():
     tree = ast.parse((ROOT / "orchestrator.py").read_text(encoding="utf-8"))
     function = next(node for node in tree.body
                     if isinstance(node, ast.FunctionDef) and node.name == "load_server_config")
-    scope = {"CONFIG_FILE": "scan_config.json", "math": math}
+    import orchestrator
+    scope = {"CONFIG_FILE": "scan_config.json", "math": math,
+             "compile_scan_scope": orchestrator.compile_scan_scope}
+    scope["load_run_profile"] = lambda: scope["load_json_file"](scope["CONFIG_FILE"], None)
     exec(compile(ast.Module(body=[function], type_ignores=[]), "orchestrator.py", "exec"), scope)
     return scope
 
 
 def geography_filter():
-    tree = ast.parse((ROOT / "orchestrator.py").read_text(encoding="utf-8"))
-    function = next(node for node in tree.body
-                    if isinstance(node, ast.FunctionDef) and node.name == "geography_rejection")
-    scope = {"REGION_MAP": {
-        "Allegheny County": {"region_type": "5", "county_name": "Allegheny"},
-        "Erie County": {"region_type": "5", "county_name": "Erie"},
-        "Erie": {"region_type": "6", "county_name": "Erie"},
-    }}
-    exec(compile(ast.Module(body=[function], type_ignores=[]), "orchestrator.py", "exec"), scope)
-    return scope["geography_rejection"]
+    import orchestrator
+    return orchestrator.geography_rejection
 
 
 class ScanControlsTests(unittest.TestCase):
@@ -235,13 +233,8 @@ class ScanControlsTests(unittest.TestCase):
                             "cities": ["Allegheny", "Pittsburgh"]})
         self.assertEqual(result["scan_settings"]["target_cities"], ["Pittsburgh"])
 
-        tree = ast.parse((ROOT / "orchestrator.py").read_text(encoding="utf-8"))
-        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
-                        and node.name == "build_mls_scan_areas")
-        scope = {"COUNTY_REGION_KEYS": {"Allegheny": "Allegheny County", "Erie": "Erie County"},
-                 "CITY_COUNTY": {"Pittsburgh": "Allegheny", "Erie": "Erie"}}
-        exec(compile(ast.Module(body=[function], type_ignores=[]), "orchestrator.py", "exec"), scope)
-        self.assertEqual(scope["build_mls_scan_areas"](["Allegheny", "Pittsburgh"], ["Erie"]),
+        import orchestrator
+        self.assertEqual(orchestrator.build_mls_scan_areas(["Allegheny", "Pittsburgh"], ["Erie"]),
                          ["Erie County", "Pittsburgh"])
 
     def test_manual_dispatch_preserves_schedule(self):
