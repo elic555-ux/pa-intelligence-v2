@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.19.0 / 2026-10-12: one county catalog; independent source selections preserved -->
+<!-- PA UI 8.19.1 / 2026-10-12: one county catalog; each manual request uses its saved profile commit -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -3531,7 +3531,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             cacheConfirmedScanProfile(prefix, serverProfile);
             applyScanProfileToForm(prefix, serverProfile);
             if (prefix === 'setting') applyConfirmedScheduledState(serverProfile);
-            return {fileName: scanProfileFileName(prefix), sha: verifiedFile.sha, profile: serverProfile};
+            return {fileName: scanProfileFileName(prefix), sha: verifiedFile.sha,
+                commitSha: savedFile.commit?.sha || null, profile: serverProfile};
         }
 
         async function putManualScanConfig(config, token) { return putScanConfig('ondemand', config, token); }
@@ -3590,9 +3591,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             lucide.createIcons();
 
             config.requestId = window.crypto?.randomUUID ? window.crypto.randomUUID() : 'manual-' + Date.now();
+            let profileCommit;
 
             try {
                 const receipt = await putManualScanConfig(config, tk);
+                if (!/^[0-9a-f]{40}$/i.test(receipt.commitSha || '')) {
+                    throw new Error('הבחירה נשמרה, אך לא התקבל מזהה גרסה תקין להפעלת הסריקה.');
+                }
+                profileCommit = receipt.commitSha;
                 setScanSaveStatus('ondemand', 'success', scanSaveReceiptMessage(receipt));
                 btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-300"></i> הפרמטרים נשמרו; מפעיל סריקה...';
                 lucide.createIcons();
@@ -3609,7 +3615,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
                     method: "POST", 
                     headers: { "Authorization": `Bearer ${tk}`, "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json" },
-                    body: JSON.stringify({ ref: "main" })
+                    body: JSON.stringify({ref: "main", inputs: {
+                        request_id: config.requestId, config_commit: profileCommit}})
                 });
                 
                 if (res.ok || res.status===204) {
