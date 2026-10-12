@@ -98156,5 +98156,247 @@
     "persistence_guard_removed": 0,
     "total_properties": 1196,
     "finished_at": "2026-10-12T13:34:32-04:00"
+  },
+  {
+    "scan_id": "SCAN-20261012-134930",
+    "started_at": "2026-10-12T13:49:30-04:00",
+    "trigger": "manual",
+    "orchestrator_version": "3.10.6-mls-resume-price-windows-20261012",
+    "status": "partial",
+    "active_sectors": [
+      "reo"
+    ],
+    "cities": [
+      "Pittsburgh"
+    ],
+    "source_results": 5,
+    "after_filters": 0,
+    "new": 0,
+    "updated": 0,
+    "unchanged": 0,
+    "off_market_candidates": 0,
+    "errors": [],
+    "code_sha256": "9915a03cbcb8",
+    "github_sha": "39338b094898a3b112b0fc7fb3bc45004da577fd",
+    "github_run_id": "38286702199",
+    "request_id": "e8ec6543-7def-4ad7-93d4-14a77852aa64",
+    "config_commit": "39338b094898a3b112b0fc7fb3bc45004da577fd",
+    "existing_records_retained_for_review": 0,
+    "out_of_scope_tax_records_removed": 0,
+    "incomplete_existing_removed": 0,
+    "counties": [
+      "Allegheny"
+    ],
+    "mls_scan_areas": [
+      "Allegheny County",
+      "Pittsburgh"
+    ],
+    "property_types": [
+      "Single Family",
+      "Duplex / Triplex"
+    ],
+    "min_baths": 0.0,
+    "config_source": "manual_scan_config.json",
+    "applied_filters": {
+      "min_price": 50000.0,
+      "max_price": 190000.0,
+      "min_sqft": 700,
+      "max_sqft": 1600,
+      "min_beds": 1,
+      "max_beds": 3,
+      "min_baths": 0.0
+    },
+    "market_state_basis": "raw_live_mls_before_user_filters",
+    "selected_neighborhoods": [
+      "Penn Hills",
+      "Pittsburgh",
+      "Verona"
+    ],
+    "applied_scope": {
+      "version": 1,
+      "semantics": "city_location_scope_refines_county",
+      "cities": [
+        "Pittsburgh"
+      ],
+      "counties": [
+        "Allegheny"
+      ],
+      "geo_areas": {
+        "Allegheny County": {
+          "allLocations": false,
+          "locations": [
+            "Penn Hills",
+            "Pittsburgh",
+            "Verona"
+          ]
+        },
+        "Pittsburgh": {
+          "allLocations": false,
+          "locations": [
+            "Penn Hills",
+            "Pittsburgh"
+          ]
+        }
+      },
+      "mls_scan_areas": [
+        "Allegheny County",
+        "Pittsburgh"
+      ],
+      "county_sources": [
+        "Allegheny"
+      ]
+    },
+    "neighborhood_filter_status": "shared_scope_all_sources",
+    "filter_policy": {
+      "sources": [
+        "mls",
+        "reo",
+        "sheriff",
+        "tax"
+      ],
+      "missing_required_facts": "retain_for_review",
+      "missing_filtered_type_or_baths": "retain_for_review",
+      "price": "published_asking_price_only; no debt or auction threshold substituted"
+    },
+    "sources": {
+      "reo": {
+        "label": "בנקים וכינוס",
+        "checked_at": "2026-10-12T13:49:30-04:00",
+        "status": "partial",
+        "rows": 5,
+        "providers": {
+          "freddie_mac_homesteps": {
+            "jsonld_listings": 12,
+            "status_counts": {
+              "Active": 8,
+              "Under Contract": 4
+            },
+            "active_rows": 8,
+            "source_url": "https://www.homesteps.com/listing/search?search=Pennsylvania",
+            "provider": "freddie_mac_homesteps",
+            "coverage": "partial_single_provider",
+            "status": "partial",
+            "rows": 1,
+            "geography_dropped": 7,
+            "scope": "selected_counties_only"
+          },
+          "hud_home_store": {
+            "provider": "hud_home_store",
+            "status": "success",
+            "counties": {
+              "Allegheny": {
+                "provider": "hud_home_store",
+                "county": "Allegheny",
+                "source_url": "https://www.hudhomestore.gov/searchresult?citystate=Allegheny+County%2C+PA",
+                "status": "success",
+                "result_payload_rows": 4,
+                "active_rows": 4,
+                "excluded": {
+                  "wrong_county_or_state": 0,
+                  "missing_required_fields": 0,
+                  "past_bid_deadline": 0,
+                  "invalid_price": 0
+                }
+              }
+            },
+            "rows": 4,
+            "source_url": "https://www.hudhomestore.gov/searchresult"
+          }
+        },
+        "provider_count": 2,
+        "coverage": "partial_multi_provider",
+        "scope": "selected_counties_only",
+        "manual_sources": [
+          {
+            "id": "fannie_mae_homepath",
+            "label": "Fannie Mae HomePath (בדיקה ידנית)",
+            "url": "https://homepath.fanniemae.com/property-finder",
+            "status": "manual_link_only"
+          },
+          {
+            "id": "bank_of_america_reo",
+            "label": "Bank of America REO בפנסילבניה (בדיקה ידנית)",
+            "url": "https://foreclosures.bankofamerica.com/pennsylvania",
+            "status": "manual_link_only"
+          }
+        ],
+        "note": "סריקה אוטומטית: Freddie Mac HomeSteps ו-HUD בלבד. קישורי Fannie Mae ו-Bank of America מוצגים לבדיקה ידנית ואינם נסרקים או נספרים; יש להרחיב כיסוי רק באמצעות פיד/API רשמי ומורשה.",
+        "passed_filters": 0,
+        "minimum_data_rejected": 1,
+        "filter_rejections": {
+          "incomplete_required_data": 1,
+          "sqft": 3,
+          "location": 1
+        },
+        "needs_details": 1,
+        "status_detail": "1 רשומות שממתינות לפרטים נשמרו בקובץ בדיקה; אין להניח שהן עברו את המסננים."
+      },
+      "offmarket": {
+        "label": "OFF MARKET",
+        "status": "needs_verification",
+        "checked_at": "2026-10-12T13:49:31-04:00",
+        "detail": "הרשימה הקיימת כוללת מועמדים היסטוריים; לא נוצרים מועמדים מהיעדרות בסריקה חלקית"
+      }
+    },
+    "geography_qa": {
+      "Allegheny County": {
+        "region_type": "5",
+        "rows": 0,
+        "city_mismatch_count": 0,
+        "actual_cities": {},
+        "source_locations": {}
+      },
+      "Pittsburgh": {
+        "region_type": "6",
+        "rows": 0,
+        "city_mismatch_count": 0,
+        "actual_cities": {},
+        "source_locations": {}
+      }
+    },
+    "raw_mls_seen": 0,
+    "source_candidates_retained_for_review": 5,
+    "duplicates_removed": 0,
+    "filter_rejections": {
+      "incomplete_required_data": 1,
+      "sqft": 3,
+      "location": 1
+    },
+    "filter_rejections_by_source": {
+      "reo": {
+        "incomplete_required_data": 1,
+        "sqft": 3,
+        "location": 1
+      }
+    },
+    "required_data_rejections_by_field": {
+      "sqft": 1
+    },
+    "required_data_rejections_by_source": {
+      "reo": 1
+    },
+    "source_property_type_counts": {
+      "UNKNOWN": 4
+    },
+    "source_passed_filters": {
+      "reo": 0
+    },
+    "redfin_location_top25": {},
+    "listing_source_details": {
+      "version": "basic-source-1.1-request-budget-20261012",
+      "new_rentcast_calls": 0,
+      "statuses": {},
+      "rows": 0,
+      "external_page_requests": 0,
+      "cached_attempts": 0
+    },
+    "off_market_detection": "disabled_without_verified_listing_status",
+    "sheriff_status_updates": 0,
+    "price_drop_events": 0,
+    "price_drop_properties": 0,
+    "persistence_records_retained_for_review": 0,
+    "persistence_guard_removed": 0,
+    "total_properties": 1196,
+    "finished_at": "2026-10-12T13:49:31-04:00"
   }
 ]
