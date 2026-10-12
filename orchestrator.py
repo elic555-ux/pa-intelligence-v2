@@ -27,14 +27,15 @@ from listing_source import enrich_rows as enrich_listing_source_rows
 
 EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
-CONFIG_FILE = ("manual_scan_config.json" if os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch") == "workflow_dispatch"
-               else "scan_config.json")
+CONFIG_FILE = os.environ.get("PA_SCAN_CONFIG_FILE", "").strip() or (
+    "manual_scan_config.json" if os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch") == "workflow_dispatch"
+    else "scan_config.json")
 SCAN_LOG_FILE = "scan_log.json"
 GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.3-sheriff-status-refresh-20261012"
+ORCHESTRATOR_VERSION = "3.10.4-sheriff-source-recovery-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -1336,6 +1337,18 @@ def fetch_allegheny_sheriff_listings():
         candidate_urls = [configured_url]
     else:
         candidate_urls = links[:3]
+        # A prior verified official URL is only a download candidate. The PDF's
+        # dates, schema and statuses must still pass the current validation.
+        cached = load_json_file(SHERIFF_FILE, [])
+        if isinstance(cached, list):
+            recovered = []
+            for row in cached:
+                if not isinstance(row, dict) or str(row.get("county") or "").casefold() != "allegheny":
+                    continue
+                url = row.get("source_url") or row.get("url")
+                if valid_sheriff_pdf_url(url) and url not in candidate_urls and url not in recovered:
+                    recovered.append(url)
+            candidate_urls.extend(recovered[:3])
         if now_est().date().isoformat() <= "2026-10-05" and SHERIFF_KNOWN_PDF not in candidate_urls:
             candidate_urls.append(SHERIFF_KNOWN_PDF)
 
