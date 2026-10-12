@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.18.1 / 2026-10-11: partial scan selections read by checked property in Chrome -->
+<!-- PA UI 8.19.0 / 2026-10-12: one county catalog; independent source selections preserved -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -654,26 +654,9 @@
                 </div>
             </div>
             
-            <div class="space-y-1.5 pt-2">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">2. עיר / יישוב (Municipality):</span>
-                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Philadelphia" data-county="Philadelphia" onchange="handleSettingCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Pittsburgh" data-county="Allegheny" onchange="handleSettingCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Allentown" data-county="Lehigh" onchange="handleSettingCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Reading" data-county="Berks" onchange="handleSettingCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Erie" data-county="Erie" onchange="handleSettingCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Scranton" data-county="Lackawanna" onchange="handleSettingCityCheckboxChange('Scranton', this.checked)"><span>Scranton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Bethlehem" data-county="Northampton" onchange="handleSettingCityCheckboxChange('Bethlehem', this.checked)"><span>Bethlehem</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="setting-city-box accent-blue-500" value="Lancaster" data-county="Lancaster" onchange="handleSettingCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
-                </div>
-            </div>
-            
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-emerald-400">3. שכונה / אזור (Neighborhood):</span>
+                    <span class="text-xs font-bold text-emerald-400">2. ערים, שכונות ואזורים בתוך המחוזות:</span>
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllSettingNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllSettingNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
@@ -710,7 +693,7 @@
             </div>
             
             <div class="border-t border-gray-800 pt-3 space-y-2">
-                <span class="text-xs font-bold text-emerald-400">שכונות ואזורים לפי עיר (שמות מהרשימה ומהמקור):</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
+                <span class="text-xs font-bold text-emerald-400">ערים, שכונות ואזורים לפי מחוז:</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
                 <div id="setting-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
             </div>
             
@@ -844,26 +827,9 @@
                 </div>
             </div>
             
-            <div class="space-y-1.5 pt-2">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-blue-400">2. עיר / יישוב (Municipality):</span>
-                    <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandCities(true)" class="text-blue-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandCities(false)" class="text-blue-400 hover:underline font-bold">נקה הכל</button></div>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1.5 text-xs text-gray-300">
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Philadelphia" data-county="Philadelphia" onchange="handleCityCheckboxChange('Philadelphia', this.checked)"><span>Philadelphia</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Pittsburgh" data-county="Allegheny" onchange="handleCityCheckboxChange('Pittsburgh', this.checked)"><span>Pittsburgh</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Allentown" data-county="Lehigh" onchange="handleCityCheckboxChange('Allentown', this.checked)"><span>Allentown</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Reading" data-county="Berks" onchange="handleCityCheckboxChange('Reading', this.checked)"><span>Reading</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Erie" data-county="Erie" onchange="handleCityCheckboxChange('Erie', this.checked)"><span>Erie</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Scranton" data-county="Lackawanna" onchange="handleCityCheckboxChange('Scranton', this.checked)"><span>Scranton</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Bethlehem" data-county="Northampton" onchange="handleCityCheckboxChange('Bethlehem', this.checked)"><span>Bethlehem</span></label>
-                    <label dir="ltr" class="flex items-center gap-1.5 bg-gray-950 p-1.5 rounded-lg border border-gray-800"><input type="checkbox" class="ondemand-city-box accent-blue-500" value="Lancaster" data-county="Lancaster" onchange="handleCityCheckboxChange('Lancaster', this.checked)"><span>Lancaster</span></label>
-                </div>
-            </div>
-            
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-emerald-400">3. שכונה / אזור (Neighborhood):</span>
+                    <span class="text-xs font-bold text-emerald-400">2. ערים, שכונות ואזורים בתוך המחוזות:</span>
                     <div class="text-xs space-x-2 space-x-reverse"><button onclick="toggleAllOnDemandNeighborhoods(true)" class="text-emerald-400 hover:underline font-bold">בחר הכל</button><span class="text-gray-600">|</span><button onclick="toggleAllOnDemandNeighborhoods(false)" class="text-emerald-400 hover:underline font-bold">נקה הכל</button></div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-[11px] text-gray-300">
@@ -900,7 +866,7 @@
             </div>
             
             <div class="border-t border-gray-800 pt-3 space-y-2">
-                <span class="text-xs font-bold text-emerald-400">שכונות ואזורים לפי עיר (שמות מהרשימה ומהמקור):</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
+                <span class="text-xs font-bold text-emerald-400">ערים, שכונות ואזורים לפי מחוז:</span><p class="text-[10px] text-amber-400">מסגרת כתומה: שם ישן שטרם נצפה בכתיב זהה במקור. בדוק אותו לפני סריקה מצומצמת.</p>
                 <div id="ondemand-dynamic-neighborhoods" class="space-y-2 text-xs text-gray-300"></div>
             </div>
             
@@ -959,6 +925,7 @@
         const scanSaveLocks = {};
         let scanCatalogAreas = {};
         const staticScanLocationInputs = {};
+        const scanCityCounties = Object.freeze({"Philadelphia": "Philadelphia", "Pittsburgh": "Allegheny", "Allentown": "Lehigh", "Reading": "Berks", "Erie": "Erie", "Scranton": "Lackawanna", "Bethlehem": "Northampton", "Lancaster": "Lancaster"});
         let boardScanPriceRange = initialBoardScanPriceRange();
         let boardPriceMinEdited = false;
 
@@ -1258,8 +1225,9 @@
             }
             // A selected source location activates only its own parent scope.
             // Never use the county click handler here: it selects all siblings.
-            checkedScanInputs(prefix, 'hood').forEach(input => {
-                if (!scanParentForArea(prefix, input.dataset.city)?.checked) updateScanLocationParent(prefix, input.dataset.city);
+            checkedScanInputs(prefix, 'hood').flatMap(selectedScanInputBindings).forEach(binding => {
+                const parent = scanParentForArea(prefix, binding.area);
+                if (parent && !parent.checked) updateScanLocationParent(prefix, binding.area);
             });
             const config = cleanScanSettings(buildServerConfig(isManual));
             const errors = scanConfigurationErrors(config);
@@ -1610,7 +1578,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             for (const [id, prefix] of [['settings-modal', 'setting'], ['ondemand-modal', 'ondemand']]) {
                 const modal = document.getElementById(id);
                 modal.addEventListener('change', event => {
-                    if (event.target.matches(`.${prefix}-hood-box`)) updateScanLocationParent(prefix, event.target.dataset.city);
+                    if (event.target.matches(`.${prefix}-hood-box`)) handleUnifiedScanPlaceChange(prefix, event.target);
                     if (event.target.matches('input, select')) saveScanDraft(prefix);
                 });
                 modal.addEventListener('input', event => {
@@ -1695,26 +1663,80 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             } catch (error) { alert('השחזור לא נשמר בשרת. הנכס נשאר בארכיון.'); }
         }
 
+        function scanInputBindings(input) {
+            if (input.dataset.geoBindings) return JSON.parse(input.dataset.geoBindings);
+            return [{area: canonicalScanArea(input.dataset.city || ''), value: input.value}];
+        }
+
+        function selectedScanInputBindings(input) {
+            if (!input.checked) return [];
+            const bindings = scanInputBindings(input);
+            if (!input.dataset.activeGeoBindings) return bindings;
+            const active = new Set(JSON.parse(input.dataset.activeGeoBindings));
+            return bindings.filter(binding => active.has(JSON.stringify([binding.area, binding.value])));
+        }
+
+        function setScanInputBindings(input, area, checked) {
+            const bindings = scanInputBindings(input);
+            const active = new Set(selectedScanInputBindings(input).map(binding => JSON.stringify([binding.area, binding.value])));
+            for (const binding of bindings) {
+                if (area !== null && canonicalScanArea(binding.area) !== canonicalScanArea(area)) continue;
+                const key = JSON.stringify([binding.area, binding.value]);
+                if (checked) active.add(key); else active.delete(key);
+            }
+            input.dataset.activeGeoBindings = JSON.stringify([...active]);
+            input.checked = active.size > 0 || input.dataset.citySelection === 'true';
+        }
+
+        function scanAreaInputs(prefix, area) {
+            const canonical = canonicalScanArea(area);
+            return Array.from(document.querySelectorAll(`.${prefix}-hood-box`)).filter(input =>
+                scanInputBindings(input).some(binding => canonicalScanArea(binding.area) === canonical));
+        }
+
+        function scanAreaLocations(prefix, area) {
+            const canonical = canonicalScanArea(area);
+            return [...new Set(scanAreaInputs(prefix, canonical).flatMap(selectedScanInputBindings)
+                .filter(binding => canonicalScanArea(binding.area) === canonical).map(binding => binding.value))];
+        }
+
+        function scanCityChosen(input) {
+            return input.checked && (input.dataset.citySelection === undefined || input.dataset.citySelection === 'true');
+        }
+
+        function handleUnifiedScanPlaceChange(prefix, input) {
+            const checked = input.checked;
+            if (input.classList.contains(`${prefix}-city-box`)) {
+                input.dataset.citySelection = String(checked);
+                for (const child of scanAreaInputs(prefix, input.value)) setScanInputBindings(child, input.value, checked);
+            }
+            setScanInputBindings(input, null, checked);
+            const areas = [...new Set(scanInputBindings(input).map(binding => binding.area))];
+            for (const area of areas) updateScanLocationParent(prefix, area);
+            if (input.classList.contains(`${prefix}-city-box`)) updateCountyAfterCityChange(prefix, input.value);
+            refreshScanScopeIndicators(prefix);
+        }
+
         function toggleAllCounties(prefix, state) {
             document.querySelectorAll(`.${prefix}-county-box`).forEach(cb => { cb.checked = state; cb.indeterminate = false; });
-            document.querySelectorAll(`.${prefix}-city-box, .${prefix}-hood-box`).forEach(cb => { cb.checked = state; });
-            if (prefix === 'setting') rememberSettingsDraft(); else rememberOnDemandDraft();
+            document.querySelectorAll(`.${prefix}-city-box`).forEach(cb => { cb.dataset.citySelection = String(state); cb.checked = state; });
+            document.querySelectorAll(`.${prefix}-hood-box`).forEach(cb => setScanInputBindings(cb, null, state));
+            refreshScanScopeIndicators(prefix);
+            saveScanDraft(prefix);
         }
 
         function handleCountyScopeChange(prefix, county, checked) {
-            // Only an explicit county click cascades downward.
+            // The only whole-county action is an explicit click on its checkbox.
             document.querySelectorAll(`.${prefix}-city-box[data-county="${county}"]`).forEach(city => {
+                city.dataset.citySelection = String(checked);
                 city.checked = checked;
-                document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                    if (hood.dataset.city === city.value) hood.checked = checked;
-                });
+                for (const input of scanAreaInputs(prefix, city.value)) setScanInputBindings(input, city.value, checked);
             });
-            document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                if (hood.dataset.city === county || hood.dataset.city === `${county} County`) hood.checked = checked;
-            });
-            const countyBox = Array.from(document.querySelectorAll(`.${prefix}-county-box`)).find(cb => cb.value === county);
-            if (countyBox) { countyBox.indeterminate = false; countyBox.dataset.locationScope = 'false'; }
-            if (prefix === 'setting') rememberSettingsDraft(); else rememberOnDemandDraft();
+            for (const input of scanAreaInputs(prefix, `${county} County`)) setScanInputBindings(input, `${county} County`, checked);
+            const parent = scanParentForArea(prefix, `${county} County`);
+            if (parent) { parent.checked = checked; parent.indeterminate = false; parent.dataset.locationScope = 'false'; }
+            refreshScanScopeIndicators(prefix);
+            saveScanDraft(prefix);
         }
 
         function scanParentForArea(prefix, area) {
@@ -1728,80 +1750,78 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function updateScanLocationParent(prefix, area) {
             const parent = scanParentForArea(prefix, area);
             if (!parent) return;
-            const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
-                .filter(input => canonicalScanArea(input.dataset.city) === canonicalScanArea(area));
-            const selected = locations.filter(input => input.checked).length;
-            // Do not dispatch change on the parent: that would select unrelated places.
-            parent.checked = selected > 0;
-            parent.indeterminate = selected > 0 && selected < locations.length;
+            const inputs = scanAreaInputs(prefix, area);
+            const selected = inputs.filter(input => selectedScanInputBindings(input).some(binding =>
+                canonicalScanArea(binding.area) === canonicalScanArea(area))).length;
+            const isCity = parent.classList.contains(`${prefix}-city-box`);
+            if (isCity) parent.dataset.citySelection = String(selected > 0);
+            parent.checked = selected > 0 || (isCity && selectedScanInputBindings(parent).length > 0);
+            parent.indeterminate = selected > 0 && selected < inputs.length;
             parent.dataset.locationScope = String(selected > 0);
-            if (parent.classList.contains(`${prefix}-city-box`)) updateCountyAfterCityChange(prefix, parent.value);
+            if (isCity) updateCountyAfterCityChange(prefix, parent.value);
         }
 
         function refreshScanScopeIndicators(prefix) {
             document.querySelectorAll(`.${prefix}-county-box, .${prefix}-city-box`).forEach(parent => {
-                const area = parent.classList.contains(`${prefix}-county-box`) ? `${parent.value} County` : parent.value;
-                const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
-                    .filter(input => canonicalScanArea(input.dataset.city) === area);
-                const selected = locations.filter(input => input.checked).length;
-                parent.dataset.locationScope = String(parent.checked && selected > 0);
-                parent.indeterminate = parent.checked && selected > 0 && selected < locations.length;
+                const isCity = parent.classList.contains(`${prefix}-city-box`);
+                const area = isCity ? parent.value : `${parent.value} County`;
+                const inputs = scanAreaInputs(prefix, area);
+                const selected = inputs.filter(input => selectedScanInputBindings(input).some(binding =>
+                    canonicalScanArea(binding.area) === area)).length;
+                const active = isCity ? scanCityChosen(parent) : parent.checked;
+                parent.dataset.locationScope = String(active && selected > 0);
+                parent.indeterminate = active && selected > 0 && selected < inputs.length;
+                if (!isCity && !parent.checked) parent.indeterminate = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county="${parent.value}"]`)).some(scanCityChosen);
             });
         }
 
         function toggleScanLocations(prefix, state) {
             const profile = buildServerConfig(prefix === 'ondemand');
-            const previousAreas = new Set(checkedScanInputs(prefix, 'hood')
-                .map(input => canonicalScanArea(input.dataset.city)));
+            const affected = new Set();
             document.querySelectorAll(`.${prefix}-hood-box`).forEach(input => {
-                input.checked = state && scanAreaSelected(profile, input.dataset.city);
+                for (const binding of scanInputBindings(input)) {
+                    if (scanAreaSelected(profile, binding.area) || !state) {
+                        affected.add(binding.area);
+                        setScanInputBindings(input, binding.area, state);
+                    }
+                }
             });
-            // Clearing a selected subset must not turn it into a whole-region scan.
-            if (!state) previousAreas.forEach(area => updateScanLocationParent(prefix, area));
+            affected.forEach(area => updateScanLocationParent(prefix, area));
             refreshScanScopeIndicators(prefix);
             saveScanDraft(prefix);
         }
 
         function updateCountyAfterCityChange(prefix, cityName) {
-            const city = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county]`))
-                .find(cb => cb.value === cityName);
+            const city = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county]`)).find(cb => cb.value === cityName);
             if (!city) return;
-            const county = Array.from(document.querySelectorAll(`.${prefix}-county-box`))
-                .find(cb => cb.value === city.dataset.county);
+            const county = scanParentForArea(prefix, `${city.dataset.county} County`);
             if (!county) return;
             const siblings = Array.from(document.querySelectorAll(`.${prefix}-city-box[data-county="${city.dataset.county}"]`));
-            if (county.checked && county.dataset.locationScope !== 'true' && siblings.some(cb => !cb.checked)) {
+            if (county.checked && county.dataset.locationScope !== 'true' && siblings.some(cb => !scanCityChosen(cb))) {
                 county.checked = false;
-                document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                    if (canonicalScanArea(hood.dataset.city) === `${city.dataset.county} County`) hood.checked = false;
-                });
+                for (const input of scanAreaInputs(prefix, `${city.dataset.county} County`)) setScanInputBindings(input, `${city.dataset.county} County`, false);
             }
-            if (!county.checked) county.indeterminate = siblings.some(cb => cb.checked);
+            if (!county.checked) county.indeterminate = siblings.some(scanCityChosen);
         }
 
         function buildGeoAreas(prefix) {
             const scopes = {};
             checkedScanInputs(prefix, 'city').forEach(city => {
-                const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`)).filter(hood => hood.dataset.city === city.value);
-                const selected = [...new Set(locations.filter(hood => hood.checked).map(hood => hood.value))];
-                scopes[city.value] = {allLocations: selected.length === 0, locations: selected};
+                const locations = scanAreaLocations(prefix, city.value);
+                scopes[city.value] = {allLocations: locations.length === 0, locations};
             });
-            document.querySelectorAll(`.${prefix}-county-box`).forEach(county => {
-                const area = county.value;
-                const locations = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
-                    .filter(hood => hood.dataset.city === `${area} County` ||
-                        (area === 'Allegheny' && hood.dataset.city === 'Allegheny'));
-                if (!county.checked || !locations.length) return;
-                const selected = [...new Set(locations.filter(hood => hood.checked).map(hood => hood.value))];
-                scopes[`${area} County`] = {allLocations: selected.length === 0, locations: selected};
+            checkedScanInputs(prefix, 'county').forEach(county => {
+                const area = `${county.value} County`;
+                const locations = scanAreaLocations(prefix, area);
+                scopes[area] = {allLocations: locations.length === 0, locations};
             });
             return scopes;
         }
 
         function checkedScanInputs(prefix, kind) {
-            // Chrome's :checked omits indeterminate controls even when checked
-            // is true. Partial county/city choices are active scan scopes.
-            return Array.from(document.querySelectorAll(`.${prefix}-${kind}-box`)).filter(input => input.checked);
+            // Read checked directly: Chrome excludes indeterminate inputs from :checked.
+            return Array.from(document.querySelectorAll(`.${prefix}-${kind}-box`))
+                .filter(input => kind === 'city' ? scanCityChosen(input) : input.checked);
         }
 
         function selectedScanCounties(prefix) {
@@ -1809,13 +1829,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function selectedScanLocations(prefix) {
-            return checkedScanInputs(prefix, 'hood')
-                .filter(hood => {
-                    const area = hood.dataset.city || '';
-                    const isCounty = area === 'Allegheny' || area.endsWith(' County');
-                    const name = isCounty ? area.replace(/ County$/, '') : area;
-                    return document.querySelector(`.${prefix}-${isCounty ? 'county' : 'city'}-box[value="${CSS.escape(name)}"]`)?.checked;
-                }).map(hood => hood.value);
+            return [...new Set(checkedScanInputs(prefix, 'hood').flatMap(selectedScanInputBindings).filter(binding => {
+                const parent = scanParentForArea(prefix, binding.area);
+                return parent && (parent.classList.contains(`${prefix}-city-box`) ? scanCityChosen(parent) : parent.checked);
+            }).map(binding => binding.value))];
         }
 
         function canonicalScanArea(area) {
@@ -1839,8 +1856,12 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function restoreGeoAreas(prefix, saved) {
-            document.querySelectorAll(`.${prefix}-hood-box`).forEach(hood => {
-                hood.checked = savedScanLocationChecked(saved, hood.dataset.city, hood.value);
+            const cityChoices = saved.uiSelections?.cities ?? saved.cities ?? [];
+            document.querySelectorAll(`.${prefix}-city-box`).forEach(input => { input.dataset.citySelection = String(cityChoices.includes(input.value)); });
+            document.querySelectorAll(`.${prefix}-hood-box`).forEach(input => {
+                const active = scanInputBindings(input).filter(binding => savedScanLocationChecked(saved, binding.area, binding.value));
+                input.dataset.activeGeoBindings = JSON.stringify(active.map(binding => JSON.stringify([binding.area, binding.value])));
+                input.checked = active.length > 0 || input.dataset.citySelection === 'true';
             });
             refreshScanScopeIndicators(prefix);
         }
@@ -1849,8 +1870,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             return {
                 counties: checkedScanInputs(prefix, 'county').map(cb => cb.value),
                 cities: checkedScanInputs(prefix, 'city').map(cb => cb.value),
-                locations: checkedScanInputs(prefix, 'hood')
-                    .map(cb => ({area: canonicalScanArea(cb.dataset.city), value: cb.value}))
+                locations: checkedScanInputs(prefix, 'hood').flatMap(selectedScanInputBindings)
+                    .map(binding => ({area: canonicalScanArea(binding.area), value: binding.value}))
             };
         }
 
@@ -2728,62 +2749,68 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function renderGeoCatalog(prefix, areas) {
             const container = document.getElementById(`${prefix}-dynamic-neighborhoods`);
             if (!container) return;
-            // Keep references to the original checkboxes: they were moved into this
-            // container, so clearing it on a second render used to delete them.
             if (!staticScanLocationInputs[prefix]) {
                 staticScanLocationInputs[prefix] = Array.from(document.querySelectorAll(`.${prefix}-hood-box`))
                     .filter(input => !input.closest(`#${prefix}-dynamic-neighborhoods`));
+                for (const input of staticScanLocationInputs[prefix]) {
+                    const grid = input.closest('.grid');
+                    if (grid) grid.classList.add('hidden');
+                    input.closest('label')?.remove();
+                }
             }
             container.replaceChildren();
             const saved = scanFormProfiles[prefix] || lastConfirmedScanProfile(prefix) || {};
-            const staticInputs = staticScanLocationInputs[prefix];
-            const staticGrid = document.getElementById(`${prefix}-static-neighborhoods`) || staticInputs[0]?.closest('.grid');
-            if (staticGrid) {
-                staticGrid.id = `${prefix}-static-neighborhoods`;
-                staticGrid.classList.add('hidden');
-            }
-            const byArea = {};
-            for (const input of staticInputs) {
-                input.dataset.city = canonicalScanArea(input.dataset.city);
-                (byArea[input.dataset.city] ||= []).push(input);
-            }
-            const names = new Set([...Object.keys(areas), ...Object.keys(byArea)]);
-            for (const area of Array.from(names).sort((a,b) => a.localeCompare(b))) {
-                const countyName = area.replace(/ County$/, '');
-                const countyArea = area === 'Allegheny' || area.endsWith(' County');
-                const parent = document.querySelector(countyArea ? `.${prefix}-county-box[value="${CSS.escape(countyName)}"]` : `.${prefix}-city-box[value="${CSS.escape(area)}"]`);
-                if (!parent) continue;
-                const fromSource = Array.from(areas[area] || []).sort((a,b) => a.localeCompare(b));
-                const sourceNames = new Set(fromSource.map(v => v.toLowerCase()));
-                const oldInputs = byArea[area] || [];
-                const known = new Set(oldInputs.map(input => input.value.toLowerCase()));
-                const newLocations = fromSource.filter(v => !known.has(v.toLowerCase()));
-                if (!oldInputs.length && !newLocations.length) continue;
+            const grouped = new Map();
+            const add = (area, value, fromSource = false, cityParent = null) => {
+                const canonical = canonicalScanArea(area);
+                const county = canonical.endsWith(' County') ? canonical.replace(/ County$/, '') : scanCityCounties[canonical];
+                if (!county || !scanParentForArea(prefix, `${county} County`)) return;
+                if (!grouped.has(county)) grouped.set(county, new Map());
+                const key = String(value).trim().toLocaleLowerCase('en-US');
+                if (!key) return;
+                const places = grouped.get(county);
+                if (!places.has(key)) places.set(key, {name: value, bindings: new Map(), source: false, cityParent: null});
+                const place = places.get(key);
+                if (cityParent) { place.cityParent = cityParent; place.name = cityParent; }
+                else place.bindings.set(JSON.stringify([canonical, value]), {area: canonical, value});
+                place.source ||= fromSource;
+            };
+            for (const [area, values] of Object.entries(areas)) for (const value of values) add(area, value, true);
+            for (const input of staticScanLocationInputs[prefix]) add(input.dataset.city, input.value);
+            for (const [city, county] of Object.entries(scanCityCounties)) add(`${county} County`, city, true, city);
+            const cityChoices = saved.uiSelections?.cities ?? saved.cities ?? [];
+            for (const [county, places] of [...grouped].sort(([a], [b]) => a.localeCompare(b))) {
                 const group = document.createElement('details');
                 group.className = 'bg-gray-950 border border-gray-800 rounded-xl px-3 py-2';
+                group.dataset.county = county;
                 const summary = document.createElement('summary');
                 summary.className = 'cursor-pointer text-emerald-300 font-bold';
-                summary.textContent = `${countyArea ? 'מחוז ' : 'עיר '}${area} — ${oldInputs.length + newLocations.length} שכונות / אזורי מקור`;
+                summary.textContent = `מחוז ${county} — ${places.size} ערים, שכונות ואזורים`;
                 const grid = document.createElement('div');
                 grid.className = 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 mt-2 text-[11px]';
-                for (const input of oldInputs) {
-                    const label = input.closest('label');
-                    if (!label) continue;
-                    input.checked = savedScanLocationChecked(saved, area, input.value);
-                    if (!sourceNames.has(input.value.toLowerCase())) { label.title = 'שם מהרשימה הישנה; טרם נמצא בשם זהה בנתוני המקור'; label.classList.add('border-amber-700/50'); }
-                    grid.append(label);
-                }
-                for (const location of newLocations) {
-                    const label = document.createElement('label'); label.dir = 'ltr'; label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
-                    const input = document.createElement('input'); input.type = 'checkbox'; input.value = location; input.className = `${prefix}-hood-box accent-emerald-500`; input.dataset.city = area;
-                    // An enlarged source catalog must never enlarge a saved scan.
-                    input.checked = savedScanLocationChecked(saved, area, location);
-                    const name = document.createElement('span'); name.textContent = location;
+                for (const place of [...places.values()].sort((a, b) => a.name.localeCompare(b.name))) {
+                    const bindings = [...place.bindings.values()];
+                    const active = bindings.filter(binding => savedScanLocationChecked(saved, binding.area, binding.value));
+                    const label = document.createElement('label');
+                    label.dir = 'ltr'; label.className = 'flex items-center gap-1.5 bg-gray-900 p-1.5 rounded-lg border border-gray-800';
+                    const input = document.createElement('input'); input.type = 'checkbox'; input.value = place.name;
+                    input.className = `${prefix}-hood-box accent-emerald-500`;
+                    input.dataset.city = bindings[0]?.area || `${county} County`;
+                    input.dataset.geoBindings = JSON.stringify(bindings);
+                    input.dataset.activeGeoBindings = JSON.stringify(active.map(binding => JSON.stringify([binding.area, binding.value])));
+                    if (place.cityParent) {
+                        input.classList.add(`${prefix}-city-box`);
+                        input.dataset.county = county;
+                        input.dataset.citySelection = String(cityChoices.includes(place.cityParent));
+                    }
+                    input.checked = active.length > 0 || input.dataset.citySelection === 'true';
+                    const name = document.createElement('span'); name.textContent = place.name;
+                    if (!place.source) { label.title = 'שם מהרשימה הישנה; טרם נמצא בשם זהה בנתוני המקור'; label.classList.add('border-amber-700/50'); }
                     label.append(input, name); grid.append(label);
                 }
                 group.append(summary, grid); container.append(group);
             }
-            if (!container.children.length) container.textContent = 'אין עדיין אזורים זמינים עבור הערים האלה.';
+            if (!container.children.length) container.textContent = 'אין עדיין ערים ושכונות זמינות למחוזות האלה.';
             refreshScanScopeIndicators(prefix);
         }
 
@@ -3416,39 +3443,31 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function toggleAllSettingCities(state) {
-            document.querySelectorAll('.setting-city-box').forEach(cb => { cb.checked = state; });
-            document.querySelectorAll('.setting-hood-box').forEach(cb => {
-                if (!canonicalScanArea(cb.dataset.city).endsWith(' County')) cb.checked = state;
-            });
-            document.querySelectorAll('.setting-city-box').forEach(cb => updateCountyAfterCityChange('setting', cb.value));
+            document.querySelectorAll('.setting-city-box').forEach(input => { input.checked = state; handleUnifiedScanPlaceChange('setting', input); });
             rememberSettingsDraft();
         }
         function toggleAllSettingNeighborhoods(state) {
             toggleScanLocations('setting', state);
         }
         function handleSettingCityCheckboxChange(cityName, isChecked) {
-            document.querySelectorAll('.setting-hood-box').forEach(cb => {
-                if (cb.dataset.city === cityName) cb.checked = isChecked;
-            });
-            updateCountyAfterCityChange('setting', cityName);
+            const city = scanParentForArea('setting', cityName);
+            if (!city) return;
+            city.checked = isChecked;
+            handleUnifiedScanPlaceChange('setting', city);
             rememberSettingsDraft();
         }
         function toggleAllOnDemandCities(state) {
-            document.querySelectorAll('.ondemand-city-box').forEach(cb => { cb.checked = state; });
-            document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
-                if (!canonicalScanArea(cb.dataset.city).endsWith(' County')) cb.checked = state;
-            });
-            document.querySelectorAll('.ondemand-city-box').forEach(cb => updateCountyAfterCityChange('ondemand', cb.value));
+            document.querySelectorAll('.ondemand-city-box').forEach(input => { input.checked = state; handleUnifiedScanPlaceChange('ondemand', input); });
             rememberOnDemandDraft();
         }
         function toggleAllOnDemandNeighborhoods(state) {
             toggleScanLocations('ondemand', state);
         }
         function handleCityCheckboxChange(cityName, isChecked) {
-            document.querySelectorAll('.ondemand-hood-box').forEach(cb => {
-                if (cb.dataset.city === cityName) cb.checked = isChecked;
-            });
-            updateCountyAfterCityChange('ondemand', cityName);
+            const city = scanParentForArea('ondemand', cityName);
+            if (!city) return;
+            city.checked = isChecked;
+            handleUnifiedScanPlaceChange('ondemand', city);
             rememberOnDemandDraft();
         }
 
