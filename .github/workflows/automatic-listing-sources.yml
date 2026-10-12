@@ -4,13 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check = no source requests; pilot = 3; batch = 100; enable/disable = 25 after actual MLS scans. Source: Tarasa.'
+        description: 'check = no requests; group10 = up to 10 recent MLS properties; enable/disable = automatic completion. Source: Tarasa.'
         type: choice
-        options: [check, pilot, batch, enable, disable]
+        options: [check, group10]
         required: true
         default: check
+  schedule:
+    - cron: '47 * * * *'
   workflow_run:
-    workflows: ['1. Central Scanner — V2.7']
+    workflows: ['1. Central Scanner — V2.9 (manual validation)']
     types: [completed]
     branches: [main]
 
@@ -26,26 +28,38 @@ jobs:
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
+      - name: Check saved completion schedule
+        id: timing
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo 'due=true' >> "$GITHUB_OUTPUT"
+          else
+            python3 scan_schedule.py completion
+          fi
       - uses: actions/setup-python@v6
+        if: steps.timing.outputs.due == 'true'
         with:
           python-version: '3.11'
       - name: Install public HTML parser
+        if: steps.timing.outputs.due == 'true'
         run: python -m pip install 'beautifulsoup4==4.15.0'
       - name: Verify cache, identities, queue and request limits
+        if: steps.timing.outputs.due == 'true'
         run: |
-          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule
           node test_secondary_sources.cjs
       - name: Complete a bounded group or change activation
+        if: steps.timing.outputs.due == 'true'
         id: worker
         env:
           AUTO_EVENT: ${{ github.event_name }}
@@ -55,7 +69,7 @@ jobs:
           python - <<'PY'
           import os, subprocess, sys
           mode = os.environ.get('AUTO_MODE', 'check') if os.environ['AUTO_EVENT'] == 'workflow_dispatch' else 'automatic'
-          if mode not in {'check', 'pilot', 'batch', 'enable', 'disable', 'automatic'}:
+          if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'}:
               raise SystemExit('Unsupported mode')
           subprocess.run([sys.executable, 'automatic_listing_sources.py', mode,
               '--upstream-sha', os.environ.get('UPSTREAM_SHA', '')], check=True)
