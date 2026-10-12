@@ -35,7 +35,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.5-mls-bounded-price-windows-20261012"
+ORCHESTRATOR_VERSION = "3.10.6-mls-resume-price-windows-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -2727,6 +2727,28 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
     """Split capped price ranges; never exceed five CSV requests per area."""
     audit = audit if audit is not None else {}
     queue = [(int(min_p), int(max_p))]
+    resumed_scan = None
+    # Resume only today's matching source query. Historical results stay in
+    # the inventory; absence from a continuation is not an off-market signal.
+    prior = load_json_file(SCANNER_STATUS_FILE, {})
+    event = prior.get("last_event", {}) if isinstance(prior, dict) else {}
+    areas = event.get("sources", {}).get("mls", {}).get("areas", [])
+    if str(event.get("started_at") or "")[:10] == now_est().date().isoformat():
+        for previous in areas:
+            if previous.get("area") != city_name or previous.get("status") != "partial":
+                continue
+            old_windows = previous.get("windows") or []
+            original = previous.get("query_price_range") or ([old_windows[0].get("min_price"), old_windows[0].get("max_price")] if old_windows else None)
+            pending = previous.get("unresolved_windows") or []
+            if original != [int(min_p), int(max_p)] or not pending:
+                continue
+            if all(isinstance(item, dict) and isinstance(item.get("min_price"), int)
+                   and isinstance(item.get("max_price"), int)
+                   and int(min_p) <= item["min_price"] <= item["max_price"] <= int(max_p)
+                   and item.get("reason") == "request_budget_or_source_failure" for item in pending):
+                queue = [(item["min_price"], item["max_price"]) for item in pending]
+                resumed_scan = event.get("scan_id")
+                break
     windows, collected, keys = [], [], set()
     unresolved = []
     while queue and len(windows) < 5:
@@ -2752,6 +2774,8 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
     unresolved.extend({"min_price": low, "max_price": high, "reason": "request_budget_or_source_failure"} for low, high in queue)
     audit.update({"area": city_name, "rows": len(collected), "windows": windows,
                   "request_count": len(windows), "request_budget": 5,
+                  "query_price_range": [int(min_p), int(max_p)],
+                  "resumed_from_scan": resumed_scan,
                   "unresolved_windows": unresolved,
                   "coverage": "not_proven_complete",
                   "limit_reached": bool(unresolved),
