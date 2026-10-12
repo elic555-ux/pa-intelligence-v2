@@ -35,7 +35,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.4-sheriff-source-recovery-20261012"
+ORCHESTRATOR_VERSION = "3.10.5-mls-bounded-price-windows-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -2590,7 +2590,7 @@ def classify_strategy(deal_type, price, beds, summary="", property_type=""):
     }
 
 
-def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
+def fetch_live_mls_window(city_name, min_p, max_p, audit=None):
     audit = audit if audit is not None else {}
     audit.update({"area": city_name, "status": "failed", "rows": 0,
                   "coverage": "not_proven_complete"})
@@ -2633,7 +2633,9 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
         if not {"ADDRESS", "PRICE", "CITY"}.issubset(set(reader.fieldnames or [])):
             audit["error"] = "unexpected CSV schema"
             return []
-        for row in reader:
+        raw_rows = list(reader)
+        audit["raw_rows"] = len(raw_rows)
+        for row in raw_rows:
             addr = row.get("ADDRESS")
             raw_price = row.get("PRICE")
             if not addr or not raw_price:
@@ -2715,10 +2717,49 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
 
     if "error" not in audit:
         audit.update({"status": "success", "rows": len(discovered),
-                      "limit_reached": len(discovered) >= 350})
+                      "limit_reached": audit.get("raw_rows", len(discovered)) >= 350})
     if audit.get("limit_reached"):
         audit.update({"status": "partial", "error": "Redfin result cap reached (350); coverage may be incomplete"})
     return discovered
+
+
+def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
+    """Split capped price ranges; never exceed five CSV requests per area."""
+    audit = audit if audit is not None else {}
+    queue = [(int(min_p), int(max_p))]
+    windows, collected, keys = [], [], set()
+    unresolved = []
+    while queue and len(windows) < 5:
+        low, high = queue.pop(0)
+        detail = {}
+        rows = fetch_live_mls_window(city_name, low, high, detail)
+        windows.append({**detail, "min_price": low, "max_price": high})
+        for row in rows:
+            key = property_key(row)
+            if key not in keys:
+                collected.append(row)
+                keys.add(key)
+        if detail.get("limit_reached"):
+            if low < high:
+                middle = (low + high) // 2
+                queue.extend([(low, middle), (middle + 1, high)])
+            else:
+                unresolved.append({"min_price": low, "max_price": high, "reason": "single_price_cap"})
+        elif detail.get("status") != "success":
+            unresolved.append({"min_price": low, "max_price": high, "reason": detail.get("error", "source_unavailable")})
+            # Do not keep requesting after the source refuses or fails a request.
+            break
+    unresolved.extend({"min_price": low, "max_price": high, "reason": "request_budget_or_source_failure"} for low, high in queue)
+    audit.update({"area": city_name, "rows": len(collected), "windows": windows,
+                  "request_count": len(windows), "request_budget": 5,
+                  "unresolved_windows": unresolved,
+                  "coverage": "not_proven_complete",
+                  "limit_reached": bool(unresolved),
+                  "status": "partial" if unresolved and collected else
+                            windows[0].get("status", "failed") if unresolved else "success"})
+    if unresolved:
+        audit["error"] = "MLS coverage remains incomplete: capped, failed or budget-limited price windows"
+    return collected
 
 
 def get_placeholder_sector_results(active_sectors):
