@@ -34,7 +34,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.1-sheriff-pdf-review-20261012"
+ORCHESTRATOR_VERSION = "3.10.2-sheriff-municipality-and-type-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -1757,6 +1757,8 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
             cooldown = timedelta(days=30) if isinstance(cached, dict) and cached.get("no_data") else timedelta(hours=1)
             if checked_at is None or now - checked_at >= cooldown:
                 todo[pin] = parcel
+    # The per-run lookup limit also applies after the initial backfill.
+    todo = dict(list(todo.items())[:max(0, int(max_lookups))])
     attempted_pins = set()
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         futures = {pool.submit(fetch_county_building_data, parcel,
@@ -1781,6 +1783,15 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
                 if not row.get(field) and data.get(field) is not None:
                     row[field] = data[field]
             row["county_property_status"] = "matched"
+            county_type = county_use_property_type(data.get("use_code"))
+            if county_type and not normalize_property_type(row.get("property_type") or row.get("type") or row.get("source_property_type")):
+                row["property_type"] = county_type
+                row["type"] = county_type
+                if not row.get("source_property_type"):
+                    row["source_property_type"] = data["use_code"]
+                row["property_type_source"] = data["source"]
+                row["property_type_source_url"] = data.get("source_url")
+                row["property_type_source_date"] = data.get("retrieved_at")
         else:
             if not pin:
                 row["county_property_status"] = "invalid_parcel_id"
@@ -1795,6 +1806,14 @@ def enrich_sheriff_rows_from_county(rows, max_lookups=50):
         cache_meta["initial_backfill_completed_at"] = iso_now_est()
     atomic_write_json(SHERIFF_PROPERTY_CACHE_FILE, cache)
     return sum(row.get("county_property_status") == "matched" for row in rows)
+
+
+def county_use_property_type(value):
+    """Only explicit county use descriptions establish a residential type."""
+    key = re.sub(r"\s+", " ", str(value or "")).strip().casefold()
+    return {"single family": "Single Family", "two family": "Duplex / Triplex",
+            "three family": "Duplex / Triplex", "four family": "Multi-Family",
+            "townhouse": "Townhouse", "vacant land": "Land / Lot"}.get(key)
 
 
 PROPERTY_TYPE_ALIASES = {
@@ -2414,7 +2433,10 @@ def geography_rejection(prop, geo_areas, scan_scope=None):
         scan_scope = compile_scan_scope(cities, counties, geo_areas)
     area = str(prop.get("source_scan_area") or "").strip()
     target = REGION_MAP.get(area) or {}
-    city = scope_city_key(prop.get("city") or prop.get("municipality"))
+    court_record = str(prop.get("source_type") or "").casefold() in {"sheriff", "tax"}
+    # Court mailing cities can cover neighboring municipalities. Use the
+    # documented municipality to establish city boundaries, never the ZIP city.
+    city = scope_city_key(prop.get("municipality") if court_record else prop.get("city") or prop.get("municipality"))
     state = scope_location_key(prop.get("source_state") or prop.get("state"))
     if state and state not in {"pa", "pennsylvania"}:
         return "state"
@@ -2430,11 +2452,15 @@ def geography_rejection(prop, geo_areas, scan_scope=None):
         rule = rules[city_area]
         if rule["allLocations"]:
             return None
+        if any(scope_city_key(value) == city for value in rule["locations"]):
+            return None
         if not locations:
             return "location_unverified"
         return None if locations & {scope_location_key(value) for value in rule["locations"]} else "location"
     county_name = next((name for name in scan_scope["counties"] if name.casefold() == county), None)
     if not county_name:
+        if court_record and not city and county and any(normalize_county_name(CITY_COUNTY.get(name)) == county for name in scan_scope["cities"]):
+            return "geography_unverified"
         return "outside_scope" if county or city else "geography_unverified"
     rule = rules[COUNTY_REGION_KEYS[county_name]]
     if rule["allLocations"]:
@@ -2447,7 +2473,8 @@ def geography_rejection(prop, geo_areas, scan_scope=None):
     # A marketing LOCATION equal to a known city cannot override a different CITY.
     if locations & (allowed - named_cities):
         return None
-    municipalities = {scope_city_key(prop.get(field)) for field in ("city", "municipality") if prop.get(field)}
+    fields = ("municipality",) if court_record else ("city", "municipality")
+    municipalities = {scope_city_key(prop.get(field)) for field in fields if prop.get(field)}
     if municipalities & {scope_city_key(value) for value in rule["locations"]}:
         return None
     return "location" if municipalities or locations else "location_unverified"
@@ -3128,8 +3155,6 @@ def run_orchestrator():
                            "rows": 0}
     log_entry["sources"] = sources
 
-    sources.setdefault("tax", {"label": SOURCE_LABELS["tax"], "status": "not_connected", "rows": 0})
-
     sheriff_rows = []
     sheriff_county_results = {}
     if "sheriff" in active_sectors_now:
@@ -3635,8 +3660,8 @@ def run_orchestrator():
     log_entry["redfin_location_top25"] = dict(top_locations)
     print(f"📍 GEO QA — ערכי LOCATION מובילים מ-Redfin: {dict(top_locations)}")
     print(f"👁 MLS MARKET STATE — נצפו במקור LIVE לפני מסננים: {len(raw_mls_seen_keys)}")
-    print(f"🧪 MLS QA — דחיות לפי מסנן: {filter_rejections}")
-    print(f"🏷️️ MLS QA — סוגי נכס מהמקור: {source_type_counts}")
+    print(f"🧪 בדיקת כל המקורות — דחיות לפי מסנן: {filter_rejections}")
+    print(f"🏷️️ בדיקת כל המקורות — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
 
     # Read the subject's source page only after the existing scan filters.
