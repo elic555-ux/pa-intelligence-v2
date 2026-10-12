@@ -8,10 +8,10 @@ from datetime import datetime, timezone, timedelta
 
 PROPERTIES_FILE = 'properties.json'
 GEOCODE_CACHE_FILE = 'geocode_cache.json'
-CONFIG_FILE = 'scan_config.json'
+CONFIG_FILE = os.environ.get('PA_SCAN_CONFIG_FILE', 'scan_config.json')
 GEOCODE_RETRY_DAYS = 30
 MAX_GEOCODE_REQUESTS_PER_RUN = 20
-ANALYZER_VERSION = '2.4-documented-financials-20261007'
+ANALYZER_VERSION = '2.5-current-run-scope-20261012'
 
 
 def utc_now_iso():
@@ -30,16 +30,49 @@ def normalize_county(value):
     return text
 
 
-def load_selected_counties():
-    """Return only the counties selected for the current scanner configuration."""
+def load_selected_counties(scan_context=None):
+    """Use a run snapshot when supplied; include explicit city-only selections."""
     try:
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        values = config.get('counties', []) if isinstance(config, dict) else []
+        if scan_context is not None:
+            values = scan_context.get('scope', {}).get('county_sources', []) + scan_context.get('passed_counties', [])
+        else:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as handle:
+                config = json.load(handle)
+            if not isinstance(config, dict):
+                raise ValueError('invalid analysis profile')
+            city_county = {'Pittsburgh': 'Allegheny', 'Philadelphia': 'Philadelphia', 'Allentown': 'Lehigh',
+                          'Reading': 'Berks', 'Erie': 'Erie', 'Scranton': 'Lackawanna',
+                          'Bethlehem': 'Northampton', 'Lancaster': 'Lancaster'}
+            values = list(config.get('counties', [])) if isinstance(config, dict) else []
+            values += [city_county[city] for city in config.get('cities', []) if city in city_county]
         return {normalize_county(value) for value in values if normalize_county(value)}
-    except (OSError, json.JSONDecodeError, TypeError) as e:
-        print(f"⚠️ לא ניתן לקרוא את המחוזות שנבחרו; Analyzer לא יבצע עיבוד נכסים: {e}")
+    except (OSError, ValueError, TypeError) as error:
+        print(f"⚠️ לא ניתן לקרוא את היקף הניתוח; לא יבוצעו בקשות מיקום: {error}")
         return set()
+
+
+def analysis_scope_key(prop):
+    """A listing id alone cannot identify the permitted geocoding subject."""
+    identity = [str(prop.get('id') or ''), normalize_geocode_key(prop.get('address'), prop.get('city')),
+                str(prop.get('zip') or '').strip(), normalize_county(prop.get('county'))]
+    return json.dumps(identity, ensure_ascii=False, separators=(',', ':'))
+
+
+def load_scan_context():
+    path = os.environ.get('PA_SCAN_CONTEXT_FILE')
+    if not path:
+        return None
+    with open(path, 'r', encoding='utf-8') as handle:
+        context = json.load(handle)
+    if (not isinstance(context, dict) or context.get('schema') != 1
+            or not isinstance(context.get('scope'), dict)
+            or not isinstance(context.get('property_keys'), list)
+            or any(not isinstance(key, str) for key in context['property_keys'])):
+        raise ValueError('invalid scan analysis context')
+    run_id = os.environ.get('GITHUB_RUN_ID')
+    if run_id and context.get('github_run_id') != run_id:
+        raise ValueError('analysis context belongs to a different GitHub run')
+    return context
 
 
 def load_geocode_cache():
@@ -386,7 +419,9 @@ def run_analyzer():
         print("❌ properties.json אינו מכיל רשימת נכסים.")
         return
 
-    selected_counties = load_selected_counties()
+    scan_context = load_scan_context()
+    selected_counties = load_selected_counties(scan_context)
+    permitted_keys = set(scan_context["property_keys"]) if scan_context is not None else None
     print(f"🎯 Analyzer מוגבל למחוזות שנבחרו: {sorted(selected_counties)}")
     if not selected_counties:
         print("⏭️ לא נבחרו מחוזות; מתבצע ניקוי כספי מקומי בלבד, ללא בקשות מיקום.")
@@ -424,7 +459,8 @@ def run_analyzer():
             continue
 
         county_key = normalize_county(prop.get('county'))
-        if not county_key or county_key not in selected_counties:
+        if (not county_key or county_key not in selected_counties
+                or (permitted_keys is not None and analysis_scope_key(prop) not in permitted_keys)):
             updated_properties.append(prop)
             outside_counties_skipped += 1
             continue
