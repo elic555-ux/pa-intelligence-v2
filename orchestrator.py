@@ -24,6 +24,7 @@ import pytz
 from analyzer import calculate_metrics, calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties, analysis_scope_key
 import requests
 from listing_source import enrich_rows as enrich_listing_source_rows
+from scan_schedule import scan_sectors
 
 EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
@@ -35,7 +36,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.6-mls-resume-price-windows-20261012"
+ORCHESTRATOR_VERSION = "3.10.7-mls-twice-daily-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -2320,6 +2321,7 @@ def load_server_config():
                 "neighborhoods": data.get("neighborhoods", []), "geo_areas": data["geoAreas"]},
             "autoScanEnabled": data["autoScanEnabled"],
             "schedules": data.get("schedules", {}), "requestId": data.get("requestId"),
+            "schedule_profile": data,
             "config_source": CONFIG_FILE,
         }
     except (ValueError, TypeError, OverflowError):
@@ -2645,10 +2647,10 @@ def fetch_live_mls_window(city_name, min_p, max_p, audit=None):
             if price <= 0:
                 continue
 
-            dom = max(0, safe_number(row.get("DAYS ON MARKET"), 0, int))
-
-            listed_dt = now_est() - timedelta(days=dom)
-            listed_date_str = listed_dt.strftime("%d/%m/%Y")
+            raw_dom = safe_number(row.get("DAYS ON MARKET"), None, int)
+            dom = max(0, raw_dom) if raw_dom is not None else None
+            listed_dt = now_est() - timedelta(days=dom) if dom is not None else None
+            listed_date_str = listed_dt.strftime("%d/%m/%Y") if listed_dt else None
             beds = safe_number(row.get("BEDS"), None, int)
             total_rooms = safe_number(row.get("TOTAL ROOMS") or row.get("ROOMS"), None, int)
             baths = safe_number(row.get("BATHS"), None, float)
@@ -2705,6 +2707,7 @@ def fetch_live_mls_window(city_name, min_p, max_p, audit=None):
                 "url": home_url,
                 "listed_date": listed_date_str,
                 "days_on_market": dom,
+                "listed_date_basis": "source_days_on_market" if dom is not None else "unknown",
                 "last_source_check": iso_now_est(),
                 "market_status": "active",
             })
@@ -3185,22 +3188,7 @@ def run_orchestrator():
         previous_report = load_json_file(SCANNER_STATUS_FILE, {})
         previous_sources = previous_report.get("sources", {}) if isinstance(previous_report, dict) else {}
 
-        for sec, sched in schedules.items():
-            if str(sec).casefold() in DISABLED_SCAN_SECTORS:
-                continue
-            s_day = sched.get("day", "Everyday")
-            s_time = sched.get("time", "08:00")
-            if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", s_time):
-                continue
-            hour, minute = map(int, s_time.split(":"))
-            due = now_est().replace(hour=hour, minute=minute, second=0, microsecond=0)
-            last_checked = (previous_sources.get(sec) or {}).get("checked_at")
-            try:
-                already_attempted = bool(last_checked and datetime.fromisoformat(last_checked) >= due)
-            except (ValueError, TypeError):
-                already_attempted = False
-            if now_est() >= due and not already_attempted and (s_day == "Everyday" or s_day == current_day):
-                active_sectors_now.append(sec)
+        active_sectors_now = scan_sectors(server_config_raw["schedule_profile"], previous_report, scan_started)
 
         active_sectors_now = [s for s in active_sectors_now
                               if s in user_selected_sectors
