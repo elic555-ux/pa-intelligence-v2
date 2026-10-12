@@ -12,11 +12,8 @@ on:
         description: "Commit containing this request's saved parameters"
         required: false
         type: string
-  # התזמון מושהה עד להשלמת תיקוני ההיקף והמסננים ואימות ההגדרות בשרת.
-  # שמירת autoScanEnabled בממשק אינה מפעילה תזמון כל עוד הטריגר מושהה כאן.
-  # אין להחזיר את הטריגר לפני סיום האימות; יש לעדכן גם את בדיקת ההשהיה.
-  # schedule:
-  #   - cron: '0 * * * *'
+  schedule:
+    - cron: '17 * * * *'
 
 permissions:
   contents: write
@@ -39,14 +36,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Check saved UI schedule without source requests
+        id: timing
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo 'due=true' >> "$GITHUB_OUTPUT"
+          else
+            python3 scan_schedule.py scan
+          fi
       - uses: actions/setup-python@v5
+        if: steps.timing.outputs.due == 'true'
         with:
           python-version: '3.10'
       - name: Set up Node.js for offline UI guard
+        if: steps.timing.outputs.due == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Install scanner dependencies
+        if: steps.timing.outputs.due == 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y poppler-utils tesseract-ocr
@@ -54,13 +62,15 @@ jobs:
           # מתקין את כל הספריות מקובץ הדרישות, ומוודא שגם pytz מותקן
           python -m pip install -r requirements.txt pytz
       - name: Print code identity
+        if: steps.timing.outputs.due == 'true'
         id: checks
         run: |
           git log -1 --format='%h %s'
           sha256sum orchestrator.py
           python -m py_compile orchestrator.py analyzer.py
-          python -m unittest -q test_scan_controls test_scan_scope
+          env -u PA_SCAN_CONFIG_FILE python -m unittest -q test_scan_controls test_scan_scope test_scan_schedule
       - name: Run selected scanners
+        if: steps.timing.outputs.due == 'true'
         id: scanner
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -150,7 +160,7 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
       - name: Publish scan summary
-        if: always()
+        if: always() && steps.timing.outputs.due == 'true'
         run: |
           python - <<'PY'
           import json, os
