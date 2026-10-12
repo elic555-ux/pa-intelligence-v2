@@ -34,7 +34,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.0-shared-scope-filters-20261012"
+ORCHESTRATOR_VERSION = "3.10.1-sheriff-pdf-review-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -1092,6 +1092,20 @@ def parse_sheriff_text(body, source_url, imported=False):
     if not blocks:
         raise ValueError("לא זוהו בלוקים של נכסים במסמך")
     rows, seen = [], set()
+    unparsed_records = []
+    def preserve_unparsed(block):
+        docket = re.search(r"\b(?:GD|MG|AR)-\d{2}-\d{5,6}\b", block.split('Comments:')[0], re.I)
+        identity = f"{source_url}|{sale_day.isoformat()}|{block}"
+        unparsed_records.append({
+            "id": "PA-SHERIFF-PARSE-" + hashlib.sha256(identity.encode()).hexdigest()[:20],
+            "source_type": "sheriff", "county": "Allegheny", "address": None,
+            "docket_id": docket.group().upper() if docket else None,
+            "sheriff_status": "Active", "sale_date": sale_day.isoformat(),
+            "source_published_date": printed_day.isoformat(),
+            "source_url": official_source_url, "source_document": source_document,
+            "data_status": "needs_source_review", "raw_source_text": block.strip(),
+            "parse_issue": "active_address_unparsed",
+        })
     skipped_active = 0
     recognized = 0
     unrecognized_blocks = 0
@@ -1108,6 +1122,7 @@ def parse_sheriff_text(body, source_url, imported=False):
         address = re.search(r"(?m)^\s*([A-Z][A-Z .'-]+),\s*PA\s+(\d{5})(?:-\d{4})?\b", facts, re.I)
         if not docket or not address:
             skipped_active += 1
+            preserve_unparsed(block)
             continue
         city, zip_code = (x.strip() for x in address.groups())
         raw_lines = facts.splitlines()
@@ -1117,15 +1132,18 @@ def parse_sheriff_text(body, source_url, imported=False):
                                  if line.strip().casefold() == "sale type"), None)
         if city_line_index is None or sale_label_index is None:
             skipped_active += 1
+            preserve_unparsed(block)
             continue
         address_lines = [line.strip() for line in raw_lines[sale_label_index + 2:city_line_index] if line.strip()]
         if len(address_lines) < 1:
             skipped_active += 1
+            preserve_unparsed(block)
             continue
         street = re.sub(r"\s+", " ", " ".join(address_lines)).strip()
         street = re.sub(r"\s+-\s*(?:VACANT|AGRICULTURAL)\b.*$", "", street, flags=re.I).strip()
         if re.search(r"\b(?:Sale Type|Case Number|Parcel/Tax ID|Plaintiff|Attorney|Cost & Tax Bid)\b", street, re.I):
             skipped_active += 1
+            preserve_unparsed(block)
             continue
         key = docket.group().upper() + ':' + normalize_addr_key(street, city, zip_code)
         if key in seen:
@@ -1195,12 +1213,25 @@ def parse_sheriff_text(body, source_url, imported=False):
             "last_source_check": iso_now_est(), "deal_score": None,
             "filter_status": "investment_fields_unavailable",
         })
-    if skipped_active or recognized < int(len(blocks) * 0.95) or not rows:
+    if recognized < int(len(blocks) * 0.95) or not rows:
         raise ValueError(f"פענוח חלקי: זוהו {recognized}/{len(blocks)} סטטוסים; {skipped_active} כתובות פעילות לא זוהו")
     return rows, {"published_date": printed_day.isoformat(), "sale_date": sale_day.isoformat(),
                   "parsed_blocks": len(blocks), "skipped_active_addresses": skipped_active,
                   "unrecognized_blocks": unrecognized_blocks,
+                  "unparsed_records": unparsed_records,
                   "mode": "imported" if imported else "live"}
+
+
+def preserve_sheriff_pdf_review(audit, scan_id):
+    """Preserve unresolved source records before enrichment or inventory writes."""
+    records = audit.get("unparsed_records", [])
+    if not isinstance(records, list):
+        raise ValueError("invalid unparsed Sheriff record list")
+    retained = retain_scan_review([(record, "sheriff_pdf_address_unparsed") for record in records],
+                                  scan_id, "sheriff_pdf_parse")
+    audit.pop("unparsed_records", None)
+    audit["unparsed_records_retained_for_review"] = retained
+    return retained
 
 
 def is_explicit_tax_sheriff_sale(sale_type):
@@ -2353,7 +2384,7 @@ def retain_scan_review(rejected, scan_id, origin):
         review["items"][key] = {"record": deepcopy(prop), "reason": reason, "reasons": reasons,
             "origins": origins, "first_checked_at": old.get("first_checked_at") or timestamp,
             "last_checked_at": timestamp, "scan_id": scan_id,
-            "status": "needs_details" if reason in {"incomplete_required_data", "property_type_unknown", "baths_unverified", "location_unverified", "geography_unverified"} else "outside_filters"}
+            "status": "needs_details" if reason in {"incomplete_required_data", "property_type_unknown", "baths_unverified", "location_unverified", "geography_unverified", "sheriff_pdf_address_unparsed"} else "outside_filters"}
     review["updated_at"] = timestamp
     json.dumps(review, allow_nan=False)
     os.makedirs(os.path.dirname(SCAN_REVIEW_FILE) or ".", exist_ok=True)
@@ -3122,6 +3153,13 @@ def run_orchestrator():
             try:
                 if county == "Allegheny":
                     county_rows, sheriff_pdf, sheriff_audit = fetch_allegheny_sheriff_listings()
+                    try:
+                        preserve_sheriff_pdf_review(sheriff_audit, scan_id)
+                    except (OSError, ValueError, TypeError) as exc:
+                        log_entry.update({"status": "failed", "finished_at": iso_now_est()})
+                        log_entry["errors"].append("Could not preserve unresolved Sheriff source records; scan stopped: " + str(exc))
+                        append_scan_log(log_entry)
+                        return
                     county_matches = enrich_sheriff_rows_from_county(county_rows, max_lookups=50)
                     sheriff_audit.update({
                         "county_property_matches": county_matches,
@@ -3200,6 +3238,10 @@ def run_orchestrator():
                 "status": aggregate_status, "rows": len(sheriff_rows),
                 "counties": sheriff_county_results, "investment_filters": "shared_scope_and_physical_filters",
             })
+            held_pdf_records = sum(item.get("unparsed_records_retained_for_review", 0) for item in sheriff_county_results.values())
+            if held_pdf_records:
+                sources["sheriff"].update({"pdf_records_retained_for_review": held_pdf_records,
+                    "note": f"{held_pdf_records} רשומות Active שכתובתן לא זוהתה נשמרו בנפרד לבדיקה. שאר הרשומות המזוהות ממשיכות למסננים; פענוח המסמך חלקי."})
             log_entry["sheriff_active_lots"] = len(sheriff_rows)
             log_entry["sheriff_sources_by_county"] = sheriff_county_results
         else:
