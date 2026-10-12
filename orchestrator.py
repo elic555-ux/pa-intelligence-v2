@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import base64
 import re
 import csv
 import io
@@ -20,7 +21,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 
 import pytz
-from analyzer import calculate_metrics, calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties
+from analyzer import calculate_metrics, calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties, analysis_scope_key
 import requests
 from listing_source import enrich_rows as enrich_listing_source_rows
 
@@ -33,8 +34,10 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.9.1-explicit-scan-areas-20261011"
+ORCHESTRATOR_VERSION = "3.10.0-shared-scope-filters-20261012"
 SCANNER_STATUS_FILE = "scanner_status.json"
+SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
+SCAN_CONTEXT_FILE = "scan_run_context.json"
 SOURCE_LABELS = {"mls": "MLS", "reo": "בנקים וכינוס", "sheriff": "מכירות שריף",
                  "tax": "חובות מס"}
 TAX_SCAN_SCOPE_COUNTIES = frozenset({"allegheny", "erie"})
@@ -1873,23 +1876,13 @@ CITY_COUNTY = {
 
 
 def build_mls_scan_areas(cities, counties):
-    selected_counties = {str(county).strip().casefold() for county in counties or []}
-    areas, selected_names = [], set()
-    for county, region_key in COUNTY_REGION_KEYS.items():
-        if county.casefold() in selected_counties:
-            areas.append(region_key)
-            selected_names.add(county.casefold())
-    for city in cities or []:
-        name = str(city).strip()
-        # This was a hidden legacy UI checkbox for a county-wide search.
-        # County scans now require the explicit counties field.
-        if name == "Allegheny":
-            continue
-        parent = CITY_COUNTY.get(name)
-        if parent and parent.casefold() in selected_names:
-            continue
-        if name and name not in areas:
-            areas.append(name)
+    selected_counties = {normalize_county_name(county) for county in counties or []}
+    areas = [key for county, key in COUNTY_REGION_KEYS.items() if county.casefold() in selected_counties]
+    known_cities = {name.casefold(): name for name, info in REGION_MAP.items() if str(info.get("region_type")) == "6"}
+    for value in cities or []:
+        city = known_cities.get(str(value).strip().casefold())
+        if city and city not in areas:
+            areas.append(city)
     return areas
 
 DISTRESS_KEYWORDS = [
@@ -1916,10 +1909,11 @@ def iso_now_est():
 
 def safe_number(value, default=0, number_type=float):
     try:
-        if value is None or value == "":
+        if value is None or value == "" or isinstance(value, bool):
             return default
-        return number_type(float(str(value).replace(",", "").strip()))
-    except (TypeError, ValueError):
+        parsed = float(str(value).replace(",", "").strip())
+        return number_type(parsed) if math.isfinite(parsed) else default
+    except (TypeError, ValueError, OverflowError):
         return default
 
 
@@ -2122,8 +2116,40 @@ def atomic_write_json(path, data):
     os.replace(temp_path, path)
 
 
+def load_run_profile():
+    """A UI request reads its saved profile at an immutable commit."""
+    commit = os.environ.get("PA_SCAN_CONFIG_COMMIT", "").strip()
+    request_id = os.environ.get("PA_SCAN_REQUEST_ID", "").strip()
+    if not commit and not request_id:
+        return load_json_file(CONFIG_FILE, None)
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if (not re.fullmatch(r"[0-9a-fA-F]{40}", commit) or not request_id or not token
+            or CONFIG_FILE != "manual_scan_config.json"
+            or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository)):
+        print("⚠️ פרטי הבקשה לגרסת ההגדרות השמורה אינם תקינים.")
+        return None
+    try:
+        response = requests.get(
+            f"https://api.github.com/repos/{repository}/contents/{CONFIG_FILE}",
+            params={"ref": commit},
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+            timeout=20)
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("encoding") != "base64":
+            raise ValueError("unexpected profile encoding")
+        data = json.loads(base64.b64decode(re.sub(r"\s+", "", payload["content"]), validate=True).decode("utf-8"))
+        if not isinstance(data, dict) or data.get("requestId") != request_id:
+            raise ValueError("profile request mismatch")
+        return data
+    except (requests.RequestException, ValueError, TypeError, KeyError, AttributeError):
+        print("⚠️ לא ניתן לאמת את ההגדרות השמורות עבור הבקשה; הסריקה נעצרה.")
+        return None
+
+
 def load_server_config():
-    data = load_json_file(CONFIG_FILE, None)
+    data = load_run_profile()
     if not isinstance(data, dict):
         return None
     # Each UI mode writes a flat profile. Never fall back to the old config.json,
@@ -2167,9 +2193,11 @@ def load_server_config():
             return None
         if "mls" in data["sectors"] and not data["propertyTypes"]:
             return None
+        scan_scope = compile_scan_scope(explicit_cities, data["counties"], data["geoAreas"])
         return {
+            "scan_scope": scan_scope,
             "scan_settings": {
-                "target_counties": data["counties"], "target_cities": explicit_cities,
+                "target_counties": scan_scope["counties"], "target_cities": scan_scope["cities"],
                 "price_range": {"min": min_price, "max": max_price},
                 "min_sqft": min_sqft, "max_sqft": max_sqft,
                 "min_beds": min_beds, "max_beds": max_beds, "min_baths": min_baths,
@@ -2201,27 +2229,197 @@ def load_existing_properties():
     return prop_dict
 
 
-def geography_rejection(prop, geo_areas):
+def scope_location_key(value):
+    return " ".join(str(value or "").split()).casefold()
+
+
+def scope_city_key(value):
+    value = scope_location_key(value)
+    value = re.sub(r"^(?:city|borough|township) of\s+", "", value)
+    return re.sub(r"\s+(?:city|borough|boro|township|twp)$", "", value).strip()
+
+
+def compile_scan_scope(cities, counties, geo_areas):
+    """Preserve explicit city scopes; a city restriction refines its county."""
     if not isinstance(geo_areas, dict):
-        return None
-    area = str(prop.get("source_scan_area") or "").strip()
-    city = str(prop.get("city") or "").strip()
-    target = REGION_MAP.get(area) or {}
-    if str(target.get("region_type")) == "6" and city.casefold() != area.casefold():
-        return "city_mismatch"
-    location = " ".join(str(prop.get("source_location") or "").split()).casefold()
-    county_scope = geo_areas.get(area) or geo_areas.get(str(target.get("county_name") or ""))
-    scopes = [county_scope]
-    if str(target.get("region_type")) == "5" and city != area and not isinstance(county_scope, dict):
-        scopes.append(geo_areas.get(city))
-    for scope in scopes:
-        if not isinstance(scope, dict) or scope.get("allLocations") is not False:
+        raise ValueError("geoAreas must be an object")
+    known_counties = {name.casefold(): name for name in COUNTY_REGION_KEYS}
+    known_cities = {name.casefold(): name for name, info in REGION_MAP.items() if str(info.get("region_type")) == "6"}
+    chosen_counties, chosen_cities = [], []
+    for value in counties or []:
+        name = known_counties.get(normalize_county_name(value))
+        if not name:
+            raise ValueError("unsupported county")
+        if name not in chosen_counties:
+            chosen_counties.append(name)
+    for value in cities or []:
+        if str(value).strip() == "Allegheny":
             continue
-        allowed = {" ".join(str(x).split()).casefold()
-                   for x in (scope.get("locations") or []) if isinstance(x, str)}
-        if not location or location not in allowed:
-            return "location"
+        name = known_cities.get(scope_location_key(value))
+        if not name:
+            raise ValueError("unsupported city")
+        if name not in chosen_cities:
+            chosen_cities.append(name)
+    if not chosen_counties and not chosen_cities:
+        raise ValueError("no selected scan area")
+    rules = {}
+    for area in [COUNTY_REGION_KEYS[name] for name in chosen_counties] + chosen_cities:
+        candidate_keys = [area]
+        if area == "Allegheny County":
+            candidate_keys.append("Allegheny")
+        specs = [geo_areas[key] for key in candidate_keys if key in geo_areas]
+        normalized = []
+        for spec in specs:
+            if not isinstance(spec, dict) or not isinstance(spec.get("allLocations"), bool):
+                raise ValueError("invalid location rule for " + area)
+            locations = spec.get("locations")
+            if not isinstance(locations, list) or any(not isinstance(value, str) or not value.strip() for value in locations):
+                raise ValueError("invalid locations for " + area)
+            locations = list(dict.fromkeys(value.strip() for value in locations))
+            if spec["allLocations"] == bool(locations):
+                raise ValueError("contradictory or empty location rule for " + area)
+            normalized.append({"allLocations": spec["allLocations"], "locations": locations})
+        if len(normalized) > 1 and normalized[0] != normalized[1]:
+            raise ValueError("conflicting legacy location rules")
+        rules[area] = normalized[0] if normalized else {"allLocations": True, "locations": []}
+    source_counties = set(chosen_counties)
+    source_counties.update(CITY_COUNTY[city] for city in chosen_cities if city in CITY_COUNTY)
+    return {"version": 1, "semantics": "city_location_scope_refines_county",
+            "cities": chosen_cities, "counties": chosen_counties, "geo_areas": rules,
+            "mls_scan_areas": build_mls_scan_areas(chosen_cities, chosen_counties),
+            "county_sources": sorted(source_counties)}
+
+
+def scan_property_rejection(prop, settings, scope):
+    """One filter gate for MLS, REO, Sheriff, Tax and the Sheriff cache."""
+    if required_property_data_failures(prop):
+        return "incomplete_required_data"
+    reason = geography_rejection(prop, scope["geo_areas"], scope)
+    if reason:
+        return reason
+    # Published auction thresholds and debts are never asking prices.
+    price = None if is_public_court_record(prop) else safe_number(prop.get("price"), None)
+    if price is not None and price > 0:
+        price_range = settings.get("price_range", {})
+        if not (price_range.get("min", 0) <= price <= price_range.get("max", 999999999)):
+            return "price"
+    sqft = safe_number(prop.get("sqft"), None)
+    beds = safe_number(prop.get("beds"), None)
+    baths = safe_number(prop.get("baths"), None)
+    if not (settings.get("min_sqft", 0) <= sqft <= settings.get("max_sqft", 99999)):
+        return "sqft"
+    if not (settings.get("min_beds", 0) <= beds <= settings.get("max_beds", 99)):
+        return "beds"
+    if settings.get("min_baths", 0) > 0:
+        if baths is None or baths < 0:
+            return "baths_unverified"
+        if baths < settings["min_baths"]:
+            return "baths"
+    selected_types = {normalize_property_type(value) or str(value).strip() for value in settings.get("property_types", [])}
+    if selected_types:
+        property_type = normalize_property_type(prop.get("property_type") or prop.get("type") or prop.get("source_property_type"))
+        if not property_type:
+            return "property_type_unknown"
+        if property_type not in selected_types:
+            return "property_type"
     return None
+
+
+def scan_review_key(prop):
+    identity = [prop.get("source_type"), prop.get("id"), property_key(prop), prop.get("docket_id"), prop.get("parcel_id")]
+    return hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode("utf-8")).hexdigest()[:32]
+
+
+def retain_scan_review(rejected, scan_id, origin):
+    """Write the original records before removing anything from an active file."""
+    if not rejected:
+        return 0
+    review = {"schema": 1, "items": {}}
+    if os.path.exists(SCAN_REVIEW_FILE):
+        with open(SCAN_REVIEW_FILE, "r", encoding="utf-8") as handle:
+            review = json.load(handle)
+        if not isinstance(review, dict) or review.get("schema") != 1 or not isinstance(review.get("items"), dict):
+            raise ValueError("scan review file is invalid; inventory writes are stopped")
+    timestamp = iso_now_est()
+    for prop, reason in rejected:
+        if not isinstance(prop, dict):
+            raise ValueError("cannot safely preserve a non-object property")
+        key = scan_review_key(prop)
+        old = review["items"].get(key) or {}
+        if not isinstance(old, dict):
+            raise ValueError("scan review entry is invalid")
+        origins = sorted(set(old.get("origins") or []) | {origin})
+        reasons = sorted(set(old.get("reasons") or []) | {reason})
+        review["items"][key] = {"record": deepcopy(prop), "reason": reason, "reasons": reasons,
+            "origins": origins, "first_checked_at": old.get("first_checked_at") or timestamp,
+            "last_checked_at": timestamp, "scan_id": scan_id,
+            "status": "needs_details" if reason in {"incomplete_required_data", "property_type_unknown", "baths_unverified", "location_unverified", "geography_unverified"} else "outside_filters"}
+    review["updated_at"] = timestamp
+    json.dumps(review, allow_nan=False)
+    os.makedirs(os.path.dirname(SCAN_REVIEW_FILE) or ".", exist_ok=True)
+    atomic_write_json(SCAN_REVIEW_FILE, review)
+    return len(rejected)
+
+
+def write_scan_analysis_context(scan_id, settings, scope, accepted_rows):
+    context = {"schema": 1, "scan_id": scan_id, "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "config_source": CONFIG_FILE, "settings": deepcopy(settings), "scope": deepcopy(scope),
+        "property_keys": sorted({analysis_scope_key(row) for row in accepted_rows}),
+        "passed_counties": sorted({normalize_county_name(row.get("county")) for row in accepted_rows if row.get("county")})}
+    atomic_write_json(SCAN_CONTEXT_FILE, context)
+
+
+def geography_rejection(prop, geo_areas, scan_scope=None):
+    if not isinstance(prop, dict) or not isinstance(geo_areas, dict):
+        return "geography_unverified"
+    if scan_scope is None:
+        cities, counties = [], []
+        for area in geo_areas:
+            info = REGION_MAP.get(area) or {}
+            if str(info.get("region_type")) == "6":
+                cities.append(area)
+            elif str(info.get("region_type")) == "5":
+                counties.append(info.get("county_name") or area)
+        scan_scope = compile_scan_scope(cities, counties, geo_areas)
+    area = str(prop.get("source_scan_area") or "").strip()
+    target = REGION_MAP.get(area) or {}
+    city = scope_city_key(prop.get("city") or prop.get("municipality"))
+    state = scope_location_key(prop.get("source_state") or prop.get("state"))
+    if state and state not in {"pa", "pennsylvania"}:
+        return "state"
+    if str(target.get("region_type")) == "6" and city != scope_city_key(area):
+        return "city_mismatch"
+    county = normalize_county_name(prop.get("county") or target.get("county_name") or CITY_COUNTY.get(area) or CITY_COUNTY.get(str(prop.get("city") or "")))
+    locations = {scope_location_key(prop.get(field)) for field in ("source_location", "neighborhood", "neighbourhood") if prop.get(field)}
+    rules = scan_scope["geo_areas"]
+    city_area = next((name for name in scan_scope["cities"] if scope_city_key(name) == city), None)
+    if city_area:
+        if not county and not state and not target:
+            return "geography_unverified"
+        rule = rules[city_area]
+        if rule["allLocations"]:
+            return None
+        if not locations:
+            return "location_unverified"
+        return None if locations & {scope_location_key(value) for value in rule["locations"]} else "location"
+    county_name = next((name for name in scan_scope["counties"] if name.casefold() == county), None)
+    if not county_name:
+        return "outside_scope" if county or city else "geography_unverified"
+    rule = rules[COUNTY_REGION_KEYS[county_name]]
+    if rule["allLocations"]:
+        return None
+    allowed = {scope_location_key(value) for value in rule["locations"]}
+    named_cities = {scope_location_key(value) for value in rule["locations"]
+                   if any(scope_city_key(name) == scope_city_key(value)
+                          and normalize_county_name(parent) == county
+                          for name, parent in CITY_COUNTY.items() if name != "Allegheny")}
+    # A marketing LOCATION equal to a known city cannot override a different CITY.
+    if locations & (allowed - named_cities):
+        return None
+    municipalities = {scope_city_key(prop.get(field)) for field in ("city", "municipality") if prop.get(field)}
+    if municipalities & {scope_city_key(value) for value in rule["locations"]}:
+        return None
+    return "location" if municipalities or locations else "location_unverified"
 
 
 def append_scan_log(entry):
@@ -2692,7 +2890,9 @@ def run_orchestrator():
         "errors": [],
         "code_sha256": code_hash,
         "github_sha": os.environ.get("GITHUB_SHA", "local"),
-        "request_id": server_config_raw.get("requestId") if server_config_raw and is_manual_trigger else None,
+        "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "request_id": (os.environ.get("PA_SCAN_REQUEST_ID") or (server_config_raw or {}).get("requestId")) if is_manual_trigger else None,
+        "config_commit": os.environ.get("PA_SCAN_CONFIG_COMMIT") or None,
     }
 
     if not server_config_raw:
@@ -2709,6 +2909,16 @@ def run_orchestrator():
         existing_props_dict = load_existing_properties()
         incomplete_existing = 0
         out_of_scope_tax_removed = 0
+        retained_existing = []
+        for key, row in existing_props_dict.items():
+            if enforce_tax_county_scope(deepcopy(row)) == "remove_tax_out_of_scope":
+                retained_existing.append((row, "unsupported_tax_county"))
+            elif required_property_data_failures(row):
+                retained_existing.append((row, "incomplete_required_data"))
+            elif (row.get("source_type") == "tax" and row.get("sale_date")
+                  and str(row["sale_date"])[:10] < now_est().date().isoformat()):
+                retained_existing.append((row, "past_tax_sale_requires_result_check"))
+        log_entry["existing_records_retained_for_review"] = retain_scan_review(retained_existing, scan_id, "existing_inventory")
         for key, row in list(existing_props_dict.items()):
             scope_action = enforce_tax_county_scope(row)
             if scope_action == "remove_tax_out_of_scope":
@@ -2729,7 +2939,7 @@ def run_orchestrator():
             existing_props_dict.pop(key, None)
         if expired_tax_keys:
             log_entry["expired_tax_candidates_removed"] = len(expired_tax_keys)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, TypeError) as exc:
         log_entry.update({"status": "failed", "finished_at": iso_now_est()})
         log_entry["errors"].append(str(exc))
         append_scan_log(log_entry)
@@ -2865,19 +3075,13 @@ def run_orchestrator():
     log_entry["market_state_basis"] = "raw_live_mls_before_user_filters"
     log_entry["selected_neighborhoods"] = selected_neighborhoods
     
-    selected_geo_areas = scan_settings.get("geo_areas")
-    if isinstance(selected_geo_areas, dict):
-        selected_geo_areas = {area: spec for area, spec in selected_geo_areas.items()
-                              if (area in cities_list or area in counties_list
-                                  or area.removesuffix(" County") in counties_list)
-                              and isinstance(spec, dict)}
-        log_entry["neighborhood_filter_status"] = (
-            "enforced_per_scan_area" if selected_geo_areas
-            else "county_wide_no_neighborhood_rule"
-        )
-    else:
-        selected_geo_areas = None
-        log_entry["neighborhood_filter_status"] = "audit_only_legacy_config"
+    scan_scope = server_config_raw["scan_scope"]
+    selected_geo_areas = scan_scope["geo_areas"]
+    log_entry["applied_scope"] = deepcopy(scan_scope)
+    log_entry["neighborhood_filter_status"] = "shared_scope_all_sources"
+    log_entry["filter_policy"] = {"sources": ["mls", "reo", "sheriff", "tax"],
+        "missing_required_facts": "retain_for_review", "missing_filtered_type_or_baths": "retain_for_review",
+        "price": "published_asking_price_only; no debt or auction threshold substituted"}
 
     print(f"🎯 אזורי יעד: {counties_list} {cities_list}")
     print(f"🎯 מחיר: {min_price:g}-{max_price:g} | SqFt: {min_sqft}-{max_sqft} | Beds: {min_beds}-{max_beds} | Baths min: {min_baths:g}")
@@ -2966,25 +3170,23 @@ def run_orchestrator():
                     county_status = sheriff_county_results.get(county, {}).get("status")
                     if county_status not in ("success", "imported"):
                         persisted_sheriff_rows.append(cached)
-                # The standalone sheriff cache feeds UI/counts too, so apply the
-                # same strict gate there rather than retaining incomplete rows.
-                sheriff_cache_before_gate = len(persisted_sheriff_rows)
-                persisted_sheriff_rows, sheriff_cache_rejections = keep_only_complete_property_rows(
-                    persisted_sheriff_rows
-                )
-                log_entry["sheriff_cache_incomplete_removed"] = (
-                    sheriff_cache_before_gate - len(persisted_sheriff_rows)
-                )
-                persisted_keys = {property_key(row) for row in persisted_sheriff_rows}
-                for fresh in sheriff_rows:
-                    if required_property_data_failures(fresh):
+                # Both old and new Sheriff rows pass the same gate as properties.json.
+                persisted_sheriff_rows.extend(sheriff_rows)
+                accepted_sheriff_cache, rejected_sheriff_cache = [], []
+                persisted_keys = set()
+                for row in persisted_sheriff_rows:
+                    reason = scan_property_rejection(row, scan_settings, scan_scope)
+                    if reason:
+                        rejected_sheriff_cache.append((row, reason))
                         continue
-                    key = property_key(fresh)
+                    key = property_key(row)
                     if key not in persisted_keys:
-                        persisted_sheriff_rows.append(fresh)
+                        accepted_sheriff_cache.append(row)
                         persisted_keys.add(key)
+                log_entry["sheriff_cache_retained_for_review"] = retain_scan_review(rejected_sheriff_cache, scan_id, "sheriff_cache")
+                persisted_sheriff_rows = accepted_sheriff_cache
                 atomic_write_json(SHERIFF_FILE, persisted_sheriff_rows)
-            except OSError as exc:
+            except (OSError, ValueError, TypeError) as exc:
                 log_entry["errors"].append(f"sheriff listing save failed: {exc}")
                 for item in sheriff_county_results.values():
                     item["status"] = "partial"
@@ -2996,7 +3198,7 @@ def run_orchestrator():
                                 else "failed")
             sources["sheriff"].update({
                 "status": aggregate_status, "rows": len(sheriff_rows),
-                "counties": sheriff_county_results, "investment_filters": "unavailable",
+                "counties": sheriff_county_results, "investment_filters": "shared_scope_and_physical_filters",
             })
             log_entry["sheriff_active_lots"] = len(sheriff_rows)
             log_entry["sheriff_sources_by_county"] = sheriff_county_results
@@ -3314,72 +3516,37 @@ def run_orchestrator():
     log_entry["raw_mls_seen"] = len(raw_mls_seen_keys)
 
     final_filtered = []
-    filter_rejections = {
-        "price": 0, "sqft": 0, "beds": 0, "baths": 0,
-        "property_type": 0, "property_type_unknown": 0,
-        "city_mismatch": 0, "location": 0, "incomplete_required_data": 0,
-    }
+    filter_rejections = {}
     incomplete_field_rejections = {}
     incomplete_rejections_by_source = {}
+    source_filter_rejections = {}
     source_type_counts = {}
-
+    rejected_candidates = []
     for prop in combined:
+        source_type = str(prop.get("source_type") or "unknown")
         missing_required = required_property_data_failures(prop)
-        if missing_required:
-            filter_rejections["incomplete_required_data"] += 1
-            source_type = str(prop.get("source_type") or "unknown")
-            incomplete_rejections_by_source[source_type] = incomplete_rejections_by_source.get(source_type, 0) + 1
-            for field in missing_required:
-                incomplete_field_rejections[field] = incomplete_field_rejections.get(field, 0) + 1
+        if not missing_required:
+            raw_type = str(prop.get("source_property_type") or "UNKNOWN").strip() or "UNKNOWN"
+            source_type_counts[raw_type] = source_type_counts.get(raw_type, 0) + 1
+        reason = scan_property_rejection(prop, scan_settings, scan_scope)
+        if reason:
+            filter_rejections[reason] = filter_rejections.get(reason, 0) + 1
+            by_source = source_filter_rejections.setdefault(source_type, {})
+            by_source[reason] = by_source.get(reason, 0) + 1
+            rejected_candidates.append((prop, reason))
+            if missing_required:
+                incomplete_rejections_by_source[source_type] = incomplete_rejections_by_source.get(source_type, 0) + 1
+                for field in missing_required:
+                    incomplete_field_rejections[field] = incomplete_field_rejections.get(field, 0) + 1
             continue
-
-        p_price = safe_number(prop.get("price"), None, float)
-        p_sqft = safe_number(prop.get("sqft"), None, int)
-        p_beds = safe_number(prop.get("beds"), None, int)
-        p_baths = safe_number(prop.get("baths"), None, float)
-        p_type = prop.get("property_type") or prop.get("type")
-
-        raw_type = str(prop.get("source_property_type") or "UNKNOWN").strip() or "UNKNOWN"
-        source_type_counts[raw_type] = source_type_counts.get(raw_type, 0) + 1
-
-        if prop.get("source_type") == "mls" and selected_geo_areas is not None:
-            reason = geography_rejection(prop, selected_geo_areas)
-            if reason:
-                filter_rejections[reason] += 1
-                continue
-
-        if prop.get("source_type") in {"sheriff", "tax"}:
-            final_filtered.append(prop)
-            continue
-        # Missing price does not make an otherwise complete property unusable.
-        # Apply the configured range only when a source supplied a price.
-        if p_price is not None and not (min_price <= p_price <= max_price):
-            filter_rejections["price"] += 1
-            continue
-        if min_sqft > 0 and (p_sqft is None or p_sqft < min_sqft):
-            filter_rejections["sqft"] += 1
-            continue
-        if max_sqft < 99999 and (p_sqft is None or p_sqft > max_sqft):
-            filter_rejections["sqft"] += 1
-            continue
-        if min_beds > 0 and (p_beds is None or p_beds < min_beds):
-            filter_rejections["beds"] += 1
-            continue
-        if max_beds < 99 and (p_beds is None or p_beds > max_beds):
-            filter_rejections["beds"] += 1
-            continue
-        if min_baths > 0 and (p_baths is None or p_baths < min_baths):
-            filter_rejections["baths"] += 1
-            continue
-        if selected_property_types:
-            if not p_type:
-                filter_rejections["property_type_unknown"] += 1
-                continue
-            if p_type not in selected_property_types:
-                filter_rejections["property_type"] += 1
-                continue
-
         final_filtered.append(prop)
+    try:
+        log_entry["source_candidates_retained_for_review"] = retain_scan_review(rejected_candidates, scan_id, "source_candidates")
+    except (OSError, ValueError, TypeError) as exc:
+        log_entry.update({"status": "failed", "finished_at": iso_now_est()})
+        log_entry["errors"].append("Could not preserve rejected source records; inventory merge stopped: " + str(exc))
+        append_scan_log(log_entry)
+        return
 
     unique_results = {}
     for prop in final_filtered:
@@ -3392,6 +3559,7 @@ def run_orchestrator():
     final_filtered = list(unique_results.values())
     log_entry["after_filters"] = len(final_filtered)
     log_entry["filter_rejections"] = filter_rejections
+    log_entry["filter_rejections_by_source"] = source_filter_rejections
     log_entry["required_data_rejections_by_field"] = incomplete_field_rejections
     log_entry["required_data_rejections_by_source"] = incomplete_rejections_by_source
     log_entry["source_property_type_counts"] = source_type_counts
@@ -3400,11 +3568,19 @@ def run_orchestrator():
             source["passed_filters"] = sum(1 for prop in final_filtered if prop.get("source_type") == sector)
             rejected = incomplete_rejections_by_source.get(sector, 0)
             source["minimum_data_rejected"] = rejected
+            source["filter_rejections"] = source_filter_rejections.get(sector, {})
+            needs_details = sum(count for reason, count in source["filter_rejections"].items()
+                                if reason in {"incomplete_required_data", "property_type_unknown", "baths_unverified", "location_unverified", "geography_unverified"})
+            source["needs_details"] = needs_details
+            if needs_details:
+                source["status_detail"] = f"{needs_details} רשומות שממתינות לפרטים נשמרו בקובץ בדיקה; אין להניח שהן עברו את המסננים."
+                if source.get("status") in {"success", "imported"}:
+                    source["status"] = "partial"
             if sector in {"sheriff", "tax"} and rejected and source.get("rows", 0):
                 source["status"] = "partial"
                 source["status_detail"] = (
                     f"המקור החזיר {source.get('rows', 0)} מועמדים; {rejected} נפסלו כי חסרו "
-                    "כתובת/מיקום, שטח או חדרי שינה. הם לא נשמרו במאגר."
+                    "כתובת/מיקום, שטח או חדרי שינה. הרשומות נשמרו בנפרד לבדיקה."
                 )
     log_entry["source_passed_filters"] = {
         sector: source.get("passed_filters", 0) for sector, source in sources.items()
@@ -3509,6 +3685,8 @@ def run_orchestrator():
         # Last persistence guard: no incomplete row can enter properties.json,
         # including an old row missed by an earlier source-specific path.
         persistence_rows_before_gate = len(final_merged_list)
+        final_rejected_rows = [(row, "incomplete_required_data") for row in final_merged_list if required_property_data_failures(row)]
+        log_entry["persistence_records_retained_for_review"] = retain_scan_review(final_rejected_rows, scan_id, "persistence_guard")
         final_merged_list, final_persistence_rejections = keep_only_complete_property_rows(
             final_merged_list
         )
@@ -3516,14 +3694,15 @@ def run_orchestrator():
             persistence_rows_before_gate - len(final_merged_list)
         )
         atomic_write_json(PROPERTIES_FILE, final_merged_list)
+        write_scan_analysis_context(scan_id, scan_settings, scan_scope, [existing_props_dict[key] for key in seen_keys])
         source_states = [sources[s].get("status") for s in active_sectors_now if s in sources]
         bad = {"failed", "blocked", "partial", "not_connected", "unsupported_area"}
         log_entry["status"] = "partial" if any(s in bad for s in source_states) else "success"
         if source_states and all(s in {"failed", "blocked", "not_connected", "unsupported_area"} for s in source_states):
             log_entry["status"] = "failed"
-    except OSError as exc:
+    except (OSError, ValueError, TypeError) as exc:
         log_entry["status"] = "failed"
-        log_entry["errors"].append(f"properties write failed: {exc}")
+        log_entry["errors"].append(f"properties/context write failed: {exc}")
         print(f"❌ שמירת properties.json נכשלה: {exc}")
 
     log_entry["total_properties"] = len(final_merged_list)
@@ -3574,3 +3753,6 @@ if __name__ == "__main__":
                         or financial_analysis_refresh_needed(stored_properties)))
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             output.write(f"analyze={'true' if analyze else 'false'}\n")
+
+    if load_json_file(SCANNER_STATUS_FILE, {}).get("last_event", {}).get("status") == "failed":
+        raise SystemExit(1)
