@@ -1,9 +1,12 @@
-name: "1. Central Scanner — V2.7"
+name: "1. Central Scanner — V2.8 (manual validation)"
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'
+  # התזמון מושהה עד להשלמת תיקוני ההיקף והמסננים ואימות ההגדרות בשרת.
+  # שמירת autoScanEnabled בממשק אינה מפעילה תזמון כל עוד הטריגר מושהה כאן.
+  # אין להחזיר את הטריגר לפני סיום האימות; יש לעדכן גם את בדיקת ההשהיה.
+  # schedule:
+  #   - cron: '0 * * * *'
 
 permissions:
   contents: write
@@ -25,6 +28,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+      - name: Set up Node.js for offline UI guard
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install scanner dependencies
         run: |
           sudo apt-get update -qq
