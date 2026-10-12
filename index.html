@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.19.3 / 2026-10-12: city checkboxes select only themselves; saved scopes remain independent -->
+<!-- PA UI 8.20.0 / 2026-10-12: city checkboxes select only themselves; saved scopes remain independent -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -92,7 +92,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.19.3 · 12.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.20.0 · 12.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -426,106 +426,10 @@
                     </label>
                 </div>
                 
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-3">
-                    <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-2"><h4 class="text-sm font-bold text-gray-200">הגדרות תזמון לפי סקטור (שעון EST):</h4></div>
-                    
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-cyan-500/40 transition">
-                        <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5"><i data-lucide="trending-down" class="w-4 h-4"></i> 1. MLS וירידות מחיר</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-cyan-500">
-                                <option value="Everyday" selected>כל יום</option>
-                                <option value="Sunday">ראשון</option>
-                                <option value="Monday">שני</option>
-                                <option value="Tuesday">שלישי</option>
-                                <option value="Wednesday">רביעי</option>
-                                <option value="Thursday">חמישי</option>
-                                <option value="Friday">שישי</option>
-                                <option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-mls" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-cyan-500">
-                                <option value="02:00">02:00</option>
-                                <option value="05:00">05:00</option>
-                                <option value="08:00" selected>08:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="16:00">16:00</option>
-                                <option value="20:00">20:00</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-amber-500/40 transition">
-                        <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5"><i data-lucide="shield-alert" class="w-4 h-4"></i> 2. בנקים וכינוס נכסים</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-amber-500">
-                                <option value="Everyday">כל יום</option>
-                                <option value="Sunday">ראשון</option>
-                                <option value="Monday">שני</option>
-                                <option value="Tuesday">שלישי</option>
-                                <option value="Wednesday" selected>רביעי</option>
-                                <option value="Thursday">חמישי</option>
-                                <option value="Friday">שישי</option>
-                                <option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-reo" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-amber-500">
-                                <option value="02:00">02:00</option>
-                                <option value="05:00">05:00</option>
-                                <option value="08:00" selected>08:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="16:00">16:00</option>
-                                <option value="20:00">20:00</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-rose-500/40 transition">
-                        <span class="text-xs font-bold text-rose-300 flex items-center gap-1.5"><i data-lucide="gavel" class="w-4 h-4"></i> 3. מכירות שריף</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-rose-500">
-                                <option value="Everyday">כל יום</option>
-                                <option value="Sunday">ראשון</option>
-                                <option value="Monday">שני</option>
-                                <option value="Tuesday">שלישי</option>
-                                <option value="Wednesday" selected>רביעי</option>
-                                <option value="Thursday">חמישי</option>
-                                <option value="Friday">שישי</option>
-                                <option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-sheriff" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-rose-500">
-                                <option value="02:00">02:00</option>
-                                <option value="05:00">05:00</option>
-                                <option value="08:00" selected>08:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="16:00">16:00</option>
-                                <option value="20:00">20:00</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3 bg-gray-900 p-2.5 rounded-lg border border-gray-800 hover:border-purple-500/40 transition">
-                        <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5"><i data-lucide="receipt" class="w-4 h-4"></i> 4. פיגורי מס</span>
-                        <div class="flex gap-2">
-                            <select id="sched-day-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white focus:border-purple-500">
-                                <option value="Everyday">כל יום</option>
-                                <option value="Sunday">ראשון</option>
-                                <option value="Monday">שני</option>
-                                <option value="Tuesday">שלישי</option>
-                                <option value="Wednesday" selected>רביעי</option>
-                                <option value="Thursday">חמישי</option>
-                                <option value="Friday">שישי</option>
-                                <option value="Saturday">שבת</option>
-                            </select>
-                            <select id="sched-time-tax" class="bg-gray-950 border border-gray-700 rounded-md px-2 py-1.5 text-xs text-white font-mono focus:border-purple-500">
-                                <option value="02:00">02:00</option>
-                                <option value="05:00">05:00</option>
-                                <option value="08:00" selected>08:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="16:00">16:00</option>
-                                <option value="20:00">20:00</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                </div>
+                <label class="block text-sm text-gray-300">אזור זמן לכל התזמונים <select id="schedule-timezone" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="America/New_York">שעון החוף המזרחי בארה״ב</option><option value="Asia/Jerusalem">שעון ישראל</option></select></label>
+                <p class="text-xs text-gray-400">האזורים, המסננים והמקורות לפי הגדרות הסריקה האוטומטית השמורות. השעות לפי אזור הזמן שנבחר. משימת השרת בודקת בכל שעה אם הגיע מועד הסריקה; ייתכן עיכוב בהפעלה.</p>
+                <div class="space-y-3">
+<section class="bg-gray-950 p-3 rounded-xl border border-gray-800"><h4 class="font-bold text-blue-300 mb-2">MLS וירידות מחיר</h4><div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label class="text-xs">תדירות<select id="sched-frequency-mls" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white" onchange="updateScheduleFields('mls')"><option value="off">כבוי</option><option value="daily">פעם ביום</option><option value="twice_daily">פעמיים ביום</option><option value="weekly">פעם בשבוע</option><option value="monthly">פעם בחודש</option></select></label><label class="text-xs">שעה ראשונה<select id="sched-time-mls" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">שעה שנייה<select id="sched-time2-mls" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">יום בשבוע<select id="sched-day-mls" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option><option value="Sunday">ראשון</option></select></label><label class="text-xs">יום בחודש<select id="sched-monthday-mls" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option></select></label></div></section><section class="bg-gray-950 p-3 rounded-xl border border-gray-800"><h4 class="font-bold text-blue-300 mb-2">בנקים וכינוס</h4><div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label class="text-xs">תדירות<select id="sched-frequency-reo" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white" onchange="updateScheduleFields('reo')"><option value="off">כבוי</option><option value="daily">פעם ביום</option><option value="twice_daily">פעמיים ביום</option><option value="weekly">פעם בשבוע</option><option value="monthly">פעם בחודש</option></select></label><label class="text-xs">שעה ראשונה<select id="sched-time-reo" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">שעה שנייה<select id="sched-time2-reo" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">יום בשבוע<select id="sched-day-reo" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option><option value="Sunday">ראשון</option></select></label><label class="text-xs">יום בחודש<select id="sched-monthday-reo" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option></select></label></div></section><section class="bg-gray-950 p-3 rounded-xl border border-gray-800"><h4 class="font-bold text-blue-300 mb-2">מכירות שריף</h4><div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label class="text-xs">תדירות<select id="sched-frequency-sheriff" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white" onchange="updateScheduleFields('sheriff')"><option value="off">כבוי</option><option value="daily">פעם ביום</option><option value="twice_daily">פעמיים ביום</option><option value="weekly">פעם בשבוע</option><option value="monthly">פעם בחודש</option></select></label><label class="text-xs">שעה ראשונה<select id="sched-time-sheriff" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">שעה שנייה<select id="sched-time2-sheriff" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">יום בשבוע<select id="sched-day-sheriff" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option><option value="Sunday">ראשון</option></select></label><label class="text-xs">יום בחודש<select id="sched-monthday-sheriff" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option></select></label></div></section><section class="bg-gray-950 p-3 rounded-xl border border-gray-800"><h4 class="font-bold text-blue-300 mb-2">פיגורי מס</h4><div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label class="text-xs">תדירות<select id="sched-frequency-tax" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white" onchange="updateScheduleFields('tax')"><option value="off">כבוי</option><option value="daily">פעם ביום</option><option value="twice_daily">פעמיים ביום</option><option value="weekly">פעם בשבוע</option><option value="monthly">פעם בחודש</option></select></label><label class="text-xs">שעה ראשונה<select id="sched-time-tax" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">שעה שנייה<select id="sched-time2-tax" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">יום בשבוע<select id="sched-day-tax" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="Monday">שני</option><option value="Tuesday">שלישי</option><option value="Wednesday">רביעי</option><option value="Thursday">חמישי</option><option value="Friday">שישי</option><option value="Saturday">שבת</option><option value="Sunday">ראשון</option></select></label><label class="text-xs">יום בחודש<select id="sched-monthday-tax" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option></select></label></div></section></div><section class="bg-gray-950 p-4 rounded-xl border border-emerald-700/40 space-y-3"><h4 class="font-bold text-emerald-300">השלמת תמונות ומפרט MLS ברקע</h4><label class="flex gap-2"><input type="checkbox" id="completion-enabled" class="accent-emerald-500">הפעל השלמה אוטומטית</label><div class="grid grid-cols-2 gap-3"><label class="text-xs">תדירות<select id="completion-frequency" onchange="updateCompletionFields()" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="hourly">כל שעה</option><option value="every_3_hours">כל שלוש שעות</option><option value="daily">פעם ביום</option><option value="twice_daily">פעמיים ביום</option></select></label><label class="text-xs">תקרה יומית<select id="completion-daily-limit" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="10">עד 10 נכסים</option><option value="20">עד 20 נכסים</option><option value="30">עד 30 נכסים</option><option value="40">עד 40 נכסים</option><option value="60">עד 60 נכסים</option><option value="80">עד 80 נכסים</option><option value="100">עד 100 נכסים</option><option value="120">עד 120 נכסים</option></select></label><label class="text-xs">שעה ראשונה<select id="completion-time" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label><label class="text-xs">שעה שנייה<select id="completion-time2" class="bg-gray-950 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"><option value="00:00">00:00</option><option value="01:00">01:00</option><option value="02:00">02:00</option><option value="03:00">03:00</option><option value="04:00">04:00</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option><option value="23:00">23:00</option></select></label></div><p class="text-sm text-gray-300">עד 10 נכסים בקבוצה. מודעות מתאריך <strong id="completion-start-label"></strong> ואילך; מודעות חדשות יצורפו בהמשך.</p><p class="text-xs text-gray-400">ההשלמה הזמינה כעת היא למחוז Allegheny. פרטים ותמונות ממקורות זמינים נשמרים בשרת; מודעה חסומה או בלי תאריך פרסום ממתינה לבדיקה. ללא RentCast.</p></section>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-end gap-3">
                 <button onclick="closeAutoScanModal()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">ביטול</button>
@@ -1946,12 +1850,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 geoAreas: buildGeoAreas(prefix),
                 uiSelections: captureScanSelections(prefix),
                 autoScanEnabled: document.getElementById('autoscan-master-switch') ? document.getElementById('autoscan-master-switch').checked : true,
-                schedules: {
-                    mls: { day: document.getElementById('sched-day-mls') ? document.getElementById('sched-day-mls').value : 'Everyday', time: document.getElementById('sched-time-mls') ? document.getElementById('sched-time-mls').value : '08:00' },
-                    reo: { day: document.getElementById('sched-day-reo') ? document.getElementById('sched-day-reo').value : 'Wednesday', time: document.getElementById('sched-time-reo') ? document.getElementById('sched-time-reo').value : '08:00' },
-                    sheriff: { day: document.getElementById('sched-day-sheriff') ? document.getElementById('sched-day-sheriff').value : 'Wednesday', time: document.getElementById('sched-time-sheriff') ? document.getElementById('sched-time-sheriff').value : '08:00' },
-                    tax: { day: document.getElementById('sched-day-tax') ? document.getElementById('sched-day-tax').value : 'Wednesday', time: document.getElementById('sched-time-tax') ? document.getElementById('sched-time-tax').value : '08:00' },
-                },
+                scheduleControlVersion: 2,
+                scheduleTimezone: document.getElementById('schedule-timezone').value,
+                schedules: readScheduleControls(),
+                completionSettings: readCompletionControls(),
                 updatedAt: new Date().toISOString(),
                 is_manual_scan: isManual
             };
@@ -1992,12 +1894,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                     const master = document.getElementById('autoscan-master-switch');
                     if (master) master.checked = st.autoScanEnabled;
                 }
-                for (const [sector, schedule] of Object.entries(st.schedules || {})) {
-                    for (const part of ['day', 'time']) {
-                        const input = document.getElementById(`sched-${part}-${sector}`);
-                        if (input && schedule?.[part] !== undefined) input.value = schedule[part];
-                    }
-                }
+                applyScheduleControls(st);
             }
         }
 
@@ -2057,7 +1954,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         function applyConfirmedScheduledState(profile) {
             if (typeof profile.autoScanEnabled === 'boolean') {
-                isAutoScanEnabled = profile.autoScanEnabled;
+                isAutoScanEnabled = profile.scheduleControlVersion === 2 && profile.autoScanEnabled === true;
                 automationStateVerified = true;
                 updateAutoScanUI();
             }
@@ -3680,15 +3577,70 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             document.getElementById('autoscan-modal').classList.add('hidden');
         }
 
+        function updateScheduleFields(sector) {
+            const frequency = document.getElementById(`sched-frequency-${sector}`).value;
+            document.getElementById(`sched-time-${sector}`).disabled = frequency === 'off';
+            document.getElementById(`sched-time2-${sector}`).disabled = frequency !== 'twice_daily';
+            document.getElementById(`sched-day-${sector}`).disabled = frequency !== 'weekly';
+            document.getElementById(`sched-monthday-${sector}`).disabled = frequency !== 'monthly';
+        }
+
+        function updateCompletionFields() {
+            const frequency = document.getElementById('completion-frequency').value;
+            document.getElementById('completion-time').disabled = !['daily','twice_daily'].includes(frequency);
+            document.getElementById('completion-time2').disabled = frequency !== 'twice_daily';
+        }
+
+        function readScheduleControls() {
+            const timezone = document.getElementById('schedule-timezone').value;
+            return Object.fromEntries([...AVAILABLE_SCAN_SECTORS].map(sector => {
+                const frequency = document.getElementById(`sched-frequency-${sector}`).value;
+                const first = document.getElementById(`sched-time-${sector}`).value;
+                return [sector, {enabled: frequency !== 'off', frequency, timezone,
+                    day: document.getElementById(`sched-day-${sector}`).value,
+                    dayOfMonth: Number(document.getElementById(`sched-monthday-${sector}`).value),
+                    time: first, times: frequency === 'twice_daily' ? [first, document.getElementById(`sched-time2-${sector}`).value] : [first]}];
+            }));
+        }
+
+        function readCompletionControls() {
+            const frequency = document.getElementById('completion-frequency').value;
+            const first = document.getElementById('completion-time').value;
+            return {enabled: document.getElementById('completion-enabled').checked,
+                frequency, timezone: document.getElementById('schedule-timezone').value,
+                times: frequency === 'twice_daily' ? [first, document.getElementById('completion-time2').value] : [first],
+                batchSize: 10, lookbackDays: 30, dailyLimit: Number(document.getElementById('completion-daily-limit').value),
+                startDate: document.getElementById('completion-start-label').dataset.date};
+        }
+
+        function applyScheduleControls(profile) {
+            document.getElementById('autoscan-master-switch').checked = profile.scheduleControlVersion === 2 && profile.autoScanEnabled === true;
+            document.getElementById('schedule-timezone').value = profile.scheduleTimezone || 'America/New_York';
+            for (const sector of AVAILABLE_SCAN_SECTORS) {
+                const spec = profile.schedules?.[sector] || {};
+                const frequency = spec.frequency || (sector === 'mls' ? 'twice_daily' : spec.day && spec.day !== 'Everyday' ? 'weekly' : 'daily');
+                document.getElementById(`sched-frequency-${sector}`).value = spec.enabled === false || !profile.sectors?.includes(sector) ? 'off' : frequency;
+                document.getElementById(`sched-time-${sector}`).value = spec.times?.[0] || spec.time || '08:00';
+                document.getElementById(`sched-time2-${sector}`).value = spec.times?.[1] || '20:00';
+                document.getElementById(`sched-day-${sector}`).value = spec.day && spec.day !== 'Everyday' ? spec.day : 'Wednesday';
+                document.getElementById(`sched-monthday-${sector}`).value = String(spec.dayOfMonth || 1);
+                updateScheduleFields(sector);
+            }
+            const completion = profile.completionSettings || {};
+            document.getElementById('completion-enabled').checked = completion.enabled === true;
+            document.getElementById('completion-frequency').value = completion.frequency || 'hourly';
+            document.getElementById('completion-daily-limit').value = String(completion.dailyLimit || 60);
+            document.getElementById('completion-time').value = completion.times?.[0] || '08:00';
+            document.getElementById('completion-time2').value = completion.times?.[1] || '20:00';
+            const date = completion.startDate || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+            const label = document.getElementById('completion-start-label'); label.dataset.date = date; label.textContent = date.split('-').reverse().join('.');
+            updateCompletionFields();
+        }
+
         function loadScheduleSettings() {
             const profile = lastConfirmedScanProfile('setting');
             if (!scheduledProfileVerified || !profile) return;
-            document.getElementById('autoscan-master-switch').checked = profile.autoScanEnabled !== false;
-            for (const sector of AVAILABLE_SCAN_SECTORS) {
-                const schedule = profile.schedules?.[sector];
-                document.getElementById(`sched-day-${sector}`).value = schedule?.day || (sector === 'mls' ? 'Everyday' : 'Wednesday');
-                document.getElementById(`sched-time-${sector}`).value = schedule?.time || '08:00';
-            }
+            applyScheduleControls(profile);
         }
 
         async function saveScheduleSettings() {
@@ -3698,8 +3650,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const confirmed = lastConfirmedScanProfile('setting');
             if (!scheduledProfileVerified || !confirmed) { alert('לא נטענו הגדרות סריקה מאומתות. פתח את התזמון מחדש.'); return; }
             const current = buildServerConfig(false);
-            const config = {...confirmed, autoScanEnabled: current.autoScanEnabled, schedules: current.schedules,
+            const config = {...confirmed, autoScanEnabled: current.autoScanEnabled, schedules: current.schedules, scheduleControlVersion: 2, scheduleTimezone: current.scheduleTimezone, completionSettings: current.completionSettings,
                 updatedAt: new Date().toISOString(), is_manual_scan: false};
+            const twice = [...Object.values(config.schedules), config.completionSettings].filter(spec => spec.enabled && spec.frequency === 'twice_daily');
+            if (twice.some(spec => spec.times[0] === spec.times[1])) { alert('בחר שתי שעות שונות לפעמיים ביום.'); return; }
             const token = document.getElementById('setting-token-input')?.value.trim() || localStorage.getItem('pa_github_token');
             if (!token) { alert('כדי לשמור את התזמון לשרת, חסר מפתח GitHub. הזן אותו בחלון "הגדרות סריקה".'); return; }
             const btn = document.getElementById('btn-save-schedule');
