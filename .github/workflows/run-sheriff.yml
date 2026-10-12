@@ -55,7 +55,7 @@ jobs:
           git log -1 --format='%h %s'
           sha256sum orchestrator.py
           python -m py_compile orchestrator.py analyzer.py
-          python -m unittest -q test_scan_controls test_scan_scope
+          env -u PA_SCAN_CONFIG_FILE python -m unittest -q test_scan_controls test_scan_scope
       - name: Run Sheriff through the central scanner
         id: scanner
         env:
