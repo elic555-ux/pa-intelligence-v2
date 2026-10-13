@@ -22,11 +22,12 @@ import automatic_listing_sources as completion
 import property_sources as registry
 import tarasa_listing_source as secondary
 import secondary_listing_source as legacy
+import howardhanna_listing_pilot as erie
 
 REPO = Path.cwd()
 MAX_REQUESTS = 12
 MAX_PROPERTIES = 3
-ALLOWED_HOSTS = {"www.redfin.com", "www.tarasa.com", "cdn.listingphotos.sierrastatic.com"}
+ALLOWED_HOSTS = {"www.redfin.com", "www.tarasa.com", "www.howardhanna.com", "cdn.listingphotos.sierrastatic.com"}
 requests_log = []
 denied = []
 blocked_hosts = set()
@@ -114,8 +115,22 @@ for area in ("Pittsburgh", "Erie"):
 counts = Counter(str(row.get("id")) for row in discovered)
 fresh = [row for row in discovered if counts[str(row.get("id"))] == 1 and meets_profile(row)
          and registry.identity(row)["complete"] and registry.listing_id(row)
+         and (row.get("county") != "Allegheny" or len(registry.listing_id(row)) <= 10)
          and completion.published_day(row) and now.date() - timedelta(days=30) <= completion.published_day(row) <= now.date()]
-fresh.sort(key=lambda row: completion.published_day(row), reverse=True)
+queue = registry.read_json(REPO / completion.STATE) if (REPO / completion.STATE).exists() else {"entries": {}}
+def selection_priority(row):
+    if row.get("county") != "Allegheny":
+        return (0, -completion.published_day(row).toordinal())
+    cached = secondary.read_snapshot(REPO, row, now)
+    if secondary.fresh(cached, now):
+        return (3, -completion.published_day(row).toordinal())
+    entry = queue.get("entries", {}).get(str(row["id"]), {})
+    if entry.get("fingerprint") == completion.fingerprint(row):
+        retry = secondary.parse_date(entry.get("retry_after_at"))
+        if (retry and retry > now) or entry.get("status") in completion.REVIEW_STATUSES:
+            return (2, -completion.published_day(row).toordinal())
+    return (0, -completion.published_day(row).toordinal())
+fresh.sort(key=selection_priority)
 selected = []
 for county, limit in (("Allegheny", 2), ("Erie", 1)):
     selected.extend([row for row in fresh if row.get("county") == county][:limit])
@@ -148,7 +163,7 @@ with tempfile.TemporaryDirectory(prefix="pa-live-source-trial-") as temporary:
         cached = primary.read_record(row, REPO)
         if cached:
             primary.write_record(row, cached, root)
-    for path in (secondary.SOURCE_STATE, completion.STATE):
+    for path in (secondary.SOURCE_STATE, completion.STATE, erie.STATE, erie.source.SOURCE_STATE):
         if (REPO / path).exists():
             destination = root / path
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -159,7 +174,7 @@ with tempfile.TemporaryDirectory(prefix="pa-live-source-trial-") as temporary:
              "active_sectors": ["mls"], "github_sha": os.environ.get("GITHUB_SHA", "local-trial")}
     registry.atomic_json(root / "scanner_status.json", {"last_scan": event, "last_event": event})
     report["primary"] = primary.enrich_rows(selected, root, limit=MAX_PROPERTIES,
-                                           allow_network="www.redfin.com" not in blocked_hosts)
+                                           allow_network=os.environ.get("TRIAL_SKIP_BLOCKED_DETAIL_SOURCE") != "true" and "www.redfin.com" not in blocked_hosts)
     registry.atomic_json(root / "properties.json", selected)
     before = (root / "properties.json").read_bytes()
     reader = secondary.PublicReader(max_requests=4, deadline=time.monotonic() + 180)
@@ -189,6 +204,17 @@ with tempfile.TemporaryDirectory(prefix="pa-live-source-trial-") as temporary:
              "technical_values": {field: additional.get(field) or facts.get(field) for field in
                                   ("roof_type", "heating", "cooling", "parking", "construction", "year_built", "sqft", "lot_area_acres")
                                   if additional.get(field) or facts.get(field)}})
+    if any(row.get("county") == "Erie" for row in selected):
+        erie_reader = erie.source.PublicReader(max_requests=min(6, MAX_REQUESTS - len(requests_log)),
+                                               deadline=time.monotonic() + 180)
+        report["independent_erie_source_probe"] = erie.run(root, "pilot", reader=erie_reader, now=now)
+        report["erie_automatic_integration"] = False
+        for row in selected:
+            if row.get("county") == "Erie":
+                saved = erie.source.read_snapshot(root, row, now)
+                report["independent_erie_property"] = {"id": row["id"], "address": row["address"],
+                    "fields": len((saved or {}).get("facts", {})), "photos": len((saved or {}).get("photos", [])),
+                    "status": (saved or {}).get("status"), "source_url": (saved or {}).get("source_url")}
     observations, aliases = registry.collect(root)
     built = registry.build_registry(observations)
     report["registry"] = {"observations": len(observations), "groups": len(built) if isinstance(built, (list, dict)) else None}
