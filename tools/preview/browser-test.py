@@ -33,9 +33,18 @@ with sync_playwright() as p:
     assert page.locator("#modal-listing-source-request").count() == 0
     assert page.locator("#modal-additional-source-request").count() == 0
     assert page.locator("#modal-additional-source-photos img").count() == 3
-    page.evaluate("closePropertyModal()")
-    result = page.evaluate("""async()=>{const client=window.supabase.createClient();await client.from('pipeline_deals').upsert({property_id:'test',deal_data:{id:'test',address:'Preview'}});return(await client.from('pipeline_deals').select('*')).data.length;}""")
-    assert result == 1
+    page.on("dialog", lambda dialog: dialog.accept())
+    page.evaluate("moveToPipelineFromModal()")
+    page.wait_for_function("pipelineDeals.length === 1")
+    page.goto("http://127.0.0.1:8765/preview/deals.html")
+    page.wait_for_function("typeof pipelineDeals !== 'undefined' && pipelineDeals.length === 1")
+    assert page.locator("#pa-preview-banner").is_visible()
+    assert page.evaluate("pipelineDeals[0].id") == "PA-MLS-1778804"
+    page.goto("http://127.0.0.1:8765/preview/report.html?id=PA-MLS-1778804")
+    page.wait_for_function("typeof currentDeal !== 'undefined' && currentDeal?.id === 'PA-MLS-1778804' && !document.getElementById('report-content').hidden")
+    assert page.locator("#pa-preview-banner").is_visible()
+    page.evaluate("requestRentCastReport('rent')")
+    assert page.locator("#pa-preview-message").is_visible()
     assert not any("supabase.co" in url or "api.rentcast.io" in url or "api.github.com" in url for url in remote), remote
     assert not errors, errors
     page.evaluate("localStorage.clear()")
@@ -43,4 +52,4 @@ with sync_playwright() as p:
     assert page.evaluate("localStorage.getItem('pa_github_token')") == "production-test-token"
     assert page.evaluate("localStorage.getItem('unrelated')") == "keep"
     browser.close()
-    print("PASS browser preview, example modal, automatic source display, local persistence and no production network")
+    print("PASS browser preview, example modal, local deal-room/report roundtrip and blocked RentCast requests")
