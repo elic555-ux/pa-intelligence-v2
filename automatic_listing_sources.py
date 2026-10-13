@@ -12,7 +12,7 @@ import tarasa_listing_source as source
 from scan_schedule import completion_due
 from zoneinfo import ZoneInfo
 
-VERSION = 'automatic-mls-sources-1.5.0-scan-integrated-20261013'
+VERSION = 'automatic-mls-sources-1.5.1-missing-listing-retry-20261013'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -21,7 +21,9 @@ STOP_BATCH = {'source_blocked', 'source_rate_limited', 'robots_disallowed',
     'source_cooldown', 'source_request_budget_exhausted', 'batch_time_limit',
     'source_redirect_stopped', 'source_unavailable', 'source_response_too_large',
     'robots_delay_exceeds_pilot_limit'}
-REVIEW_STATUSES = {'listing_not_available', 'source_identity_mismatch'}
+# A missing public listing follows its saved retry time. An identity conflict
+# remains excluded from automatic requests until the binding is reviewed.
+REVIEW_STATUSES = {'source_identity_mismatch'}
 
 
 def fingerprint(row):

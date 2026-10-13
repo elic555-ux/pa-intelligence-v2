@@ -220,8 +220,8 @@ class QueueTests(unittest.TestCase):
         self.assertFalse((self.repo/source.SOURCE_STATE).exists())
         report=worker.run(self.repo,'pilot',reader=self.reader(),now=self.now)
         self.assertEqual(report['new_snapshots'],2)
-        self.assertEqual(report['pending'],0)
-        self.assertEqual(report['review_required'],2)
+        self.assertEqual(report['pending'],1)
+        self.assertEqual(report['review_required'],1)
 
     def test_block_stops_rest_of_batch_and_cooldown_is_tarasa_only(self):
         report=worker.run(self.repo,'pilot',reader=self.reader(blocked=True),now=self.now)
@@ -313,7 +313,7 @@ class QueueTests(unittest.TestCase):
     def test_failed_identity_is_visible_but_not_automatically_retried(self):
         self.rows=make_rows(1)
         self.put_inventory()
-        first=worker.run(self.repo,'pilot',reader=self.reader(missing=('1001',)),now=self.now)
+        first=worker.run(self.repo,'pilot',reader=self.reader(wrong=('1001',)),now=self.now)
         self.assertEqual(first['review_required'],1)
         reader=self.reader()
         second=worker.run(self.repo,'pilot',reader=reader,now=self.now)
@@ -321,6 +321,39 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(second['pending'],0)
         self.assertEqual(second['new_source_network_requests'],0)
         self.assertEqual(reader.requests,0)
+
+    def test_missing_listing_retries_automatically_only_after_saved_wait(self):
+        self.rows=make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        first=worker.run(self.repo,'scan','abc',self.reader(missing=('1001',)),now=self.now)
+        self.assertEqual(first['new_snapshots'],0)
+        self.assertEqual(first['pending'],1)
+        self.assertEqual(first['review_required'],0)
+        self.assertEqual(first['results'][0]['status'],'listing_not_available')
+
+        def next_scan(scan_id):
+            self.rows[0]['last_scan_id']=scan_id
+            self.put_inventory()
+            event={**self.scan['last_event'],'scan_id':scan_id}
+            registry.atomic_json(self.repo/'scanner_status.json',{'last_event':event,'last_scan':event})
+
+        next_scan('S2')
+        early_reader=self.reader()
+        early=worker.run(self.repo,'scan','abc',early_reader,now=self.now+timedelta(hours=1))
+        self.assertEqual(early['status'],'waiting_for_retry')
+        self.assertEqual(early_reader.requests,0)
+        self.assertEqual(early['pending'],1)
+
+        next_scan('S3')
+        retry_reader=self.reader()
+        retried=worker.run(self.repo,'scan','abc',retry_reader,now=self.now+timedelta(days=2))
+        self.assertEqual(retried['new_snapshots'],1)
+        self.assertEqual(retried['pending'],0)
+        self.assertEqual(retried['review_required'],0)
+        self.assertEqual(retried['results'][0]['status'],'published')
+        self.assertEqual(retried['new_rentcast_calls'],0)
+        self.assertEqual((self.repo/'properties.json').read_bytes(),self.inventory_before)
 
     def test_long_unverified_id_never_becomes_tarasa_request(self):
         self.rows=[{**make_rows(1)[0], 'id':'PA-MLS-2208152674674600913',
