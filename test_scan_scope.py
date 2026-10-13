@@ -203,6 +203,10 @@ class PipelineTests(unittest.TestCase):
                  "profile_failures": 0, "profile_status_counts": {}, "required_missing_field_counts": {},
                  "required_missing_pattern_counts": {}, "profile_field_presence_counts": {}, "gis_field_presence_counts": {}}
         with ExitStack() as stack:
+            # The engine chooses CONFIG_FILE at import time, before this fixture
+            # changes GITHUB_EVENT_NAME. Bind the test profile explicitly so a
+            # scheduled runner cannot select an unmocked county source.
+            stack.enter_context(patch.object(scanner, "CONFIG_FILE", "manual_scan_config.json"))
             stack.enter_context(patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_RUN_ID": "test-run",
                 "PA_SCAN_CONFIG_COMMIT": "", "PA_SCAN_REQUEST_ID": ""}))
             stack.enter_context(patch.object(scanner.requests.sessions.Session, "send", side_effect=AssertionError("Live HTTP is forbidden")))
@@ -233,6 +237,18 @@ class PipelineTests(unittest.TestCase):
             expected_rows = [row for row in rows if row["id"] != old["id"]]
             self.assertEqual(set(context["property_keys"]), {analyzer.analysis_scope_key(row) for row in expected_rows})
             self.assertNotIn(analyzer.analysis_scope_key(old), context["property_keys"])
+
+    def test_pipeline_fixture_uses_its_own_profile_on_a_scheduled_runner(self):
+        with patch.object(scanner, "CONFIG_FILE", "scan_config.json"), \
+             patch.dict(os.environ, {"GITHUB_EVENT_NAME": "schedule", "PA_SCAN_CONFIG_FILE": "scan_config.json"}):
+            with temporary_repo():
+                good, old, _, _ = self.run_case()
+                rows = json.loads(Path("properties.json").read_text())
+                self.assertEqual({row["id"] for row in rows}, {row["id"] for row in good} | {old["id"]})
+                event = json.loads(Path("scanner_status.json").read_text())["last_event"]
+                self.assertEqual(event["config_source"], "manual_scan_config.json")
+                self.assertEqual(event["trigger"], "manual")
+            self.assertEqual(scanner.CONFIG_FILE, "scan_config.json")
 
     def test_incomplete_existing_row_is_preserved_before_removal(self):
         with temporary_repo():
