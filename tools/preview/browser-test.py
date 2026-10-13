@@ -16,6 +16,8 @@ with sync_playwright() as p:
             request.fulfill(body="window.lucide={createIcons(){}};", content_type="application/javascript")
         elif "tailwind" in url:
             request.fulfill(body="var s=document.createElement('style');s.textContent='.hidden{display:none!important}';document.head.appendChild(s);", content_type="application/javascript")
+        elif "pdf.min.js" in url:
+            request.fulfill(body="window.pdfjsLib={GlobalWorkerOptions:{}};", content_type="application/javascript")
         elif request.request.resource_type == "script":
             request.fulfill(body="", content_type="application/javascript")
         else:
