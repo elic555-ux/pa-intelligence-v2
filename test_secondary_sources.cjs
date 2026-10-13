@@ -65,7 +65,8 @@ class Element {
 const dom={getElementById:id=>elements.get(id)||null,createElement:tag=>new Element(tag),
     createTextNode:text=>({textContent:text}),querySelectorAll:()=>[],addEventListener(){}};
 for(const id of ['modal-listing-source-controls','modal-roof','modal-roof-source','modal-hvac','modal-hvac-source',
-    'modal-parking','modal-parking-source','modal-occupancy','modal-occupancy-source','modal-listing-extra-facts']) {
+    'modal-parking','modal-parking-source','modal-occupancy','modal-occupancy-source','modal-listing-extra-facts',
+    'modal-sqft','modal-sqft-source','modal-lot-size','modal-lot-size-source']) {
     const e=new Element();e.id=id;e.parentNode=new Element();
 }
 const storage=new Map([['pa_github_token','test-token']]);let calls=[];
@@ -105,6 +106,28 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         assert.equal(section.children.filter(n=>n.tagName==='button').length,0);
         assert.equal(run('typeof requestBasicSourceDetails'),'undefined');
         assert.doesNotMatch(html,/id="modal-listing-source-request"|onclick="requestBasicSourceDetails/);
+    });
+    check('strategy controls are removed from the board and property modal',()=>{
+        assert.doesNotMatch(html,/filter-strategy|modal-strategy|אסטרטגיה/);
+    });
+    check('living and lot areas render separately with source units and links',()=>{
+        assert.equal(dom.getElementById('modal-sqft').textContent,'900 SqFt');
+        assert.equal(dom.getElementById('modal-lot-size').textContent,'0.07 Acres');
+        assert.equal(dom.getElementById('modal-sqft-source').children[0].href,tarasa.source_url);
+        assert.equal(dom.getElementById('modal-lot-size-source').children[0].href,tarasa.source_url);
+        assert.equal(ctx.p.lot_size,3201);
+    });
+    check('conflicting floor area is displayed without falsely attributing it to another value',()=>{
+        ctx.p.sqft=951;run('renderPropertyAreaFacts(p)');
+        assert.equal(dom.getElementById('modal-sqft').textContent,'951 SqFt');
+        assert.equal(dom.getElementById('modal-sqft-source').hidden,true);
+        ctx.p.sqft=900;run('renderPropertyAreaFacts(p)');
+    });
+    check('an identity mismatch cannot supply the lot area or an invented unit',()=>{
+        ctx.p.address='14 First St';run('renderPropertyAreaFacts(p)');
+        assert.equal(dom.getElementById('modal-lot-size').textContent,'3,201 (יחידה לא צוינה)');
+        assert.equal(dom.getElementById('modal-lot-size-source').hidden,true);
+        ctx.p.address='12 First St';run('renderPropertyAreaFacts(p)');
     });
     check('all original property data and financial inputs remain unchanged',()=>assert.equal(JSON.stringify(ctx.p),before));
     check('normal opening only reads four GitHub snapshots',()=>{
