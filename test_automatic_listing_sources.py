@@ -61,6 +61,87 @@ class QueueTests(unittest.TestCase):
         reader.calls=calls
         return reader
 
+
+    def integrated_config(self, automatic=False, enabled=True):
+        profile = {'scheduleControlVersion': 2, 'autoScanEnabled': automatic,
+            'completionSettings': {'enabled': enabled, 'frequency': 'hourly',
+                'timezone': 'UTC', 'dailyLimit': 60,
+                'startDate': (self.now.date() - timedelta(days=30)).isoformat()}}
+        registry.atomic_json(self.repo / 'scan_config.json', profile)
+
+    def test_scan_mode_collects_without_background_activation(self):
+        self.integrated_config()
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        self.assertTrue(report['scan_integrated'])
+        self.assertEqual(report['new_snapshots'], 5)
+        self.assertEqual(report['new_rentcast_calls'], 0)
+        self.assertLessEqual(report['new_source_network_requests'], 13)
+        self.assertEqual((self.repo / 'properties.json').read_bytes(), self.inventory_before)
+        self.assertEqual((self.repo / source.STATUS).read_bytes(), self.manual_before)
+
+    def test_scan_mode_requires_a_current_successful_mls_scan(self):
+        self.integrated_config()
+        for event in (
+            {**self.scan['last_event'], 'status': 'failed'},
+            {**self.scan['last_event'], 'active_sectors': ['sheriff']},
+            {**self.scan['last_event'], 'scan_id': None},
+        ):
+            registry.atomic_json(self.repo / 'scanner_status.json', {'last_event': event})
+            reader = self.reader()
+            report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+            self.assertEqual(report['status'], 'no_new_mls_scan')
+            self.assertFalse(report['should_save'])
+            self.assertEqual(reader.requests, 0)
+
+    def test_scan_mode_preserves_explicit_completion_pause(self):
+        self.integrated_config(enabled=False)
+        reader = self.reader()
+        report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'automatic_disabled')
+        self.assertEqual(reader.requests, 0)
+
+    def test_scan_mode_prioritizes_current_scan_rows(self):
+        self.integrated_config()
+        self.rows = make_rows(20)
+        for row in self.rows[5:]:
+            row['last_scan_id'] = 'older'
+        self.put_inventory()
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        self.assertEqual(report['attempted_properties'], 10)
+        self.assertEqual(set(item['property_id'] for item in report['results'][:5]),
+                         set(row['id'] for row in self.rows[:5]))
+
+    def test_replayed_scan_does_not_repeat_work(self):
+        self.integrated_config()
+        worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        reader = self.reader()
+        report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'scan_already_processed')
+        self.assertFalse(report['should_save'])
+        self.assertEqual(reader.requests, 0)
+
+    def test_scan_completion_prevents_same_slot_background_requests(self):
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'not_due_or_daily_limit')
+        self.assertEqual(reader.requests, 0)
+
+    def test_scan_completion_shares_daily_limit_with_background(self):
+        self.integrated_config(automatic=True)
+        registry.atomic_json(self.repo / worker.STATE, {'schema': 1, 'enabled': False,
+            'entries': {}, 'budget_day': self.now.date().isoformat(), 'daily_attempted': 58})
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        self.assertEqual(report['attempted_properties'], 2)
+        self.assertEqual(registry.read_json(self.repo / worker.STATE)['daily_attempted'], 60)
+        self.scan['last_event']['scan_id'] = 'S2'
+        registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+        reader = self.reader()
+        report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'daily_limit_reached')
+        self.assertEqual(reader.requests, 0)
+
     def test_check_is_read_only_and_network_free(self):
         before={p.relative_to(self.repo):p.read_bytes() for p in self.repo.rglob('*') if p.is_file()}
         reader=self.reader()

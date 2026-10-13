@@ -1,4 +1,4 @@
-"""Cache-first, resumable Tarasa completion of the existing MLS scan queue."""
+"""Cache-first MLS source completion inside scans and resumable background work."""
 import argparse
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -12,11 +12,11 @@ import tarasa_listing_source as source
 from scan_schedule import completion_due
 from zoneinfo import ZoneInfo
 
-VERSION = 'automatic-mls-sources-1.4.0-recent-ten-20261012'
+VERSION = 'automatic-mls-sources-1.5.0-scan-integrated-20261013'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
-PROFILES = {'pilot': (3, 8, 240), 'group10': (10, 13, 240), 'automatic': (10, 13, 240), 'batch': (10, 13, 240)}
+PROFILES = {'pilot': (3, 8, 240), 'group10': (10, 13, 240), 'automatic': (10, 13, 240), 'batch': (10, 13, 240), 'scan': (10, 13, 240)}
 STOP_BATCH = {'source_blocked', 'source_rate_limited', 'robots_disallowed',
     'source_cooldown', 'source_request_budget_exhausted', 'batch_time_limit',
     'source_redirect_stopped', 'source_unavailable', 'source_response_too_large',
@@ -86,7 +86,7 @@ def eligible_rows(repo, start_day=None, today=None):
 
 def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     repo = Path(repo)
-    if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'}:
+    if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic', 'scan'}:
         raise ValueError('Unsupported mode.')
     now = now or datetime.now(timezone.utc)
     state = registry.read_json(repo / STATE) if (repo / STATE).exists() else {'schema': 1, 'enabled': False, 'entries': {}}
@@ -97,27 +97,30 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     profile = registry.read_json(repo / 'scan_config.json') if (repo / 'scan_config.json').exists() else {}
     controlled = profile.get('scheduleControlVersion') == 2
     completion = profile.get('completionSettings') or {}
-    enabled = bool(profile.get('autoScanEnabled') is True and completion.get('enabled') is True) if controlled else bool(state.get('enabled'))
+    enabled = bool(completion.get('enabled') is True and (mode == 'scan' or profile.get('autoScanEnabled') is True)) if controlled else bool(state.get('enabled'))
     caps = PROFILES.get(mode, PROFILES['automatic'])
     report = {'version': VERSION, 'mode': mode, 'provider': source.PROVIDER, 'source_name': source.SOURCE,
         'enabled': enabled, 'status': 'ready', 'should_save': False,
         'new_rentcast_calls': 0, 'new_source_network_requests': 0,
         'max_properties_per_run': caps[0], 'max_source_requests_per_run': caps[1], 'max_seconds_per_run': caps[2],
         'properties_sha256': hashlib.sha256((repo / 'properties.json').read_bytes()).hexdigest(),
-        'scan_id': None, 'cached_properties': 0, 'attempted_properties': 0,
+        'scan_id': None, 'scan_integrated': mode == 'scan', 'cached_properties': 0, 'attempted_properties': 0,
         'new_snapshots': 0, 'results': [], 'pending': 0, 'due': 0,
         'review_required': 0, 'migrated_provider_entries': 0}
-    if mode == 'automatic':
+    if mode in {'automatic', 'scan'}:
         if not enabled:
             report['status'] = 'automatic_disabled'
             return report
         if upstream_sha and event.get('github_sha') != upstream_sha:
             report['status'] = 'upstream_scan_no_longer_current'
             return report
-        if upstream_sha and (event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', [])):
+        if (upstream_sha or mode == 'scan') and (event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', []) or not event.get('scan_id')):
             report['status'] = 'no_new_mls_scan'
             return report
-        if controlled and not completion_due(profile, state, now):
+        if mode == 'scan' and state.get('last_enriched_scan_id') == event.get('scan_id'):
+            report['status'] = 'scan_already_processed'
+            return report
+        if mode == 'automatic' and controlled and not completion_due(profile, state, now):
             report['status'] = 'not_due_or_daily_limit'
             return report
         scan = event
@@ -200,7 +203,9 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             before = reader.requests
             # Unattempted listings first, then oldest attempts: missing listings
             # cannot keep taking all slots in subsequent batches.
-            candidates = sorted(due, key=lambda k: (entries[k].get('last_attempt_at', ''), -int(registry.listing_id(due[k]))))[:remaining]
+            candidates = sorted(due, key=lambda k: (
+                0 if mode == 'scan' and due[k].get('last_scan_id') == scan.get('scan_id') else 1,
+                entries[k].get('last_attempt_at', ''), -int(registry.listing_id(due[k]))))[:remaining]
             for key in candidates:
                 result = source.run(repo, 'fetch', key, reader=reader, write_status=False, now=now)
                 report['results'].append(result)
@@ -225,8 +230,10 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
     if controlled:
         state['daily_attempted'] = int(state.get('daily_attempted', 0)) + report['attempted_properties']
-    if mode == 'automatic':
+    if mode in {'automatic', 'scan'}:
         state['last_automatic_run'] = now.isoformat()
+    if mode == 'scan':
+        state['last_enriched_scan_id'] = scan.get('scan_id')
     state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER,
                  completion_start_date=start_day.isoformat())
     report['should_save'] = True
@@ -239,6 +246,7 @@ def summary(report):
     lines = ['## AUTOMATIC_MLS_SOURCES', '', '- New RentCast calls: **0**',
         '- New source network requests: **' + str(report['new_source_network_requests']) + '**',
         '- מקור פעיל: Tarasa / River Point Realty', '- מצב: ' + report['status'],
+        '- השלמה בתוך הסריקה: ' + ('כן' if report.get('scan_integrated') else 'לא'),
         '- השלמה מתאריך פרסום: ' + str(report.get('completion_start_date', 'טרם נקבע')),
         '- קבוצה: עד 10 נכסים; עד 13 בקשות למקור בכל ריצה',
         '- תאריך פרסום חסר: ' + str(report.get('excluded', {}).get('listing_date_unknown', 0)),
@@ -269,7 +277,7 @@ def summary(report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'))
+    parser.add_argument('mode', choices=('check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic', 'scan'))
     parser.add_argument('--repo', type=Path, default=Path('.'))
     parser.add_argument('--upstream-sha', default='')
     args = parser.parse_args()

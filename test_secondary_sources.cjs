@@ -100,6 +100,12 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         assert.match(dom.getElementById('modal-additional-source-notice').textContent,/Tarasa/);
         assert.equal(section.children.filter(n=>n.tagName==='a').length,2);
     });
+    check('manual loading controls are absent while cached facts and photos render',()=>{
+        const section=dom.getElementById('modal-additional-source');
+        assert.equal(section.children.filter(n=>n.tagName==='button').length,0);
+        assert.equal(run('typeof requestBasicSourceDetails'),'undefined');
+        assert.doesNotMatch(html,/id="modal-listing-source-request"|onclick="requestBasicSourceDetails/);
+    });
     check('all original property data and financial inputs remain unchanged',()=>assert.equal(JSON.stringify(ctx.p),before));
     check('normal opening only reads four GitHub snapshots',()=>{
         assert.equal(calls.length,4);assert.ok(calls.every(([url,options])=>url.startsWith('https://api.github.com/')&&!options?.method));

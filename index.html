@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.21.3 / 2026-10-13: display only financial fields supported by documented inputs -->
+<!-- PA UI 8.21.4 / 2026-10-13: automatic source collection during scans; passive property details -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -117,7 +117,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.21.3 · 13.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.21.4 · 13.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -335,7 +335,6 @@
             <div class="space-y-2 bg-gray-950/70 p-4 rounded-xl border border-gray-800">
                 <h4 class="text-xs font-black text-amber-400 uppercase flex items-center gap-1.5"><i data-lucide="clipboard-check" class="w-4 h-4"></i> מפרט טכני:</h4>
                 <div id="modal-listing-source-controls" hidden class="space-y-2">
-                    <button id="modal-listing-source-request" onclick="requestBasicSourceDetails()" class="px-3 py-2 bg-blue-950 border border-blue-500/40 rounded-lg text-blue-200 text-xs font-bold disabled:opacity-50">טען פרטים ממודעת המקור — ללא RentCast</button>
                     <p id="modal-listing-source-status" class="text-xs text-gray-400" aria-live="polite"></p>
                     <p class="text-[11px] text-gray-400">הנתונים מתארים את מה שפורסם במודעה. סוג גג אינו בדיקת מצב הגג; שנת הבנייה אינה מעידה על מצב המערכות.</p>
                 </div>
@@ -3251,10 +3250,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const labels = {source_blocked:'האתר חסם את השאיבה האוטומטית. לא הופעל RentCast.',
                 source_unavailable:'עמוד המקור לא היה זמין בבדיקה האחרונה.', source_identity_mismatch:'זהות המודעה לא תאמה לנכס; לא צורפו פרטים.'};
             const date = parseDate(details.retrieved_at) ? ' · נשמרו: ' + displayDate(details.retrieved_at) : '';
-            const aged = parseDate(details.retrieved_at) && Date.now() - parseDate(details.retrieved_at) > 7*86400000 ? ' · הנתונים בני יותר משבוע; יש לבדוק עדכון.' : '';
+            const aged = parseDate(details.retrieved_at) && Date.now() - parseDate(details.retrieved_at) > 7*86400000 ? ' · הנתונים בני יותר משבוע; עדכון נבדק אוטומטית בסריקות.' : '';
             const available = Object.values(p.technical_facts || {}).filter(e => e?.source && e?.value).length;
             node.textContent = override || (labels[latest.status || details.status] ||
-                (details.status === 'published' ? `פרטים ממודעת המקור זמינים (${available} שדות).` : 'פרטי המודעה עדיין לא נשאבו.')) + date + aged;
+                (details.status === 'published' ? `פרטים ממודעת המקור זמינים (${available} שדות).` : 'טרם נשמרו פרטי מודעה נוספים. האיסוף מתבצע אוטומטית במהלך הסריקה.')) + date + aged;
         }
         async function loadBasicListingDetails(p, generation) {
             try {
@@ -3271,38 +3270,6 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 if (generation === basicSourceGeneration) renderListingSourceStatus(p, 'הנתונים השמורים לא נטענו; אפשר לפתוח את מודעת המקור או לנסות שוב.');
             }
         }
-        async function requestBasicSourceDetails() {
-            const p = currentSelectedProperty, generation = basicSourceGeneration;
-            if (!p || p._idAmbiguous || !listingSourceUrl(p) || !listingNumber(p)) return;
-            const button = document.getElementById('modal-listing-source-request');
-            const token = localStorage.getItem('pa_github_token');
-            if (!token) { renderListingSourceStatus(p, 'להפעלת השאיבה צריך לחבר את GitHub בהגדרות המערכת.'); return; }
-            button.disabled = true;
-            const requestId = crypto.randomUUID();
-            try {
-                const response = await fetch('https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/basic-property-details.yml/dispatches', {
-                    method:'POST', headers:{Authorization:'Bearer '+token, Accept:'application/vnd.github+json','Content-Type':'application/json'},
-                    body:JSON.stringify({ref:'main', inputs:{property_id:String(p.id), refresh:'false', request_id:requestId}})});
-                if (!response.ok) throw new Error('GitHub HTTP ' + response.status);
-                if (generation !== basicSourceGeneration) return;
-                renderListingSourceStatus(p, 'הבקשה נשלחה. בודק נתונים שמורים ואז את מודעת המקור — ללא RentCast.');
-                for (let n=0; n<24; n++) {
-                    await new Promise(resolve => setTimeout(resolve,5000));
-                    if (generation !== basicSourceGeneration || currentSelectedProperty !== p) return;
-                    const status = await readBasicSourceJson('COMPS_REPORTS/basic_source_status.json');
-                    if (status?.request_id !== requestId || status.property_id !== String(p.id)) continue;
-                    await loadBasicListingDetails(p, generation);
-                    if (status.statuses?.unsupported_source) renderListingSourceStatus(p, 'למקור הזה עדיין אין חיבור לשאיבת מפרט.');
-                    return;
-                }
-                renderListingSourceStatus(p, 'הבקשה עדיין לא הסתיימה. בדוק ב־Actions את Basic Property Source Details ואז פתח שוב את הנכס.');
-            } catch (error) {
-                if (generation === basicSourceGeneration) renderListingSourceStatus(p,
-                    'לא ניתן להפעיל את הבקשה: ' + error.message + '. בדוק שהקובץ basic-property-details.yml הותקן ושהטוקן מאפשר הפעלת Actions.');
-            } finally { if (generation === basicSourceGeneration) button.disabled = false; }
-        }
-
-
         function updateModalFinancialVisibility(p) {
             const f = financialSnapshot(p);
             const hasEvidence = Object.values(f.evidence).some(Boolean);
@@ -3337,7 +3304,6 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const sourceGeneration = ++basicSourceGeneration;
             const sourceSupported = Boolean(listingSourceUrl(p) && listingNumber(p) && !p._idAmbiguous);
             document.getElementById('modal-listing-source-controls').hidden = !sourceSupported;
-            document.getElementById('modal-listing-source-request').disabled = false;
             renderListingSourceStatus(p); renderListingPhotos(p);
             
             if (!viewedDeals.has(uiPropertyKey(p))) {
@@ -3895,6 +3861,6 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         window.onload = bootstrapPaAuthentication;
     </script>
-    <script src="secondary_sources.js?v=1.0.0-20261009"></script>
+    <script src="secondary_sources.js?v=1.5.0-20261013"></script>
 </body>
 </html>
