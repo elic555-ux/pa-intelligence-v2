@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.21.4 / 2026-10-13: automatic source collection during scans; passive property details -->
+<!-- PA UI 8.21.5 / 2026-10-13: prominent living/lot areas; no strategy controls; automatic source collection -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -79,7 +79,8 @@
 
         /* Table Structure Enhancements */
         .props-table { table-layout: fixed; width: 100%; min-width: 1000px; }
-        .col-location { width: 30%; }
+        .col-location { width: 25%; }
+        .col-area { width: 14%; }
         .col-price { width: 12%; }
         .col-features { width: 12%; }
         .col-yield { width: 15%; }
@@ -118,7 +119,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.21.4 · 13.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.21.5 · 13.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -172,7 +173,7 @@
         </section>
 
         <!-- Filters -->
-        <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3.5 shadow-lg">
+        <section class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5 shadow-lg">
             <!-- מסנן גאוגרפי ללוח הנכסים הקיימים בלבד -->
             <div class="relative" id="city-filter-wrapper">
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מחוז / עיר / שכונה או אזור מקור</label>
@@ -195,14 +196,6 @@
             </div>
 
 
-            <div>
-                <label class="block text-xs font-bold text-amber-400 mb-1.5">אסטרטגיה</label>
-                <select id="filter-strategy" onchange="applyFilters()" class="w-full bg-gray-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs text-amber-300 font-bold focus:outline-none">
-                    <option value="all">הכל</option>
-                    <option value="turnkey">🔑 בחינה להשכרה</option>
-                    <option value="value_add">🔨 בחינה להשבחה</option>
-                </select>
-            </div>
             
             <div>
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">סוג נכס</label>
@@ -297,11 +290,12 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 bg-gray-950 p-4 rounded-xl border border-gray-800 text-center shadow-inner">
                 <div><span id="modal-price-label" class="text-xs font-bold text-gray-400 block mb-0.5">מחיר מבוקש</span><strong class="text-2xl font-black text-emerald-400 font-mono" id="modal-price"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">חדרי שינה</span><strong class="text-xl font-extrabold text-white" id="modal-beds"></strong></div>
                 <div><span class="text-xs font-bold text-gray-400 block mb-0.5">רחצה</span><strong class="text-xl font-extrabold text-white" id="modal-baths"></strong></div>
-                <div><span class="text-xs font-bold text-gray-400 block mb-0.5">שטח</span><strong class="text-xl font-extrabold text-white" id="modal-sqft"></strong></div>
+                <div><span class="text-xs font-bold text-blue-300 block mb-0.5">שטח מגורים</span><strong class="text-xl font-extrabold text-white font-mono" dir="ltr" id="modal-sqft"></strong><span id="modal-sqft-source" hidden class="block mt-1 text-[10px] text-gray-400"></span></div>
+                <div><span class="text-xs font-bold text-blue-300 block mb-0.5">שטח מגרש</span><strong class="text-xl font-extrabold text-white font-mono" dir="ltr" id="modal-lot-size"></strong><span id="modal-lot-size-source" hidden class="block mt-1 text-[10px] text-gray-400"></span></div>
             </div>
 
             <section id="modal-price-history" hidden class="bg-gray-950/70 p-4 rounded-xl border border-gray-800">
@@ -327,7 +321,6 @@
             </div>
 
             <div id="modal-financial-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950/70 p-3 rounded-xl border border-gray-800 text-xs mt-2">
-                <div><span class="text-gray-400 block font-bold">אסטרטגיה</span><strong class="text-amber-300 font-extrabold" id="modal-strategy"></strong></div>
                 <div><span class="text-gray-400 block font-bold">שכירות חודשית</span><strong class="text-emerald-400 font-extrabold font-mono" id="modal-rent"></strong></div>
                 <div><span class="text-gray-400 block font-bold">תשואה ברוטו</span><strong class="text-emerald-400 font-extrabold font-mono" id="modal-yield"></strong></div>
                 <div><span class="text-gray-400 block font-bold">הערכת שיפוץ</span><strong class="text-white font-extrabold" id="modal-rehab"></strong></div>
@@ -344,7 +337,6 @@
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">סוג הגג</span><strong class="text-white text-sm" id="modal-roof"></strong><span id="modal-roof-source" hidden class="block mt-1 text-[10px] text-gray-400 font-normal"></span></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חימום / קירור</span><strong class="text-white text-sm" id="modal-hvac"></strong><span id="modal-hvac-source" hidden class="block mt-1 text-[10px] text-gray-400 font-normal"></span></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">בנייה</span><strong class="text-white text-sm" id="modal-year-built"></strong></div>
-                    <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">מגרש</span><strong class="text-white text-sm" id="modal-lot-size"></strong></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">חניה</span><strong class="text-white text-sm" id="modal-parking"></strong><span id="modal-parking-source" hidden class="block mt-1 text-[10px] text-gray-400 font-normal"></span></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">עסקה</span><span class="text-white text-sm" id="modal-deal-type"></span></div>
                     <div class="bg-gray-900/90 p-2.5 rounded-lg border border-gray-800"><span class="text-gray-400 block font-bold">תיק</span><span class="text-blue-300 font-mono" id="modal-docket"></span></div>
@@ -1104,6 +1096,7 @@
 
         function propertyStatusDisplayHtml(p) {
             const parts = [];
+            if (p.is_synthetic_demo) parts.push('נכס מומצא לבדיקה · דוגמה ללא מפרט נוסף');
             if (isPastSale(p)) parts.push('מועד המכירה עבר · נדרש עדכון מהמקור');
             else if (p.sheriff_status) parts.push('סטטוס לפי המקור: ' + String(p.sheriff_status));
             if (isOffMarketProperty(p)) parts.push(String(p.market_status || p.status || '').includes('candidate') ? 'מועמד Off Market · דורש אימות' : 'Off Market לפי המקור');
@@ -1323,7 +1316,7 @@
             if (status) status.textContent = !terms.length ? '' : searchAll ? 'בכל המאגר, כולל ארכיון' : 'בתוך המסננים';
             if (searchAll) return rawProperties.filter(p => propertyMatchesSearch(p, terms));
             const value = id => document.getElementById(id)?.value || 'all';
-            const strat = value('filter-strategy'), type = value('filter-type');
+            const type = value('filter-type');
             const range = boardPriceRange();
             if (range.error) return [];
             const includeUnknown = document.getElementById('filter-unknown-price')?.checked !== false;
@@ -1332,7 +1325,6 @@
                 if (isPipelineProperty(p)) return false;
                 if (watchlistFilterActive && !isWatchlistedProperty(p)) return false;
                 if (activeCategory === 'archive' ? !p.is_archived : (p.is_archived || !matchesSourceCategory(p, activeCategory))) return false;
-                if (strat !== 'all' && p.strategy !== strat) return false;
                 if (type !== 'all' && (p.type || p.property_type) !== type) return false;
                 const price = getMarketAskingPrice(p);
                 if (price === null && !includeUnknown) return false;
@@ -2972,6 +2964,51 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             return '<span class="text-sm text-gray-300">מחיר מבוקש לא פורסם</span>';
         }
 
+        function livingAreaSqft(p) {
+            const positive = value => { const n = numericData(value); return n !== null && n > 0 ? n : null; };
+            return positive(p.sqft) ?? positive(p.county_property_data?.sqft) ??
+                (propertyTechnicalFact(p, 'sqft').source ? positive(propertyTechnicalFact(p, 'sqft').value) : null);
+        }
+        function livingAreaText(p) {
+            const area = livingAreaSqft(p);
+            return area === null ? 'לא פורסם' : area.toLocaleString('en-US') + ' SqFt';
+        }
+        function livingAreaDisplayHtml(p) {
+            return '<span class="property-living-area">' + escapeHtml(livingAreaText(p)) + '</span>';
+        }
+        function propertyLotArea(p) {
+            const fact = propertyTechnicalFact(p, 'lot_area_acres'), acres = numericData(fact.value);
+            if (fact.source && acres !== null && acres > 0 && ['acre', 'acres'].includes(String(fact.unit || '').toLowerCase()))
+                return {text: acres.toLocaleString('en-US', {maximumFractionDigits: 6}) + ' Acres', fact};
+            const value = suppliedTechnicalValue(p.lot_size ?? p.county_property_data?.lot_size);
+            if (value === null) return {text: 'לא פורסם', fact: null};
+            if (/[a-zא-ת]/i.test(value)) return {text: value, fact: null};
+            const unit = suppliedTechnicalValue(p.lot_size_unit ?? p.county_property_data?.lot_size_unit);
+            const units = {sqft: 'SqFt', acre: 'Acres', acres: 'Acres', sqm: 'מ״ר'};
+            const number = numericData(value);
+            return {text: (number !== null ? number.toLocaleString('en-US') : value) + ' ' +
+                (units[String(unit || '').toLowerCase()] || unit || '(יחידה לא צוינה)'), fact: null};
+        }
+        function renderAreaSource(id, fact) {
+            const node = document.getElementById(id); if (!node) return;
+            node.replaceChildren(); node.hidden = !fact?.source;
+            if (!fact?.source) return;
+            const link = document.createElement(fact.url ? 'a' : 'span');
+            link.textContent = 'מקור: ' + fact.source;
+            if (fact.url) { link.href = fact.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.className = 'text-blue-300 underline'; }
+            node.appendChild(link);
+            if (parseDate(fact.date)) node.appendChild(document.createTextNode(' · ' + displayDate(fact.date)));
+        }
+        function renderPropertyAreaFacts(p) {
+            const living = document.getElementById('modal-sqft'), lot = document.getElementById('modal-lot-size');
+            if (living) living.textContent = livingAreaText(p);
+            const lotArea = propertyLotArea(p);
+            if (lot) lot.textContent = lotArea.text;
+            const fact = propertyTechnicalFact(p, 'sqft');
+            renderAreaSource('modal-sqft-source', fact.source && numericData(fact.value) === livingAreaSqft(p) ? fact : null);
+            renderAreaSource('modal-lot-size-source', lotArea.fact);
+        }
+
         function featureDisplayHtml(p) {
             if (p.source_type === 'tax') {
                  const parcel = p.parcel_id ? `חלקה: ${escapeHtml(p.parcel_id)}` : 'חלקה לא פורסמה';
@@ -2996,7 +3033,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             if (!filtered.length) { container.innerHTML = propertySearchTerms().length ? '<div class="text-center py-8 text-gray-300">לא נמצא נכס שתואם לחיפוש.</div>' : selectedCitiesFilter !== null && !selectedCitiesFilter.size ? '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">בחר מחוז, עיר או אזור מהרשימה, או לחץ ״הצג את כל הנכסים״.</div>' : '<div class="text-center py-12 text-white font-extrabold bg-gray-900 rounded-2xl">לא נמצאו תוצאות שתואמות למסננים.</div>'; return; }
 
             if (currentViewMode === 'table') {
-                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">שכירות / תשואה ברוטו</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
+                container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-area">שטח מגורים</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">שכירות / תשואה ברוטו</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-score text-center">ציון</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
                 ${filtered.map((p, index) => {
                     const isW = isWatchlistedProperty(p), isH = (p.deal_score||0)>=80, isT = p.strategy==='turnkey';
                     const isV = viewedDeals.has(uiPropertyKey(p)) || (!p._idAmbiguous && viewedDeals.has(String(p.id)));
@@ -3017,6 +3054,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                             ${isGoodDeal ? '<span title="מתחת ל-MAO!" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 ml-1">עומד ביעד שהוזן</span>' : ''}
                         </td>
                         <td class="p-3 font-mono font-black text-emerald-400 text-sm">${propertyPriceDisplayHtml(p)}${priceDropDetailsHtml(p)}</td>
+                        <td class="p-3 font-bold text-blue-200 whitespace-nowrap" dir="ltr">${livingAreaDisplayHtml(p)}</td>
                         <td class="p-3 font-bold text-gray-300 whitespace-nowrap">${featureDisplayHtml(p)}</td>
                         <td class="p-3">${financialDisplayHtml(p)}</td>
                         <td class="p-3 font-mono text-amber-300">${propertyDateDisplayHtml(p)}</td>
@@ -3048,7 +3086,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                             <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${escapeHtml(p.address)}"><span class="property-number-badge" title="מספר נכס במאגר הטעון">${displayNumberById.get(uiPropertyKey(p)) ?? index + 1}</span><span class="truncate">${escapeHtml(p.address)}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</p>${propertyStatusDisplayHtml(p)}
                             <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${propertyPriceDisplayHtml(p)}${priceDropDetailsHtml(p)}</div>
                             
-                            <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-3"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div><div>Sqft: <strong class="text-white">${p.sqft||'-'}</strong></div></div>
+                            <div class="bg-blue-950/30 p-3 rounded-xl border border-blue-500/30 mb-2"><span class="text-xs text-blue-300 font-bold">שטח מגורים</span><div class="text-lg font-black text-white font-mono mt-1" dir="ltr">${livingAreaDisplayHtml(p)}</div></div>
+                            <div class="bg-gray-950 p-2 rounded-xl text-center text-xs text-gray-400 mb-2 grid grid-cols-2"><div>חדרים: <strong class="text-white">${p.beds||'-'}</strong></div><div>אמבט: <strong class="text-white">${p.baths||'-'}</strong></div></div>
                             <div class="bg-gray-950/70 p-2 rounded-lg text-xs">${financialDisplayHtml(p)}</div>
                         
                             <div class="bg-blue-950/20 p-2.5 rounded-xl border border-blue-500/30 mt-3 mb-1 space-y-1.5">
@@ -3131,6 +3170,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 }
             }
             renderListingExtraFacts(p);
+            renderPropertyAreaFacts(p);
         }
 
         const LISTING_ALIASES = {STREET:'ST',AVENUE:'AVE',ROAD:'RD',DRIVE:'DR',BOULEVARD:'BLVD',LANE:'LN',COURT:'CT',PLACE:'PL',TERRACE:'TER',
@@ -3296,7 +3336,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 grid.classList.add(count === 1 ? 'grid-cols-1' : 'grid-cols-2', ['sm:grid-cols-1', 'sm:grid-cols-2', 'sm:grid-cols-3', 'sm:grid-cols-4'][Math.max(1, count) - 1]);
             };
             fitColumns('modal-financial-figures', Object.values(figures).filter(visible).length);
-            fitColumns('modal-financial-summary', 1 + Object.values(summary).filter(visible).length);
+            document.getElementById('modal-financial-summary').hidden = !Object.values(summary).some(visible);
+            fitColumns('modal-financial-summary', Object.values(summary).filter(visible).length);
         }
 
         function openPropertyModal(id) {
@@ -3327,8 +3368,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const countyData = p.county_property_data || null;
             document.getElementById('modal-beds').textContent = p.beds || countyData?.beds || '-';
             document.getElementById('modal-baths').textContent = p.baths || countyData?.baths || '-';
-            document.getElementById('modal-sqft').textContent = p.sqft || countyData?.sqft || '-';
-            document.getElementById('modal-strategy').textContent = p.strategy_label||'-';
+            renderPropertyAreaFacts(p);
             document.getElementById('modal-rent').textContent = financialRentText(p);
             document.getElementById('modal-yield').textContent = financialYieldText(p);
             document.getElementById('modal-rehab').textContent = financialRehabText(p);
@@ -3337,7 +3377,6 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 : propertyCurrentSummary(p);
             renderPropertyTechnicalFacts(p);
             document.getElementById('modal-year-built').textContent = p.year_built || countyData?.year_built || 'לא ידוע';
-            document.getElementById('modal-lot-size').textContent = p.lot_size || countyData?.lot_size || '-';
             document.getElementById('modal-deal-type').textContent = p.deal_type||'-';
             document.getElementById('modal-docket').textContent = p.docket_id||p.id;
             const sheriffDetails = document.getElementById('modal-sheriff-details');
@@ -3862,7 +3901,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         window.onload = bootstrapPaAuthentication;
     </script>
-    <script src="secondary_sources.js?v=1.5.0-20261013"></script>
+    <script src="secondary_sources.js?v=1.5.0-area-20261013"></script>
     <script src="preview-hooks.js"></script>
 </body>
 </html>

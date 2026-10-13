@@ -30,11 +30,33 @@ with sync_playwright() as p:
     page.wait_for_function("typeof rawProperties !== 'undefined' && rawProperties.length === 3 && !document.getElementById('pa-app-shell').hidden")
     assert page.locator("#pa-preview-banner").is_visible()
     assert "סביבת בדיקה" in page.locator("#pa-preview-banner").inner_text()
-    page.evaluate("openPropertyModal('PA-MLS-1778804')")
+    assert page.locator("#filter-strategy").count() == 0
+    assert page.locator("#modal-strategy").count() == 0
+    assert "שטח מגורים" in page.locator("#properties-container th.col-area").inner_text()
+    assert "1,218 SqFt" in page.locator("#properties-container").inner_text()
+    page.evaluate("openPropertyModal('PA-MLS-900000001')")
+    page.wait_for_function("currentSelectedProperty?.id === 'PA-MLS-900000001'")
+    assert "נכס מומצא לבדיקה" in page.locator("#modal-badges").inner_text()
+    assert "מומצא" in page.locator("#modal-summary").inner_text()
+    assert page.locator("#modal-lot-size").inner_text() == "לא פורסם"
+    page.evaluate("closePropertyModal();openPropertyModal('PA-MLS-1778804')")
     page.wait_for_function("document.getElementById('modal-additional-source-notice')?.textContent.includes('Tarasa')")
     assert page.locator("#modal-listing-source-request").count() == 0
     assert page.locator("#modal-additional-source-request").count() == 0
     assert page.locator("#modal-additional-source-photos img").count() == 3
+    assert page.locator("#modal-sqft").inner_text() == "1,218 SqFt"
+    assert page.locator("#modal-lot-size").inner_text() == "0.14 Acres"
+    assert "Tarasa" in page.locator("#modal-sqft-source").inner_text()
+    assert "Tarasa" in page.locator("#modal-lot-size-source").inner_text()
+    assert page.locator("#modal-roof").inner_text() == "אספלט"
+    assert "גז" in page.locator("#modal-hvac").inner_text()
+    assert "קיר/חלון" in page.locator("#modal-hvac").inner_text()
+    assert page.locator("#modal-parking").inner_text() != "לא פורסם"
+    assert page.locator("#modal-listing-extra-facts strong").count() >= 5
+    assert page.locator("#modal-financial-summary").is_hidden()
+    page.evaluate("closePropertyModal();setViewMode('cards')")
+    assert "1,218 SqFt" in page.locator("#properties-container").inner_text()
+    page.evaluate("openPropertyModal('PA-MLS-1778804')")
     page.on("dialog", lambda dialog: dialog.accept())
     page.evaluate("moveToPipelineFromModal()")
     page.wait_for_function("pipelineDeals.length === 1")
@@ -54,4 +76,4 @@ with sync_playwright() as p:
     assert page.evaluate("localStorage.getItem('pa_github_token')") == "production-test-token"
     assert page.evaluate("localStorage.getItem('unrelated')") == "keep"
     browser.close()
-    print("PASS browser preview, example modal, local deal-room/report roundtrip and blocked RentCast requests")
+    print("PASS browser preview, living/lot areas, real Valley source details, synthetic labels, local deal-room/report and blocked RentCast")
