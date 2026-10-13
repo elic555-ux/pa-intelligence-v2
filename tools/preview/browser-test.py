@@ -54,7 +54,8 @@ with sync_playwright() as p:
     assert page.locator("#modal-parking").inner_text() != "לא פורסם"
     assert page.locator("#modal-listing-extra-facts strong").count() >= 5
     assert page.locator("#modal-financial-summary").is_hidden()
-    page.evaluate("closePropertyModal();setViewMode('cards')")
+    page.evaluate("closePropertyModal()")
+    page.locator("#btn-view-grid").click()
     assert "1,218 SqFt" in page.locator("#properties-container").inner_text()
     page.evaluate("openPropertyModal('PA-MLS-1778804')")
     page.on("dialog", lambda dialog: dialog.accept())
