@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.21.0 / 2026-10-13: Supabase owner sign-in; private tables require matching server RLS policies -->
+<!-- PA UI 8.21.1 / 2026-10-13: Supabase owner sign-in; private tables require matching server RLS policies -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -117,7 +117,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.21.0 · 13.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.21.1 · 13.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -218,13 +218,14 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מחיר מקסימום</label>
-                <select id="filter-price" onchange="applyPriceFilters('max')" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
+                <select id="filter-price" onchange="updateCustomMaxPrice(); applyPriceFilters('max')" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold focus:outline-none">
                     <option value="scan" selected>לפי הסריקה · עד $190,000</option>
-                    <option value="all">ללא הגבלה</option>
+                    <option value="custom">סכום לבחירה</option><option value="all">ללא הגבלה</option>
                     <option value="100000">עד $100k</option>
                     <option value="190000">עד $190k</option>
                     <option value="250000">עד $250k</option>
                 </select>
+                <input id="filter-custom-max-price" hidden type="text" inputmode="numeric" value="190,000" aria-label="מחיר מקסימום לבחירה בדולרים" oninput="handlePriceInput(this); applyPriceFilters('max')" class="mt-2 w-full bg-gray-950 border border-emerald-500 rounded-xl px-2.5 py-2 text-sm text-white font-mono text-center">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-300 mb-1.5">מיון</label>
@@ -236,6 +237,7 @@
             </div>
         </section>
 
+        <button id="filter-latest-new" type="button" aria-pressed="false" onclick="toggleLatestNew()" class="px-4 py-2 rounded-xl border border-blue-500 text-blue-300 bg-gray-900 font-bold text-sm">נכסים חדשים · מהסריקה האחרונה</button>
         <section class="flex flex-wrap items-center justify-between gap-3 text-xs" aria-live="polite">
             <div class="flex flex-wrap items-center gap-3"><strong id="filtered-result-count" class="text-blue-300">תוצאות לאחר סינון: 0</strong><span id="filtered-unknown-price" hidden class="text-gray-400"></span><span id="active-price-range" class="text-gray-400"></span><button id="reset-board-price-range" hidden onclick="restoreBoardScanPriceRange()" class="text-blue-300 underline text-xs">לטווח הסריקה</button></div>
             <label class="flex items-center gap-2 text-gray-300 cursor-pointer"><input type="checkbox" id="filter-unknown-price" checked onchange="applyFilters()" class="accent-blue-500">הצג גם נכסים ללא מחיר מבוקש</label>
@@ -1169,15 +1171,35 @@
             const option = maxSelect?.querySelector('option[value="scan"]');
             if (option) option.textContent = 'לפי הסריקה · עד ' + moneyData(range.max);
             if (resetView && maxSelect) maxSelect.value = 'scan';
+            updateCustomMaxPrice();
             if (databaseProperties.length) renderCards();
             return true;
         }
 
+        function updateCustomMaxPrice() {
+            document.getElementById('filter-custom-max-price').hidden = document.getElementById('filter-price').value !== 'custom';
+        }
+        let latestNewFilterActive = false;
+        function isLatestNewProperty(p) {
+            const scan = scannerReport?.last_scan;
+            if (!scan?.scan_id || p.last_scan_id !== scan.scan_id || p.scan_status !== 'new') return false;
+            const firstSeen = parseDate(p.first_seen), started = parseDate(scan.started_at);
+            return firstSeen > 0 && started > 0 && firstSeen >= started;
+        }
+        function toggleLatestNew() {
+            latestNewFilterActive = !latestNewFilterActive;
+            const button = document.getElementById('filter-latest-new');
+            button.setAttribute('aria-pressed', String(latestNewFilterActive));
+            button.classList.toggle('bg-blue-600', latestNewFilterActive);
+            button.classList.toggle('text-white', latestNewFilterActive);
+            button.textContent = latestNewFilterActive ? 'נכסים חדשים · הצג הכל' : 'נכסים חדשים · מהסריקה האחרונה';
+            renderCards();
+        }
         function boardPriceRange() {
             const rawMin = document.getElementById('filter-min-price')?.value;
             const min = String(rawMin ?? '').trim() ? numericData(rawMin) : 0;
             const choice = document.getElementById('filter-price')?.value || 'scan';
-            const max = choice === 'scan' ? boardScanPriceRange.max : choice === 'all' ? null : numericData(choice);
+            const max = choice === 'scan' ? boardScanPriceRange.max : choice === 'all' ? null : choice === 'custom' ? numericData(document.getElementById('filter-custom-max-price')?.value) : numericData(choice);
             const error = min === null || min < 0 || (choice !== 'all' && (max === null || max <= 0))
                 ? 'יש להזין טווח מחיר תקין.' : max !== null && min > max ? 'מחיר המינימום גבוה ממחיר המקסימום.' : '';
             return {min, max, error, choice};
@@ -2299,6 +2321,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 scannerReport = await response.json();
                 if (!scannerReport || typeof scannerReport !== 'object' || Array.isArray(scannerReport)) throw new Error('invalid scanner report');
                 updateScanHeader(scannerReport);
+                if (latestNewFilterActive) renderCards();
 
                 const lastScan = scannerReport.last_scan || null;
                 const lastEvent = scannerReport.last_event || null;
@@ -2972,6 +2995,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const container = document.getElementById('properties-container');
             const displayNumberById = new Map(rawProperties.map((p, index) => [uiPropertyKey(p), index + 1]));
             let filtered = getFilteredProperties();
+            if (latestNewFilterActive) filtered = filtered.filter(isLatestNewProperty);
             const sortBy = document.getElementById('sort-by')?.value || 'date_desc';
             if (sortBy === 'score_desc') filtered.sort((a, b) => (numericData(b.deal_score) ?? -Infinity) - (numericData(a.deal_score) ?? -Infinity));
             else if (sortBy === 'date_desc') filtered.sort((a, b) => parseDate(b.listed_date) - parseDate(a.listed_date));
