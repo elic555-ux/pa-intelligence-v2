@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.20.1 / 2026-10-12: verify scan saves against their immutable commit; saved scopes remain independent -->
+<!-- PA UI 8.21.0 / 2026-10-13: Supabase owner sign-in; private tables require matching server RLS policies -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -14,6 +14,16 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
         [hidden] { display: none !important; }
+        #pa-login-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+        #pa-login-screen > div { width: min(100%, 440px); padding: 32px; border: 1px solid #374151; border-radius: 20px; background: #111827; box-shadow: 0 20px 60px #0005; }
+        #pa-login-screen h1 { margin: 0 0 8px; font-size: 26px; font-weight: 800; }
+        #pa-login-screen label { display: block; margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+        #pa-login-screen input { display: block; box-sizing: border-box; width: 100%; margin-bottom: 20px; padding: 12px; border: 1px solid #374151; border-radius: 12px; background: #030712; color: #f3f4f6; font-size: 16px; }
+        #pa-login-screen input:focus { outline: 2px solid #60a5fa; outline-offset: 2px; }
+        #pa-login-submit { width: 100%; padding: 12px; border: 0; border-radius: 12px; background: #2563eb; color: white; font-size: 16px; font-weight: 700; cursor: pointer; }
+        #pa-login-submit:disabled { opacity: .65; cursor: wait; }
+        #pa-login-status { margin-top: 16px; font-size: 14px; line-height: 1.6; }
+        #pa-login-screen > div > p { margin: 0 0 24px; color: #9ca3af; }
         body { font-family: 'Assistant', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .kpi-active-all { background-color: rgba(59, 130, 246, 0.2) !important; border-color: #3b82f6 !important; box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); transform: translateY(-2px); }
@@ -84,6 +94,21 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
+    <section id="pa-login-screen" class="min-h-screen flex items-center justify-center p-6" aria-label="כניסה למערכת">
+        <div class="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-8 shadow-2xl">
+            <h1 class="text-2xl font-extrabold text-white mb-2">כניסה למערכת</h1>
+            <p class="text-gray-400 text-sm mb-6">PA Real Estate Intelligence Hub</p>
+            <form id="pa-login-form" onsubmit="loginPaApp(event)">
+                <label for="pa-login-email" class="block text-sm font-bold mb-2">אימייל</label>
+                <input id="pa-login-email" type="email" dir="ltr" autocomplete="username" required class="w-full bg-gray-950 border border-gray-700 rounded-xl p-3 mb-4 text-white" />
+                <label for="pa-login-password" class="block text-sm font-bold mb-2">סיסמה</label>
+                <input id="pa-login-password" type="password" dir="ltr" autocomplete="current-password" required class="w-full bg-gray-950 border border-gray-700 rounded-xl p-3 mb-5 text-white" />
+                <button id="pa-login-submit" type="submit" class="w-full rounded-xl bg-blue-600 hover:bg-blue-500 p-3 text-white font-bold">כניסה</button>
+            </form>
+            <p id="pa-login-status" role="status" aria-live="polite" class="mt-4 text-sm text-gray-300">בודק התחברות…</p>
+        </div>
+    </section>
+    <div id="pa-app-shell" hidden>
 
     <!-- Header & Navigation -->
     <header class="bg-gray-900/90 border-b border-gray-800 sticky top-0 z-40 backdrop-blur-md" id="app-header">
@@ -92,7 +117,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.20.1 · 12.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.21.0 · 13.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -100,6 +125,7 @@
                 <button onclick="openTelegramModal()" title="התראות טלגרם" aria-label="התראות טלגרם" class="compact-action bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 border border-sky-500/40 rounded-lg font-bold transition"><i data-lucide="send" class="w-4 h-4"></i><span>טלגרם</span><span id="telegram-status-dot" title="מצב ההתראות לא אומת" class="w-2 h-2 rounded-full bg-gray-500"></span></button>
                 <button onclick="openOnDemandScanModal()" title="הפעל סריקה יזומה" class="compact-action bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-black transition"><i data-lucide="play-circle" class="w-4 h-4"></i><span>סריקה יזומה</span></button>
                 <button onclick="openSettingsModal()" class="compact-action bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-lg font-bold transition"><i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i><span>הגדרות סריקה</span></button>
+                <button id="pa-logout-button" onclick="logoutPaApp()" class="compact-action bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-lg font-bold transition">התנתקות</button>
             </nav>
             <div class="compact-header-status">
                 <div class="compact-last-scan" title="סריקה אחרונה · זמן ישראל">
@@ -783,12 +809,98 @@
         </div>
     </div>
 
+    </div>
     <!-- Script Logic -->
     <script>
         // Supabase Initialization
         const SUPABASE_URL = 'https://rccncvnybybastdgdoqe.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_-OFzsbOGfsPATYLeD5Grnw_GpHYDAAC';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_KEY) || null;
+        const PA_OWNER_ID = 'c8657ee2-42cd-47bc-b62c-73bab8d8954d';
+        let paAuthVerified = false;
+        let paAuthGeneration = 0;
+        let paInitPromise = null;
+
+        function lockPaApp(message = 'הזן אימייל וסיסמה כדי להיכנס.') {
+            paAuthVerified = false;
+            document.getElementById('pa-app-shell').hidden = true;
+            document.getElementById('pa-login-screen').hidden = false;
+            document.getElementById('pa-login-status').textContent = message;
+        }
+
+        async function verifyPaAccess() {
+            const generation = ++paAuthGeneration;
+            try {
+                if (!supabaseClient?.auth) throw new Error('auth_unavailable');
+                const {data, error} = await supabaseClient.auth.getUser();
+                if (generation !== paAuthGeneration) return false;
+                if (error || !data?.user) { lockPaApp(); return false; }
+                if (data.user.id !== PA_OWNER_ID) {
+                    lockPaApp('לחשבון הזה אין הרשאה למערכת. התחבר באמצעות החשבון שהוגדר עבורך.');
+                    return false;
+                }
+                paAuthVerified = true;
+                document.getElementById('pa-login-status').textContent = 'טוען את המערכת…';
+                if (!paInitPromise) paInitPromise = init();
+                await paInitPromise;
+                if (generation !== paAuthGeneration || !paAuthVerified) return false;
+                document.getElementById('pa-login-screen').hidden = true;
+                document.getElementById('pa-app-shell').hidden = false;
+                return true;
+            } catch (error) {
+                if (generation === paAuthGeneration) {
+                    paInitPromise = null;
+                    lockPaApp('לא ניתן לאמת את הכניסה כרגע. נסה שוב בעוד רגע.');
+                }
+                return false;
+            }
+        }
+
+        async function loginPaApp(event) {
+            event?.preventDefault();
+            const button = document.getElementById('pa-login-submit');
+            if (button.disabled) return;
+            const passwordInput = document.getElementById('pa-login-password');
+            button.disabled = true;
+            document.getElementById('pa-login-status').textContent = 'מתחבר…';
+            try {
+                const {error} = await supabaseClient.auth.signInWithPassword({
+                    email: document.getElementById('pa-login-email').value.trim(), password: passwordInput.value
+                });
+                passwordInput.value = '';
+                if (error) { lockPaApp('לא ניתן להתחבר. בדוק את האימייל והסיסמה.'); return; }
+                await verifyPaAccess();
+            } catch (error) { lockPaApp('לא ניתן להתחבר כרגע. נסה שוב בעוד רגע.'); }
+            finally { passwordInput.value = ''; button.disabled = false; }
+        }
+
+        async function logoutPaApp() {
+            ++paAuthGeneration;
+            lockPaApp('מתנתק…');
+            localStorage.removeItem('pa_github_token');
+            try {
+                const {error} = await supabaseClient.auth.signOut({scope: 'local'});
+                if (error) { lockPaApp('ההתנתקות לא הושלמה. נסה שוב.'); return; }
+                window.location.reload();
+            } catch (error) { lockPaApp('ההתנתקות לא הושלמה. נסה שוב.'); }
+        }
+
+        async function bootstrapPaAuthentication() {
+            lockPaApp('בודק התחברות…');
+            if (supabaseClient?.auth) supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_OUT') {
+                    ++paAuthGeneration;
+                    lockPaApp();
+                    // Discard private in-memory records and in-flight requests.
+                    if (paInitPromise) window.location.reload();
+                } else if (['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
+                    if (event === 'SIGNED_IN' && (!paAuthVerified || session?.user?.id !== PA_OWNER_ID)) lockPaApp('בודק התחברות…');
+                    // Run outside the SDK callback to avoid an auth-lock deadlock.
+                    setTimeout(() => verifyPaAccess(), 0);
+                }
+            });
+            await verifyPaAccess();
+        }
 
         let rawProperties = [];
         let activeCategory = 'all';
@@ -3737,7 +3849,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             button.title = automationStateVerified ? 'הגדרת התזמון בשרת; תוצאת הריצות מופיעה בדוח הסריקה' : 'הגדרת התזמון בשרת לא נטענה';
         }
 
-        window.onload = init;
+        window.onload = bootstrapPaAuthentication;
     </script>
     <script src="secondary_sources.js?v=1.0.0-20261009"></script>
 </body>
