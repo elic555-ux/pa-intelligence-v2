@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import automatic_listing_sources as worker
 import completion_subjects as subjects
+import listing_source as basic_source
 import orchestrator as scanner
 import property_sources as registry
 import tarasa_listing_source as source
@@ -189,7 +190,7 @@ class IndependentCompletionTests(unittest.TestCase):
                         'PA_SCAN_CONFIG_COMMIT': '', 'PA_SCAN_REQUEST_ID': ''}), \
                     patch.object(scanner, 'fetch_live_mls_for_city', side_effect=fetch), \
                     patch.object(source, 'run', side_effect=AssertionError('No completion in discovery')), \
-                    patch('listing_source.get_html', side_effect=AssertionError('No detail pages')), \
+                    patch.object(basic_source, 'get_html', side_effect=AssertionError('No detail pages')), \
                     redirect_stdout(io.StringIO()):
                 scanner.run_orchestrator()
         finally:
