@@ -12,6 +12,7 @@ on:
       - 'price_watch.py'
       - 'test_price_watch.py'
       - 'test_price_watch_ui.cjs'
+      - 'test_authentication.cjs'
       - 'tarasa_listing_source.py'
       - 'secondary_listing_source.py'
       - 'orchestrator.py'
@@ -85,6 +86,7 @@ jobs:
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
           node test_price_watch_ui.cjs
+          node test_authentication.cjs
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
@@ -119,6 +121,7 @@ jobs:
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
           node test_price_watch_ui.cjs
+          node test_authentication.cjs
       - name: Complete a bounded group or change activation
         if: steps.timing.outputs.due == 'true'
         id: worker
