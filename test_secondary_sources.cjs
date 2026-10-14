@@ -52,6 +52,75 @@ check('latest valid snapshot wins while older provider remains available',()=>{
 });
 check('rounded acreage keeps original unit without altering original lot',()=>{assert.equal(api.fact(row,tarasa,'lot_area_acres').unit,'acre');assert.equal(row.lot_size,3201);});
 
+check('coverage counts only verified fields and deduplicated photo references',()=>{
+    const notice=api.collectionNotice(row,[clear,tarasa]);
+    assert.match(notice,/שדות שנאספו: 17/);assert.match(notice,/תמונות: 3/);assert.match(notice,/חלקי/);
+    assert.equal(api.combinedPhotos(row,[clear,tarasa]).length,3);
+});
+check('partial snapshots remain partial without invented financial or occupancy fields',()=>{
+    const partial=structuredClone(tarasa);
+    partial.facts={beds:partial.facts.beds};partial.photos=[];
+    for(const field of ['occupancy','arv','monthly_rent_est']) partial.facts[field]={
+        ...tarasa.facts.beds,value:1234};
+    assert.match(api.collectionNotice(row,[partial]),/^שדות שנאספו: 1/);
+    assert.equal(api.fact(row,partial,'occupancy'),null);
+    assert.equal(api.fact(row,partial,'arv'),null);
+});
+check('empty verified snapshot is distinguished from an uncollected listing',()=>{
+    const empty=structuredClone(tarasa);empty.facts={};empty.photos=[];
+    assert.match(api.collectionNotice(row,[empty]),/אומתה/);
+    assert.match(api.collectionNotice(row,[]),/טרם נאסף/);
+});
+check('Erie without saved data has no promise of automatic enrichment',()=>{
+    assert.match(api.collectionNotice({...row,county:'Erie',city:'Erie'},[]),/עדיין אינה זמינה למחוז Erie/);
+});
+check('bound failed attempts explain the last failure but supply no facts or photos',()=>{
+    for(const status of ['source_blocked','source_rate_limited','robots_disallowed',
+                         'source_identity_mismatch','listing_not_available','source_unavailable']) {
+        const failed=structuredClone(tarasa);failed.status=status;failed.retrieved_at=null;
+        failed.last_attempt={status,checked_at:new Date().toISOString()};
+        assert.equal(api.matches(row,failed),false);
+        assert.equal(api.fact(row,failed,'beds'),null);
+        assert.equal(api.combinedPhotos(row,[failed]).length,0);
+        assert.doesNotMatch(api.collectionNotice(row,[failed]),/טרם נאסף/);
+    }
+});
+check('unrelated failure receipts cannot explain this property',()=>{
+    const failed=structuredClone(tarasa);failed.status='source_blocked';
+    failed.property_id='PA-MLS-9999';
+    assert.match(api.collectionNotice(row,[failed]),/טרם נאסף/);
+    const changed=structuredClone(tarasa);changed.status='source_blocked';changed.subject.county='Erie';
+    assert.match(api.collectionNotice(row,[changed]),/טרם נאסף/);
+});
+check('valid saved data remains visible after a later failed refresh',()=>{
+    const cached=structuredClone(tarasa);
+    cached.last_attempt={status:'source_blocked',checked_at:new Date().toISOString()};
+    assert.match(api.collectionNotice(row,[cached]),/שדות שנאספו: 17/);
+    assert.equal(api.combinedPhotos(row,[cached]).length,3);
+});
+
+check('exhausted completion is distinct from scan failure',()=>{
+    const failed=structuredClone(tarasa);failed.status='listing_not_available';failed.facts={};failed.photos=[];
+    failed.last_attempt={status:'listing_not_available',completion_status:'not_completed',unsuccessful_attempts:2};
+    const message=api.collectionNotice(row,[failed]);
+    assert.match(message,/השלמת הפרטים לא הצליחה/);
+    assert.match(message,/הסריקה ממשיכה/);
+    assert.doesNotMatch(message,/הסריקה נכשלה/);
+});
+check('failed refresh retains saved facts and shows incomplete-completion notice',()=>{
+    const cached=structuredClone(tarasa);
+    cached.last_attempt={status:'source_blocked',completion_status:'not_completed',unsuccessful_attempts:2};
+    const message=api.collectionNotice(row,[cached]);
+    assert.match(message,/שדות שנאספו: 17/);
+    assert.match(message,/השלמת הפרטים לא הצליחה/);
+    assert.equal(api.photos(row,cached).length,3);
+});
+check('unrelated exhausted receipt cannot mark this property incomplete',()=>{
+    const failed=structuredClone(tarasa);failed.property_id='PA-MLS-9999';failed.status='source_blocked';
+    failed.last_attempt={completion_status:'not_completed',unsuccessful_attempts:2};
+    assert.match(api.collectionNotice(row,[failed]),/טרם נאסף/);
+});
+
 const elements=new Map();
 class Element {
     constructor(tag='div'){this.tagName=tag;this.children=[];this.textContent='';this.hidden=false;this.disabled=false;
@@ -65,7 +134,8 @@ class Element {
 const dom={getElementById:id=>elements.get(id)||null,createElement:tag=>new Element(tag),
     createTextNode:text=>({textContent:text}),querySelectorAll:()=>[],addEventListener(){}};
 for(const id of ['modal-listing-source-controls','modal-roof','modal-roof-source','modal-hvac','modal-hvac-source',
-    'modal-parking','modal-parking-source','modal-occupancy','modal-occupancy-source','modal-listing-extra-facts']) {
+    'modal-parking','modal-parking-source','modal-occupancy','modal-occupancy-source','modal-listing-extra-facts',
+    'modal-sqft','modal-sqft-source','modal-lot-size','modal-lot-size-source']) {
     const e=new Element();e.id=id;e.parentNode=new Element();
 }
 const storage=new Map([['pa_github_token','test-token']]);let calls=[];
@@ -94,11 +164,43 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         assert.equal(dom.getElementById('modal-parking').textContent,'חניה מחוץ לרחוב');
         assert.match(dom.getElementById('modal-roof-source').children.map(n=>n.textContent).join(''),/Tarasa/);
     });
+    check('real modal shows a partial coverage summary beside saved source details',()=>{
+        const notice=dom.getElementById('modal-source-coverage').textContent;
+        assert.match(notice,/שדות שנאספו: 17/);assert.match(notice,/תמונות: 3/);assert.match(notice,/חלקי/);
+    });
     check('two source columns and three real photo nodes rendered',()=>{
         const section=dom.getElementById('modal-additional-source');
         assert.equal(dom.getElementById('modal-additional-source-photos').children.length,3);
         assert.match(dom.getElementById('modal-additional-source-notice').textContent,/Tarasa/);
         assert.equal(section.children.filter(n=>n.tagName==='a').length,2);
+    });
+    check('manual loading controls are absent while cached facts and photos render',()=>{
+        const section=dom.getElementById('modal-additional-source');
+        assert.equal(section.children.filter(n=>n.tagName==='button').length,0);
+        assert.equal(run('typeof requestBasicSourceDetails'),'undefined');
+        assert.doesNotMatch(html,/id="modal-listing-source-request"|onclick="requestBasicSourceDetails/);
+    });
+    check('strategy controls are removed from the board and property modal',()=>{
+        assert.doesNotMatch(html,/filter-strategy|modal-strategy|אסטרטגיה/);
+    });
+    check('living and lot areas render separately with source units and links',()=>{
+        assert.equal(dom.getElementById('modal-sqft').textContent,'900 SqFt');
+        assert.equal(dom.getElementById('modal-lot-size').textContent,'0.07 Acres');
+        assert.equal(dom.getElementById('modal-sqft-source').children[0].href,tarasa.source_url);
+        assert.equal(dom.getElementById('modal-lot-size-source').children[0].href,tarasa.source_url);
+        assert.equal(ctx.p.lot_size,3201);
+    });
+    check('conflicting floor area is displayed without falsely attributing it to another value',()=>{
+        ctx.p.sqft=951;run('renderPropertyAreaFacts(p)');
+        assert.equal(dom.getElementById('modal-sqft').textContent,'951 SqFt');
+        assert.equal(dom.getElementById('modal-sqft-source').hidden,true);
+        ctx.p.sqft=900;run('renderPropertyAreaFacts(p)');
+    });
+    check('an identity mismatch cannot supply the lot area or an invented unit',()=>{
+        ctx.p.address='14 First St';run('renderPropertyAreaFacts(p)');
+        assert.equal(dom.getElementById('modal-lot-size').textContent,'3,201 (יחידה לא צוינה)');
+        assert.equal(dom.getElementById('modal-lot-size-source').hidden,true);
+        ctx.p.address='12 First St';run('renderPropertyAreaFacts(p)');
     });
     check('all original property data and financial inputs remain unchanged',()=>assert.equal(JSON.stringify(ctx.p),before));
     check('normal opening only reads four GitHub snapshots',()=>{

@@ -1,16 +1,30 @@
 name: Automatic MLS Source Completion
 
 on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'secondary_sources.js'
+      - 'automatic_listing_sources.py'
+      - 'orchestrator.py'
+      - 'test_automatic_listing_sources.py'
+      - 'scan_schedule.py'
+      - 'scan_config.json'
+      - 'test_scan_schedule.py'
+      - 'test_completion_controls.cjs'
+      - 'test_secondary_sources.cjs'
+      - '.github/workflows/cron-daily-mls.yml'
+      - '.github/workflows/automatic-listing-sources.yml'
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check = no requests; group10 = up to 10 recent MLS properties; enable/disable = automatic completion. Source: Tarasa.'
+        description: 'check = no requests; batch = 3–5 recent MLS properties using saved settings. Source: Tarasa.'
         type: choice
-        options: [check, group10]
+        options: [check, batch]
         required: true
         default: check
   schedule:
-    - cron: '47 * * * *'
+    - cron: '7,22,37,52 * * * *'
   workflow_run:
     workflows: ['1. Central Scanner — V2.9 (manual validation)']
     types: [completed]
@@ -21,10 +35,53 @@ permissions:
 
 concurrency:
   # Share the scanner's write queue; do not overlap its inventory commit.
-  group: pa-repo-write-queue
+  group: ${{ github.event_name == 'pull_request' && format('pa-source-validation-{0}', github.event.pull_request.number) || 'pa-repo-write-queue' }}
   cancel-in-progress: false
 
 jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test dependencies
+        run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz PyYAML
+      - name: Compile changed Python and validate workflow YAML
+        run: |
+          python -m py_compile orchestrator.py automatic_listing_sources.py test_automatic_listing_sources.py
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for name in ('cron-daily-mls.yml', 'automatic-listing-sources.yml'):
+              workflow = yaml.load((Path('.github/workflows') / name).read_text(), Loader=yaml.BaseLoader)
+              assert 'on' in workflow and 'jobs' in workflow, name
+          PY
+      - name: Verify scan integration without live requests
+        run: |
+          python - <<'PY'
+          import socket, unittest, requests
+          def blocked(*args, **kwargs):
+              raise AssertionError('Live network requests are disabled in source integration tests')
+          socket.create_connection = blocked
+          requests.sessions.Session.request = blocked
+          names = ['test_scan_controls', 'test_scan_scope', 'test_scan_schedule',
+                   'test_property_sources', 'test_secondary_listing_source',
+                   'test_tarasa_listing_source', 'test_automatic_listing_sources']
+          suite = unittest.defaultTestLoader.loadTestsFromNames(names)
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          raise SystemExit(0 if result.wasSuccessful() else 1)
+          PY
+          node test_secondary_sources.cjs
+          node test_completion_controls.cjs
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
@@ -58,6 +115,7 @@ jobs:
         run: |
           python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule
           node test_secondary_sources.cjs
+          node test_completion_controls.cjs
       - name: Complete a bounded group or change activation
         if: steps.timing.outputs.due == 'true'
         id: worker

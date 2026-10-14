@@ -1,4 +1,4 @@
-/* Howard Hanna, ErieMoves, Tarasa and Clear Choice evidence. Version 1.4.3, 2026-10-11. Reads separate snapshots; no deal/cloud writes. */
+/* Howard Hanna, ErieMoves, Tarasa and Clear Choice evidence. Version 1.6.0, 2026-10-14. Reads separate snapshots; no deal/cloud writes. */
 (function (root) {
     'use strict';
     const PROVIDERS = {
@@ -43,9 +43,9 @@
             !u.username && !u.password && (!u.port || u.port==='443') && u.search==='?d=l' && !u.hash &&
             /^\/\d+\/[a-f0-9]{32}\/\d+\.jpeg$/.test(u.pathname); } catch (_) { return false; }
     }
-    function matches(p, r) {
+    function bindingMatches(p, r) {
         const id = identity(p), county = String(p.county || '').toLowerCase().replace(/ county$/,'');
-        return Boolean(!p._idAmbiguous && p.source_type === 'mls' && Object.hasOwn(PROVIDERS,r?.provider) && r.status === 'published' &&
+        return Boolean(!p._idAmbiguous && p.source_type === 'mls' && Object.hasOwn(PROVIDERS,r?.provider) &&
             r.property_id === String(p.id) && r.listing_id === listing(p) && sourceUrl(r.source_url,r.provider) &&
             (r.provider!=='eriemoves' || (county==='erie' && erieUrlMatches(p,r.source_url))) &&
             (r.provider!=='howardhanna' || (county==='erie' && hannaUrlMatches(p,r.source_url))) &&
@@ -56,6 +56,7 @@
             norm(r.subject.street + (r.subject.unit ? ' unit ' + r.subject.unit : '')) === id[0] &&
             cityNorm(r.subject.city) === id[1] && r.subject.state === id[2] && r.subject.zip === id[3]);
     }
+    function matches(p,r) { return r?.status === 'published' && bindingMatches(p,r); }
     function value(v) {
         if (typeof v === 'number') return Number.isFinite(v) ? String(v) : null;
         if (typeof v !== 'string') return null;
@@ -102,7 +103,42 @@
         for(const r of ordered(p,items)) { const f=fact(p,r,field); if(f) return f; }
         return null;
     }
-    const api={identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact};
+    function combinedPhotos(p,items) {
+        const seen=new Set();
+        return ordered(p,items).flatMap(r=>photos(p,r)).filter(photo=>{
+            const sequence=photo.url.match(/_(\d{2,3})\.jpg$/)?.[1] || photo.url;
+            if(seen.has(sequence)) return false;
+            seen.add(sequence); return true;
+        }).slice(0,3);
+    }
+    function collectionNotice(p,items) {
+        const saved=ordered(p,items);
+        const fields=[...ALLOWED].filter(field=>saved.some(r=>fact(p,r,field))).length;
+        const images=combinedPhotos(p,saved).length;
+        const exhausted=(Array.isArray(items)?items:[]).some(r=>bindingMatches(p,r) &&
+            r.last_attempt?.completion_status==='not_completed');
+        if(fields || images) return 'שדות שנאספו: '+fields+' · קישורי תמונות: '+images+'. המידע יכול להיות חלקי; מוצגים רק פרטים עם מקור.'+
+            (exhausted ? ' השלמת הפרטים לא הצליחה; הנתונים השמורים נשארים זמינים.' : '');
+        const reasons={
+            source_blocked:'ניסיון האיסוף האחרון מהמקור נחסם; לא התקבל מפרט נוסף לנכס זה.',
+            source_rate_limited:'המקור ביקש להמתין בניסיון האיסוף האחרון.',
+            robots_disallowed:'המקור אינו מתיר איסוף אוטומטי מהעמוד.',
+            source_identity_mismatch:'המודעה שנבדקה לא התאימה לזהות הנכס; הפרטים לא צורפו.',
+            listing_not_available:'המודעה לא הייתה זמינה בניסיון האיסוף האחרון.',
+            source_unavailable:'המקור לא היה זמין בניסיון האיסוף האחרון.'
+        };
+        const attempts=(Array.isArray(items)?items:[]).filter(r=>bindingMatches(p,r))
+            .map(r=>({status:r.last_attempt?.status || r.status,
+                date:Date.parse(r.last_attempt?.checked_at || r.retrieved_at)||0}))
+            .filter(r=>Object.hasOwn(reasons,r.status)).sort((a,b)=>b.date-a.date);
+        if(exhausted) return 'השלמת הפרטים לא הצליחה. האיסוף לנכס זה הופסק; הסריקה ממשיכה לנכסים אחרים.';
+        if(attempts.length) return reasons[attempts[0].status];
+        if(saved.length) return 'מודעת המקור אומתה, אך לא נשמרו ממנה שדות מפרט או קישורי תמונות להצגה.';
+        if(String(p.county || '').toLowerCase().replace(/ county$/,'')==='erie')
+            return 'אין מפרט נוסף שמור לנכס זה. השלמה אוטומטית ממקור נוסף עדיין אינה זמינה למחוז Erie.';
+        return 'טרם נאסף מפרט נוסף לנכס זה. ההשלמה תלויה בגישה למקור ובמידע שהוא מפרסם.';
+    }
+    const api={identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
     if (typeof module !== 'undefined' && module.exports) { module.exports=api; return; }
     root.SecondarySourceEvidence=api;
     if (typeof document === 'undefined' || typeof openPropertyModal !== 'function') return;
@@ -126,7 +162,7 @@
         technicalPanel.appendChild(style);
     }
 
-    const records=new WeakMap(), baseFact=propertyTechnicalFact, baseOpen=openPropertyModal, baseTranslate=translateListingFact;
+    const records=new WeakMap(), attempts=new WeakMap(), baseFact=propertyTechnicalFact, baseOpen=openPropertyModal, baseTranslate=translateListingFact;
     translateListingFact=function(v) {
         const translations={'composition':'גג מחומר מרוכב','forced air, gas':'חימום אוויר מאולץ בגז','wall/window unit(s)':'יחידות קיר/חלון',
             'full, walk-out access':'מרתף מלא עם יציאה החוצה','public':'רשת ציבורית','colonial, ranch':'Colonial, Ranch'};
@@ -164,12 +200,11 @@
         n=element('section','','mt-3 p-3 rounded-xl border border-blue-500/30 bg-gray-950/40'); n.id='modal-additional-source'; n.dir='rtl';
         anchor.parentNode.appendChild(n); return n;
     }
-    function notice(text) { const n=document.getElementById('modal-additional-source-notice'); if(n) n.textContent=text; }
     function render(p,message='') {
         const n=panel(); if(!n) return; n.replaceChildren();
         const supported=!p._idAmbiguous && p.source_type==='mls' && listing(p) && ['Allegheny','Erie'].includes(p.county);
         n.hidden=!supported; if(!supported) return;
-        n.appendChild(element('h4','פרטים ממקור נוסף — ללא RentCast','text-blue-300 font-bold mb-2'));
+        n.appendChild(element('h4','מפרט ותמונות שנאספו','text-blue-300 font-bold mb-2'));
         const items=ordered(p,records.get(p)), r=items[0];
         const origin=p.listing_identifier_origin;
         const originText=origin==='redfin_csv_mls_column' ? 'מספר המודעה התקבל מקובץ הסריקה של Redfin.' :
@@ -179,10 +214,10 @@
             ' טרם נמצאה במערכת מודעת מקור נוספת שאומתה לזהות הנכס.';
         const identityStatus=element('p',originText+verified,'text-sm text-gray-300 my-2');
         identityStatus.id='modal-listing-identity-status'; n.appendChild(identityStatus);
-        const button=element('button','טען ממקור נוסף','bg-blue-900/80 border border-blue-400/40 rounded-lg p-2 text-sm font-bold');
-        button.type='button'; button.id='modal-additional-source-request'; button.addEventListener('click',request); n.appendChild(button);
         const status=element('p','','text-xs text-gray-400 my-2'); status.id='modal-additional-source-notice'; n.appendChild(status);
-        if(!r) { status.textContent=message || 'אין פרטים שמורים ממקור נוסף לנכס זה. ההשלמה בודקת את Tarasa לפי מספר MLS והכתובת.'; return; }
+        const coverage=element('p',collectionNotice(p,attempts.get(p) || items),'text-sm text-gray-300 my-2');
+        coverage.id='modal-source-coverage'; n.appendChild(coverage);
+        if(!r) { status.textContent=message; return; }
         const dated=parseDate(r.retrieved_at) ? displayDate(r.retrieved_at) : 'תאריך לא ידוע';
         status.textContent=message || 'פרטים שמורים ממודעת '+PROVIDERS[r.provider].name+' · נאספו: '+dated+
             (r.source_updated_at ? ' · עודכנו במקור: '+r.source_updated_at : '')+
@@ -208,13 +243,7 @@
         comparison.appendChild(table); n.appendChild(comparison);
         n.appendChild(element('p','סוג גג אינו בדיקה של מצב הגג; אין להסיק אכלוס מנתוני המפרט. שטח מגרש ב־Acres נשמר ביחידה המקורית ללא המרה.','text-xs text-gray-400 mt-2'));
         const gallery=element('div','','grid grid-cols-1 md:grid-cols-3 gap-2 mt-3'); gallery.id='modal-additional-source-photos';
-        const seen=new Set();
-        const images=items.flatMap(s=>photos(p,s)).filter(photo=>{
-            // Sierra photos share a sequence; ErieMoves photos use distinct full URLs.
-            const seq=photo.url.match(/_(\d{2,3})\.jpg$/)?.[1] || photo.url;
-            if(seen.has(seq)) return false;
-            seen.add(seq); return true;
-        }).slice(0,3);
+        const images=combinedPhotos(p,items);
         for(const photo of images) {
             const a=document.createElement('a'); a.href=photo.source_url; a.target='_blank'; a.rel='noopener noreferrer';
             const img=document.createElement('img'); img.src=photo.url; img.alt='תמונת המודעה של '+p.address;
@@ -231,7 +260,9 @@
             const responses=await Promise.allSettled(Object.keys(PROVIDERS).map(provider=>
                 readBasicSourceJson('COMPS_REPORTS/additional_sources/'+provider+'/'+cacheKey+'.json')));
             if(generation!==basicSourceGeneration || currentSelectedProperty!==p) return;
-            records.set(p,ordered(p,responses.filter(r=>r.status==='fulfilled').map(r=>r.value)));
+            const snapshots=responses.filter(r=>r.status==='fulfilled').map(r=>r.value);
+            attempts.set(p,snapshots);
+            records.set(p,ordered(p,snapshots));
             renderPropertyTechnicalFacts(p); renderListingSourceStatus(p); render(p);
         } catch(_) { if(generation===basicSourceGeneration && currentSelectedProperty===p) render(p,'הפרטים השמורים מהמקור הנוסף לא נטענו.'); }
     }
@@ -239,39 +270,5 @@
         baseOpen(id); const p=currentSelectedProperty; if(!p) return;
         render(p); if(!p._idAmbiguous && p.source_type==='mls' && ['Allegheny','Erie'].includes(p.county)) load(p,basicSourceGeneration);
     };
-    async function request() {
-        const p=currentSelectedProperty,generation=basicSourceGeneration, token=localStorage.getItem('pa_github_token');
-        if(!p || p._idAmbiguous) return;
-        if(!token) { notice('להפעלת הבקשה יש לחבר את GitHub בהגדרות המערכת.'); return; }
-        const button=document.getElementById('modal-additional-source-request'); if(button) button.disabled=true;
-        const requestId=crypto.randomUUID();
-        try {
-            const response=await fetch('https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/additional-property-source.yml/dispatches',{
-                method:'POST',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},
-                body:JSON.stringify({ref:'main',inputs:{mode:'fetch',property_id:String(p.id),source_url:'',request_id:requestId}})});
-            if(!response.ok) throw new Error('GitHub HTTP '+response.status);
-            if(generation!==basicSourceGeneration || currentSelectedProperty!==p) return;
-            notice('הבקשה נשלחה. המערכת בודקת מטמון לפני פנייה למקור הנוסף — ללא RentCast.');
-            for(let i=0;i<48;i++) {
-                await new Promise(resolve=>setTimeout(resolve,5000));
-                if(generation!==basicSourceGeneration || currentSelectedProperty!==p) return;
-                const status=await readBasicSourceJson('COMPS_REPORTS/additional_source_status.json');
-                if(status?.request_id!==requestId || status.property_id!==String(p.id)) continue;
-                await load(p,generation);
-                if(generation!==basicSourceGeneration || currentSelectedProperty!==p) return;
-                const messages={cache_used:'נטענו פרטים שמורים. לא נעשתה פנייה נוספת למקור.',published:'נשמרו פרטים חדשים מהמקור הנוסף.',
-                    source_blocked:'המקור חסם את הבקשה. נשמרה הפסקה של יום לפחות.',source_rate_limited:'המקור ביקש להמתין. המערכת עצרה.',
-                    source_cooldown:'המקור נמצא בהמתנה אחרי בקשה קודמת. הפרטים השמורים נשארים זמינים.',robots_disallowed:'המקור אינו מתיר גישה אוטומטית לעמוד.',
-                    listing_not_available:'המודעה לא זמינה ב־Tarasa. נכסים אחרים בתור נבדקים בנפרד.',
-                    source_identity_mismatch:'המודעה הנוספת לא תאמה לזהות הנכס; הפרטים לא צורפו.',
-                    ambiguous_property_identity:'זהות הנכס נמצאת בבדיקה; לא בוצעה פנייה למקור.',
-                    ambiguous_or_missing_property_id:'מזהה הנכס חסר או שייך לכמה רשומות; לא בוצעה פנייה למקור.',
-                    unsupported_or_incomplete_identity:'זהות הנכס אינה מלאה או שהמקור אינו נתמך בניסוי.'};
-                notice(messages[status.status] || 'לא התקבל מפרט נוסף בבקשה זו. אפשר לפתוח את המודעה במקור ולבדוק את הריצה ב־Actions.'); return;
-            }
-            notice('הבקשה עדיין לא הסתיימה. בדוק ב־Actions את Additional Property Source ואז פתח שוב את הנכס.');
-        } catch(error) { if(generation===basicSourceGeneration && currentSelectedProperty===p) notice('לא ניתן להפעיל את הבקשה: '+error.message+'. בדוק שהקובץ additional-property-source.yml הותקן.'); }
-        finally { if(generation===basicSourceGeneration && currentSelectedProperty===p) {const n=document.getElementById('modal-additional-source-request'); if(n) n.disabled=false;} }
-    }
     root.SecondarySourceEvidence.load=load;
 })(typeof window !== 'undefined' ? window : globalThis);

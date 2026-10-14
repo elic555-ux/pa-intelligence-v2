@@ -36,7 +36,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.7-mls-twice-daily-20261012"
+ORCHESTRATOR_VERSION = "3.10.8-automatic-listing-details-20261013"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -3784,12 +3784,12 @@ def run_orchestrator():
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
 
     # Read the subject's source page only after the existing scan filters.
-    # Scheduled scans reuse snapshots; a manually started scan reads up to 20 pages.
+    # Manual and scheduled scans reuse snapshots, then read up to 20 missing pages.
     # Source blocks are separate from the search CSV coverage, with no paid fallback.
     try:
         detail_audit = enrich_listing_source_rows(
             final_filtered, limit=20,
-            allow_network=os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch")
+            allow_network=os.environ.get("GITHUB_EVENT_NAME") in {"workflow_dispatch", "schedule"})
         log_entry["listing_source_details"] = detail_audit
         print("📄 פרטי מודעות מהמקור: " + json.dumps(detail_audit, ensure_ascii=False))
     except (OSError, ValueError) as exc:

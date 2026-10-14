@@ -26,7 +26,7 @@ class QueueTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.repo=Path(self.temp.name)
-        self.now=datetime.now(timezone.utc)
+        self.now=datetime.now(timezone.utc).replace(hour=12, minute=7, second=0, microsecond=0)
         self.rows=make_rows()
         self.put_inventory()
         self.scan={'last_scan':{'scan_id':'S1'},'last_event':{'scan_id':'S1','status':'partial','active_sectors':['mls'],'github_sha':'abc'}}
@@ -60,6 +60,87 @@ class QueueTests(unittest.TestCase):
         reader=source.PublicReader(opener=Opener(),clock=lambda:clock[0],sleep=lambda d:clock.__setitem__(0,clock[0]+d),max_requests=max_requests)
         reader.calls=calls
         return reader
+
+
+    def integrated_config(self, automatic=False, enabled=True, batch_size=3, frequency='hourly'):
+        profile = {'scheduleControlVersion': 2, 'autoScanEnabled': automatic,
+            'completionSettings': {'enabled': enabled, 'frequency': frequency, 'batchSize': batch_size,
+                'timezone': 'UTC', 'dailyLimit': 60,
+                'startDate': (self.now.date() - timedelta(days=30)).isoformat()}}
+        registry.atomic_json(self.repo / 'scan_config.json', profile)
+
+    def test_scan_mode_collects_without_background_activation(self):
+        self.integrated_config()
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        self.assertTrue(report['scan_integrated'])
+        self.assertEqual(report['new_snapshots'], 3)
+        self.assertEqual(report['new_rentcast_calls'], 0)
+        self.assertLessEqual(report['new_source_network_requests'], 13)
+        self.assertEqual((self.repo / 'properties.json').read_bytes(), self.inventory_before)
+        self.assertEqual((self.repo / source.STATUS).read_bytes(), self.manual_before)
+
+    def test_scan_mode_requires_a_current_successful_mls_scan(self):
+        self.integrated_config()
+        for event in (
+            {**self.scan['last_event'], 'status': 'failed'},
+            {**self.scan['last_event'], 'active_sectors': ['sheriff']},
+            {**self.scan['last_event'], 'scan_id': None},
+        ):
+            registry.atomic_json(self.repo / 'scanner_status.json', {'last_event': event})
+            reader = self.reader()
+            report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+            self.assertEqual(report['status'], 'no_new_mls_scan')
+            self.assertFalse(report['should_save'])
+            self.assertEqual(reader.requests, 0)
+
+    def test_scan_mode_preserves_explicit_completion_pause(self):
+        self.integrated_config(enabled=False)
+        reader = self.reader()
+        report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'automatic_disabled')
+        self.assertEqual(reader.requests, 0)
+
+    def test_scan_mode_prioritizes_current_scan_rows(self):
+        self.integrated_config()
+        self.rows = make_rows(20)
+        for row in self.rows[5:]:
+            row['last_scan_id'] = 'older'
+        self.put_inventory()
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        self.assertEqual(report['attempted_properties'], 3)
+        self.assertLessEqual(set(item['property_id'] for item in report['results']),
+                             set(row['id'] for row in self.rows[:5]))
+
+    def test_replayed_scan_does_not_repeat_work(self):
+        self.integrated_config()
+        worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        reader = self.reader()
+        report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'scan_already_processed')
+        self.assertFalse(report['should_save'])
+        self.assertEqual(reader.requests, 0)
+
+    def test_scan_completion_prevents_same_slot_background_requests(self):
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'not_due_or_daily_limit')
+        self.assertEqual(reader.requests, 0)
+
+    def test_scan_completion_shares_daily_limit_with_background(self):
+        self.integrated_config(automatic=True)
+        registry.atomic_json(self.repo / worker.STATE, {'schema': 1, 'enabled': False,
+            'entries': {}, 'budget_day': self.now.date().isoformat(), 'daily_attempted': 58})
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        self.assertEqual(report['attempted_properties'], 2)
+        self.assertEqual(registry.read_json(self.repo / worker.STATE)['daily_attempted'], 60)
+        self.scan['last_event']['scan_id'] = 'S2'
+        registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+        reader = self.reader()
+        report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'daily_limit_reached')
+        self.assertEqual(reader.requests, 0)
 
     def test_check_is_read_only_and_network_free(self):
         before={p.relative_to(self.repo):p.read_bytes() for p in self.repo.rglob('*') if p.is_file()}
@@ -139,8 +220,8 @@ class QueueTests(unittest.TestCase):
         self.assertFalse((self.repo/source.SOURCE_STATE).exists())
         report=worker.run(self.repo,'pilot',reader=self.reader(),now=self.now)
         self.assertEqual(report['new_snapshots'],2)
-        self.assertEqual(report['pending'],0)
-        self.assertEqual(report['review_required'],2)
+        self.assertEqual(report['pending'],1)
+        self.assertEqual(report['review_required'],1)
 
     def test_block_stops_rest_of_batch_and_cooldown_is_tarasa_only(self):
         report=worker.run(self.repo,'pilot',reader=self.reader(blocked=True),now=self.now)
@@ -232,7 +313,7 @@ class QueueTests(unittest.TestCase):
     def test_failed_identity_is_visible_but_not_automatically_retried(self):
         self.rows=make_rows(1)
         self.put_inventory()
-        first=worker.run(self.repo,'pilot',reader=self.reader(missing=('1001',)),now=self.now)
+        first=worker.run(self.repo,'pilot',reader=self.reader(wrong=('1001',)),now=self.now)
         self.assertEqual(first['review_required'],1)
         reader=self.reader()
         second=worker.run(self.repo,'pilot',reader=reader,now=self.now)
@@ -240,6 +321,39 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(second['pending'],0)
         self.assertEqual(second['new_source_network_requests'],0)
         self.assertEqual(reader.requests,0)
+
+    def test_missing_listing_retries_automatically_only_after_saved_wait(self):
+        self.rows=make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        first=worker.run(self.repo,'scan','abc',self.reader(missing=('1001',)),now=self.now)
+        self.assertEqual(first['new_snapshots'],0)
+        self.assertEqual(first['pending'],1)
+        self.assertEqual(first['review_required'],0)
+        self.assertEqual(first['results'][0]['status'],'listing_not_available')
+
+        def next_scan(scan_id):
+            self.rows[0]['last_scan_id']=scan_id
+            self.put_inventory()
+            event={**self.scan['last_event'],'scan_id':scan_id}
+            registry.atomic_json(self.repo/'scanner_status.json',{'last_event':event,'last_scan':event})
+
+        next_scan('S2')
+        early_reader=self.reader()
+        early=worker.run(self.repo,'scan','abc',early_reader,now=self.now+timedelta(hours=1))
+        self.assertEqual(early['status'],'waiting_for_retry')
+        self.assertEqual(early_reader.requests,0)
+        self.assertEqual(early['pending'],1)
+
+        next_scan('S3')
+        retry_reader=self.reader()
+        retried=worker.run(self.repo,'scan','abc',retry_reader,now=self.now+timedelta(days=2))
+        self.assertEqual(retried['new_snapshots'],1)
+        self.assertEqual(retried['pending'],0)
+        self.assertEqual(retried['review_required'],0)
+        self.assertEqual(retried['results'][0]['status'],'published')
+        self.assertEqual(retried['new_rentcast_calls'],0)
+        self.assertEqual((self.repo/'properties.json').read_bytes(),self.inventory_before)
 
     def test_long_unverified_id_never_becomes_tarasa_request(self):
         self.rows=[{**make_rows(1)[0], 'id':'PA-MLS-2208152674674600913',
@@ -286,6 +400,270 @@ class QueueTests(unittest.TestCase):
         report=worker.run(self.repo,'batch',reader=reader,now=self.now)
         self.assertEqual(report['status'],'queue_current')
         self.assertEqual(reader.requests,0)
+
+    def test_saved_batch_size_is_honored_in_scan_background_and_manual_modes(self):
+        for size in (3, 4, 5):
+            for mode in ('scan', 'automatic', 'batch', 'group10'):
+                with self.subTest(size=size, mode=mode), tempfile.TemporaryDirectory() as temp:
+                    self.repo = Path(temp)
+                    self.rows = make_rows(20)
+                    self.put_inventory()
+                    registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+                    self.integrated_config(automatic=True, batch_size=size)
+                    saved = (self.repo / 'scan_config.json').read_bytes()
+                    report = worker.run(self.repo, mode, reader=self.reader(), now=self.now)
+                    self.assertEqual(report['attempted_properties'], size)
+                    self.assertEqual(report['new_snapshots'], size)
+                    self.assertEqual(report['max_properties_per_run'], size)
+                    self.assertLessEqual(report['new_source_network_requests'], 13)
+                    self.assertEqual((self.repo / 'scan_config.json').read_bytes(), saved)
+                    self.assertEqual((self.repo / 'properties.json').read_bytes(), self.inventory_before)
+
+    def test_legacy_ten_setting_migrates_to_three_without_rewriting_config(self):
+        self.integrated_config(batch_size=10)
+        saved = (self.repo / 'scan_config.json').read_bytes()
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        self.assertEqual(report['attempted_properties'], 3)
+        self.assertEqual((self.repo / 'scan_config.json').read_bytes(), saved)
+
+    def test_invalid_batch_size_and_daily_limit_make_no_requests_or_writes(self):
+        for field, invalid in [('batchSize', n) for n in (0, -1, 2, 6, 80, True, '3', None)] + [
+                ('dailyLimit', 0), ('dailyLimit', 65), ('dailyLimit', 130), ('dailyLimit', True)]:
+            with self.subTest(field=field, invalid=invalid):
+                self.integrated_config()
+                profile = registry.read_json(self.repo / 'scan_config.json')
+                profile['completionSettings'][field] = invalid
+                registry.atomic_json(self.repo / 'scan_config.json', profile)
+                before = {p.relative_to(self.repo): p.read_bytes() for p in self.repo.rglob('*') if p.is_file()}
+                reader = self.reader()
+                with self.assertRaises(ValueError):
+                    worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+                self.assertEqual(reader.requests, 0)
+                self.assertEqual(before, {p.relative_to(self.repo): p.read_bytes()
+                                         for p in self.repo.rglob('*') if p.is_file()})
+
+    def test_reserved_backlog_turn_progresses_despite_continuous_new_arrivals(self):
+        self.rows = make_rows(8)
+        self.put_inventory()
+        self.integrated_config(automatic=True, frequency='every_15_minutes')
+        first = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        old_ids = {r['id'] for r in self.rows} - {r['property_id'] for r in first['results']}
+        served_old = set()
+        for turn in range(1, 6):
+            newcomers = []
+            for offset in range(5):
+                mls = 2000 + turn * 10 + offset
+                newcomers.append({**copy.deepcopy(self.rows[0]), 'id': 'PA-MLS-' + str(mls),
+                    'docket_id': 'MLS-' + str(mls), 'address': str(mls) + ' First St',
+                    'url': 'https://www.redfin.com/PA/Pittsburgh/x/home/' + str(mls)})
+            self.rows.extend(newcomers)
+            self.put_inventory()
+            report = worker.run(self.repo, 'automatic', reader=self.reader(),
+                                now=self.now + timedelta(minutes=15 * turn))
+            ids = [item['property_id'] for item in report['results']]
+            self.assertEqual(len(ids), 3)
+            self.assertIn(ids[0], old_ids)
+            self.assertTrue(set(ids[1:]) <= {row['id'] for row in newcomers})
+            served_old.add(ids[0])
+        self.assertEqual(served_old, old_ids)
+
+    def test_one_remaining_daily_turn_is_given_to_waiting_backlog(self):
+        self.rows = make_rows(8)
+        self.put_inventory()
+        self.integrated_config(automatic=True, frequency='every_15_minutes')
+        first = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        old_ids = {row['id'] for row in self.rows} - {item['property_id'] for item in first['results']}
+        state = registry.read_json(self.repo / worker.STATE)
+        state['daily_attempted'] = 59
+        registry.atomic_json(self.repo / worker.STATE, state)
+        self.rows.append({**copy.deepcopy(self.rows[0]), 'id': 'PA-MLS-9000',
+            'docket_id': 'MLS-9000', 'address': '9000 First St',
+            'url': 'https://www.redfin.com/PA/Pittsburgh/x/home/9000'})
+        self.put_inventory()
+        report = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now + timedelta(minutes=15))
+        self.assertEqual(report['attempted_properties'], 1)
+        self.assertIn(report['results'][0]['property_id'], old_ids)
+        self.assertEqual(registry.read_json(self.repo / worker.STATE)['daily_attempted'], 60)
+
+    def test_background_then_new_scan_does_not_double_request_in_quarter_hour(self):
+        self.integrated_config(automatic=True, frequency='every_15_minutes')
+        worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now)
+        self.scan['last_event']['scan_id'] = 'S2'
+        registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+        before = (self.repo / worker.STATE).read_bytes()
+        reader = self.reader()
+        report = worker.run(self.repo, 'scan', 'abc', reader, now=self.now)
+        self.assertEqual(report['status'], 'completion_slot_already_processed')
+        self.assertFalse(report['should_save'])
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual((self.repo / worker.STATE).read_bytes(), before)
+        later = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now + timedelta(minutes=15))
+        self.assertEqual(later['new_snapshots'], 2)
+
+    def test_sixty_attempts_are_shared_across_manual_background_and_scan(self):
+        self.now = self.now.replace(hour=4, minute=7, second=0, microsecond=0)
+        self.rows = make_rows(75)
+        self.put_inventory()
+        self.integrated_config(automatic=True, batch_size=5, frequency='every_15_minutes')
+        attempted = 0
+        for turn in range(12):
+            mode = ('scan', 'automatic', 'batch')[turn % 3]
+            self.scan['last_event']['scan_id'] = 'S' + str(turn + 1)
+            registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+            report = worker.run(self.repo, mode, reader=self.reader(),
+                                now=self.now + timedelta(minutes=15 * turn))
+            attempted += report['attempted_properties']
+        self.assertEqual(attempted, 60)
+        self.assertEqual(registry.read_json(self.repo / worker.STATE)['daily_attempted'], 60)
+        for mode in ('scan', 'automatic', 'batch'):
+            self.scan['last_event']['scan_id'] = 'S-limit'
+            registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+            reader = self.reader()
+            report = worker.run(self.repo, mode, reader=reader, now=self.now + timedelta(hours=4))
+            self.assertEqual(report['attempted_properties'], 0)
+            self.assertEqual(reader.requests, 0)
+        self.assertEqual((self.repo / 'properties.json').read_bytes(), self.inventory_before)
+
+    def test_fresh_snapshot_with_unpublished_fields_is_not_refetched(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True, frequency='every_15_minutes')
+        worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
+        path = self.repo / source.ROOT / (source.cache_key(self.rows[0]['id']) + '.json')
+        cached = registry.read_json(path)
+        cached['facts'] = {'beds': cached['facts']['beds']}
+        cached['photos'] = []
+        registry.atomic_json(path, cached)
+        saved = path.read_bytes()
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(minutes=15))
+        self.assertEqual(report['cached_properties'], 1)
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual(path.read_bytes(), saved)
+
+    def test_quarter_hour_respects_provider_cooldown_without_spending_daily_attempts(self):
+        self.integrated_config(automatic=True, frequency='every_15_minutes')
+        worker.run(self.repo, 'scan', 'abc', self.reader(blocked=True), now=self.now)
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(minutes=15))
+        self.assertEqual(report['status'], 'source_cooldown')
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual(registry.read_json(self.repo / worker.STATE)['daily_attempted'], 1)
+
+    def test_two_failed_attempts_skip_property_and_keep_scan_success(self):
+        self.rows = make_rows(4)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        self.scan['last_event']['status'] = 'success'
+        registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+        scan_before = (self.repo / 'scanner_status.json').read_bytes()
+        first = worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1004',)), now=self.now)
+        self.assertEqual(first['new_snapshots'], 2)
+        state = registry.read_json(self.repo / worker.STATE)
+        self.assertEqual(state['entries']['PA-MLS-1004']['unsuccessful_attempts'], 1)
+        early_reader = self.reader(missing=('1004',))
+        early = worker.run(self.repo, 'automatic', reader=early_reader, now=self.now + timedelta(hours=1))
+        self.assertNotIn('PA-MLS-1004', [r['property_id'] for r in early['results']])
+        second = worker.run(self.repo, 'automatic', reader=self.reader(missing=('1004',)),
+                            now=self.now + timedelta(days=2))
+        self.assertEqual(second['incomplete_properties'], 1)
+        self.assertEqual(second['completion_status'], 'partial')
+        state = registry.read_json(self.repo / worker.STATE)
+        self.assertEqual(state['entries']['PA-MLS-1004']['unsuccessful_attempts'], 2)
+        self.assertEqual(state['entries']['PA-MLS-1004']['status'], 'completion_incomplete')
+        reader = self.reader()
+        final = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(days=4))
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual(final['incomplete_properties'], 1)
+        self.assertEqual(final['pending'], 0)
+        self.assertEqual((self.repo / 'scanner_status.json').read_bytes(), scan_before)
+        self.assertEqual((self.repo / 'properties.json').read_bytes(), self.inventory_before)
+
+    def test_saved_receipt_preserves_two_attempt_limit_if_queue_is_rebuilt(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1001',)), now=self.now)
+        worker.run(self.repo, 'automatic', reader=self.reader(missing=('1001',)), now=self.now + timedelta(days=2))
+        receipt_path = self.repo / source.ROOT / (source.cache_key(self.rows[0]['id']) + '.json')
+        receipt = registry.read_json(receipt_path)
+        self.assertEqual(receipt['last_attempt']['unsuccessful_attempts'], 2)
+        self.assertEqual(receipt['last_attempt']['completion_status'], 'not_completed')
+        (self.repo / worker.STATE).unlink()
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(days=4))
+        self.assertEqual(report['incomplete_properties'], 1)
+        self.assertEqual(report['completion_status'], 'not_completed')
+        self.assertEqual(reader.requests, 0)
+
+    def test_successful_second_attempt_resets_failure_count(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1001',)), now=self.now)
+        report = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now + timedelta(days=2))
+        self.assertEqual(report['new_snapshots'], 1)
+        self.assertEqual(report['incomplete_properties'], 0)
+        self.assertEqual(registry.read_json(self.repo / worker.STATE)['entries'][self.rows[0]['id']]['unsuccessful_attempts'], 0)
+
+    def test_relisting_resets_exhausted_completion_with_new_identity(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1001',)), now=self.now)
+        worker.run(self.repo, 'automatic', reader=self.reader(missing=('1001',)), now=self.now + timedelta(days=2))
+        self.rows[0]['docket_id'] = 'MLS-9911'
+        self.put_inventory()
+        report = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now + timedelta(days=4))
+        self.assertEqual(report['new_snapshots'], 1)
+        self.assertEqual(report['incomplete_properties'], 0)
+
+    def test_budget_stop_does_not_consume_a_property_retry(self):
+        self.integrated_config()
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(max_requests=1), now=self.now)
+        self.assertEqual(report['attempted_properties'], 0)
+        state = registry.read_json(self.repo / worker.STATE)
+        self.assertTrue(all(e['unsuccessful_attempts'] == 0 for e in state['entries'].values()))
+        self.assertEqual(report['incomplete_properties'], 0)
+
+    def test_failed_refresh_exhaustion_keeps_prior_facts_and_photos(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        worker.run(self.repo, 'pilot', reader=self.reader(), now=self.now)
+        path = self.repo / source.ROOT / (source.cache_key(self.rows[0]['id']) + '.json')
+        original = registry.read_json(path)
+        worker.run(self.repo, 'pilot', reader=self.reader(blocked=True), now=self.now + timedelta(days=8))
+        report = worker.run(self.repo, 'pilot', reader=self.reader(blocked=True), now=self.now + timedelta(days=11))
+        self.assertEqual(report['incomplete_properties'], 1)
+        saved = registry.read_json(path)
+        self.assertEqual(saved['facts'], original['facts'])
+        self.assertEqual(saved['photos'], original['photos'])
+        reader = self.reader()
+        worker.run(self.repo, 'pilot', reader=reader, now=self.now + timedelta(days=14))
+        self.assertEqual(reader.requests, 0)
+
+    def test_empty_verified_snapshot_does_not_trigger_repeated_completion(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        worker.run(self.repo, 'pilot', reader=self.reader(), now=self.now)
+        path = self.repo / source.ROOT / (source.cache_key(self.rows[0]['id']) + '.json')
+        empty = registry.read_json(path)
+        empty['facts'] = {}; empty['photos'] = []
+        registry.atomic_json(path, empty)
+        reader = self.reader()
+        report = worker.run(self.repo, 'pilot', reader=reader, now=self.now + timedelta(minutes=15))
+        self.assertEqual(report['incomplete_properties'], 1)
+        self.assertEqual(report['completion_status'], 'not_completed')
+        self.assertEqual(reader.requests, 0)
+
+    def test_workflow_keeps_completion_failures_out_of_scan_failure_stage(self):
+        root = Path(__file__).resolve().parent
+        workflow = (root / '.github/workflows/cron-daily-mls.yml').read_text()
+        stage = workflow.split('- name: Record failed stage for the UI', 1)[1].split('run: |', 1)[0]
+        self.assertNotIn('source_details', stage)
+        self.assertNotIn('source_registry', stage)
+        self.assertIn('continue-on-error: true', workflow)
+        self.assertIn('השלמת פרטי המודעות לא הסתיימה', workflow)
 
 
 if __name__=='__main__':

@@ -1,4 +1,4 @@
-"""Cache-first, resumable Tarasa completion of the existing MLS scan queue."""
+"""Cache-first MLS source completion inside scans and resumable background work."""
 import argparse
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -9,19 +9,23 @@ from pathlib import Path
 
 import property_sources as registry
 import tarasa_listing_source as source
-from scan_schedule import completion_due
+from scan_schedule import completion_due, completion_batch_size, completion_daily_limit, due_slot
 from zoneinfo import ZoneInfo
 
-VERSION = 'automatic-mls-sources-1.4.0-recent-ten-20261012'
+VERSION = 'automatic-mls-sources-1.7.0-two-attempt-completion-20261014'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
-PROFILES = {'pilot': (3, 8, 240), 'group10': (10, 13, 240), 'automatic': (10, 13, 240), 'batch': (10, 13, 240)}
+PROFILES = {'pilot': (3, 8, 240), 'group10': (10, 13, 240), 'automatic': (10, 13, 240), 'batch': (10, 13, 240), 'scan': (10, 13, 240)}
 STOP_BATCH = {'source_blocked', 'source_rate_limited', 'robots_disallowed',
     'source_cooldown', 'source_request_budget_exhausted', 'batch_time_limit',
     'source_redirect_stopped', 'source_unavailable', 'source_response_too_large',
     'robots_delay_exceeds_pilot_limit'}
-REVIEW_STATUSES = {'listing_not_available', 'source_identity_mismatch'}
+# A missing public listing follows its saved retry time. An identity conflict
+# remains excluded from automatic requests until the binding is reviewed.
+REVIEW_STATUSES = {'source_identity_mismatch'}
+MAX_UNSUCCESSFUL_ATTEMPTS = 2
+TERMINAL_COMPLETION = {'completion_incomplete'}
 
 
 def fingerprint(row):
@@ -84,9 +88,31 @@ def eligible_rows(repo, start_day=None, today=None):
     return rows, dict(excluded)
 
 
+def select_candidates(due, entries, limit, scan_id, now):
+    """Reserve an oldest waiting turn when new listings keep arriving."""
+    recent, backlog = [], []
+    for key in due:
+        entry = entries[key]
+        queued = source.parse_date(entry.get('first_queued_at')) or now
+        (recent if not entry.get('last_attempt_at') and queued >= now else backlog).append(key)
+    recent.sort(key=lambda key: (
+        0 if scan_id and due[key].get('last_scan_id') == scan_id else 1,
+        -(published_day(due[key]).toordinal() if published_day(due[key]) else 0),
+        -int(registry.listing_id(due[key]))))
+    backlog.sort(key=lambda key: (
+        source.parse_date(entries[key].get('last_served_at') or entries[key].get('last_attempt_at')
+                          or entries[key].get('first_queued_at')) or now,
+        -int(registry.listing_id(due[key]))))
+    if recent and backlog:
+        # Serve the reserved old turn first, even if a later request stops the run.
+        selected = backlog[:1] + recent[:max(0, limit - 1)]
+        return (selected + backlog[1:])[:limit]
+    return (recent or backlog)[:limit]
+
+
 def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     repo = Path(repo)
-    if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'}:
+    if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic', 'scan'}:
         raise ValueError('Unsupported mode.')
     now = now or datetime.now(timezone.utc)
     state = registry.read_json(repo / STATE) if (repo / STATE).exists() else {'schema': 1, 'enabled': False, 'entries': {}}
@@ -97,28 +123,39 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     profile = registry.read_json(repo / 'scan_config.json') if (repo / 'scan_config.json').exists() else {}
     controlled = profile.get('scheduleControlVersion') == 2
     completion = profile.get('completionSettings') or {}
-    enabled = bool(profile.get('autoScanEnabled') is True and completion.get('enabled') is True) if controlled else bool(state.get('enabled'))
+    enabled = bool(completion.get('enabled') is True and (mode == 'scan' or profile.get('autoScanEnabled') is True)) if controlled else bool(state.get('enabled'))
     caps = PROFILES.get(mode, PROFILES['automatic'])
+    if controlled:
+        caps = (min(caps[0], completion_batch_size(completion)), caps[1], caps[2])
+        completion_daily_limit(completion)
     report = {'version': VERSION, 'mode': mode, 'provider': source.PROVIDER, 'source_name': source.SOURCE,
         'enabled': enabled, 'status': 'ready', 'should_save': False,
         'new_rentcast_calls': 0, 'new_source_network_requests': 0,
         'max_properties_per_run': caps[0], 'max_source_requests_per_run': caps[1], 'max_seconds_per_run': caps[2],
         'properties_sha256': hashlib.sha256((repo / 'properties.json').read_bytes()).hexdigest(),
-        'scan_id': None, 'cached_properties': 0, 'attempted_properties': 0,
+        'scan_id': None, 'scan_integrated': mode == 'scan', 'cached_properties': 0, 'attempted_properties': 0,
         'new_snapshots': 0, 'results': [], 'pending': 0, 'due': 0,
-        'review_required': 0, 'migrated_provider_entries': 0}
-    if mode == 'automatic':
+        'review_required': 0, 'migrated_provider_entries': 0,
+        'incomplete_properties': 0, 'completion_status': 'not_run'}
+    if mode in {'automatic', 'scan'}:
         if not enabled:
             report['status'] = 'automatic_disabled'
             return report
         if upstream_sha and event.get('github_sha') != upstream_sha:
             report['status'] = 'upstream_scan_no_longer_current'
             return report
-        if upstream_sha and (event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', [])):
+        if (upstream_sha or mode == 'scan') and (event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', []) or not event.get('scan_id')):
             report['status'] = 'no_new_mls_scan'
             return report
-        if controlled and not completion_due(profile, state, now):
+        if mode == 'scan' and state.get('last_enriched_scan_id') == event.get('scan_id'):
+            report['status'] = 'scan_already_processed'
+            return report
+        if mode == 'automatic' and controlled and not completion_due(profile, state, now):
             report['status'] = 'not_due_or_daily_limit'
+            return report
+        if (mode == 'scan' and controlled and completion.get('frequency') == 'every_15_minutes'
+                and due_slot(completion, now, state.get('last_automatic_run')) is None):
+            report['status'] = 'completion_slot_already_processed'
             return report
         scan = event
     else:
@@ -144,14 +181,17 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         if entry.get('active_provider') != source.PROVIDER:
             # A Clear Choice wait cannot suppress a different provider. Preserve
             # queue membership and activation; recheck caches before new access.
-            for field in ('source_url', 'retry_after_at', 'last_attempt_at'):
+            for field in ('source_url', 'retry_after_at', 'last_attempt_at', 'unsuccessful_attempts'):
                 entry.pop(field, None)
             entry['status'] = 'queued'
             report['migrated_provider_entries'] += int(bool(old))
         entry['active_provider'] = source.PROVIDER
+        entry.setdefault('first_queued_at', now.isoformat())
+        entry.setdefault('unsuccessful_attempts', 0)
         cached = source.read_snapshot(repo, row, now)
-        if source.fresh(cached, now):
-            entry.update(status='cache_used', retry_after_at=None, cache_provider=cached['provider'])
+        if source.fresh(cached, now) and (cached.get('facts') or cached.get('photos')):
+            entry.update(status='cache_used', retry_after_at=None, cache_provider=cached['provider'],
+                         unsuccessful_attempts=0)
             report['cached_properties'] += 1
         else:
             if entry.get('status') == 'cache_used':
@@ -164,14 +204,22 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
                 if retry and retry > now:
                     entry['retry_after_at'] = retry.isoformat()
                 entry['source_url'] = own['source_url']
+                saved_count = own.get('last_attempt', {}).get('unsuccessful_attempts', 0)
+                if type(saved_count) is int:
+                    entry['unsuccessful_attempts'] = max(entry['unsuccessful_attempts'], saved_count)
+        if (entry['status'] != 'cache_used' and entry['unsuccessful_attempts'] >= MAX_UNSUCCESSFUL_ATTEMPTS):
+            entry.update(status='completion_incomplete', retry_after_at=None)
+        if source.fresh(cached, now) and not (cached.get('facts') or cached.get('photos')):
+            entry.update(status='completion_incomplete', retry_after_at=None, completion_reason='no_source_parameters')
         entries[key] = entry
     state['entries'] = entries
     pending = {k: rows[k] for k, e in entries.items()
-               if e.get('status') not in REVIEW_STATUSES | {'cache_used'}}
+               if e.get('status') not in REVIEW_STATUSES | TERMINAL_COMPLETION | {'cache_used'}}
     report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
     due = {k: row for k, row in pending.items() if not source.parse_date(entries[k].get('retry_after_at'))
            or source.parse_date(entries[k].get('retry_after_at')) <= now}
-    report.update(pending=len(pending), due=len(due))
+    report.update(pending=len(pending), due=len(due),
+                  incomplete_properties=sum(e.get('status') in TERMINAL_COMPLETION for e in entries.values()))
     if mode == 'check':
         report['status'] = 'check_ok'
         return report
@@ -183,7 +231,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         if controlled:
             budget_day = now.astimezone(ZoneInfo(completion.get('timezone', 'America/New_York'))).date().isoformat()
             used = int(state.get('daily_attempted', 0)) if state.get('budget_day') == budget_day else 0
-            remaining = max(0, min(remaining, int(completion.get('dailyLimit', 60)) - used))
+            remaining = max(0, min(remaining, completion_daily_limit(completion) - used))
             state.update(budget_day=budget_day, daily_attempted=used)
         provider_state = registry.read_json(repo / source.SOURCE_STATE) if (repo / source.SOURCE_STATE).exists() else {}
         cooldown = source.parse_date(provider_state.get('retry_after_at'))
@@ -198,16 +246,39 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             deadline = reader.clock() + caps[2]
             reader.deadline = min(reader.deadline, deadline) if reader.deadline is not None else deadline
             before = reader.requests
-            # Unattempted listings first, then oldest attempts: missing listings
-            # cannot keep taking all slots in subsequent batches.
-            candidates = sorted(due, key=lambda k: (entries[k].get('last_attempt_at', ''), -int(registry.listing_id(due[k]))))[:remaining]
+            candidates = select_candidates(due, entries, remaining, scan.get('scan_id'), now)
             for key in candidates:
                 result = source.run(repo, 'fetch', key, reader=reader, write_status=False, now=now)
                 report['results'].append(result)
                 report['attempted_properties'] += int(result['listing_requests'] > 0)
-                report['new_snapshots'] += int(result['cache_saved'])
-                entries[key].update(status='cache_used' if result['status'] in {'published', 'cache_used'} else result['status'],
+                available = bool(result['cached_facts'] or result['cached_photos'])
+                completed = result['status'] in {'published', 'cache_used'} and available
+                report['new_snapshots'] += int(result['cache_saved'] and available)
+                entries[key].update(status='cache_used' if completed else result['status'],
                     last_attempt_at=now.isoformat(), retry_after_at=result.get('retry_after_at'))
+                if completed:
+                    entries[key]['unsuccessful_attempts'] = 0
+                elif result['listing_requests'] > 0:
+                    entries[key]['unsuccessful_attempts'] += 1
+                no_parameters = result['status'] in {'published', 'cache_used'} and not available
+                if no_parameters or entries[key]['unsuccessful_attempts'] >= MAX_UNSUCCESSFUL_ATTEMPTS:
+                    entries[key].update(status='completion_incomplete', retry_after_at=None)
+                    if no_parameters:
+                        entries[key]['completion_reason'] = 'no_source_parameters'
+                    result['completion_status'] = 'not_completed'
+                if result['listing_requests'] > 0:
+                    entries[key]['last_served_at'] = now.isoformat()
+                    own_path = repo / source.ROOT / (source.cache_key(key) + '.json')
+                    own = registry.read_json(own_path) if own_path.exists() else None
+                    if source.bound(rows[key], own):
+                        attempt = own.setdefault('last_attempt', {})
+                        attempt.update(unsuccessful_attempts=entries[key]['unsuccessful_attempts'],
+                                       checked_at=now.isoformat())
+                        if completed:
+                            attempt.pop('completion_status', None)
+                        elif entries[key]['status'] == 'completion_incomplete':
+                            attempt['completion_status'] = 'not_completed'
+                        registry.atomic_json(own_path, own)
                 if result.get('source_url'):
                     entries[key]['source_url'] = result['source_url']
                 if result['status'] in STOP_BATCH:
@@ -221,12 +292,19 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
                 report['status'] = 'batch_complete'
     else:
         report['status'] = 'waiting_for_retry' if pending else 'queue_current'
-    report['pending'] = sum(e.get('status') not in REVIEW_STATUSES | {'cache_used'} for e in entries.values())
+    report['pending'] = sum(e.get('status') not in REVIEW_STATUSES | TERMINAL_COMPLETION | {'cache_used'} for e in entries.values())
     report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
+    report['incomplete_properties'] = sum(e.get('status') in TERMINAL_COMPLETION for e in entries.values())
+    report['completion_status'] = ('partial' if report['incomplete_properties'] and
+        (report['cached_properties'] or report['new_snapshots']) else 'not_completed'
+        if report['incomplete_properties'] else 'available'
+        if report['cached_properties'] or report['new_snapshots'] else 'waiting')
     if controlled:
         state['daily_attempted'] = int(state.get('daily_attempted', 0)) + report['attempted_properties']
-    if mode == 'automatic':
+    if mode in {'automatic', 'scan'}:
         state['last_automatic_run'] = now.isoformat()
+    if mode == 'scan':
+        state['last_enriched_scan_id'] = scan.get('scan_id')
     state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER,
                  completion_start_date=start_day.isoformat())
     report['should_save'] = True
@@ -239,8 +317,9 @@ def summary(report):
     lines = ['## AUTOMATIC_MLS_SOURCES', '', '- New RentCast calls: **0**',
         '- New source network requests: **' + str(report['new_source_network_requests']) + '**',
         '- מקור פעיל: Tarasa / River Point Realty', '- מצב: ' + report['status'],
+        '- השלמה בתוך הסריקה: ' + ('כן' if report.get('scan_integrated') else 'לא'),
         '- השלמה מתאריך פרסום: ' + str(report.get('completion_start_date', 'טרם נקבע')),
-        '- קבוצה: עד 10 נכסים; עד 13 בקשות למקור בכל ריצה',
+        '- קבוצה: עד ' + str(report['max_properties_per_run']) + ' נכסים; עד ' + str(report['max_source_requests_per_run']) + ' בקשות למקור בכל ריצה',
         '- תאריך פרסום חסר: ' + str(report.get('excluded', {}).get('listing_date_unknown', 0)),
         '- לפני תחילת ההשלמה: ' + str(report.get('excluded', {}).get('older_than_completion_scope', 0)),
         '- השלמה אוטומטית מופעלת: ' + ('כן' if report['enabled'] else 'לא'),
@@ -248,6 +327,8 @@ def summary(report):
         '- מטמונים חדשים: ' + str(report['new_snapshots']),
         '- נכסים שהשתמשו במטמון שמור: ' + str(report['cached_properties']),
         '- נכסים שממתינים בתור: ' + str(report['pending']), '',
+        '- השלמת פרטים שלא הצליחה (בנפרד ממצב הסריקה): ' + str(report.get('incomplete_properties', 0)),
+        'עד שני ניסיונות השלמה לא מוצלחים לנכס ולמקור. לאחר מכן עוברים הלאה; אין שינוי במצב הסריקה.',
         '- נכסים שדורשים בדיקת התאמה ידנית לפני ניסיון חוזר: ' + str(report.get('review_required', 0)),
         '- מזהים שאינם מאומתים לנתיב Tarasa: ' + str(report.get('excluded', {}).get('unverified_tarasa_listing_id', 0)),
         'בקשות חדשות ל־Tarasa מוגבלות כעת למחוז Allegheny. מודעות Erie מוחרגות מתור זה בלבד; מפרטים שמורים ממקורות אחרים ממשיכים להיות זמינים.',
@@ -269,7 +350,7 @@ def summary(report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'))
+    parser.add_argument('mode', choices=('check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic', 'scan'))
     parser.add_argument('--repo', type=Path, default=Path('.'))
     parser.add_argument('--upstream-sha', default='')
     args = parser.parse_args()
