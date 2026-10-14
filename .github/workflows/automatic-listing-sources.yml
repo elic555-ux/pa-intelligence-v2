@@ -9,6 +9,9 @@ on:
       - 'completion_subjects.py'
       - 'test_independent_completion.py'
       - 'test_independent_completion_ui.cjs'
+      - 'price_watch.py'
+      - 'test_price_watch.py'
+      - 'test_price_watch_ui.cjs'
       - 'tarasa_listing_source.py'
       - 'secondary_listing_source.py'
       - 'orchestrator.py'
@@ -76,7 +79,7 @@ jobs:
           requests.sessions.Session.request = blocked
           names = ['test_scan_controls', 'test_scan_scope', 'test_scan_schedule',
                    'test_property_sources', 'test_secondary_listing_source',
-                   'test_tarasa_listing_source', 'test_automatic_listing_sources', 'test_independent_completion']
+                   'test_tarasa_listing_source', 'test_automatic_listing_sources', 'test_independent_completion', 'test_price_watch']
           suite = unittest.defaultTestLoader.loadTestsFromNames(names)
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           raise SystemExit(0 if result.wasSuccessful() else 1)
@@ -84,6 +87,7 @@ jobs:
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
+          node test_price_watch_ui.cjs
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
@@ -113,10 +117,11 @@ jobs:
       - name: Verify cache, identities, queue and request limits
         if: steps.timing.outputs.due == 'true'
         run: |
-          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion test_price_watch
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
+          node test_price_watch_ui.cjs
       - name: Complete a bounded group or change activation
         if: steps.timing.outputs.due == 'true'
         id: worker
