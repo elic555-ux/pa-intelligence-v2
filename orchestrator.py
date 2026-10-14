@@ -36,7 +36,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.12.0-bounded-price-watch-20261014"
+ORCHESTRATOR_VERSION = "3.12.1-preserve-review-completion-20261014"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -2483,6 +2483,8 @@ def retain_scan_review(rejected, scan_id, origin, settings=None, scope=None):
         if settings is not None and scope is not None:
             review["items"][key]["filter_context"] = {
                 "settings": deepcopy(settings), "scope": deepcopy(scope)}
+        from completion_subjects import preserve_completion
+        preserve_completion(old, review["items"][key])
     review["updated_at"] = timestamp
     json.dumps(review, allow_nan=False)
     os.makedirs(os.path.dirname(SCAN_REVIEW_FILE) or ".", exist_ok=True)
