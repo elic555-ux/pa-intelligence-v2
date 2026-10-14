@@ -10,10 +10,11 @@ from pathlib import Path
 import property_sources as registry
 import tarasa_listing_source as source
 from completion_subjects import load_subjects, update_review
+from price_watch import watch_ceiling, classify_price
 from scan_schedule import completion_due, completion_batch_size, completion_daily_limit, due_slot
 from zoneinfo import ZoneInfo
 
-VERSION = 'automatic-mls-sources-1.8.0-independent-completion-20261014'
+VERSION = 'automatic-mls-sources-1.9.0-bounded-price-watch-20261014'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -51,6 +52,9 @@ def published_day(row):
 
 def eligible_rows(repo, start_day=None, today=None):
     inventory = load_subjects(repo)
+    profile = registry.read_json(repo / 'scan_config.json') if (repo / 'scan_config.json').exists() else {}
+    maximum = profile.get('maxPrice')
+    ceiling = watch_ceiling(maximum) if maximum is not None else None
     counts = Counter(str(row.get('id')) for row in inventory if isinstance(row, dict))
     aliases = repo / registry.ROOT / 'aliases.json'
     ambiguous = registry.read_json(aliases).get('ambiguous', {}) if aliases.exists() else {}
@@ -76,6 +80,8 @@ def eligible_rows(repo, start_day=None, today=None):
             excluded['incomplete_identity'] += 1
         elif row.get('market_status') not in (None, '', 'active'):
             excluded['unconfirmed_or_inactive_listing'] += 1
+        elif ceiling is not None and classify_price(row.get('price'), maximum) == 'historical_outside_watch':
+            excluded['above_price_watch_ceiling'] += 1
         elif start_day is not None and published_day(row) is None:
             excluded['listing_date_unknown'] += 1
         elif start_day is not None and published_day(row) < start_day:
@@ -87,7 +93,7 @@ def eligible_rows(repo, start_day=None, today=None):
     return rows, dict(excluded)
 
 
-def select_candidates(due, entries, limit, scan_id, now):
+def select_candidates(due, entries, limit, scan_id, now, maximum=None):
     """Reserve an oldest waiting turn when new listings keep arriving."""
     recent, backlog = [], []
     for key in due:
@@ -95,10 +101,12 @@ def select_candidates(due, entries, limit, scan_id, now):
         queued = source.parse_date(entry.get('first_queued_at')) or now
         (recent if not entry.get('last_attempt_at') and queued >= now else backlog).append(key)
     recent.sort(key=lambda key: (
+        1 if maximum is not None and classify_price(due[key].get('price'), maximum) == 'background_watch' else 0,
         0 if scan_id and due[key].get('last_scan_id') == scan_id else 1,
         -(published_day(due[key]).toordinal() if published_day(due[key]) else 0),
         -int(registry.listing_id(due[key]))))
     backlog.sort(key=lambda key: (
+        1 if maximum is not None and classify_price(due[key].get('price'), maximum) == 'background_watch' else 0,
         source.parse_date(entries[key].get('last_served_at') or entries[key].get('last_attempt_at')
                           or entries[key].get('first_queued_at')) or now,
         -int(registry.listing_id(due[key]))))
@@ -248,7 +256,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             deadline = reader.clock() + caps[2]
             reader.deadline = min(reader.deadline, deadline) if reader.deadline is not None else deadline
             before = reader.requests
-            candidates = select_candidates(due, entries, remaining, scan.get('scan_id'), now)
+            candidates = select_candidates(due, entries, remaining, scan.get('scan_id'), now, profile.get('maxPrice'))
             for key in candidates:
                 result = source.run(repo, 'fetch', key, reader=reader, write_status=False, now=now,
                                     include_review=True)
@@ -333,6 +341,7 @@ def summary(report):
         '- נכסים שהשתמשו במטמון שמור: ' + str(report['cached_properties']),
         '- נכסים שממתינים בתור: ' + str(report['pending']), '',
         '- רשומות בדיקה בתור ההשלמה: ' + str(report.get('review_properties', 0)),
+        '- מעל תקרת מעקב המחיר (ללא בקשות השלמה חדשות): ' + str(report.get('excluded', {}).get('above_price_watch_ceiling', 0)),
         '- רשומות בדיקה שהושלמו ועודכנו: ' + str(report.get('review_updated', 0)),
         '- השלמת פרטים שלא הצליחה (בנפרד ממצב הסריקה): ' + str(report.get('incomplete_properties', 0)),
         'עד שני ניסיונות השלמה לא מוצלחים לנכס ולמקור. לאחר מכן עוברים הלאה; אין שינוי במצב הסריקה.',

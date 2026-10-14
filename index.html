@@ -144,6 +144,7 @@
             <summary class="cursor-pointer font-bold text-blue-300">מצב מקורות הסריקה</summary>
             <div id="scanner-source-status" class="mt-2 space-y-1 text-gray-300">ממתין לדוח הסריקה הראשון.</div>
             <div id="completion-source-status" class="mt-3 border-t border-emerald-800/40 pt-2 text-xs text-emerald-300">ממתין לדוח השלמת הפרטים העצמאי.</div>
+            <p id="price-watch-policy" class="text-xs text-amber-300 mt-2">מעקב ברקע עד 10% מעל תקרת המחיר; תוצאות רגילות בתוך התקציב בלבד.</p>
             <p class="text-gray-400 mt-2">רשימת MLS עשויה להיות חלקית. OFF MARKET כולל מועמדים שדורשים אימות. נכס בלי כתובת ומיקום, שטח וחדרי שינה לא יישמר ולא יוצג. מחיר אינו תנאי חובה, ולכן נכס בלי מחיר עדיין עשוי להופיע.</p>
         </details>
         <!-- KPI Cards -->
@@ -1152,6 +1153,8 @@
             const range = configuredPriceRange(config);
             if (!range) return false;
             boardScanPriceRange = range;
+            const watchPolicy = document.getElementById('price-watch-policy');
+            if (watchPolicy) watchPolicy.textContent = `תקרת התוצאות: $${range.max.toLocaleString('en-US')} | מעקב ברקע עד $${Math.floor(range.max * 110 / 100).toLocaleString('en-US')} (10% מעל התקרה).`;
             if (resetView) { boardPriceMinEdited = false; boardPriceMaxEdited = false; }
             const minInput = document.getElementById('filter-min-price');
             if (minInput && !boardPriceMinEdited) minInput.value = range.min.toLocaleString('en-US');
@@ -1332,6 +1335,7 @@
                 if (activeCategory === 'archive' ? !p.is_archived : (p.is_archived || !matchesSourceCategory(p, activeCategory))) return false;
                 if (type !== 'all' && (p.type || p.property_type) !== type) return false;
                 const price = getMarketAskingPrice(p);
+                if (p.source_type === 'mls' && price !== null && price > boardScanPriceRange.max) return false;
                 if (price === null && !includeUnknown) return false;
                 if (price !== null && (price < range.min || (range.max !== null && price > range.max))) return false;
                 return selectedCitiesFilter === null || selectedCitiesFilter.has(mainGeoKey(p));
@@ -2973,7 +2977,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         function propertyPriceDisplayHtml(p) {
             const price = getMarketAskingPrice(p);
-            if (price !== null) return moneyData(price);
+            if (price !== null) {
+                if (p.source_type === 'mls' && price > boardScanPriceRange.max) {
+                    const ceiling = Math.floor(boardScanPriceRange.max * 110 / 100);
+                    const label = price <= ceiling ? 'מעקב ברקע · מחוץ לטווח המחיר הנוכחי' : 'היסטוריה · מעל תקרת המעקב';
+                    return `${moneyData(price)}<span class="block text-xs text-amber-300">${label}</span>`;
+                }
+                return moneyData(price);
+            }
             const opening = numericData(p.opening_bid), minimum = numericData(p.minimum_bid), cost = numericData(p.case_cost_tax_bid);
             if (p.source_amount_type === 'document_opening_bid' && opening !== null && opening > 0) return `<span class="block text-sm text-amber-300">הצעת פתיחה: ${moneyData(opening)}</span><span class="block text-[10px] text-gray-400">לפי המסמך · אינה מחיר מבוקש</span>`;
             if (isTaxProperty(p) && !String(p.source_type || '').includes('sheriff') && !String(p.deal_type || '').toLowerCase().includes('sheriff')) {

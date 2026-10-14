@@ -24,6 +24,7 @@ import pytz
 from analyzer import calculate_metrics, calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties, analysis_scope_key
 import requests
 from scan_schedule import scan_sectors
+from price_watch import watch_ceiling, classify_price, BUFFER_PERCENT
 
 EST_TZ = pytz.timezone("US/Eastern")
 PROPERTIES_FILE = "properties.json"
@@ -35,7 +36,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.11.0-independent-completion-20261014"
+ORCHESTRATOR_VERSION = "3.12.0-bounded-price-watch-20261014"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -2446,6 +2447,15 @@ def scan_review_key(prop):
     return hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode("utf-8")).hexdigest()[:32]
 
 
+def is_background_price_candidate(prop, settings, scope):
+    maximum = settings.get("price_range", {}).get("max", 250000)
+    if prop.get("source_type") != "mls" or classify_price(prop.get("price"), maximum) != "background_watch":
+        return False
+    expanded = deepcopy(settings)
+    expanded["price_range"] = {**settings.get("price_range", {}), "max": watch_ceiling(maximum)}
+    return scan_property_rejection(prop, expanded, scope) is None
+
+
 def retain_scan_review(rejected, scan_id, origin, settings=None, scope=None):
     """Write the original records before removing anything from an active file."""
     if not rejected:
@@ -3572,10 +3582,13 @@ def run_orchestrator():
 
     live_results = []
     if "mls" in active_sectors_now:
+        watch_max_price = watch_ceiling(max_price)
+        log_entry["price_watch_policy"] = {"buffer_percent": BUFFER_PERCENT,
+            "visible_max_price": max_price, "watch_max_price": watch_max_price}
         mls_audits = []
         for city in mls_scan_areas:
             area_audit = {}
-            live_results.extend(fetch_live_mls_for_city(city, min_price, max_price, area_audit))
+            live_results.extend(fetch_live_mls_for_city(city, min_price, watch_max_price, area_audit))
             mls_audits.append(area_audit)
         good = sum(a.get("status") == "success" for a in mls_audits)
         usable = sum(a.get("status") in ("success", "partial") for a in mls_audits)
@@ -3700,10 +3713,12 @@ def run_orchestrator():
         property_key(prop)
         for prop in live_results
         if property_key(prop)
+        and classify_price(prop.get("price"), max_price) != "historical_outside_watch"
     }
     log_entry["raw_mls_seen"] = len(raw_mls_seen_keys)
 
     final_filtered = []
+    background_results = {}
     filter_rejections = {}
     incomplete_field_rejections = {}
     incomplete_rejections_by_source = {}
@@ -3718,6 +3733,11 @@ def run_orchestrator():
             source_type_counts[raw_type] = source_type_counts.get(raw_type, 0) + 1
         reason = scan_property_rejection(prop, scan_settings, scan_scope)
         if reason:
+            if is_background_price_candidate(prop, scan_settings, scan_scope):
+                key = property_key(prop)
+                if key:
+                    background_results[key] = prop
+                continue
             filter_rejections[reason] = filter_rejections.get(reason, 0) + 1
             by_source = source_filter_rejections.setdefault(source_type, {})
             by_source[reason] = by_source.get(reason, 0) + 1
@@ -3728,6 +3748,9 @@ def run_orchestrator():
                     incomplete_field_rejections[field] = incomplete_field_rejections.get(field, 0) + 1
             continue
         final_filtered.append(prop)
+    log_entry["background_price_watch_rows"] = len(background_results)
+    if "mls" in sources:
+        sources["mls"]["background_price_watch_rows"] = len(background_results)
     try:
         log_entry["source_candidates_retained_for_review"] = retain_scan_review(
             rejected_candidates, scan_id, "source_candidates", scan_settings, scan_scope)
@@ -3790,6 +3813,12 @@ def run_orchestrator():
         "external_page_requests": 0}
 
     seen_keys = set()
+    for key, deal in background_results.items():
+        deal["price_watch_status"] = "background_watch"
+        merged, state = merge_property(existing_props_dict.get(key), deal, scan_id)
+        existing_props_dict[key] = merged
+        field = "background_price_watch_" + state
+        log_entry[field] = log_entry.get(field, 0) + 1
     for deal in final_filtered:
         key = property_key(deal)
         if not key:
@@ -3830,6 +3859,8 @@ def run_orchestrator():
                 deal["id"] = existing.get("id") or deal.get("id")
                 existing_props_dict.pop(old_key, None)
         seen_keys.add(key)
+        if deal.get("source_type") == "mls":
+            deal["price_watch_status"] = "within_budget"
         merged, state = merge_property(existing, deal, scan_id)
         existing_props_dict[key] = merged
         log_entry[state] += 1
