@@ -34,6 +34,10 @@ def build(source, output, assets):
                 raise ValueError("Missing body marker: " + name)
             text = text.replace("</body>", '    <script src="preview-hooks.js"></script>\n</body>')
             text = text.replace('target="deals_tab"', 'target="pa_preview_deals_tab"')
+            tag = manifest["source_sha"][:8]
+            text = text.replace('src="preview-hooks.js"', 'src="preview-hooks.js?v=' + tag + '"')
+            text = re.sub(r'src="secondary_sources\.js(?:\?[^"]*)?"',
+                          'src="secondary_sources.js?v=' + tag + '"', text)
             if "@supabase/supabase-js" in text or ".supabase.co" in text:
                 raise ValueError("Production client remains: " + name)
         (output / name).write_text(text, encoding="utf-8")

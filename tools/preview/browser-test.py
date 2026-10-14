@@ -39,11 +39,16 @@ with sync_playwright() as p:
     assert "נכס מומצא לבדיקה" in page.locator("#modal-badges").inner_text()
     assert "מומצא" in page.locator("#modal-summary").inner_text()
     assert page.locator("#modal-lot-size").inner_text() == "לא פורסם"
+    page.wait_for_function("document.getElementById('modal-source-coverage')?.textContent.includes('השלמת הפרטים לא הצליחה')")
+    assert "הסריקה ממשיכה" in page.locator("#modal-source-coverage").inner_text()
+    assert page.evaluate("scannerReport.last_event.status") == "success"
     page.evaluate("closePropertyModal();openPropertyModal('PA-MLS-1778804')")
     page.wait_for_function("document.getElementById('modal-additional-source-notice')?.textContent.includes('Tarasa')")
     assert page.locator("#modal-listing-source-request").count() == 0
     assert page.locator("#modal-additional-source-request").count() == 0
     assert page.locator("#modal-additional-source-photos img").count() == 3
+    assert "שדות שנאספו:" in page.locator("#modal-source-coverage").inner_text()
+    assert "המידע יכול להיות חלקי" in page.locator("#modal-source-coverage").inner_text()
     assert page.locator("#modal-sqft").inner_text() == "1,218 SqFt"
     assert page.locator("#modal-lot-size").inner_text() == "0.14 Acres"
     assert "Tarasa" in page.locator("#modal-sqft-source").inner_text()
@@ -77,4 +82,4 @@ with sync_playwright() as p:
     assert page.evaluate("localStorage.getItem('pa_github_token')") == "production-test-token"
     assert page.evaluate("localStorage.getItem('unrelated')") == "keep"
     browser.close()
-    print("PASS browser preview, living/lot areas, real Valley source details, synthetic labels, local deal-room/report and blocked RentCast")
+    print("PASS browser preview, two-attempt completion with successful scan, honest source coverage, living/lot areas, real Valley source details, synthetic labels, local deal-room/report and blocked RentCast")
