@@ -53,7 +53,7 @@ class ScheduleTests(unittest.TestCase):
         self.assertTrue(schedule.completion_due(p, {}, self.now))
         self.assertFalse(schedule.completion_due(p, {'last_automatic_run': self.now.isoformat()}, self.now))
         self.assertFalse(schedule.completion_due(p, {'budget_day': '2026-10-12', 'daily_attempted': 20}, self.now))
-        self.assertFalse(schedule.completion_due({**p, 'autoScanEnabled': False}, {}, self.now))
+        self.assertTrue(schedule.completion_due({**p, 'autoScanEnabled': False}, {}, self.now))
         self.assertFalse(schedule.completion_due({**p, 'scheduleControlVersion': 1}, {}, self.now))
         self.assertTrue(schedule.completion_due(p, {'budget_day': '2026-10-11', 'daily_attempted': 20}, self.now))
 
@@ -97,7 +97,7 @@ class ScheduleTests(unittest.TestCase):
         profile = {'scheduleControlVersion': 2, 'autoScanEnabled': True,
             'completionSettings': {'enabled': True, 'frequency': 'every_15_minutes',
                                    'timezone': 'UTC', 'dailyLimit': 60, 'batchSize': 3}}
-        self.assertFalse(schedule.completion_due({**profile, 'autoScanEnabled': False}, {}, self.now))
+        self.assertTrue(schedule.completion_due({**profile, 'autoScanEnabled': False}, {}, self.now))
         self.assertFalse(schedule.completion_due({**profile,
             'completionSettings': {**profile['completionSettings'], 'enabled': False}}, {}, self.now))
         self.assertFalse(schedule.completion_due(profile, {'budget_day': '2026-10-12', 'daily_attempted': 60}, self.now))
@@ -165,3 +165,4 @@ class RecentQueueTests(QueueTests):
 
 if __name__ == '__main__':
     unittest.main()
+

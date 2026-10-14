@@ -216,7 +216,6 @@ class PipelineTests(unittest.TestCase):
             stack.enter_context(patch.object(scanner, "fetch_hud_homestore_reo", return_value=([], {"status": "success", "counties": {}})))
             stack.enter_context(patch.object(scanner, "fetch_erie_repository_list", return_value=([good[3], unknown_type], {"status": "success", "source_url": "offline"})))
             stack.enter_context(patch.object(scanner, "enrich_erie_repository_rows", side_effect=lambda rows, cache: (rows, cache, deepcopy(audit))))
-            stack.enter_context(patch.object(scanner, "enrich_listing_source_rows", return_value={"status": "offline"}))
             with redirect_stdout(io.StringIO()):
                 scanner.run_orchestrator()
         return good, old, before, fetch_mls
@@ -457,7 +456,6 @@ class SheriffPdfReviewTests(unittest.TestCase):
                 patch.object(scanner, "CONFIG_FILE", "manual_scan_config.json"), \
                 patch.object(scanner, "fetch_allegheny_sheriff_listings", return_value=([row], scanner.SHERIFF_PAGE, audit)), \
                 patch.object(scanner, "enrich_sheriff_rows_from_county", return_value=0) as enrich, \
-                patch.object(scanner, "enrich_listing_source_rows", return_value={"status": "offline"}), \
                 patch.object(scanner.requests.sessions.Session, "send", side_effect=AssertionError("No live HTTP")), \
                 redirect_stdout(io.StringIO()):
             scanner.run_orchestrator()
@@ -512,3 +510,4 @@ class WorkflowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

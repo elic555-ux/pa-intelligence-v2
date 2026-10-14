@@ -72,7 +72,7 @@ class QueueTests(unittest.TestCase):
     def test_scan_mode_collects_without_background_activation(self):
         self.integrated_config()
         report = worker.run(self.repo, 'scan', 'abc', self.reader(), now=self.now)
-        self.assertTrue(report['scan_integrated'])
+        self.assertFalse(report['scan_integrated'])
         self.assertEqual(report['new_snapshots'], 3)
         self.assertEqual(report['new_rentcast_calls'], 0)
         self.assertLessEqual(report['new_source_network_requests'], 13)
@@ -251,21 +251,21 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(reader.requests,0)
         self.assertFalse((self.repo/source.SOURCE_STATE).exists())
 
-    def test_automatic_requires_activation_and_skip_never_advances_queue(self):
+    def test_automatic_requires_activation_but_is_independent_of_skipped_scan(self):
         reader=self.reader()
         self.assertEqual(worker.run(self.repo,'automatic','abc',reader)['status'],'automatic_disabled')
         self.assertEqual(reader.requests,0)
         worker.run(self.repo,'enable',now=self.now)
-        before=(self.repo/worker.STATE).read_bytes()
         self.scan['last_event']['status']='skipped'
         registry.atomic_json(self.repo/'scanner_status.json',self.scan)
-        self.assertEqual(worker.run(self.repo,'automatic','abc',reader)['status'],'no_new_mls_scan')
-        self.assertEqual(before,(self.repo/worker.STATE).read_bytes())
-        self.assertEqual(reader.requests,0)
+        before=(self.repo/'scanner_status.json').read_bytes()
+        self.assertEqual(worker.run(self.repo,'automatic','abc',reader)['status'],'batch_complete')
+        self.assertEqual(before,(self.repo/'scanner_status.json').read_bytes())
+        self.assertGreater(reader.requests,0)
 
-    def test_changed_upstream_scan_is_rejected(self):
+    def test_background_completion_does_not_require_a_matching_scan_commit(self):
         worker.run(self.repo,'enable',now=self.now)
-        self.assertEqual(worker.run(self.repo,'automatic','old',self.reader())['status'],'upstream_scan_no_longer_current')
+        self.assertEqual(worker.run(self.repo,'automatic','old',self.reader())['status'],'batch_complete')
 
     def test_ambiguous_outside_and_inactive_rows_do_not_fetch(self):
         self.rows.extend([{**self.rows[0],'address':'98 Other St'},
@@ -662,9 +662,12 @@ class QueueTests(unittest.TestCase):
         stage = workflow.split('- name: Record failed stage for the UI', 1)[1].split('run: |', 1)[0]
         self.assertNotIn('source_details', stage)
         self.assertNotIn('source_registry', stage)
-        self.assertIn('continue-on-error: true', workflow)
-        self.assertIn('השלמת פרטי המודעות לא הסתיימה', workflow)
+        self.assertNotIn('python automatic_listing_sources.py', workflow)
+        self.assertNotIn('steps.source_details', workflow)
+        completion = (root / '.github/workflows/automatic-listing-sources.yml').read_text(encoding='utf-8')
+        self.assertNotIn('workflow_run:', completion)
 
 
 if __name__=='__main__':
     unittest.main()
+

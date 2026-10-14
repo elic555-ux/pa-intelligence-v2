@@ -85,8 +85,7 @@ def completion_daily_limit(config):
 
 def completion_due(profile, state, current):
     config = profile.get('completionSettings') or {}
-    if (profile.get('scheduleControlVersion') != 2 or profile.get('autoScanEnabled') is not True
-            or config.get('enabled') is not True):
+    if profile.get('scheduleControlVersion') != 2 or config.get('enabled') is not True:
         return False
     completion_batch_size(config)
     cap = completion_daily_limit(config)
@@ -114,3 +113,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

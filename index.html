@@ -143,6 +143,7 @@
         <details class="bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs">
             <summary class="cursor-pointer font-bold text-blue-300">מצב מקורות הסריקה</summary>
             <div id="scanner-source-status" class="mt-2 space-y-1 text-gray-300">ממתין לדוח הסריקה הראשון.</div>
+            <div id="completion-source-status" class="mt-3 border-t border-emerald-800/40 pt-2 text-xs text-emerald-300">ממתין לדוח השלמת הפרטים העצמאי.</div>
             <p class="text-gray-400 mt-2">רשימת MLS עשויה להיות חלקית. OFF MARKET כולל מועמדים שדורשים אימות. נכס בלי כתובת ומיקום, שטח וחדרי שינה לא יישמר ולא יוצג. מחיר אינו תנאי חובה, ולכן נכס בלי מחיר עדיין עשוי להופיע.</p>
         </details>
         <!-- KPI Cards -->
@@ -431,7 +432,7 @@
                 <div class="flex items-center justify-between bg-gray-950 p-4 rounded-xl border border-gray-800">
                     <div>
                         <span class="text-sm font-bold text-white block">סטטוס מנוע אוטומטי מרכזי</span>
-                        <span class="text-xs text-gray-400">הפעלה או עצירה של כלל הסריקות המתוזמנות</span>
+                        <span class="text-xs text-gray-400">הפעלה או עצירה של סריקות גילוי הנכסים; השלמת הפרטים נשלטת בנפרד</span>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="autoscan-master-switch" checked class="sr-only peer">
@@ -2301,7 +2302,26 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             panel.appendChild(details);
         }
 
+        async function loadCompletionStatus() {
+            const panel = document.getElementById('completion-source-status');
+            if (!panel) return;
+            try {
+                const response = await fetch('COMPS_REPORTS/automatic_listing_sources/status.json?t=' + Date.now(), {cache: 'no-store'});
+                if (!response.ok) throw new Error('completion report unavailable');
+                const report = await response.json();
+                if (!report || typeof report !== 'object' || Array.isArray(report)) throw new Error('invalid completion report');
+                const counts = [report.pending, report.new_snapshots, report.review_required, report.incomplete_properties];
+                if (counts.some(value => !Number.isInteger(value) || value < 0)) throw new Error('invalid completion counts');
+                panel.textContent = `השלמת פרטים — תהליך עצמאי: ממתינים ${report.pending} | מפרטים חדשים בריצה האחרונה ${report.new_snapshots} | בדיקת התאמה ${report.review_required} | השלמה שלא הצליחה ${report.incomplete_properties}`;
+                if (report.checked_at) panel.textContent += ` | נבדק: ${scannerDateLabel(report.checked_at)}`;
+                if (report.retry_after_at) panel.textContent += ` | ניסיון נוסף: ${scannerDateLabel(report.retry_after_at)}`;
+            } catch (error) {
+                panel.textContent = 'דוח השלמת הפרטים העצמאי אינו זמין כרגע.';
+            }
+        }
+
         async function loadScannerStatus() {
+            void loadCompletionStatus();
             try {
                 const response = await fetch('scanner_status.json?t=' + Date.now());
                 if (!response.ok) throw new Error('scanner report unavailable');
@@ -3909,3 +3929,4 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
     <script src="secondary_sources.js?v=1.5.0-area-20261013"></script>
 </body>
 </html>
+

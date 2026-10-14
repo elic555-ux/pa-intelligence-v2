@@ -23,7 +23,6 @@ from datetime import datetime, timedelta
 import pytz
 from analyzer import calculate_metrics, calculate_rental_metrics, is_public_court_record, needs_analysis, normalize_county, load_selected_counties, analysis_scope_key
 import requests
-from listing_source import enrich_rows as enrich_listing_source_rows
 from scan_schedule import scan_sectors
 
 EST_TZ = pytz.timezone("US/Eastern")
@@ -36,7 +35,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.10.8-automatic-listing-details-20261013"
+ORCHESTRATOR_VERSION = "3.11.0-independent-completion-20261014"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -2447,7 +2446,7 @@ def scan_review_key(prop):
     return hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode("utf-8")).hexdigest()[:32]
 
 
-def retain_scan_review(rejected, scan_id, origin):
+def retain_scan_review(rejected, scan_id, origin, settings=None, scope=None):
     """Write the original records before removing anything from an active file."""
     if not rejected:
         return 0
@@ -2471,6 +2470,9 @@ def retain_scan_review(rejected, scan_id, origin):
             "origins": origins, "first_checked_at": old.get("first_checked_at") or timestamp,
             "last_checked_at": timestamp, "scan_id": scan_id,
             "status": "needs_details" if reason in {"incomplete_required_data", "property_type_unknown", "baths_unverified", "location_unverified", "geography_unverified", "sheriff_pdf_address_unparsed"} else "outside_filters"}
+        if settings is not None and scope is not None:
+            review["items"][key]["filter_context"] = {
+                "settings": deepcopy(settings), "scope": deepcopy(scope)}
     review["updated_at"] = timestamp
     json.dumps(review, allow_nan=False)
     os.makedirs(os.path.dirname(SCAN_REVIEW_FILE) or ".", exist_ok=True)
@@ -3727,7 +3729,8 @@ def run_orchestrator():
             continue
         final_filtered.append(prop)
     try:
-        log_entry["source_candidates_retained_for_review"] = retain_scan_review(rejected_candidates, scan_id, "source_candidates")
+        log_entry["source_candidates_retained_for_review"] = retain_scan_review(
+            rejected_candidates, scan_id, "source_candidates", scan_settings, scan_scope)
     except (OSError, ValueError, TypeError) as exc:
         log_entry.update({"status": "failed", "finished_at": iso_now_est()})
         log_entry["errors"].append("Could not preserve rejected source records; inventory merge stopped: " + str(exc))
@@ -3760,10 +3763,7 @@ def run_orchestrator():
             source["needs_details"] = needs_details
             if needs_details:
                 source["status_detail"] = f"{needs_details} רשומות שממתינות לפרטים נשמרו בקובץ בדיקה; אין להניח שהן עברו את המסננים."
-                if source.get("status") in {"success", "imported"}:
-                    source["status"] = "partial"
             if sector in {"sheriff", "tax"} and rejected and source.get("rows", 0):
-                source["status"] = "partial"
                 source["status_detail"] = (
                     f"המקור החזיר {source.get('rows', 0)} מועמדים; {rejected} נפסלו כי חסרו "
                     "כתובת/מיקום, שטח או חדרי שינה. הרשומות נשמרו בנפרד לבדיקה."
@@ -3783,18 +3783,11 @@ def run_orchestrator():
     print(f"🏷️️ בדיקת כל המקורות — סוגי נכס מהמקור: {source_type_counts}")
     print(f"🔍 {len(final_filtered)} תוצאות עברו את כל המסננים. מבצע מיזוג בטוח...")
 
-    # Read the subject's source page only after the existing scan filters.
-    # Manual and scheduled scans reuse snapshots, then read up to 20 missing pages.
-    # Source blocks are separate from the search CSV coverage, with no paid fallback.
-    try:
-        detail_audit = enrich_listing_source_rows(
-            final_filtered, limit=20,
-            allow_network=os.environ.get("GITHUB_EVENT_NAME") in {"workflow_dispatch", "schedule"})
-        log_entry["listing_source_details"] = detail_audit
-        print("📄 פרטי מודעות מהמקור: " + json.dumps(detail_audit, ensure_ascii=False))
-    except (OSError, ValueError) as exc:
-        log_entry["listing_source_details"] = {"status": "failed", "error": str(exc), "new_rentcast_calls": 0}
-        log_entry["errors"].append("Listing source details unavailable: " + str(exc))
+    # Parameter completion has its own queue, schedule and status. Discovery
+    # never opens MLS detail pages or spends the completion request budget.
+    log_entry["listing_source_details"] = {
+        "status": "independent_worker", "new_rentcast_calls": 0,
+        "external_page_requests": 0}
 
     seen_keys = set()
     for deal in final_filtered:
@@ -3944,3 +3937,4 @@ if __name__ == "__main__":
 
     if load_json_file(SCANNER_STATUS_FILE, {}).get("last_event", {}).get("status") == "failed":
         raise SystemExit(1)
+
