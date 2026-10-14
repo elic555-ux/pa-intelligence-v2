@@ -1,4 +1,4 @@
-"""Cache-first MLS source completion inside scans and resumable background work."""
+"""Independent cache-first completion of saved MLS inventory and review records."""
 import argparse
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -9,10 +9,11 @@ from pathlib import Path
 
 import property_sources as registry
 import tarasa_listing_source as source
+from completion_subjects import load_subjects, update_review
 from scan_schedule import completion_due, completion_batch_size, completion_daily_limit, due_slot
 from zoneinfo import ZoneInfo
 
-VERSION = 'automatic-mls-sources-1.7.0-two-attempt-completion-20261014'
+VERSION = 'automatic-mls-sources-1.8.0-independent-completion-20261014'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -49,9 +50,7 @@ def published_day(row):
 
 
 def eligible_rows(repo, start_day=None, today=None):
-    inventory = registry.read_json(repo / 'properties.json')
-    if not isinstance(inventory, list):
-        raise ValueError('Inventory must be an array.')
+    inventory = load_subjects(repo)
     counts = Counter(str(row.get('id')) for row in inventory if isinstance(row, dict))
     aliases = repo / registry.ROOT / 'aliases.json'
     ambiguous = registry.read_json(aliases).get('ambiguous', {}) if aliases.exists() else {}
@@ -123,28 +122,30 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     profile = registry.read_json(repo / 'scan_config.json') if (repo / 'scan_config.json').exists() else {}
     controlled = profile.get('scheduleControlVersion') == 2
     completion = profile.get('completionSettings') or {}
-    enabled = bool(completion.get('enabled') is True and (mode == 'scan' or profile.get('autoScanEnabled') is True)) if controlled else bool(state.get('enabled'))
+    enabled = completion.get('enabled') is True if controlled else bool(state.get('enabled'))
     caps = PROFILES.get(mode, PROFILES['automatic'])
     if controlled:
         caps = (min(caps[0], completion_batch_size(completion)), caps[1], caps[2])
         completion_daily_limit(completion)
     report = {'version': VERSION, 'mode': mode, 'provider': source.PROVIDER, 'source_name': source.SOURCE,
+        'checked_at': now.isoformat(),
         'enabled': enabled, 'status': 'ready', 'should_save': False,
         'new_rentcast_calls': 0, 'new_source_network_requests': 0,
         'max_properties_per_run': caps[0], 'max_source_requests_per_run': caps[1], 'max_seconds_per_run': caps[2],
         'properties_sha256': hashlib.sha256((repo / 'properties.json').read_bytes()).hexdigest(),
-        'scan_id': None, 'scan_integrated': mode == 'scan', 'cached_properties': 0, 'attempted_properties': 0,
+        'scan_id': None, 'scan_integrated': False, 'cached_properties': 0, 'attempted_properties': 0,
         'new_snapshots': 0, 'results': [], 'pending': 0, 'due': 0,
         'review_required': 0, 'migrated_provider_entries': 0,
-        'incomplete_properties': 0, 'completion_status': 'not_run'}
+        'incomplete_properties': 0, 'completion_status': 'not_run',
+        'review_updated': 0, 'review_filter_results': {}}
     if mode in {'automatic', 'scan'}:
         if not enabled:
             report['status'] = 'automatic_disabled'
             return report
-        if upstream_sha and event.get('github_sha') != upstream_sha:
+        if mode == 'scan' and upstream_sha and event.get('github_sha') != upstream_sha:
             report['status'] = 'upstream_scan_no_longer_current'
             return report
-        if (upstream_sha or mode == 'scan') and (event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', []) or not event.get('scan_id')):
+        if mode == 'scan' and (event.get('status') not in {'success', 'partial'} or 'mls' not in event.get('active_sectors', []) or not event.get('scan_id')):
             report['status'] = 'no_new_mls_scan'
             return report
         if mode == 'scan' and state.get('last_enriched_scan_id') == event.get('scan_id'):
@@ -173,6 +174,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     report['date_basis'] = 'saved_listing_publication_date'
     rows, excluded = eligible_rows(repo, start_day, now.date())
     report.update(eligible_properties=len(rows), excluded=excluded)
+    report['review_properties'] = sum(row.get('_completion_origin') == 'review' for row in rows.values())
     entries = {}
     for key, row in rows.items():
         old = state['entries'].get(key)
@@ -248,7 +250,8 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             before = reader.requests
             candidates = select_candidates(due, entries, remaining, scan.get('scan_id'), now)
             for key in candidates:
-                result = source.run(repo, 'fetch', key, reader=reader, write_status=False, now=now)
+                result = source.run(repo, 'fetch', key, reader=reader, write_status=False, now=now,
+                                    include_review=True)
                 report['results'].append(result)
                 report['attempted_properties'] += int(result['listing_requests'] > 0)
                 available = bool(result['cached_facts'] or result['cached_photos'])
@@ -305,6 +308,8 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         state['last_automatic_run'] = now.isoformat()
     if mode == 'scan':
         state['last_enriched_scan_id'] = scan.get('scan_id')
+    if mode not in {'enable', 'disable'}:
+        report['review_updated'], report['review_filter_results'] = update_review(repo, rows, now)
     state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER,
                  completion_start_date=start_day.isoformat())
     report['should_save'] = True
@@ -327,6 +332,8 @@ def summary(report):
         '- מטמונים חדשים: ' + str(report['new_snapshots']),
         '- נכסים שהשתמשו במטמון שמור: ' + str(report['cached_properties']),
         '- נכסים שממתינים בתור: ' + str(report['pending']), '',
+        '- רשומות בדיקה בתור ההשלמה: ' + str(report.get('review_properties', 0)),
+        '- רשומות בדיקה שהושלמו ועודכנו: ' + str(report.get('review_updated', 0)),
         '- השלמת פרטים שלא הצליחה (בנפרד ממצב הסריקה): ' + str(report.get('incomplete_properties', 0)),
         'עד שני ניסיונות השלמה לא מוצלחים לנכס ולמקור. לאחר מכן עוברים הלאה; אין שינוי במצב הסריקה.',
         '- נכסים שדורשים בדיקת התאמה ידנית לפני ניסיון חוזר: ' + str(report.get('review_required', 0)),
@@ -336,7 +343,8 @@ def summary(report):
         'מגבלה בריצה זו: עד ' + str(report['max_properties_per_run']) + ' נכסים ועד ' + str(report['max_source_requests_per_run']) + ' בקשות.',
         'לפחות 10 שניות בין בקשות. אין המתנה של יום בין נכסים; חסימה עוצרת את המקור ומוצגת עם זמן ניסיון נוסף.',
         'התור ממשיך מהמקום שנשמר. מטמוני Clear Choice התקינים נשמרים ונבדקים לפני גישה למקור.',
-        'הסריקה, כל המחוזות והמסננים, properties.json, חדר העסקאות ותקציב RentCast נשארים ללא שינוי.', '']
+        'תהליך עצמאי: השלמת רשומות קיימות בלבד, ללא חיפוש נכסים חדשים. מועמדים שהושלמו נשארים בקובץ הבדיקה ונבדקים מול המסננים המקוריים.',
+        'properties.json, סטטוס הסריקה, חדר העסקאות ותקציב RentCast נשארים ללא שינוי.', '']
     if report.get('retry_after_at'):
         lines.append('- ניסיון נוסף למקור: ' + report['retry_after_at'] + ' (UTC)')
     if report.get('http_status'):
@@ -367,3 +375,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

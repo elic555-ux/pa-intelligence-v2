@@ -43,7 +43,8 @@ LABELS = {'Roof': 'roof_type', 'Heating': 'heating', 'Cooling': 'cooling',
           'Construction Materials': 'construction', 'Basement': 'basement',
           'Stories': 'stories', 'Water': 'water', 'Sewer': 'sewer',
           'Bedrooms': 'beds', 'Bathrooms': 'baths', 'Building Area': 'sqft',
-          'Year Built': 'year_built', 'Total Rooms': 'total_rooms', 'Style': 'style'}
+          'Year Built': 'year_built', 'Total Rooms': 'total_rooms', 'Style': 'style',
+          'Property Type': 'property_type'}
 FIELD_UNITS = {'sqft': 'sqft', 'lot_area_acres': 'acre'}
 NUMERIC = {'beds', 'baths', 'sqft', 'year_built', 'stories', 'parking_spaces', 'total_rooms'}
 
@@ -101,8 +102,12 @@ def bound(row, record, provider=PROVIDER):
         and registry.address_key(record.get('subject') or {}) == registry.address_key(registry.identity(row)))
 
 
-def eligible(repo, property_id):
-    rows = registry.read_json(repo / 'properties.json')
+def eligible(repo, property_id, include_review=False):
+    if include_review:
+        from completion_subjects import load_subjects
+        rows = load_subjects(repo)
+    else:
+        rows = registry.read_json(repo / 'properties.json')
     matches = [r for r in rows if isinstance(r, dict) and str(r.get('id')) == property_id]
     if len(matches) != 1:
         raise ValueError('ambiguous_or_missing_property_id')
@@ -552,3 +557,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

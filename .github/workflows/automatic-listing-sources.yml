@@ -6,6 +6,11 @@ on:
       - 'index.html'
       - 'secondary_sources.js'
       - 'automatic_listing_sources.py'
+      - 'completion_subjects.py'
+      - 'test_independent_completion.py'
+      - 'test_independent_completion_ui.cjs'
+      - 'tarasa_listing_source.py'
+      - 'secondary_listing_source.py'
       - 'orchestrator.py'
       - 'test_automatic_listing_sources.py'
       - 'scan_schedule.py'
@@ -25,10 +30,6 @@ on:
         default: check
   schedule:
     - cron: '7,22,37,52 * * * *'
-  workflow_run:
-    workflows: ['1. Central Scanner — V2.9 (manual validation)']
-    types: [completed]
-    branches: [main]
 
 permissions:
   contents: write
@@ -57,7 +58,7 @@ jobs:
         run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz PyYAML
       - name: Compile changed Python and validate workflow YAML
         run: |
-          python -m py_compile orchestrator.py automatic_listing_sources.py test_automatic_listing_sources.py
+          python -m py_compile orchestrator.py automatic_listing_sources.py completion_subjects.py test_automatic_listing_sources.py
           python - <<'PY'
           from pathlib import Path
           import yaml
@@ -75,19 +76,18 @@ jobs:
           requests.sessions.Session.request = blocked
           names = ['test_scan_controls', 'test_scan_scope', 'test_scan_schedule',
                    'test_property_sources', 'test_secondary_listing_source',
-                   'test_tarasa_listing_source', 'test_automatic_listing_sources']
+                   'test_tarasa_listing_source', 'test_automatic_listing_sources', 'test_independent_completion']
           suite = unittest.defaultTestLoader.loadTestsFromNames(names)
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           raise SystemExit(0 if result.wasSuccessful() else 1)
           PY
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
+          node test_independent_completion_ui.cjs
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository))
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -109,28 +109,27 @@ jobs:
           python-version: '3.11'
       - name: Install public HTML parser
         if: steps.timing.outputs.due == 'true'
-        run: python -m pip install 'beautifulsoup4==4.15.0'
+        run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz tzdata
       - name: Verify cache, identities, queue and request limits
         if: steps.timing.outputs.due == 'true'
         run: |
-          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
+          node test_independent_completion_ui.cjs
       - name: Complete a bounded group or change activation
         if: steps.timing.outputs.due == 'true'
         id: worker
         env:
           AUTO_EVENT: ${{ github.event_name }}
           AUTO_MODE: ${{ inputs.mode }}
-          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           python - <<'PY'
           import os, subprocess, sys
           mode = os.environ.get('AUTO_MODE', 'check') if os.environ['AUTO_EVENT'] == 'workflow_dispatch' else 'automatic'
           if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'}:
               raise SystemExit('Unsupported mode')
-          subprocess.run([sys.executable, 'automatic_listing_sources.py', mode,
-              '--upstream-sha', os.environ.get('UPSTREAM_SHA', '')], check=True)
+          subprocess.run([sys.executable, 'automatic_listing_sources.py', mode], check=True)
           PY
       - name: Refresh registry from saved source evidence
         if: steps.worker.outputs.save == 'true'
@@ -142,6 +141,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- COMPS_REPORTS/automatic_listing_sources COMPS_REPORTS/property_sources
           if [ -d COMPS_REPORTS/additional_sources ]; then git add COMPS_REPORTS/additional_sources; fi
+          if [ -d COMPS_REPORTS/scan_review ]; then git add COMPS_REPORTS/scan_review; fi
           if git diff --cached --quiet; then exit 0; fi
           git fetch origin main
           if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
@@ -157,3 +157,4 @@ jobs:
           PY
           git commit -m 'Save bounded MLS source completion and resumable queue'
           git push origin HEAD:main
+

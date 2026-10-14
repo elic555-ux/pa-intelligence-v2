@@ -104,7 +104,8 @@ def read_snapshot(repo, row, now=None):
     return next((r for r in records if fresh(r, now)), records[0] if records else None)
 
 
-def run(repo, mode, property_id, requested_url='', request_id='', reader=None, write_status=True, now=None):
+def run(repo, mode, property_id, requested_url='', request_id='', reader=None, write_status=True, now=None,
+        include_review=False):
     repo = Path(repo)
     if mode not in ('check', 'fetch'):
         raise ValueError('Unsupported source mode')
@@ -115,7 +116,7 @@ def run(repo, mode, property_id, requested_url='', request_id='', reader=None, w
         'cached_facts': 0, 'cached_photos': 0,
         'properties_sha256': hashlib.sha256((repo / 'properties.json').read_bytes()).hexdigest()}
     try:
-        row = core.eligible(repo, property_id)
+        row = core.eligible(repo, property_id, include_review=include_review)
     except ValueError as error:
         report['status'] = str(error)
         if mode == 'fetch' and write_status:
@@ -220,3 +221,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
