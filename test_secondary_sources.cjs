@@ -52,6 +52,53 @@ check('latest valid snapshot wins while older provider remains available',()=>{
 });
 check('rounded acreage keeps original unit without altering original lot',()=>{assert.equal(api.fact(row,tarasa,'lot_area_acres').unit,'acre');assert.equal(row.lot_size,3201);});
 
+check('coverage counts only verified fields and deduplicated photo references',()=>{
+    const notice=api.collectionNotice(row,[clear,tarasa]);
+    assert.match(notice,/שדות שנאספו: 17/);assert.match(notice,/תמונות: 3/);assert.match(notice,/חלקי/);
+    assert.equal(api.combinedPhotos(row,[clear,tarasa]).length,3);
+});
+check('partial snapshots remain partial without invented financial or occupancy fields',()=>{
+    const partial=structuredClone(tarasa);
+    partial.facts={beds:partial.facts.beds};partial.photos=[];
+    for(const field of ['occupancy','arv','monthly_rent_est']) partial.facts[field]={
+        ...tarasa.facts.beds,value:1234};
+    assert.match(api.collectionNotice(row,[partial]),/^שדות שנאספו: 1/);
+    assert.equal(api.fact(row,partial,'occupancy'),null);
+    assert.equal(api.fact(row,partial,'arv'),null);
+});
+check('empty verified snapshot is distinguished from an uncollected listing',()=>{
+    const empty=structuredClone(tarasa);empty.facts={};empty.photos=[];
+    assert.match(api.collectionNotice(row,[empty]),/אומתה/);
+    assert.match(api.collectionNotice(row,[]),/טרם נאסף/);
+});
+check('Erie without saved data has no promise of automatic enrichment',()=>{
+    assert.match(api.collectionNotice({...row,county:'Erie',city:'Erie'},[]),/עדיין אינה זמינה למחוז Erie/);
+});
+check('bound failed attempts explain the last failure but supply no facts or photos',()=>{
+    for(const status of ['source_blocked','source_rate_limited','robots_disallowed',
+                         'source_identity_mismatch','listing_not_available','source_unavailable']) {
+        const failed=structuredClone(tarasa);failed.status=status;failed.retrieved_at=null;
+        failed.last_attempt={status,checked_at:new Date().toISOString()};
+        assert.equal(api.matches(row,failed),false);
+        assert.equal(api.fact(row,failed,'beds'),null);
+        assert.equal(api.combinedPhotos(row,[failed]).length,0);
+        assert.doesNotMatch(api.collectionNotice(row,[failed]),/טרם נאסף/);
+    }
+});
+check('unrelated failure receipts cannot explain this property',()=>{
+    const failed=structuredClone(tarasa);failed.status='source_blocked';
+    failed.property_id='PA-MLS-9999';
+    assert.match(api.collectionNotice(row,[failed]),/טרם נאסף/);
+    const changed=structuredClone(tarasa);changed.status='source_blocked';changed.subject.county='Erie';
+    assert.match(api.collectionNotice(row,[changed]),/טרם נאסף/);
+});
+check('valid saved data remains visible after a later failed refresh',()=>{
+    const cached=structuredClone(tarasa);
+    cached.last_attempt={status:'source_blocked',checked_at:new Date().toISOString()};
+    assert.match(api.collectionNotice(row,[cached]),/שדות שנאספו: 17/);
+    assert.equal(api.combinedPhotos(row,[cached]).length,3);
+});
+
 const elements=new Map();
 class Element {
     constructor(tag='div'){this.tagName=tag;this.children=[];this.textContent='';this.hidden=false;this.disabled=false;
@@ -94,6 +141,10 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         assert.match(dom.getElementById('modal-hvac').textContent,/קיר\/חלון/);
         assert.equal(dom.getElementById('modal-parking').textContent,'חניה מחוץ לרחוב');
         assert.match(dom.getElementById('modal-roof-source').children.map(n=>n.textContent).join(''),/Tarasa/);
+    });
+    check('real modal shows a partial coverage summary beside saved source details',()=>{
+        const notice=dom.getElementById('modal-source-coverage').textContent;
+        assert.match(notice,/שדות שנאספו: 17/);assert.match(notice,/תמונות: 3/);assert.match(notice,/חלקי/);
     });
     check('two source columns and three real photo nodes rendered',()=>{
         const section=dom.getElementById('modal-additional-source');
