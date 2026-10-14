@@ -22,15 +22,17 @@ def due_slot(schedule, current, last_checked=None, default_zone='America/New_Yor
     frequency = schedule.get('frequency') or ('daily' if schedule.get('day', 'Everyday') == 'Everyday' else 'weekly')
     if frequency == 'off':
         return None
-    if frequency not in {'daily', 'twice_daily', 'weekly', 'monthly', 'hourly', 'every_3_hours'}:
+    if frequency not in {'daily', 'twice_daily', 'weekly', 'monthly', 'hourly', 'every_3_hours', 'every_15_minutes'}:
         raise ValueError('Unsupported schedule frequency')
     if frequency == 'weekly' and schedule.get('day', 'Wednesday') != DAYS[local.weekday()]:
         return None
     if frequency == 'monthly' and local.day != int(schedule.get('dayOfMonth', 1)):
         return None
-    if frequency in {'hourly', 'every_3_hours'}:
-        hour = local.hour if frequency == 'hourly' else local.hour // 3 * 3
-        slots = [datetime.combine(local.date(), time(hour), zone)]
+    if frequency in {'hourly', 'every_3_hours', 'every_15_minutes'}:
+        hour = local.hour if frequency != 'every_3_hours' else local.hour // 3 * 3
+        minute = local.minute // 15 * 15 if frequency == 'every_15_minutes' else 0
+        # Preserve the repeated hour's fold; compare actual instants below.
+        slots = [local.replace(hour=hour, minute=minute, second=0, microsecond=0)]
     else:
         times = schedule.get('times') or [schedule.get('time', '08:00')]
         if not isinstance(times, list) or len(times) != (2 if frequency == 'twice_daily' else 1):
@@ -42,13 +44,13 @@ def due_slot(schedule, current, last_checked=None, default_zone='America/New_Yor
             if not isinstance(value, str) or not re.fullmatch(r'(?:[01]\d|2[0-3]):00', value):
                 raise ValueError('Schedules support whole hours')
             slots.append(datetime.combine(local.date(), time(int(value[:2])), zone))
-    elapsed = [slot for slot in slots if slot <= local]
+    elapsed = [slot for slot in slots if slot.astimezone(timezone.utc) <= current.astimezone(timezone.utc)]
     if not elapsed:
         return None
     latest = max(elapsed)
     try:
         previous = datetime.fromisoformat(str(last_checked).replace('Z', '+00:00'))
-        if previous.tzinfo is not None and previous >= latest:
+        if previous.tzinfo is not None and previous.astimezone(timezone.utc) >= latest.astimezone(timezone.utc):
             return None
     except ValueError:
         pass
@@ -64,14 +66,30 @@ def scan_sectors(profile, report, current):
                          (sources.get(sector) or {}).get('checked_at'))]
 
 
+def completion_batch_size(config):
+    value = config.get('batchSize', 3)
+    # Migrate the previous fixed-size UI setting conservatively.
+    if type(value) is int and value == 10:
+        return 3
+    if type(value) is not int or value not in {3, 4, 5}:
+        raise ValueError('Completion batch size must be 3, 4 or 5')
+    return value
+
+
+def completion_daily_limit(config):
+    cap = config.get('dailyLimit', 60)
+    if type(cap) is not int or cap < 10 or cap > 120 or cap % 10:
+        raise ValueError('Invalid daily completion limit')
+    return cap
+
+
 def completion_due(profile, state, current):
     config = profile.get('completionSettings') or {}
     if (profile.get('scheduleControlVersion') != 2 or profile.get('autoScanEnabled') is not True
             or config.get('enabled') is not True):
         return False
-    cap = int(config.get('dailyLimit', 60))
-    if cap < 10 or cap > 120 or cap % 10:
-        raise ValueError('Invalid daily completion limit')
+    completion_batch_size(config)
+    cap = completion_daily_limit(config)
     day = current.astimezone(ZoneInfo(config.get('timezone', 'America/New_York'))).date().isoformat()
     used = int(state.get('daily_attempted', 0)) if state.get('budget_day') == day else 0
     return used < cap and due_slot(config, current, state.get('last_automatic_run')) is not None

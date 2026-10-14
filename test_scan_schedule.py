@@ -57,6 +57,61 @@ class ScheduleTests(unittest.TestCase):
         self.assertFalse(schedule.completion_due({**p, 'scheduleControlVersion': 1}, {}, self.now))
         self.assertTrue(schedule.completion_due(p, {'budget_day': '2026-10-11', 'daily_attempted': 20}, self.now))
 
+    def test_quarter_hour_repeats_only_in_the_next_slot(self):
+        spec = {'frequency': 'every_15_minutes', 'timezone': 'UTC'}
+        start = datetime(2026, 10, 14, 12, 7, tzinfo=timezone.utc)
+        self.assertEqual(schedule.due_slot(spec, start), '2026-10-14T12:00:00+00:00')
+        self.assertIsNone(schedule.due_slot(spec, start + timedelta(minutes=7), start.isoformat()))
+        self.assertIn('12:15:00', schedule.due_slot(spec, start + timedelta(minutes=15), start.isoformat()))
+
+    def test_delayed_runners_use_only_latest_slot_without_catchup_burst(self):
+        spec = {'frequency': 'every_15_minutes', 'timezone': 'UTC'}
+        delayed = datetime(2026, 10, 14, 13, 52, tzinfo=timezone.utc)
+        slot = schedule.due_slot(spec, delayed, '2026-10-14T12:07:00+00:00')
+        self.assertEqual(slot, '2026-10-14T13:45:00+00:00')
+        self.assertIsNone(schedule.due_slot(spec, delayed, delayed.isoformat()))
+
+    def test_quarter_hour_preserves_both_dst_fall_back_hours(self):
+        spec = {'frequency': 'every_15_minutes', 'timezone': 'America/New_York'}
+        repeated = datetime(2026, 11, 1, 6, 7, tzinfo=timezone.utc)
+        slot = schedule.due_slot(spec, repeated, '2026-11-01T05:52:00+00:00')
+        self.assertEqual(slot, '2026-11-01T01:00:00-05:00')
+        self.assertIsNone(schedule.due_slot(spec, repeated, repeated.isoformat()))
+        self.assertIsNotNone(schedule.due_slot(spec, repeated + timedelta(minutes=15), repeated.isoformat()))
+
+    def test_quarter_hour_spring_forward_uses_actual_elapsed_time(self):
+        spec = {'frequency': 'every_15_minutes', 'timezone': 'America/New_York'}
+        current = datetime(2026, 3, 8, 7, 7, tzinfo=timezone.utc)
+        self.assertEqual(schedule.due_slot(spec, current, '2026-03-08T06:52:00+00:00'),
+                         '2026-03-08T03:00:00-04:00')
+
+    def test_daily_budget_rolls_over_at_configured_local_midnight(self):
+        profile = {'scheduleControlVersion': 2, 'autoScanEnabled': True,
+            'completionSettings': {'enabled': True, 'frequency': 'every_15_minutes',
+                                   'timezone': 'America/New_York', 'dailyLimit': 60, 'batchSize': 3}}
+        state = {'budget_day': '2026-10-13', 'daily_attempted': 60}
+        self.assertFalse(schedule.completion_due(profile, state, datetime(2026, 10, 14, 3, 52, tzinfo=timezone.utc)))
+        self.assertTrue(schedule.completion_due(profile, state, datetime(2026, 10, 14, 4, 7, tzinfo=timezone.utc)))
+
+    def test_quarter_hour_pause_and_exhausted_budget_are_not_due(self):
+        profile = {'scheduleControlVersion': 2, 'autoScanEnabled': True,
+            'completionSettings': {'enabled': True, 'frequency': 'every_15_minutes',
+                                   'timezone': 'UTC', 'dailyLimit': 60, 'batchSize': 3}}
+        self.assertFalse(schedule.completion_due({**profile, 'autoScanEnabled': False}, {}, self.now))
+        self.assertFalse(schedule.completion_due({**profile,
+            'completionSettings': {**profile['completionSettings'], 'enabled': False}}, {}, self.now))
+        self.assertFalse(schedule.completion_due(profile, {'budget_day': '2026-10-12', 'daily_attempted': 60}, self.now))
+
+    def test_completion_workflow_is_quarter_hour_and_uses_shared_write_lock(self):
+        root = Path(__file__).resolve().parent
+        workflow = (root / '.github/workflows/automatic-listing-sources.yml').read_text()
+        self.assertIn("cron: '7,22,37,52 * * * *'", workflow)
+        self.assertIn("'pa-repo-write-queue'", workflow)
+        self.assertIn('cancel-in-progress: false', workflow)
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn("requests.sessions.Session.request = blocked", workflow)
+        self.assertIn('node test_completion_controls.cjs', workflow)
+
 
 class RecentQueueTests(QueueTests):
     def test_recent_publication_not_first_seen_controls_scope(self):
@@ -88,16 +143,21 @@ class RecentQueueTests(QueueTests):
         self.put_inventory()
         profile = {'scheduleControlVersion': 2, 'autoScanEnabled': True,
                    'completionSettings': {'enabled': True, 'frequency': 'hourly', 'timezone': 'UTC',
-                       'dailyLimit': 20, 'startDate': (self.now-timedelta(days=30)).date().isoformat()}}
+                       'dailyLimit': 20, 'batchSize': 5, 'startDate': (self.now-timedelta(days=30)).date().isoformat()}}
         registry.atomic_json(self.repo/'scan_config.json', profile)
         saved = (self.repo/'scan_config.json').read_bytes()
         first = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now)
-        self.assertEqual(first['new_snapshots'], 10)
+        self.assertEqual(first['new_snapshots'], 5)
         second = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now+timedelta(hours=1))
-        self.assertEqual(second['new_snapshots'], 10)
+        self.assertEqual(second['new_snapshots'], 5)
         reader = self.reader()
         third = worker.run(self.repo, 'automatic', reader=reader, now=self.now+timedelta(hours=2))
-        self.assertEqual(third['status'], 'not_due_or_daily_limit')
+        self.assertEqual(third['new_snapshots'], 5)
+        fourth = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now+timedelta(hours=3))
+        self.assertEqual(fourth['new_snapshots'], 5)
+        reader = self.reader()
+        final = worker.run(self.repo, 'automatic', reader=reader, now=self.now+timedelta(hours=4))
+        self.assertEqual(final['status'], 'not_due_or_daily_limit')
         self.assertEqual(reader.requests, 0)
         self.assertEqual((self.repo/'scan_config.json').read_bytes(), saved)
         self.assertEqual((self.repo/'properties.json').read_bytes(), self.inventory_before)

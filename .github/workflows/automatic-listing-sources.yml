@@ -8,19 +8,23 @@ on:
       - 'automatic_listing_sources.py'
       - 'orchestrator.py'
       - 'test_automatic_listing_sources.py'
+      - 'scan_schedule.py'
+      - 'scan_config.json'
+      - 'test_scan_schedule.py'
+      - 'test_completion_controls.cjs'
       - 'test_secondary_sources.cjs'
       - '.github/workflows/cron-daily-mls.yml'
       - '.github/workflows/automatic-listing-sources.yml'
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check = no requests; group10 = up to 10 recent MLS properties; enable/disable = automatic completion. Source: Tarasa.'
+        description: 'check = no requests; batch = 3–5 recent MLS properties using saved settings. Source: Tarasa.'
         type: choice
-        options: [check, group10]
+        options: [check, batch]
         required: true
         default: check
   schedule:
-    - cron: '47 * * * *'
+    - cron: '7,22,37,52 * * * *'
   workflow_run:
     workflows: ['1. Central Scanner — V2.9 (manual validation)']
     types: [completed]
@@ -77,6 +81,7 @@ jobs:
           raise SystemExit(0 if result.wasSuccessful() else 1)
           PY
           node test_secondary_sources.cjs
+          node test_completion_controls.cjs
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
@@ -110,6 +115,7 @@ jobs:
         run: |
           python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule
           node test_secondary_sources.cjs
+          node test_completion_controls.cjs
       - name: Complete a bounded group or change activation
         if: steps.timing.outputs.due == 'true'
         id: worker

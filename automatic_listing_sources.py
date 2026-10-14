@@ -9,10 +9,10 @@ from pathlib import Path
 
 import property_sources as registry
 import tarasa_listing_source as source
-from scan_schedule import completion_due
+from scan_schedule import completion_due, completion_batch_size, completion_daily_limit, due_slot
 from zoneinfo import ZoneInfo
 
-VERSION = 'automatic-mls-sources-1.5.1-missing-listing-retry-20261013'
+VERSION = 'automatic-mls-sources-1.6.0-small-fair-queue-20261014'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -86,6 +86,28 @@ def eligible_rows(repo, start_day=None, today=None):
     return rows, dict(excluded)
 
 
+def select_candidates(due, entries, limit, scan_id, now):
+    """Reserve an oldest waiting turn when new listings keep arriving."""
+    recent, backlog = [], []
+    for key in due:
+        entry = entries[key]
+        queued = source.parse_date(entry.get('first_queued_at')) or now
+        (recent if not entry.get('last_attempt_at') and queued >= now else backlog).append(key)
+    recent.sort(key=lambda key: (
+        0 if scan_id and due[key].get('last_scan_id') == scan_id else 1,
+        -(published_day(due[key]).toordinal() if published_day(due[key]) else 0),
+        -int(registry.listing_id(due[key]))))
+    backlog.sort(key=lambda key: (
+        source.parse_date(entries[key].get('last_served_at') or entries[key].get('last_attempt_at')
+                          or entries[key].get('first_queued_at')) or now,
+        -int(registry.listing_id(due[key]))))
+    if recent and backlog:
+        # Serve the reserved old turn first, even if a later request stops the run.
+        selected = backlog[:1] + recent[:max(0, limit - 1)]
+        return (selected + backlog[1:])[:limit]
+    return (recent or backlog)[:limit]
+
+
 def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     repo = Path(repo)
     if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic', 'scan'}:
@@ -101,6 +123,9 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     completion = profile.get('completionSettings') or {}
     enabled = bool(completion.get('enabled') is True and (mode == 'scan' or profile.get('autoScanEnabled') is True)) if controlled else bool(state.get('enabled'))
     caps = PROFILES.get(mode, PROFILES['automatic'])
+    if controlled:
+        caps = (min(caps[0], completion_batch_size(completion)), caps[1], caps[2])
+        completion_daily_limit(completion)
     report = {'version': VERSION, 'mode': mode, 'provider': source.PROVIDER, 'source_name': source.SOURCE,
         'enabled': enabled, 'status': 'ready', 'should_save': False,
         'new_rentcast_calls': 0, 'new_source_network_requests': 0,
@@ -124,6 +149,10 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             return report
         if mode == 'automatic' and controlled and not completion_due(profile, state, now):
             report['status'] = 'not_due_or_daily_limit'
+            return report
+        if (mode == 'scan' and controlled and completion.get('frequency') == 'every_15_minutes'
+                and due_slot(completion, now, state.get('last_automatic_run')) is None):
+            report['status'] = 'completion_slot_already_processed'
             return report
         scan = event
     else:
@@ -154,6 +183,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             entry['status'] = 'queued'
             report['migrated_provider_entries'] += int(bool(old))
         entry['active_provider'] = source.PROVIDER
+        entry.setdefault('first_queued_at', now.isoformat())
         cached = source.read_snapshot(repo, row, now)
         if source.fresh(cached, now):
             entry.update(status='cache_used', retry_after_at=None, cache_provider=cached['provider'])
@@ -188,7 +218,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         if controlled:
             budget_day = now.astimezone(ZoneInfo(completion.get('timezone', 'America/New_York'))).date().isoformat()
             used = int(state.get('daily_attempted', 0)) if state.get('budget_day') == budget_day else 0
-            remaining = max(0, min(remaining, int(completion.get('dailyLimit', 60)) - used))
+            remaining = max(0, min(remaining, completion_daily_limit(completion) - used))
             state.update(budget_day=budget_day, daily_attempted=used)
         provider_state = registry.read_json(repo / source.SOURCE_STATE) if (repo / source.SOURCE_STATE).exists() else {}
         cooldown = source.parse_date(provider_state.get('retry_after_at'))
@@ -203,11 +233,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             deadline = reader.clock() + caps[2]
             reader.deadline = min(reader.deadline, deadline) if reader.deadline is not None else deadline
             before = reader.requests
-            # Unattempted listings first, then oldest attempts: missing listings
-            # cannot keep taking all slots in subsequent batches.
-            candidates = sorted(due, key=lambda k: (
-                0 if mode == 'scan' and due[k].get('last_scan_id') == scan.get('scan_id') else 1,
-                entries[k].get('last_attempt_at', ''), -int(registry.listing_id(due[k]))))[:remaining]
+            candidates = select_candidates(due, entries, remaining, scan.get('scan_id'), now)
             for key in candidates:
                 result = source.run(repo, 'fetch', key, reader=reader, write_status=False, now=now)
                 report['results'].append(result)
@@ -215,6 +241,8 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
                 report['new_snapshots'] += int(result['cache_saved'])
                 entries[key].update(status='cache_used' if result['status'] in {'published', 'cache_used'} else result['status'],
                     last_attempt_at=now.isoformat(), retry_after_at=result.get('retry_after_at'))
+                if result['listing_requests'] > 0:
+                    entries[key]['last_served_at'] = now.isoformat()
                 if result.get('source_url'):
                     entries[key]['source_url'] = result['source_url']
                 if result['status'] in STOP_BATCH:
@@ -250,7 +278,7 @@ def summary(report):
         '- מקור פעיל: Tarasa / River Point Realty', '- מצב: ' + report['status'],
         '- השלמה בתוך הסריקה: ' + ('כן' if report.get('scan_integrated') else 'לא'),
         '- השלמה מתאריך פרסום: ' + str(report.get('completion_start_date', 'טרם נקבע')),
-        '- קבוצה: עד 10 נכסים; עד 13 בקשות למקור בכל ריצה',
+        '- קבוצה: עד ' + str(report['max_properties_per_run']) + ' נכסים; עד ' + str(report['max_source_requests_per_run']) + ' בקשות למקור בכל ריצה',
         '- תאריך פרסום חסר: ' + str(report.get('excluded', {}).get('listing_date_unknown', 0)),
         '- לפני תחילת ההשלמה: ' + str(report.get('excluded', {}).get('older_than_completion_scope', 0)),
         '- השלמה אוטומטית מופעלת: ' + ('כן' if report['enabled'] else 'לא'),
