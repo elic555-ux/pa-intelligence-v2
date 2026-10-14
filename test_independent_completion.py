@@ -199,6 +199,14 @@ class IndependentCompletionTests(unittest.TestCase):
         subjects.preserve_completion(previous, current)
         self.assertEqual(current['completion']['status'], 'needs_revalidation')
 
+    def test_inventory_retention_without_new_filters_keeps_original_filter_context(self):
+        worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
+        previous = registry.read_json(self.repo / subjects.REVIEW)['items']['saved']
+        current = {'record': deepcopy(previous['record'])}
+        subjects.preserve_completion(previous, current)
+        self.assertEqual(current['filter_context'], previous['filter_context'])
+        self.assertEqual(current['completion'], previous['completion'])
+
     def test_changed_identity_never_inherits_completion(self):
         worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
         previous = registry.read_json(self.repo / subjects.REVIEW)['items']['saved']

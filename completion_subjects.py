@@ -35,6 +35,8 @@ def preserve_completion(previous, current):
             or not registry.listing_id(row) or not registry.safe_url(row.get('url'))
             or binding(old_row) != binding(row)):
         return
+    if 'filter_context' not in current and isinstance(previous.get('filter_context'), dict):
+        current['filter_context'] = deepcopy(previous['filter_context'])
     if not isinstance(previous.get('completion'), dict) or not isinstance(previous.get('completed_record'), dict):
         return
     if binding(previous['completed_record']) != binding(row):
