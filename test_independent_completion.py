@@ -164,6 +164,64 @@ class IndependentCompletionTests(unittest.TestCase):
         self.assertIn('COMPS_REPORTS/scan_review', completion)
         self.assertNotIn('git add -- properties.json', completion)
 
+    def test_rescan_keeps_completed_candidate_and_original_observation(self):
+        worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
+        original = Path.cwd()
+        try:
+            os.chdir(self.repo)
+            before = registry.read_json(subjects.REVIEW)['items']['saved']
+            key = scanner.scan_review_key(self.row)
+            registry.atomic_json(subjects.REVIEW, {'schema': 1, 'items': {key: before}})
+            scanner.retain_scan_review([(self.row, 'incomplete_required_data')], 'rescan',
+                'source_candidates', self.settings, self.scope)
+            after = registry.read_json(subjects.REVIEW)['items'][key]
+            self.assertEqual(after['completion'], before['completion'])
+            self.assertEqual(after['completed_record'], before['completed_record'])
+            self.assertIsNone(after['record']['sqft'])
+        finally:
+            os.chdir(original)
+
+    def test_changed_filters_keep_evidence_but_require_revalidation(self):
+        worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
+        previous = registry.read_json(self.repo / subjects.REVIEW)['items']['saved']
+        current = deepcopy(previous)
+        current['filter_context']['settings']['max_sqft'] = 800
+        current.pop('completion'); current.pop('completed_record')
+        subjects.preserve_completion(previous, current)
+        self.assertEqual(current['completion']['status'], 'needs_revalidation')
+        self.assertEqual(current['completed_record']['sqft'], 900)
+
+    def test_changed_source_price_does_not_reuse_old_filter_approval(self):
+        worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
+        previous = registry.read_json(self.repo / subjects.REVIEW)['items']['saved']
+        current = {'record': {**previous['record'], 'price': 250000},
+                   'filter_context': previous['filter_context']}
+        subjects.preserve_completion(previous, current)
+        self.assertEqual(current['completion']['status'], 'needs_revalidation')
+
+    def test_changed_identity_never_inherits_completion(self):
+        worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
+        previous = registry.read_json(self.repo / subjects.REVIEW)['items']['saved']
+        for changes in ({'address': '98 Other St'}, {'docket_id': 'MLS-9999'},
+                        {'url': 'https://www.redfin.com/PA/Pittsburgh/x/home/9999'}, {'zip': ''}):
+            current = {'record': {**previous['record'], **changes}}
+            subjects.preserve_completion(previous, current)
+            self.assertNotIn('completion', current)
+            self.assertNotIn('completed_record', current)
+
+    def test_background_worker_rechecks_changed_filters_using_cache_without_network(self):
+        worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
+        review = registry.read_json(self.repo / subjects.REVIEW)
+        old = deepcopy(review['items']['saved'])
+        current = review['items']['saved']
+        current['filter_context']['settings']['max_sqft'] = 800
+        subjects.preserve_completion(old, current)
+        registry.atomic_json(self.repo / subjects.REVIEW, review)
+        reader = self.reader()
+        report = worker.run(self.repo, 'batch', reader=reader, now=self.now)
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual(report['review_filter_results'], {'outside_filters': 1})
+
     def test_manual_completion_workflow_executes_worker_without_running_discovery(self):
         workflow = (Path(__file__).parent / '.github/workflows/automatic-listing-sources.yml').read_text(encoding='utf-8')
         block = workflow.split('- name: Complete a bounded group or change activation', 1)[1]

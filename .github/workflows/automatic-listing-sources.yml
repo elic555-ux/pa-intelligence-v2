@@ -77,10 +77,7 @@ jobs:
               raise AssertionError('Live network requests are disabled in source integration tests')
           socket.create_connection = blocked
           requests.sessions.Session.request = blocked
-          names = ['test_scan_controls', 'test_scan_scope', 'test_scan_schedule',
-                   'test_property_sources', 'test_secondary_listing_source',
-                   'test_tarasa_listing_source', 'test_automatic_listing_sources', 'test_independent_completion', 'test_price_watch']
-          suite = unittest.defaultTestLoader.loadTestsFromNames(names)
+          suite = unittest.defaultTestLoader.discover('.', pattern='test_*.py')
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           raise SystemExit(0 if result.wasSuccessful() else 1)
           PY

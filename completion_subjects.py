@@ -25,6 +25,31 @@ def binding(row):
             registry.listing_id(row), registry.safe_url(row.get('url')))
 
 
+def preserve_completion(previous, current):
+    """Keep evidence for the same complete listing; invalidate changed inputs."""
+    old_row, row = previous.get('record'), current.get('record')
+    if not isinstance(old_row, dict) or not isinstance(row, dict):
+        return
+    if (row.get('source_type') != 'mls' or old_row.get('source_type') != 'mls'
+            or not registry.identity(row)['complete'] or not registry.identity(old_row)['complete']
+            or not registry.listing_id(row) or not registry.safe_url(row.get('url'))
+            or binding(old_row) != binding(row)):
+        return
+    if not isinstance(previous.get('completion'), dict) or not isinstance(previous.get('completed_record'), dict):
+        return
+    if binding(previous['completed_record']) != binding(row):
+        return
+    current['completion'] = deepcopy(previous['completion'])
+    current['completed_record'] = deepcopy(previous['completed_record'])
+    def inputs(value):
+        return {k: v for k, v in value.items() if k not in {
+            'last_source_check', 'last_seen', 'last_scan_id', 'seen_count', 'scan_status'}}
+    if (inputs(old_row) != inputs(row)
+            or previous.get('filter_context') != current.get('filter_context')):
+        current['completion'].update(status='needs_revalidation',
+            filter_rejection='source_record_or_filters_changed')
+
+
 def load_subjects(repo):
     inventory = registry.read_json(Path(repo) / 'properties.json')
     if not isinstance(inventory, list):
