@@ -115,7 +115,10 @@
         const saved=ordered(p,items);
         const fields=[...ALLOWED].filter(field=>saved.some(r=>fact(p,r,field))).length;
         const images=combinedPhotos(p,saved).length;
-        if(fields || images) return 'שדות שנאספו: '+fields+' · קישורי תמונות: '+images+'. המידע יכול להיות חלקי; מוצגים רק פרטים עם מקור.';
+        const exhausted=(Array.isArray(items)?items:[]).some(r=>bindingMatches(p,r) &&
+            r.last_attempt?.completion_status==='not_completed');
+        if(fields || images) return 'שדות שנאספו: '+fields+' · קישורי תמונות: '+images+'. המידע יכול להיות חלקי; מוצגים רק פרטים עם מקור.'+
+            (exhausted ? ' השלמת הפרטים לא הצליחה; הנתונים השמורים נשארים זמינים.' : '');
         const reasons={
             source_blocked:'ניסיון האיסוף האחרון מהמקור נחסם; לא התקבל מפרט נוסף לנכס זה.',
             source_rate_limited:'המקור ביקש להמתין בניסיון האיסוף האחרון.',
@@ -128,6 +131,7 @@
             .map(r=>({status:r.last_attempt?.status || r.status,
                 date:Date.parse(r.last_attempt?.checked_at || r.retrieved_at)||0}))
             .filter(r=>Object.hasOwn(reasons,r.status)).sort((a,b)=>b.date-a.date);
+        if(exhausted) return 'השלמת הפרטים לא הצליחה. האיסוף לנכס זה הופסק; הסריקה ממשיכה לנכסים אחרים.';
         if(attempts.length) return reasons[attempts[0].status];
         if(saved.length) return 'מודעת המקור אומתה, אך לא נשמרו ממנה שדות מפרט או קישורי תמונות להצגה.';
         if(String(p.county || '').toLowerCase().replace(/ county$/,'')==='erie')

@@ -99,6 +99,28 @@ check('valid saved data remains visible after a later failed refresh',()=>{
     assert.equal(api.combinedPhotos(row,[cached]).length,3);
 });
 
+check('exhausted completion is distinct from scan failure',()=>{
+    const failed=structuredClone(tarasa);failed.status='listing_not_available';failed.facts={};failed.photos=[];
+    failed.last_attempt={status:'listing_not_available',completion_status:'not_completed',unsuccessful_attempts:2};
+    const message=api.collectionNotice(row,[failed]);
+    assert.match(message,/השלמת הפרטים לא הצליחה/);
+    assert.match(message,/הסריקה ממשיכה/);
+    assert.doesNotMatch(message,/הסריקה נכשלה/);
+});
+check('failed refresh retains saved facts and shows incomplete-completion notice',()=>{
+    const cached=structuredClone(tarasa);
+    cached.last_attempt={status:'source_blocked',completion_status:'not_completed',unsuccessful_attempts:2};
+    const message=api.collectionNotice(row,[cached]);
+    assert.match(message,/שדות שנאספו: 17/);
+    assert.match(message,/השלמת הפרטים לא הצליחה/);
+    assert.equal(api.photos(row,cached).length,3);
+});
+check('unrelated exhausted receipt cannot mark this property incomplete',()=>{
+    const failed=structuredClone(tarasa);failed.property_id='PA-MLS-9999';failed.status='source_blocked';
+    failed.last_attempt={completion_status:'not_completed',unsuccessful_attempts:2};
+    assert.match(api.collectionNotice(row,[failed]),/טרם נאסף/);
+});
+
 const elements=new Map();
 class Element {
     constructor(tag='div'){this.tagName=tag;this.children=[];this.textContent='';this.hidden=false;this.disabled=false;

@@ -550,6 +550,121 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(reader.requests, 0)
         self.assertEqual(registry.read_json(self.repo / worker.STATE)['daily_attempted'], 1)
 
+    def test_two_failed_attempts_skip_property_and_keep_scan_success(self):
+        self.rows = make_rows(4)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        self.scan['last_event']['status'] = 'success'
+        registry.atomic_json(self.repo / 'scanner_status.json', self.scan)
+        scan_before = (self.repo / 'scanner_status.json').read_bytes()
+        first = worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1004',)), now=self.now)
+        self.assertEqual(first['new_snapshots'], 2)
+        state = registry.read_json(self.repo / worker.STATE)
+        self.assertEqual(state['entries']['PA-MLS-1004']['unsuccessful_attempts'], 1)
+        early_reader = self.reader(missing=('1004',))
+        early = worker.run(self.repo, 'automatic', reader=early_reader, now=self.now + timedelta(hours=1))
+        self.assertNotIn('PA-MLS-1004', [r['property_id'] for r in early['results']])
+        second = worker.run(self.repo, 'automatic', reader=self.reader(missing=('1004',)),
+                            now=self.now + timedelta(days=2))
+        self.assertEqual(second['incomplete_properties'], 1)
+        self.assertEqual(second['completion_status'], 'partial')
+        state = registry.read_json(self.repo / worker.STATE)
+        self.assertEqual(state['entries']['PA-MLS-1004']['unsuccessful_attempts'], 2)
+        self.assertEqual(state['entries']['PA-MLS-1004']['status'], 'completion_incomplete')
+        reader = self.reader()
+        final = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(days=4))
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual(final['incomplete_properties'], 1)
+        self.assertEqual(final['pending'], 0)
+        self.assertEqual((self.repo / 'scanner_status.json').read_bytes(), scan_before)
+        self.assertEqual((self.repo / 'properties.json').read_bytes(), self.inventory_before)
+
+    def test_saved_receipt_preserves_two_attempt_limit_if_queue_is_rebuilt(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1001',)), now=self.now)
+        worker.run(self.repo, 'automatic', reader=self.reader(missing=('1001',)), now=self.now + timedelta(days=2))
+        receipt_path = self.repo / source.ROOT / (source.cache_key(self.rows[0]['id']) + '.json')
+        receipt = registry.read_json(receipt_path)
+        self.assertEqual(receipt['last_attempt']['unsuccessful_attempts'], 2)
+        self.assertEqual(receipt['last_attempt']['completion_status'], 'not_completed')
+        (self.repo / worker.STATE).unlink()
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(days=4))
+        self.assertEqual(report['incomplete_properties'], 1)
+        self.assertEqual(report['completion_status'], 'not_completed')
+        self.assertEqual(reader.requests, 0)
+
+    def test_successful_second_attempt_resets_failure_count(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1001',)), now=self.now)
+        report = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now + timedelta(days=2))
+        self.assertEqual(report['new_snapshots'], 1)
+        self.assertEqual(report['incomplete_properties'], 0)
+        self.assertEqual(registry.read_json(self.repo / worker.STATE)['entries'][self.rows[0]['id']]['unsuccessful_attempts'], 0)
+
+    def test_relisting_resets_exhausted_completion_with_new_identity(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        self.integrated_config(automatic=True)
+        worker.run(self.repo, 'scan', 'abc', self.reader(missing=('1001',)), now=self.now)
+        worker.run(self.repo, 'automatic', reader=self.reader(missing=('1001',)), now=self.now + timedelta(days=2))
+        self.rows[0]['docket_id'] = 'MLS-9911'
+        self.put_inventory()
+        report = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now + timedelta(days=4))
+        self.assertEqual(report['new_snapshots'], 1)
+        self.assertEqual(report['incomplete_properties'], 0)
+
+    def test_budget_stop_does_not_consume_a_property_retry(self):
+        self.integrated_config()
+        report = worker.run(self.repo, 'scan', 'abc', self.reader(max_requests=1), now=self.now)
+        self.assertEqual(report['attempted_properties'], 0)
+        state = registry.read_json(self.repo / worker.STATE)
+        self.assertTrue(all(e['unsuccessful_attempts'] == 0 for e in state['entries'].values()))
+        self.assertEqual(report['incomplete_properties'], 0)
+
+    def test_failed_refresh_exhaustion_keeps_prior_facts_and_photos(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        worker.run(self.repo, 'pilot', reader=self.reader(), now=self.now)
+        path = self.repo / source.ROOT / (source.cache_key(self.rows[0]['id']) + '.json')
+        original = registry.read_json(path)
+        worker.run(self.repo, 'pilot', reader=self.reader(blocked=True), now=self.now + timedelta(days=8))
+        report = worker.run(self.repo, 'pilot', reader=self.reader(blocked=True), now=self.now + timedelta(days=11))
+        self.assertEqual(report['incomplete_properties'], 1)
+        saved = registry.read_json(path)
+        self.assertEqual(saved['facts'], original['facts'])
+        self.assertEqual(saved['photos'], original['photos'])
+        reader = self.reader()
+        worker.run(self.repo, 'pilot', reader=reader, now=self.now + timedelta(days=14))
+        self.assertEqual(reader.requests, 0)
+
+    def test_empty_verified_snapshot_does_not_trigger_repeated_completion(self):
+        self.rows = make_rows(1)
+        self.put_inventory()
+        worker.run(self.repo, 'pilot', reader=self.reader(), now=self.now)
+        path = self.repo / source.ROOT / (source.cache_key(self.rows[0]['id']) + '.json')
+        empty = registry.read_json(path)
+        empty['facts'] = {}; empty['photos'] = []
+        registry.atomic_json(path, empty)
+        reader = self.reader()
+        report = worker.run(self.repo, 'pilot', reader=reader, now=self.now + timedelta(minutes=15))
+        self.assertEqual(report['incomplete_properties'], 1)
+        self.assertEqual(report['completion_status'], 'not_completed')
+        self.assertEqual(reader.requests, 0)
+
+    def test_workflow_keeps_completion_failures_out_of_scan_failure_stage(self):
+        root = Path(__file__).resolve().parent
+        workflow = (root / '.github/workflows/cron-daily-mls.yml').read_text()
+        stage = workflow.split('- name: Record failed stage for the UI', 1)[1].split('run: |', 1)[0]
+        self.assertNotIn('source_details', stage)
+        self.assertNotIn('source_registry', stage)
+        self.assertIn('continue-on-error: true', workflow)
+        self.assertIn('השלמת פרטי המודעות לא הסתיימה', workflow)
+
 
 if __name__=='__main__':
     unittest.main()
