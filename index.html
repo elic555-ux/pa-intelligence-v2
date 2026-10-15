@@ -992,6 +992,25 @@
             return Math.max(parseDate(p.last_source_check), parseDate(p.last_seen), parseDate(p.profile_checked_at));
         }
 
+        function propertySourceFamily(p) {
+            const type = String(p.source_type || '').trim().toLowerCase();
+            if (type) return type;
+            const id = String(p.id || '').trim();
+            const legacyId = id.toLowerCase();
+            for (const [prefix, family] of [['pa-mls-', 'mls'], ['pa-reo-', 'reo'],
+                ['pa-sheriff-', 'sheriff'], ['pa-tax-', 'tax'], ['tax-', 'tax']]) {
+                if (legacyId.startsWith(prefix)) return family;
+            }
+            return id ? 'unknown:' + id : null;
+        }
+
+        function propertyMlsListingKey(p) {
+            if (propertySourceFamily(p) !== 'mls') return null;
+            const value = String(p.listing_id || p.docket_id || p.id || '');
+            const listing = value.match(/^(?:(?:PA-)?MLS-)?(\d+)$/);
+            return listing ? 'mls-' + listing[1] : p.id ? 'id-' + String(p.id) : null;
+        }
+
         function preparePropertyRecords(rows) {
             const grouped = new Map();
             let ignored = 0;
@@ -1004,6 +1023,14 @@
                 const nextIsNewer = propertyCheckedTime(p) > propertyCheckedTime(previous);
                 const preferred = nextIsNewer ? p : previous;
                 const other = nextIsNewer ? previous : p;
+                const previousSource = propertySourceFamily(previous), nextSource = propertySourceFamily(p);
+                const previousListing = propertyMlsListingKey(previous), nextListing = propertyMlsListingKey(p);
+                if (!previousSource || !nextSource || previousSource !== nextSource ||
+                    (previousListing && nextListing && previousListing !== nextListing)) {
+                    // Each source and MLS listing owns its ID, history and details, even for the same home.
+                    grouped.set(key, {...preferred});
+                    continue;
+                }
                 const merged = {...other, ...preferred};
                 // Keep the ID of the primary database record so existing saved selections remain linked.
                 merged.id = previous.id || p.id;
@@ -1028,12 +1055,20 @@
                 ambiguous: records.filter(p => p._idAmbiguous).length};
         }
 
+        function savedPropertyMatches(p, saved, savedId = saved?.id) {
+            if (!p || !saved || typeof saved !== 'object' || Array.isArray(saved)) return false;
+            const currentIdentity = p._identityKey || propertyIdentity(p);
+            const identities = [saved.identity_key, saved._identityKey]
+                .filter(value => typeof value === 'string' && value.trim());
+            if (saved.address) identities.push(propertyIdentity(saved));
+            if (identities.length) return identities.every(identity => identity === currentIdentity);
+            const id = String(p.id || '');
+            // Legacy saves contain only an ID; a known conflicting identity must never use this fallback.
+            return !p._idAmbiguous && Boolean(id) && String(savedId ?? '') === id;
+        }
+
         function isPipelineProperty(p) {
-            return pipelineDeals.some(deal => {
-                if (!deal || typeof deal !== 'object') return false;
-                if (deal.address && propertyIdentity(deal) === (p._identityKey || propertyIdentity(p))) return true;
-                return !p._idAmbiguous && String(deal.id) === String(p.id);
-            });
+            return Array.isArray(pipelineDeals) && pipelineDeals.some(deal => savedPropertyMatches(p, deal));
         }
 
         function isWatchlistedProperty(p) {
@@ -1045,8 +1080,17 @@
                 alert('מזהה המקור משותף לכמה רשומות. אפשר לבדוק את פרטי כל נכס ואת המקור; שמירה לפי המזהה הזה מושהית כדי שלא תעדכן נכס אחר.');
                 return false;
             }
-            if (!cloudReady[kind]) {
+            if (!cloudReady?.[kind] || (kind === 'pipeline' && !Array.isArray(pipelineDeals)) ||
+                (kind === 'archive' && (!archiveDeals || typeof archiveDeals !== 'object' || Array.isArray(archiveDeals)))) {
                 alert('נתוני השמירה לא נטענו בהצלחה. רענן את העמוד לפני שינוי מעקב, ארכיון או חדר עסקאות.');
+                return false;
+            }
+            const id = String(p.id);
+            const conflictingSave = kind === 'pipeline'
+                ? pipelineDeals.some(deal => deal && String(deal.id) === id && !savedPropertyMatches(p, deal))
+                : kind === 'archive' && archiveDeals[id] && !savedPropertyMatches(p, archiveDeals[id], id);
+            if (conflictingSave) {
+                alert('מזהה המקור מקושר לשמירה קיימת של נכס בעל זהות אחרת. הפעולה מושהית כדי לשמור על הנתונים הקיימים; נדרשת בדיקת התאמה ידנית.');
                 return false;
             }
             return true;
@@ -2478,8 +2522,8 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 const unarchiveFailures = [];
                 for (const p of prepared.records) {
                     const id = String(p.id || '');
-                    const archive = archiveDeals[id];
-                    const archiveMatches = archive && (!p._idAmbiguous || archive.identity_key === p._identityKey);
+                    const archive = archiveDeals?.[id];
+                    const archiveMatches = savedPropertyMatches(p, archive, id);
                     p.is_archived = Boolean(archiveMatches);
                     const price = getMarketAskingPrice(p);
                     const archivedPrice = numericData(archive?.price);

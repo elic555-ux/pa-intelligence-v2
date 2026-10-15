@@ -36,7 +36,7 @@ GEO_CATALOG_FILE = "geo_catalog.json"
 SHERIFF_FILE = "sheriff_listings.json"
 SHERIFF_PROPERTY_CACHE_FILE = "sheriff_property_cache.json"
 OFF_MARKET_MISS_THRESHOLD = 2
-ORCHESTRATOR_VERSION = "3.12.1-preserve-review-completion-20261014"
+ORCHESTRATOR_VERSION = "3.12.2-source-isolated-inventory-20261015"
 SCANNER_STATUS_FILE = "scanner_status.json"
 SCAN_REVIEW_FILE = "COMPS_REPORTS/scan_review/records.json"
 SCAN_CONTEXT_FILE = "scan_run_context.json"
@@ -2060,6 +2060,37 @@ def property_key(item):
     return str(item.get("id") or "").strip()
 
 
+def inventory_source(item):
+    """Keep source records separate, including legacy rows without a type."""
+    source = str(item.get("source_type") or "").strip().casefold()
+    if source:
+        return source
+    property_id = str(item.get("id") or "").strip()
+    legacy_id = property_id.casefold()
+    for prefix, source in (("pa-mls-", "mls"), ("pa-reo-", "reo"),
+                           ("pa-sheriff-", "sheriff"), ("pa-tax-", "tax"),
+                           ("tax-", "tax")):
+        if legacy_id.startswith(prefix):
+            return source
+    # An address alone cannot establish which source produced an unknown row.
+    identity = property_id or hashlib.sha256(json.dumps(
+        item, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    return "unknown:" + identity
+
+
+def inventory_key(item):
+    """Namespace the address key without changing review or source joins."""
+    key = property_key(item)
+    if not key:
+        return ""
+    source = inventory_source(item)
+    parts = [source, key]
+    if source == "mls":
+        from property_sources import listing_id
+        parts.append(listing_id(item) or str(item.get("id") or ""))
+    return json.dumps(parts, ensure_ascii=False)
+
+
 def erie_cross_source_match_key(item):
     """Build a strict same-county street-address + municipality join key."""
     if not isinstance(item, dict) or normalize_county_name(item.get("county")) != "erie":
@@ -2340,7 +2371,7 @@ def load_existing_properties():
     for item in data:
         if not isinstance(item, dict):
             continue
-        key = property_key(item)
+        key = inventory_key(item)
         if key:
             prop_dict[key] = item
     return prop_dict
@@ -2774,7 +2805,7 @@ def fetch_live_mls_for_city(city_name, min_p, max_p, audit=None):
         rows = fetch_live_mls_window(city_name, low, high, detail)
         windows.append({**detail, "min_price": low, "max_price": high})
         for row in rows:
-            key = property_key(row)
+            key = inventory_key(row)
             if key not in keys:
                 collected.append(row)
                 keys.add(key)
@@ -2966,6 +2997,11 @@ def merge_property(existing, incoming, scan_id):
 
     merged = deepcopy(existing)
     merged.update(incoming)
+    if (existing.get("id") and inventory_source(existing) == "mls"
+            and inventory_key(existing) == inventory_key(incoming)):
+        # A legacy alias for this listing must not unlink saved selections or
+        # snapshots. Different MLS listings have separate inventory keys.
+        merged["id"] = existing["id"]
     if existing.get("listing_source_details") and existing.get("url") == incoming.get("url") and existing.get("docket_id") == incoming.get("docket_id"):
         for field in ("source_listing_description", "listing_photos", "listing_source_details"):
             if incoming.get(field) in (None, "", {}):
@@ -3712,9 +3748,9 @@ def run_orchestrator():
     log_entry["source_results"] = len(combined)
 
     raw_mls_seen_keys = {
-        property_key(prop)
+        inventory_key(prop)
         for prop in live_results
-        if property_key(prop)
+        if inventory_key(prop)
         and classify_price(prop.get("price"), max_price) != "historical_outside_watch"
     }
     log_entry["raw_mls_seen"] = len(raw_mls_seen_keys)
@@ -3736,7 +3772,7 @@ def run_orchestrator():
         reason = scan_property_rejection(prop, scan_settings, scan_scope)
         if reason:
             if is_background_price_candidate(prop, scan_settings, scan_scope):
-                key = property_key(prop)
+                key = inventory_key(prop)
                 if key:
                     background_results[key] = prop
                 continue
@@ -3764,7 +3800,7 @@ def run_orchestrator():
 
     unique_results = {}
     for prop in final_filtered:
-        key = property_key(prop)
+        key = inventory_key(prop)
         old = unique_results.get(key)
         is_city = REGION_MAP.get(prop.get("source_scan_area"), {}).get("region_type") == "6"
         if old is None or is_city:
@@ -3822,7 +3858,7 @@ def run_orchestrator():
         field = "background_price_watch_" + state
         log_entry[field] = log_entry.get(field, 0) + 1
     for deal in final_filtered:
-        key = property_key(deal)
+        key = inventory_key(deal)
         if not key:
             print(f"⚠️ תוצאה ללא מזהה/כתובת דולגה: {deal.get('id', 'unknown')}")
             continue

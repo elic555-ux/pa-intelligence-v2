@@ -15,7 +15,7 @@ from scan_schedule import completion_due, completion_batch_size, completion_dail
 from zoneinfo import ZoneInfo
 from completion_wakeup import input_fingerprint, idle_unchanged
 
-VERSION = 'automatic-mls-sources-1.10.1-revalidate-saved-evidence-20261015'
+VERSION = 'automatic-mls-sources-1.10.2-complete-binding-wakeup-20261015'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
