@@ -68,11 +68,12 @@ jobs:
           git log -1 --format='%h %s'
           sha256sum orchestrator.py
           python -m py_compile orchestrator.py analyzer.py
-          env -u PA_SCAN_CONFIG_FILE python -m unittest -q test_scan_controls test_scan_scope test_scan_schedule test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_independent_completion test_price_watch
+          env -u PA_SCAN_CONFIG_FILE python -m unittest -q test_scan_controls test_scan_scope test_scan_schedule test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_independent_completion test_price_watch test_inventory_source_identity
           node test_secondary_sources.cjs
           node test_independent_completion_ui.cjs
           node test_price_watch_ui.cjs
           node test_authentication.cjs
+          node test_saved_property_identity.cjs
       - name: Run selected scanners
         if: steps.timing.outputs.due == 'true'
         id: scanner

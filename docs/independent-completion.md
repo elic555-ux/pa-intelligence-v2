@@ -60,6 +60,11 @@ completed review can be revalidated from its retained snapshot after cache
 expiry only when the saved completion identity, source URL and retrieval time
 still match; stale evidence cannot supply a first completion.
 
+Idle input tracking includes all identity aliases used by the source binding,
+including explicit listing IDs, unit/unit_number, legacy source state/type,
+parcel IDs and MLS board fields. Correcting an incomplete unit or changing a
+listing ID therefore wakes the worker without relying on an unrelated edit.
+
 Verification is offline: `python -m unittest -q test_independent_completion`
 tests saved review completion, cache reuse, original filter checks, protected
 inventory, identity conflicts, independent activation and discovery status.

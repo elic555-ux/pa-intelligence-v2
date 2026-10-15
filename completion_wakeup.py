@@ -4,9 +4,14 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-FIELDS = ('id', 'source_type', 'address', 'city', 'state', 'zip', 'zipcode',
-          'county', 'docket_id', 'mls_id', 'url', 'listed_date', 'market_status',
-          'price', 'sqft', 'beds', 'baths', 'property_type')
+# Keep every saved input used by property_sources.identity/listing_id and the
+# worker's binding, including aliases. This gate runs before dependencies are
+# installed, so it mirrors those input names without importing the registry.
+FIELDS = ('id', 'source_type', 'address', 'unit', 'unit_number', 'city', 'state',
+          'source_state', 'zip', 'zipcode', 'county', 'parcel_id', 'parcel_ids',
+          'mls_board', 'source_mls_board', 'listing_id', 'docket_id', 'mls_id',
+          'url', 'listed_date', 'market_status', 'price', 'sqft', 'beds', 'baths',
+          'property_type', 'type')
 
 
 def published_day(row):

@@ -1,6 +1,7 @@
 """Idle/wake lifecycle with saved inventory, fake HTML, and blocked discovery."""
 from copy import deepcopy
 from datetime import timedelta
+import io
 import os
 from pathlib import Path
 import tempfile
@@ -11,8 +12,10 @@ import automatic_listing_sources as worker
 from completion_wakeup import input_fingerprint, idle_unchanged
 import property_sources as registry
 import scan_schedule
+import tarasa_listing_source as source
 import test_automatic_listing_sources as fixtures
 from test_automatic_listing_sources import make_rows
+from test_tarasa_listing_source import tarasa_page
 
 
 class CompletionWakeupTests(unittest.TestCase):
@@ -119,6 +122,77 @@ class CompletionWakeupTests(unittest.TestCase):
         result, _ = self.run_worker(days=4)
         self.assertEqual(result['attempted_properties'], 1)
         self.assertEqual(result['new_snapshots'], 1)
+
+    def test_explicit_listing_id_change_wakes_and_uses_new_binding(self):
+        self.run_worker()
+        self.fx.rows[0]['listing_id'] = '9911'
+        self.fx.put_inventory()
+        result, reader = self.run_worker(days=1)
+        self.assertEqual(result['attempted_properties'], 1)
+        self.assertEqual(result['new_snapshots'], 1)
+        self.assertEqual(reader.requests, 2)
+        path = self.fx.repo / source.ROOT / (source.cache_key(self.fx.rows[0]['id']) + '.json')
+        self.assertEqual(registry.read_json(path)['listing_id'], '9911')
+
+    def test_repaired_condo_unit_alias_wakes_previously_ineligible_subject(self):
+        for index, unit_field in enumerate(('unit', 'unit_number')):
+            with self.subTest(unit_field=unit_field):
+                self.fx.rows[0].pop('unit', None)
+                self.fx.rows[0].pop('unit_number', None)
+                self.fx.rows[0]['property_type'] = 'condo'
+                self.fx.put_inventory()
+                first, _ = self.run_worker(mode='batch')
+                self.assertEqual(first['excluded']['incomplete_identity'], 1)
+                self.assertEqual(first['worker_state'], 'idle')
+                unit_value = str(index + 2)
+                self.fx.rows[0][unit_field] = unit_value
+                self.fx.put_inventory()
+                row = deepcopy(self.fx.rows[0])
+                row['address'] += ' Unit ' + unit_value
+                html = tarasa_page(row, canonical=source.target_url(self.fx.rows[0]))
+                # Structured data identifies the unit while this broker's
+                # headline uses the saved street address without a unit.
+                html = html.replace('<h1><span>' + row['address'] + '</span>',
+                                    '<h1><span>' + self.fx.rows[0]['address'] + '</span>')
+                times = [0]
+                class Opener:
+                    def open(self, request, timeout):
+                        if request.full_url.endswith('/robots.txt'):
+                            return io.BytesIO(b'User-agent: *\nAllow: /\n')
+                        return io.BytesIO(html.encode())
+                reader = source.PublicReader(opener=Opener(), clock=lambda: times[0],
+                    sleep=lambda delay: times.__setitem__(0, times[0] + delay), max_requests=13)
+                result = worker.run(self.fx.repo, 'automatic', reader=reader,
+                                    now=self.fx.now + timedelta(days=index + 1))
+                self.assertEqual(result['attempted_properties'], 1)
+                self.assertEqual(result['new_snapshots'], 1)
+                self.assertEqual(reader.requests, 2)
+
+    def test_all_supported_identity_input_aliases_change_fingerprint(self):
+        profile = registry.read_json(self.fx.repo / 'scan_config.json')
+        original = deepcopy(self.fx.rows[0])
+        baseline = input_fingerprint(self.fx.repo, profile, self.fx.now.date())
+        aliases = {'unit': '2', 'unit_number': '2', 'source_state': 'OH',
+                   'parcel_id': '83-A-285', 'parcel_ids': ['83-A-285'],
+                   'mls_board': 'West Penn', 'source_mls_board': 'West Penn',
+                   'listing_id': '9911', 'type': 'condo'}
+        for field, value in aliases.items():
+            with self.subTest(field=field):
+                self.fx.rows = [{**original, field: value}]
+                self.fx.put_inventory()
+                self.assertNotEqual(input_fingerprint(self.fx.repo, profile, self.fx.now.date()), baseline)
+
+    def test_observation_timestamps_do_not_wake_idle_worker(self):
+        self.run_worker()
+        profile = registry.read_json(self.fx.repo / 'scan_config.json')
+        baseline = input_fingerprint(self.fx.repo, profile, self.fx.now.date())
+        self.fx.rows[0].update(last_source_check='later', last_seen='later',
+                              last_scan_id='S2', seen_count=5, scan_status='success')
+        self.fx.put_inventory()
+        self.assertEqual(input_fingerprint(self.fx.repo, profile, self.fx.now.date()), baseline)
+        result, reader = self.run_worker(days=1)
+        self.assertEqual(result['status'], 'idle_waiting_for_new_properties')
+        self.assertEqual(reader.requests, 0)
 
     def test_resolved_ambiguous_identity_wakes_without_new_inventory(self):
         alias_path = self.fx.repo / registry.ROOT / 'aliases.json'
