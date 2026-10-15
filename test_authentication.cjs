@@ -28,7 +28,7 @@ function setup() {
         init: async () => {initCalls++;}, setTimeout: fn => timers.push(fn),
         window: {location: {reload() {}}}, localStorage: {removeItem() {}}
     });
-    vm.runInContext(['lockPaApp','verifyPaAccess','loginPaApp','bootstrapPaAuthentication'].map(extract).join('\n'), ctx);
+    vm.runInContext(['showPaAuthPending','lockPaApp','verifyPaAccess','loginPaApp','bootstrapPaAuthentication'].map(extract).join('\n'), ctx);
     return {ctx, auth, el, timers, get initCalls() {return initCalls;},
         get signInCalls() {return signInCalls;}, get callback() {return callback;}};
 }
@@ -85,5 +85,56 @@ function setup() {
     t.ctx.lockPaApp();
     assert.equal(t.el('pa-account-email').textContent, '');
     assert.equal(t.el('pa-account-status').hidden, true);
-    console.log('8 authentication and verified account display checks passed');
+    assert.match(html, /<form id="pa-login-form"[^>]*\shidden[\s>]/);
+    t = setup();
+    let resolveUser, resolveInit;
+    t.auth.getUser = () => new Promise(resolve => {resolveUser = resolve;});
+    t.ctx.init = () => new Promise(resolve => {resolveInit = resolve;});
+    const boot = t.ctx.bootstrapPaAuthentication();
+    assert.equal(t.el('pa-login-form').hidden, true);
+    assert.equal(t.el('pa-app-shell').hidden, true);
+    assert.equal(t.el('pa-auth-heading').textContent, 'טוען את המערכת');
+    resolveUser({data: {user: {id: 'owner'}}});
+    await new Promise(setImmediate);
+    assert.equal(typeof resolveInit, 'function');
+    assert.equal(t.el('pa-login-form').hidden, true);
+    assert.equal(t.el('pa-app-shell').hidden, true);
+    resolveInit();
+    await boot;
+    assert.equal(t.el('pa-app-shell').hidden, false);
+    assert.equal(t.el('pa-login-screen').hidden, true);
+    assert.equal(t.signInCalls, 0);
+    t = setup();
+    t.auth.getUser = async () => ({data: {user: null}});
+    await t.ctx.bootstrapPaAuthentication();
+    assert.equal(t.el('pa-login-form').hidden, false);
+    assert.equal(t.el('pa-auth-heading').textContent, 'כניסה למערכת');
+    t = setup();
+    t.auth.getUser = async () => {throw new Error('network unavailable');};
+    await t.ctx.bootstrapPaAuthentication();
+    assert.equal(t.el('pa-login-form').hidden, false);
+    assert.equal(t.el('pa-app-shell').hidden, true);
+    t = setup();
+    t.ctx.init = async () => {throw new Error('init failed');};
+    await t.ctx.bootstrapPaAuthentication();
+    assert.equal(t.el('pa-login-form').hidden, false);
+    assert.equal(t.el('pa-app-shell').hidden, true);
+    t = setup();
+    t.ctx.init = () => new Promise(resolve => {resolveInit = resolve;});
+    const interrupted = t.ctx.bootstrapPaAuthentication();
+    await new Promise(setImmediate);
+    t.callback('SIGNED_OUT', null);
+    resolveInit();
+    await interrupted;
+    assert.equal(t.el('pa-app-shell').hidden, true);
+    assert.equal(t.el('pa-login-form').hidden, false);
+    t = setup();
+    await t.ctx.bootstrapPaAuthentication();
+    t.callback('TOKEN_REFRESHED', {user: {id: 'owner'}});
+    assert.equal(t.el('pa-app-shell').hidden, false);
+    assert.equal(t.el('pa-login-screen').hidden, true);
+    assert.equal(t.el('pa-login-form').hidden, true);
+    await t.timers[0]();
+    assert.equal(t.el('pa-app-shell').hidden, false);
+    console.log('14 authentication, account display and session-loading checks passed');
 })().catch(error => {console.error(error); process.exitCode = 1;});
