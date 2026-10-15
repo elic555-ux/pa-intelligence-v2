@@ -1,6 +1,6 @@
 """Offline boundaries between discovery, saved candidates and completion."""
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from contextlib import redirect_stdout
 import io
 import json
@@ -218,7 +218,8 @@ class IndependentCompletionTests(unittest.TestCase):
             self.assertNotIn('completed_record', current)
 
     def test_background_worker_rechecks_changed_filters_using_cache_without_network(self):
-        worker.run(self.repo, 'batch', reader=self.reader(), now=self.now)
+        first = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now)
+        self.assertEqual(first['worker_state'], 'idle')
         review = registry.read_json(self.repo / subjects.REVIEW)
         old = deepcopy(review['items']['saved'])
         current = review['items']['saved']
@@ -226,9 +227,55 @@ class IndependentCompletionTests(unittest.TestCase):
         subjects.preserve_completion(old, current)
         registry.atomic_json(self.repo / subjects.REVIEW, review)
         reader = self.reader()
-        report = worker.run(self.repo, 'batch', reader=reader, now=self.now)
+        report = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(minutes=15))
         self.assertEqual(reader.requests, 0)
         self.assertEqual(report['review_filter_results'], {'outside_filters': 1})
+        self.assertEqual(report['review_updated'], 1)
+
+    def test_background_worker_revalidates_changed_price_from_retained_expired_evidence(self):
+        worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now)
+        path = self.repo / source.ROOT / (source.cache_key(self.row['id']) + '.json')
+        snapshot_before = path.read_bytes()
+        review = registry.read_json(self.repo / subjects.REVIEW)
+        old = deepcopy(review['items']['saved'])
+        current = review['items']['saved']
+        current['record']['price'] = 110000
+        subjects.preserve_completion(old, current)
+        self.assertEqual(current['completion']['status'], 'needs_revalidation')
+        registry.atomic_json(self.repo / subjects.REVIEW, review)
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(days=8))
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual(report['attempted_properties'], 0)
+        self.assertEqual(report['review_updated'], 1)
+        saved = registry.read_json(self.repo / subjects.REVIEW)['items']['saved']
+        self.assertEqual(saved['completion']['status'], 'ready_for_review')
+        self.assertEqual(saved['completion']['retrieved_at'], old['completion']['retrieved_at'])
+        self.assertEqual(saved['completed_record']['price'], 110000)
+        self.assertEqual(saved['completed_record']['completion_facts'], old['completed_record']['completion_facts'])
+        self.assertEqual(path.read_bytes(), snapshot_before)
+        result = worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now + timedelta(days=9))
+        self.assertEqual(result['status'], 'idle_waiting_for_new_properties')
+
+    def test_revalidation_status_alone_wakes_and_preserves_saved_snapshot(self):
+        worker.run(self.repo, 'automatic', reader=self.reader(), now=self.now)
+        review = registry.read_json(self.repo / subjects.REVIEW)
+        review['items']['saved']['completion']['status'] = 'needs_revalidation'
+        registry.atomic_json(self.repo / subjects.REVIEW, review)
+        reader = self.reader()
+        report = worker.run(self.repo, 'automatic', reader=reader, now=self.now + timedelta(minutes=15))
+        self.assertEqual(reader.requests, 0)
+        self.assertEqual(report['review_filter_results'], {'ready_for_review': 1})
+        self.assertEqual(report['review_updated'], 1)
+
+    def test_expired_snapshot_without_previous_completion_cannot_supply_first_completion(self):
+        snapshot = source.parse_detail(tarasa_page(self.row), self.row,
+            source.target_url(self.row), self.now.isoformat())
+        registry.atomic_json(self.repo / source.ROOT / (source.cache_key(self.row['id']) + '.json'), snapshot)
+        before = (self.repo / subjects.REVIEW).read_bytes()
+        changed, _ = subjects.update_review(self.repo, {self.row['id']: self.row}, self.now + timedelta(days=8))
+        self.assertEqual(changed, 0)
+        self.assertEqual((self.repo / subjects.REVIEW).read_bytes(), before)
 
     def test_manual_completion_workflow_executes_worker_without_running_discovery(self):
         workflow = (Path(__file__).parent / '.github/workflows/automatic-listing-sources.yml').read_text(encoding='utf-8')

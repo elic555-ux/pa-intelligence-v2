@@ -15,7 +15,7 @@ from scan_schedule import completion_due, completion_batch_size, completion_dail
 from zoneinfo import ZoneInfo
 from completion_wakeup import input_fingerprint, idle_unchanged
 
-VERSION = 'automatic-mls-sources-1.10.0-idle-until-new-subjects-20261015'
+VERSION = 'automatic-mls-sources-1.10.1-revalidate-saved-evidence-20261015'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -151,7 +151,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         if not enabled:
             report['status'] = 'automatic_disabled'
             return report
-        if mode == 'automatic' and idle_unchanged(repo, profile, state):
+        if mode == 'automatic' and idle_unchanged(repo, profile, state, now.date()):
             saved = registry.read_json(repo / STATUS) if (repo / STATUS).exists() else {}
             report.update({key: saved[key] for key in ('pending', 'review_required', 'incomplete_properties', 'completion_status') if key in saved})
             report['cached_properties'] = sum(entry.get('status') == 'cache_used' for entry in state['entries'].values())
@@ -335,7 +335,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         reason = ('no_eligible_properties' if not entries else 'all_subjects_settled') if idle else None
         report.update(worker_state='idle' if idle else 'active', idle_reason=reason)
         state.update(worker_state=report['worker_state'], idle_reason=reason,
-                     input_fingerprint=input_fingerprint(repo, profile))
+                     input_fingerprint=input_fingerprint(repo, profile, now.date()))
     state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER,
                  completion_start_date=start_day.isoformat())
     report['should_save'] = True

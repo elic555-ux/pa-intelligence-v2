@@ -119,3 +119,49 @@ class CompletionWakeupTests(unittest.TestCase):
         result, _ = self.run_worker(days=4)
         self.assertEqual(result['attempted_properties'], 1)
         self.assertEqual(result['new_snapshots'], 1)
+
+    def test_resolved_ambiguous_identity_wakes_without_new_inventory(self):
+        alias_path = self.fx.repo / registry.ROOT / 'aliases.json'
+        key = self.fx.rows[0]['id']
+        registry.atomic_json(alias_path, {'ambiguous': {key: ['first', 'other']}})
+        first, _ = self.run_worker()
+        self.assertEqual(first['worker_state'], 'idle')
+        self.assertEqual(first['excluded']['ambiguous_identity'], 1)
+        registry.atomic_json(alias_path, {'ambiguous': {}})
+        result, reader = self.run_worker(days=1)
+        self.assertEqual(result['attempted_properties'], 1)
+        self.assertEqual(result['new_snapshots'], 1)
+        self.assertEqual(reader.requests, 2)
+        result, reader = self.run_worker(days=2)
+        self.assertEqual(result['status'], 'idle_waiting_for_new_properties')
+        self.assertEqual(reader.requests, 0)
+
+    def test_future_publication_wakes_only_when_it_becomes_eligible(self):
+        self.fx.rows[0]['listed_date'] = (self.fx.now.date() + timedelta(days=2)).isoformat()
+        self.fx.put_inventory()
+        first, _ = self.run_worker()
+        self.assertEqual(first['excluded']['future_listing_date'], 1)
+        self.assertEqual(first['worker_state'], 'idle')
+        profile = registry.read_json(self.fx.repo / 'scan_config.json')
+        state = registry.read_json(self.fx.repo / worker.STATE)
+        self.assertTrue(idle_unchanged(self.fx.repo, profile, state,
+            today=(self.fx.now + timedelta(days=1)).date()))
+        self.assertFalse(idle_unchanged(self.fx.repo, profile, state,
+            today=(self.fx.now + timedelta(days=2)).date()))
+        result, reader = self.run_worker(days=1)
+        self.assertEqual(result['status'], 'idle_waiting_for_new_properties')
+        self.assertEqual(reader.requests, 0)
+        result, reader = self.run_worker(days=2)
+        self.assertEqual(result['new_snapshots'], 1)
+        self.assertEqual(result['attempted_properties'], 1)
+        result, reader = self.run_worker(days=3)
+        self.assertEqual(result['status'], 'idle_waiting_for_new_properties')
+        self.assertEqual(reader.requests, 0)
+
+    def test_unrelated_alias_changes_do_not_wake_idle_worker(self):
+        self.run_worker()
+        registry.atomic_json(self.fx.repo / registry.ROOT / 'aliases.json',
+            {'ambiguous': {'unrelated-id': ['first', 'other']}})
+        result, reader = self.run_worker(days=1)
+        self.assertEqual(result['status'], 'idle_waiting_for_new_properties')
+        self.assertEqual(reader.requests, 0)
