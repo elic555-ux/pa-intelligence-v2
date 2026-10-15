@@ -52,6 +52,14 @@ Discovery keeps its own schedule so it can find the new subjects that wake
 completion. Completing a source specification does not promise that all required
 fields were published, and does not promote a review candidate into inventory.
 
+The idle gate also tracks each review candidate's original filter context and
+revalidation flag, changes to relevant ambiguous-identity entries, and the point
+at which a future publication date becomes eligible. Unrelated alias changes
+and the passage of another day alone do not wake the worker. A previously
+completed review can be revalidated from its retained snapshot after cache
+expiry only when the saved completion identity, source URL and retrieval time
+still match; stale evidence cannot supply a first completion.
+
 Verification is offline: `python -m unittest -q test_independent_completion`
 tests saved review completion, cache reuse, original filter checks, protected
 inventory, identity conflicts, independent activation and discovery status.

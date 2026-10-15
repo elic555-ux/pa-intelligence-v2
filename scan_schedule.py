@@ -108,7 +108,7 @@ def main():
             profile, read('COMPS_REPORTS/automatic_listing_sources/state.json', {}), current)
     if due and args.mode == 'completion':
         state = read('COMPS_REPORTS/automatic_listing_sources/state.json', {})
-        if idle_unchanged('.', profile, state):
+        if idle_unchanged('.', profile, state, current.date()):
             due = False
             print('השלמת הפרטים בהמתנה לנכסים חדשים או לשינוי נתוני מועמד; אין בקשות מקור')
     print('עבודה ממתינה לפי ההגדרות השמורות' if due else 'אין עבודה מתוזמנת כעת; לא יופעלו מקורות')

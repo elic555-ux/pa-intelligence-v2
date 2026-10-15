@@ -138,7 +138,17 @@ def update_review(repo, eligible, now):
         if not selected or binding(row) != binding(selected):
             continue
         snapshot = source.read_snapshot(repo, row, now)
-        if not source.fresh(snapshot, now):
+        previous = item.get('completion')
+        previous_record = item.get('completed_record')
+        retrieved = source.parse_date((snapshot or {}).get('retrieved_at'))
+        retained_evidence = (isinstance(previous, dict) and isinstance(previous_record, dict)
+            and binding(previous_record) == binding(row) and retrieved is not None and retrieved <= now
+            and previous.get('source_url') == (snapshot or {}).get('source_url')
+            and previous.get('retrieved_at') == (snapshot or {}).get('retrieved_at'))
+        # A settled snapshot is kept indefinitely. Recheck changed observations
+        # or filters against that same evidence without refreshing the source.
+        # An expired snapshot alone cannot supply a first completion.
+        if not source.fresh(snapshot, now) and not retained_evidence:
             continue
         completed = complete_record(row, snapshot)
         context = item.get('filter_context')
@@ -160,3 +170,4 @@ def update_review(repo, eligible, now):
         review['completion_updated_at'] = now.isoformat()
         registry.atomic_json(Path(repo) / REVIEW, review)
     return changed, dict(results)
+

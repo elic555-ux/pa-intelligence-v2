@@ -179,9 +179,17 @@ jobs:
                   out.write(f"גרסה: {data.get('version')} | ריצה: {event.get('scan_id')}\n\n")
                   if event.get('failure_stage'):
                       out.write(f"שלב שנכשל: {event['failure_stage']}\n\n")
-                  for item in event.get('sources', {}).values():
+                  for source_key, item in event.get('sources', {}).items():
                       out.write(f"- {item.get('label')}: {item.get('status')} | {item.get('rows', 0)} רשומות\n")
+                      if item.get('coverage'):
+                          coverage = item['coverage']
+                          description = 'שלמות הכיסוי לא הוכחה' if coverage == 'not_proven_complete' else coverage
+                          out.write(f"  - כיסוי מדווח: {description}\n")
+                      if source_key == 'mls':
+                          for area in item.get('areas', []):
+                              pending = len(area.get('unresolved_windows') or [])
+                              out.write(f"  - {area.get('area', 'אזור לא ידוע')}: {area.get('status', 'unknown')} | חלונות מחיר ממתינים: {pending}\n")
                   waiting = sum(item.get('needs_details', 0) for item in event.get('sources', {}).values())
-                  out.write(f"\nרשומות שממתינות לפרטים: {waiting}. השלמת הפרטים מתבצעת בתהליך עצמאי לפי התזמון שלה.\n")
+                  out.write(f"\nתצפיות מקור שדורשות פרטים בסריקה זו (לפני איחוד אזורים): {waiting}. השלמת הפרטים מתבצעת בתהליך עצמאי לפי התזמון שלה.\n")
           PY
 
