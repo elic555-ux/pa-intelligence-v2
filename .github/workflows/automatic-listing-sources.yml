@@ -7,6 +7,8 @@ on:
       - 'secondary_sources.js'
       - 'automatic_listing_sources.py'
       - 'completion_subjects.py'
+      - 'completion_wakeup.py'
+      - 'test_completion_wakeup.py'
       - 'test_independent_completion.py'
       - 'test_independent_completion_ui.cjs'
       - 'price_watch.py'
@@ -116,7 +118,7 @@ jobs:
       - name: Verify cache, identities, queue and request limits
         if: steps.timing.outputs.due == 'true'
         run: |
-          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion test_price_watch
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion test_price_watch test_completion_wakeup
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
@@ -162,4 +164,5 @@ jobs:
           PY
           git commit -m 'Save bounded MLS source completion and resumable queue'
           git push origin HEAD:main
+
 

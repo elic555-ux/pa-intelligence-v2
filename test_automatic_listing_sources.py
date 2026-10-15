@@ -391,10 +391,10 @@ class QueueTests(unittest.TestCase):
         self.assertFalse((self.repo/source.ROOT).exists())
         self.assertEqual((self.repo/source.STATUS).read_bytes(),self.manual_before)
 
-    def test_expired_cache_is_refreshable_and_fresh_cache_wins_over_host_cooldown(self):
+    def test_settled_cache_does_not_requeue_on_expiry_or_host_cooldown(self):
         worker.run(self.repo,'batch',reader=self.reader(),now=self.now)
         future=self.now+timedelta(days=8)
-        self.assertEqual(worker.run(self.repo,'check',now=future)['pending'],5)
+        self.assertEqual(worker.run(self.repo,'check',now=future)['pending'],0)
         registry.atomic_json(self.repo/source.SOURCE_STATE,{'retry_after_at':(self.now+timedelta(days=1)).isoformat()})
         reader=self.reader()
         report=worker.run(self.repo,'batch',reader=reader,now=self.now)
@@ -626,7 +626,7 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(all(e['unsuccessful_attempts'] == 0 for e in state['entries'].values()))
         self.assertEqual(report['incomplete_properties'], 0)
 
-    def test_failed_refresh_exhaustion_keeps_prior_facts_and_photos(self):
+    def test_settled_snapshot_is_preserved_without_automatic_refresh(self):
         self.rows = make_rows(1)
         self.put_inventory()
         worker.run(self.repo, 'pilot', reader=self.reader(), now=self.now)
@@ -634,7 +634,8 @@ class QueueTests(unittest.TestCase):
         original = registry.read_json(path)
         worker.run(self.repo, 'pilot', reader=self.reader(blocked=True), now=self.now + timedelta(days=8))
         report = worker.run(self.repo, 'pilot', reader=self.reader(blocked=True), now=self.now + timedelta(days=11))
-        self.assertEqual(report['incomplete_properties'], 1)
+        self.assertEqual(report['incomplete_properties'], 0)
+        self.assertEqual(report['attempted_properties'], 0)
         saved = registry.read_json(path)
         self.assertEqual(saved['facts'], original['facts'])
         self.assertEqual(saved['photos'], original['photos'])
@@ -670,4 +671,5 @@ class QueueTests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
 
