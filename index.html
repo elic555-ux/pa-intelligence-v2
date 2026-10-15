@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PA UI 8.21.6 / 2026-10-15: show the verified signed-in account -->
+<!-- PA UI 8.21.7 / 2026-10-15: separate session checks from credential entry -->
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -97,9 +97,9 @@
 <body class="min-h-screen flex flex-col antialiased">
     <section id="pa-login-screen" class="min-h-screen flex items-center justify-center p-6" aria-label="כניסה למערכת">
         <div class="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-8 shadow-2xl">
-            <h1 class="text-2xl font-extrabold text-white mb-2">כניסה למערכת</h1>
+            <h1 id="pa-auth-heading" class="text-2xl font-extrabold text-white mb-2">טוען את המערכת</h1>
             <p class="text-gray-400 text-sm mb-6">PA Real Estate Intelligence Hub</p>
-            <form id="pa-login-form" onsubmit="loginPaApp(event)">
+            <form id="pa-login-form" hidden onsubmit="loginPaApp(event)">
                 <label for="pa-login-email" class="block text-sm font-bold mb-2">אימייל</label>
                 <input id="pa-login-email" type="email" dir="ltr" autocomplete="username" required class="w-full bg-gray-950 border border-gray-700 rounded-xl p-3 mb-4 text-white" />
                 <label for="pa-login-password" class="block text-sm font-bold mb-2">סיסמה</label>
@@ -118,7 +118,7 @@
                 <div class="compact-brand-icon bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400"><i data-lucide="building-2" class="w-4 h-4"></i></div>
                 <div>
                     <h1 id="app-title" dir="ltr">PA Real Estate Intelligence Hub</h1>
-                    <span class="text-blue-400" id="ui-version">UI 8.21.6 · 15.10.2026</span>
+                    <span class="text-blue-400" id="ui-version">UI 8.21.7 · 15.10.2026</span>
                 </div>
             </div>
             <nav class="compact-actions" aria-label="פעולות ראשיות">
@@ -813,13 +813,21 @@
         let paAuthGeneration = 0;
         let paInitPromise = null;
 
-        function lockPaApp(message = 'הזן אימייל וסיסמה כדי להיכנס.') {
+        function showPaAuthPending(message = 'בודק התחברות…') {
             paAuthVerified = false;
             document.getElementById('pa-account-email').textContent = '';
             document.getElementById('pa-account-status').hidden = true;
             document.getElementById('pa-app-shell').hidden = true;
             document.getElementById('pa-login-screen').hidden = false;
+            document.getElementById('pa-login-form').hidden = true;
+            document.getElementById('pa-auth-heading').textContent = 'טוען את המערכת';
             document.getElementById('pa-login-status').textContent = message;
+        }
+
+        function lockPaApp(message = 'הזן אימייל וסיסמה כדי להיכנס.') {
+            showPaAuthPending(message);
+            document.getElementById('pa-auth-heading').textContent = 'כניסה למערכת';
+            document.getElementById('pa-login-form').hidden = false;
         }
 
         async function verifyPaAccess() {
@@ -834,6 +842,8 @@
                     return false;
                 }
                 paAuthVerified = true;
+                document.getElementById('pa-login-form').hidden = true;
+                document.getElementById('pa-auth-heading').textContent = 'טוען את המערכת';
                 document.getElementById('pa-login-status').textContent = 'טוען את המערכת…';
                 if (!paInitPromise) paInitPromise = init();
                 await paInitPromise;
@@ -883,7 +893,7 @@
         }
 
         async function bootstrapPaAuthentication() {
-            lockPaApp('בודק התחברות…');
+            showPaAuthPending();
             if (supabaseClient?.auth) supabaseClient.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_OUT') {
                     ++paAuthGeneration;
@@ -891,7 +901,7 @@
                     // Discard private in-memory records and in-flight requests.
                     if (paInitPromise) window.location.reload();
                 } else if (['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
-                    if (event === 'SIGNED_IN' && (!paAuthVerified || session?.user?.id !== PA_OWNER_ID)) lockPaApp('בודק התחברות…');
+                    if (event === 'SIGNED_IN' && (!paAuthVerified || session?.user?.id !== PA_OWNER_ID)) showPaAuthPending();
                     // Run outside the SDK callback to avoid an auth-lock deadlock.
                     setTimeout(() => verifyPaAccess(), 0);
                 }
