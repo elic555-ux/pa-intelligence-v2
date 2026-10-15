@@ -13,8 +13,9 @@ from completion_subjects import load_subjects, update_review
 from price_watch import watch_ceiling, classify_price
 from scan_schedule import completion_due, completion_batch_size, completion_daily_limit, due_slot
 from zoneinfo import ZoneInfo
+from completion_wakeup import input_fingerprint, idle_unchanged
 
-VERSION = 'automatic-mls-sources-1.9.0-bounded-price-watch-20261014'
+VERSION = 'automatic-mls-sources-1.10.0-idle-until-new-subjects-20261015'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -150,6 +151,12 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         if not enabled:
             report['status'] = 'automatic_disabled'
             return report
+        if mode == 'automatic' and idle_unchanged(repo, profile, state):
+            saved = registry.read_json(repo / STATUS) if (repo / STATUS).exists() else {}
+            report.update({key: saved[key] for key in ('pending', 'review_required', 'incomplete_properties', 'completion_status') if key in saved})
+            report['cached_properties'] = sum(entry.get('status') == 'cache_used' for entry in state['entries'].values())
+            report.update(status='idle_waiting_for_new_properties', worker_state='idle')
+            return report
         if mode == 'scan' and upstream_sha and event.get('github_sha') != upstream_sha:
             report['status'] = 'upstream_scan_no_longer_current'
             return report
@@ -199,9 +206,11 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         entry.setdefault('first_queued_at', now.isoformat())
         entry.setdefault('unsuccessful_attempts', 0)
         cached = source.read_snapshot(repo, row, now)
-        if source.fresh(cached, now) and (cached.get('facts') or cached.get('photos')):
-            entry.update(status='cache_used', retry_after_at=None, cache_provider=cached['provider'],
-                         unsuccessful_attempts=0)
+        available_cache = bool(cached and (cached.get('facts') or cached.get('photos')))
+        settled = available_cache and (entry.get('completion_settled') is True or entry.get('status') == 'cache_used')
+        if settled or (source.fresh(cached, now) and available_cache):
+            entry.update(status='cache_used', retry_after_at=None, cache_provider=(cached or {}).get('provider', entry.get('cache_provider')),
+                         unsuccessful_attempts=0, completion_settled=True)
             report['cached_properties'] += 1
         else:
             if entry.get('status') == 'cache_used':
@@ -269,6 +278,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
                     last_attempt_at=now.isoformat(), retry_after_at=result.get('retry_after_at'))
                 if completed:
                     entries[key]['unsuccessful_attempts'] = 0
+                    entries[key]['completion_settled'] = True
                 elif result['listing_requests'] > 0:
                     entries[key]['unsuccessful_attempts'] += 1
                 no_parameters = result['status'] in {'published', 'cache_used'} and not available
@@ -318,6 +328,14 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         state['last_enriched_scan_id'] = scan.get('scan_id')
     if mode not in {'enable', 'disable'}:
         report['review_updated'], report['review_filter_results'] = update_review(repo, rows, now)
+    if mode not in {'enable', 'disable'}:
+        idle = report['pending'] == 0
+        if idle:
+            report['due'] = 0
+        reason = ('no_eligible_properties' if not entries else 'all_subjects_settled') if idle else None
+        report.update(worker_state='idle' if idle else 'active', idle_reason=reason)
+        state.update(worker_state=report['worker_state'], idle_reason=reason,
+                     input_fingerprint=input_fingerprint(repo, profile))
     state.update(updated_at=now.isoformat(), last_scan_id=scan.get('scan_id'), active_provider=source.PROVIDER,
                  completion_start_date=start_day.isoformat())
     report['should_save'] = True
@@ -356,6 +374,8 @@ def summary(report):
         'properties.json, סטטוס הסריקה, חדר העסקאות ותקציב RentCast נשארים ללא שינוי.', '']
     if report.get('retry_after_at'):
         lines.append('- ניסיון נוסף למקור: ' + report['retry_after_at'] + ' (UTC)')
+    if report.get('worker_state') == 'idle':
+        lines.append('- השלמת הפרטים בהמתנה לנכסים חדשים או לשינוי נתוני מועמד; אין בקשות מקור. נכסים שטופלו אינם חוזרים לתור בגלל גיל המטמון; עד שני ניסיונות כושלים לנכס ולמקור.')
     if report.get('http_status'):
         lines.append('- HTTP: ' + str(report['http_status']))
     if report.get('request_url'):
@@ -384,4 +404,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 

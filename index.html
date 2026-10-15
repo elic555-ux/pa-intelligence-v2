@@ -2317,6 +2317,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 const counts = [report.pending, report.new_snapshots, report.review_required, report.incomplete_properties];
                 if (counts.some(value => !Number.isInteger(value) || value < 0)) throw new Error('invalid completion counts');
                 panel.textContent = `השלמת פרטים — תהליך עצמאי: ממתינים ${report.pending} | מפרטים חדשים בריצה האחרונה ${report.new_snapshots} | בדיקת התאמה ${report.review_required} | השלמה שלא הצליחה ${report.incomplete_properties}`;
+                if (report.worker_state === 'idle') panel.textContent += ' | בהמתנה לנכסים חדשים — אין בקשות השלמה למקורות';
                 if (report.checked_at) panel.textContent += ` | נבדק: ${scannerDateLabel(report.checked_at)}`;
                 if (report.retry_after_at) panel.textContent += ` | ניסיון נוסף: ${scannerDateLabel(report.retry_after_at)}`;
             } catch (error) {

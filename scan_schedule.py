@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 from zoneinfo import ZoneInfo
+from completion_wakeup import idle_unchanged
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -105,6 +106,11 @@ def main():
     if profile.get('scheduleControlVersion') == 2:
         due = bool(scan_sectors(profile, read('scanner_status.json', {}), current)) if args.mode == 'scan' else completion_due(
             profile, read('COMPS_REPORTS/automatic_listing_sources/state.json', {}), current)
+    if due and args.mode == 'completion':
+        state = read('COMPS_REPORTS/automatic_listing_sources/state.json', {})
+        if idle_unchanged('.', profile, state):
+            due = False
+            print('השלמת הפרטים בהמתנה לנכסים חדשים או לשינוי נתוני מועמד; אין בקשות מקור')
     print('עבודה ממתינה לפי ההגדרות השמורות' if due else 'אין עבודה מתוזמנת כעת; לא יופעלו מקורות')
     if os.environ.get('GITHUB_OUTPUT'):
         with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
@@ -113,4 +119,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
