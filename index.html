@@ -300,6 +300,17 @@
                 <div><span class="text-xs font-bold text-blue-300 block mb-0.5">שטח מגרש</span><strong class="text-xl font-extrabold text-white font-mono" dir="ltr" id="modal-lot-size"></strong><span id="modal-lot-size-source" hidden class="block mt-1 text-[10px] text-gray-400"></span></div>
             </div>
 
+            <section id="modal-property-map-section" hidden aria-labelledby="modal-property-map-heading" class="space-y-3 bg-emerald-950/20 p-4 rounded-xl border border-emerald-500/30">
+                <div class="flex flex-col sm:flex-row items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h4 id="modal-property-map-heading" class="text-base font-black text-emerald-300">הבית והסביבה</h4>
+                        <p id="modal-property-map-address" dir="ltr" class="mt-1 text-sm text-gray-200 break-words"></p>
+                    </div>
+                    <a id="modal-property-map-link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold shrink-0"><i data-lucide="map" class="w-4 h-4"></i>מפה ותמונת רחוב</a>
+                </div>
+                <p class="text-xs leading-relaxed text-gray-300">נפתח ב־Google Maps. בחר Street View לתמונת רחוב ולסיור בסביבה, או עבור לתצוגת לוויין. הזמינות תלויה בכיסוי הצילומים.</p>
+            </section>
+
             <section id="modal-price-history" hidden class="bg-gray-950/70 p-4 rounded-xl border border-gray-800">
                 <h4 class="text-sm font-bold text-gray-200">היסטוריית מחיר שנשמרה בסריקות</h4>
                 <div id="modal-price-drop-summary" class="mt-2"></div>
@@ -2968,6 +2979,37 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             return city ? `${city}, PA` : (county ? `${county} County` : 'מיקום לא צוין');
         }
 
+        function propertyMapDestination(property) {
+            if (!property || typeof property !== 'object' || Array.isArray(property)) return null;
+            const normalize = value => value.replace(/^[ .,;:-]+|[ .,;:-]+$/g, '').toLowerCase();
+            const placeholders = /^(?:unknown|n\/?a|none|not available|not provided|erie county|allegheny county|pennsylvania|כתובת לא ידועה|לא ידוע|[-—])$/i;
+            const clean = value => {
+                const text = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+                return !normalize(text) || placeholders.test(normalize(text)) ? '' : text;
+            };
+            const address = clean(property.address);
+            const aliases = [clean(property.city), clean(property.municipality), clean(property.county)];
+            if (aliases[2]) aliases.push(aliases[2] + ' County');
+            if (!address || !/\p{L}/u.test(address) || aliases.some(value => value && normalize(value) === normalize(address))) return null;
+            const locality = clean(property.city) || clean(property.municipality);
+            const zip = clean(property.zip) || (Number.isInteger(property.zip) && property.zip > 0 ? String(property.zip) : '');
+            if (!locality && !zip) return null;
+            const query = [address, locality, ['PA', zip].filter(Boolean).join(' '), 'USA'].filter(Boolean).join(', ');
+            const searchUrl = 'https://www.google.com/maps/search/?' + new URLSearchParams({api: '1', query}).toString();
+            return searchUrl.length <= 2048 ? {query, searchUrl} : null;
+        }
+
+        function renderPropertyMapDestination(destination) {
+            document.getElementById('modal-property-map-section').hidden = !destination;
+            document.getElementById('modal-property-map-address').textContent = destination?.query || '';
+            for (const id of ['modal-property-map-link', 'modal-footer-map-link']) {
+                const link = document.getElementById(id);
+                link.hidden = !destination;
+                if (destination) link.href = destination.searchUrl;
+                else link.removeAttribute('href');
+            }
+        }
+
         function safeExternalUrl(value) {
             try {
                 const parsed = new URL(String(value || ''), window.location.href);
@@ -3592,12 +3634,14 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             }
             
             archiveBtnContainer.querySelector('button').disabled = Boolean(p._idAmbiguous || !cloudReady.archive);
+            const mapDestination = propertyMapDestination(p);
             const q = encodeURIComponent(`${p.address}, ${p.city}, PA`);
             document.getElementById('modal-action-buttons').innerHTML = `
                 <a href="https://www.google.com/search?q=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5"></i> רשת</a>
-                <a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="px-4 py-2 bg-gray-800 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="map" class="w-3.5 h-3.5"></i> מפה</a>
+                <a id="modal-footer-map-link" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-gray-800 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="map" class="w-3.5 h-3.5"></i> מפה</a>
                 <a id="modal-generic-source-link" href="#" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> מקור</a>
             `;
+            renderPropertyMapDestination(mapDestination);
             const genericSourceLink = document.getElementById('modal-generic-source-link');
             const safeSourceUrl = safeExternalUrl(p.url || p.source_url);
             genericSourceLink.href = safeSourceUrl || '#';
