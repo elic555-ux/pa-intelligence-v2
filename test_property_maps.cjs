@@ -171,11 +171,15 @@ if (path.extname(helperFile) === '.html') {
             assert.ok(Object.hasOwn(nodes, id), 'renderer must use known property map elements: ' + id);
             return nodes[id];
         }};
-        const render = loadFunction(helperFile, 'renderPropertyMapDestination', {document});
+        const previewCalls = [];
+        const render = loadFunction(helperFile, 'renderPropertyMapDestination', {
+            document, window: {PAStreetPreview: {render(destination) { previewCalls.push(destination); }}}
+        });
         const A = inspect(base);
         const B = inspect({address: '9242 Valley St', municipality: 'Penn Hills', zip: '15235', lat: 0, lng: 0});
         for (const destination of [A, B, null, A]) {
             render(destination);
+            assert.equal(previewCalls[previewCalls.length - 1], destination);
             assert.equal(nodes['modal-property-map-section'].hidden, !destination);
             assert.equal(nodes['modal-property-map-address'].textContent, destination?.query || '');
             for (const id of ['modal-property-map-link', 'modal-footer-map-link']) {
@@ -184,6 +188,20 @@ if (path.extname(helperFile) === '.html') {
                 else assert.equal(Object.hasOwn(nodes[id], 'href'), false, 'hidden link must lose stale href');
             }
         }
+        assert.equal(previewCalls.length, 4);
+        const renderWithoutPreview = loadFunction(helperFile, 'renderPropertyMapDestination', {document, window: {}});
+        assert.doesNotThrow(() => renderWithoutPreview(A), 'working map links must remain available without the preview module');
+        const closeEvents = [];
+        const close = loadFunction(helperFile, 'closePropertyModal', {
+            basicSourceGeneration: 0,
+            window: {PAStreetPreview: {cancel() { closeEvents.push('cancel'); }}},
+            document: {getElementById(id) {
+                assert.equal(id, 'property-modal');
+                return {classList: {add(value) { closeEvents.push(value); }}};
+            }}
+        });
+        close();
+        assert.deepEqual(closeEvents, ['cancel', 'hidden'], 'closing the modal must cancel a pending preview before hiding it');
     });
 
     test('actual Street View and external map anchors use a separate tab with opener protection', () => {
