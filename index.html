@@ -309,6 +309,12 @@
                     <a id="modal-property-map-link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold shrink-0"><i data-lucide="camera" class="w-4 h-4"></i>STREET VIEW</a>
                 </div>
                 <p class="text-xs leading-relaxed text-gray-300">פותח צילום רחוב בקרבת הכתובת בלשונית נפרדת. המיקום משוער; הזמינות תלויה בכיסוי הצילומים.</p>
+                <figure id="modal-street-view-preview" hidden class="space-y-2">
+                    <a id="modal-street-view-preview-link" target="_blank" rel="noopener noreferrer" aria-label="פתח את צילום הרחוב ב־Google Maps" class="block w-full border border-gray-700 bg-gray-950">
+                        <img id="modal-street-view-preview-image" alt="צילום הרחוב בקרבת כתובת הנכס" referrerpolicy="strict-origin-when-cross-origin" decoding="async" class="block w-full h-auto">
+                    </a>
+                    <figcaption class="text-xs text-gray-300">צילום רחוב · לחצו לפתיחה ב־Google Maps</figcaption>
+                </figure>
             </section>
 
             <section id="modal-price-history" hidden class="bg-gray-950/70 p-4 rounded-xl border border-gray-800">
@@ -811,6 +817,7 @@
     </div>
 
     </div>
+    <script src="street-view-preview.js?v=1.0.0"></script>
     <!-- Script Logic -->
     <script>
         // Supabase Initialization
@@ -3011,6 +3018,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 if (destination) link.href = url;
                 else link.removeAttribute('href');
             }
+            window.PAStreetPreview?.render?.(destination);
         }
 
         function safeExternalUrl(value) {
@@ -3662,7 +3670,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             document.getElementById('modal-watchlist-btn').className = w ? 'p-2.5 rounded-xl bg-amber-500 text-gray-950 font-black text-xs flex gap-1.5' : 'p-2.5 rounded-xl bg-gray-800 text-amber-400 font-bold text-xs flex gap-1.5';
         }
 
-        function closePropertyModal() { ++basicSourceGeneration; document.getElementById('property-modal').classList.add('hidden'); }
+        function closePropertyModal() {
+            ++basicSourceGeneration;
+            window.PAStreetPreview?.cancel?.();
+            document.getElementById('property-modal').classList.add('hidden');
+        }
 
         function copyPropertyAddress() {
             if (currentSelectedProperty) {
