@@ -300,7 +300,7 @@
                 <div><span class="text-xs font-bold text-blue-300 block mb-0.5">שטח מגרש</span><strong class="text-xl font-extrabold text-white font-mono" dir="ltr" id="modal-lot-size"></strong><span id="modal-lot-size-source" hidden class="block mt-1 text-[10px] text-gray-400"></span></div>
             </div>
 
-            <section id="modal-property-map-section" hidden aria-labelledby="modal-property-map-heading" class="space-y-3 bg-emerald-950/20 p-4 rounded-xl border border-emerald-500/30">
+            <section id="modal-property-map-section" hidden aria-labelledby="modal-property-map-heading" class="space-y-3 bg-emerald-950/20 p-3 sm:p-4 rounded-xl border border-emerald-500/30">
                 <div class="flex flex-col sm:flex-row items-start justify-between gap-3">
                     <div class="min-w-0">
                         <h4 id="modal-property-map-heading" class="text-base font-black text-emerald-300">הבית והסביבה</h4>
@@ -309,6 +309,11 @@
                     <a id="modal-property-map-link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold shrink-0"><i data-lucide="camera" class="w-4 h-4"></i>STREET VIEW</a>
                 </div>
                 <p class="text-xs leading-relaxed text-gray-300">פותח צילום רחוב בקרבת הכתובת בלשונית נפרדת. המיקום משוער; הזמינות תלויה בכיסוי הצילומים.</p>
+                <figure id="modal-street-view-preview" hidden class="space-y-2">
+                    <iframe id="modal-street-view-preview-frame" title="תצוגת רחוב אינטראקטיבית בקרבת הנכס" referrerpolicy="strict-origin-when-cross-origin" loading="eager" allowfullscreen class="block w-full min-w-[200px] min-h-[200px] h-64 sm:h-80 border-0"></iframe>
+                    <figcaption class="text-xs text-gray-300">תצוגת רחוב אינטראקטיבית בקרבת הכתובת</figcaption>
+                    <a id="modal-street-view-preview-link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-300 underline underline-offset-2">פתיחה ב־Google Maps</a>
+                </figure>
             </section>
 
             <section id="modal-price-history" hidden class="bg-gray-950/70 p-4 rounded-xl border border-gray-800">
@@ -811,6 +816,8 @@
     </div>
 
     </div>
+    <script src="street-view.js?v=1.1.0"></script>
+    <script src="street-view-preview.js?v=1.2.0"></script>
     <!-- Script Logic -->
     <script>
         // Supabase Initialization
@@ -3011,6 +3018,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 if (destination) link.href = url;
                 else link.removeAttribute('href');
             }
+            window.PAStreetPreview?.render?.(destination);
         }
 
         function safeExternalUrl(value) {
@@ -3662,7 +3670,11 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             document.getElementById('modal-watchlist-btn').className = w ? 'p-2.5 rounded-xl bg-amber-500 text-gray-950 font-black text-xs flex gap-1.5' : 'p-2.5 rounded-xl bg-gray-800 text-amber-400 font-bold text-xs flex gap-1.5';
         }
 
-        function closePropertyModal() { ++basicSourceGeneration; document.getElementById('property-modal').classList.add('hidden'); }
+        function closePropertyModal() {
+            ++basicSourceGeneration;
+            window.PAStreetPreview?.cancel?.();
+            document.getElementById('property-modal').classList.add('hidden');
+        }
 
         function copyPropertyAddress() {
             if (currentSelectedProperty) {

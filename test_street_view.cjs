@@ -5,6 +5,7 @@ const test = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const vm = require('node:vm');
 const api = require('./street-view.js');
 
 const INPUT = {address: '9242 Valley Street', city: 'Pittsburgh', zip: '15235', county: 'Allegheny County'};
@@ -39,6 +40,10 @@ function deferred() {
     return {promise, resolve, reject};
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
+function jsonpCallback(env) {
+    const script = env.scripts[env.scripts.length - 1];
+    return script ? env.window[new URL(script.src).searchParams.get('callback')] : undefined;
+}
 
 function environment(search = '?' + new URLSearchParams(INPUT)) {
     const timers = new Map();
@@ -209,28 +214,28 @@ test('JSONP success cleans script, timer and handlers before delivering exactly 
     assert.equal(env.scripts.length, 1);
     assert.equal(env.allTimers[0].milliseconds, 12000);
     const script = env.scripts[0];
-    const callback = env.window.paStreetView;
+    const callback = jsonpCallback(env);
     const oldError = script.onerror;
-    env.window.paStreetView(fixture());
+    jsonpCallback(env)(fixture());
     assert.equal(env.results.length, 1);
     assert.equal(env.results[0].status, 'matched');
     assert.equal(env.timers.size, 0);
     assert.equal(script.parentNode, null);
     assert.equal(script.onerror, null);
     assert.equal(script.onload, null);
-    callback(fixture()); oldError(); controller.cancel(); env.window.paStreetView(fixture());
+    callback(fixture()); oldError(); controller.cancel(); jsonpCallback(env)(fixture());
     assert.equal(env.results.length, 1, 'late and duplicate callbacks must be harmless');
 });
 
 test('timeout stops the request at 12 seconds and all later callbacks remain inert', () => {
     const env = environment();
     api.resolveOnce(request(), env);
-    const callback = env.window.paStreetView;
+    const callback = jsonpCallback(env);
     env.allTimers[0].fn();
     assert.equal(env.results[0].status, 'timeout');
     assert.equal(env.scripts[0].parentNode, null);
     assert.equal(env.timers.size, 0);
-    callback(fixture()); env.window.paStreetView(fixture());
+    callback(fixture()); jsonpCallback(env)(fixture());
     assert.equal(env.results.length, 1);
     assert.equal(env.navigations.length, 0);
 });
@@ -242,8 +247,8 @@ test('load error, loaded script without callback, malformed response and append 
         api.resolveOnce(request(), env);
         if (mode === 'error') env.scripts[0].onerror();
         if (mode === 'no-callback') env.scripts[0].onload();
-        if (mode === 'malformed') env.window.paStreetView({features: 'not an array'});
-        if (mode === 'throwing-payload') env.window.paStreetView({get features() { throw new Error('bad payload'); }});
+        if (mode === 'malformed') jsonpCallback(env)({features: 'not an array'});
+        if (mode === 'throwing-payload') jsonpCallback(env)({get features() { throw new Error('bad payload'); }});
         assert.equal(env.results.length, 1, mode);
         assert.equal(env.results[0].status, 'unavailable', mode);
         assert.equal(env.timers.size, 0, mode);
@@ -254,8 +259,8 @@ test('load error, loaded script without callback, malformed response and append 
 test('user cancellation prevents both stored and global late callbacks from matching', () => {
     const env = environment();
     const controller = api.resolveOnce(request(), env);
-    const callback = env.window.paStreetView;
-    controller.cancel(); callback(fixture()); env.window.paStreetView(fixture());
+    const callback = jsonpCallback(env);
+    controller.cancel(); callback(fixture()); jsonpCallback(env)(fixture());
     assert.equal(env.results.length, 1);
     assert.equal(env.results[0].status, 'cancelled');
     assert.equal(env.scripts[0].parentNode, null);
@@ -278,7 +283,7 @@ test('page mounts once, displays user input only as text and replaces this tab o
     api.mount(env.window, env.document);
     assert.equal(env.scripts.length, 1);
     assert.equal(env.nodes['street-view-address'].textContent, request().query);
-    env.window.paStreetView(fixture());
+    jsonpCallback(env)(fixture());
     assert.equal(env.navigations.length, 1);
     assert.equal(new URL(env.navigations[0]).searchParams.get('map_action'), 'pano');
     assert.equal(env.nodes['street-view-fallback'].hidden, true);
@@ -292,7 +297,7 @@ test('page invalid/unsupported/no-match states never silently open Google Maps i
     for (const mode of ['unsupported', 'no-match', 'timeout', 'cancel', 'pagehide']) {
         const env = environment('?' + new URLSearchParams({...INPUT, ...(mode === 'unsupported' ? {county: 'Westmoreland County'} : {})}));
         api.mount(env.window, env.document);
-        if (mode === 'no-match') env.window.paStreetView({spatialReference: {wkid: 4326}, features: []});
+        if (mode === 'no-match') jsonpCallback(env)({spatialReference: {wkid: 4326}, features: []});
         if (mode === 'timeout') env.allTimers[0].fn();
         if (mode === 'cancel') env.nodes['street-view-cancel'].handlers.click();
         if (mode === 'pagehide') env.events.get('pagehide')();
@@ -300,7 +305,7 @@ test('page invalid/unsupported/no-match states never silently open Google Maps i
         assert.equal(env.nodes['street-view-fallback'].hidden, false, mode);
         assert.equal(new URL(env.nodes['street-view-fallback'].href).searchParams.get('query'), request().query);
         assert.equal(env.timers.size, 0, mode);
-        env.window.paStreetView?.(fixture());
+        jsonpCallback(env)?.(fixture());
         assert.equal(env.navigations.length, 0, 'no late redirect: ' + mode);
     }
 });
@@ -309,7 +314,7 @@ test('blocked final navigation exposes explicit fallback and keeps the address a
     const env = environment();
     env.window.location.replace = () => { throw new Error('navigation denied'); };
     api.mount(env.window, env.document);
-    env.window.paStreetView(fixture());
+    jsonpCallback(env)(fixture());
     assert.equal(env.nodes['street-view-fallback'].hidden, false);
     assert.equal(env.nodes['street-view-address'].textContent, request().query);
 });
@@ -470,4 +475,31 @@ test('standalone CSP separates Allegheny JSONP from credential-free Erie CORS an
     assert.match(html, /id="street-view-fallback"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
     assert.match(html, /עשוי להציג בית סמוך/);
     assert.match(html, /מרכז חלקה/);
+});
+
+test('reusable locator module never mounts or requests sources outside the standalone resolver page', () => {
+    let reads = 0;
+    const window = {document: {readyState: 'complete', getElementById(id) {
+        assert.equal(id, 'street-view-status'); reads += 1; return null;
+    }}};
+    vm.runInNewContext(fs.readFileSync(require.resolve('./street-view.js'), 'utf8'), {window, URLSearchParams});
+    assert.equal(typeof window.PAStreetView.resolveOnce, 'function');
+    assert.equal(reads, 1);
+});
+
+test('unique JSONP callback isolates a late A response from the current B lookup', () => {
+    const env = environment();
+    const first = api.resolveOnce(request(), env);
+    const nameA = new URL(env.scripts[0].src).searchParams.get('callback');
+    const capturedA = env.window[nameA];
+    first.cancel();
+    api.resolveOnce(request({address: '233 Macfarlane Drive'}), env);
+    const nameB = new URL(env.scripts[1].src).searchParams.get('callback');
+    assert.notEqual(nameA, nameB);
+    assert.match(nameB, /^paStreetView_\d+$/);
+    env.window[nameA](fixture()); capturedA(fixture());
+    assert.equal(env.results.length, 1, 'late A must not reject or complete B');
+    env.window[nameB](altered({ADDR_NUM: 233, FULL_ADDRESS: '233 MACFARLANE DR'}));
+    assert.equal(env.results.length, 2);
+    assert.equal(env.results[1].status, 'matched');
 });

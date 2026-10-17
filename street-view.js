@@ -4,7 +4,7 @@
     if (typeof module === 'object' && module.exports) module.exports = api;
     else {
         root.PAStreetView = api;
-        const start = () => api.mount(root, root.document);
+        const start = () => { if (root.document.getElementById('street-view-status')) api.mount(root, root.document); };
         if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start, {once: true});
         else start();
     }
@@ -13,6 +13,7 @@
     const ENDPOINT = 'https://gisdata.alleghenycounty.us/arcgis/rest/services/EGIS/AC_AddressPointsWithLabels/MapServer/0/query';
     const ERIE_ENDPOINT = 'https://gis.eriecountypa.gov/server/rest/services/Hosted/ErieCountyParcels_Dec2025/FeatureServer/16/query';
     const CALLBACK = 'paStreetView';
+    let callbackSequence = 0;
     const TIMEOUT_MS = 12000;
     const EMPTY = /^(?:unknown|n\/?a|none|not available|not provided|pennsylvania|erie county|allegheny county|כתובת לא ידועה|לא ידוע|[-—])$/i;
     const SUFFIX = Object.freeze({STREET: 'ST', ST: 'ST', ROAD: 'RD', RD: 'RD', DRIVE: 'DR', DR: 'DR',
@@ -79,7 +80,7 @@
         return countyProvider(request) !== null;
     }
 
-    function countyRequestUrl(request) {
+    function countyRequestUrl(request, callbackName = CALLBACK) {
         if (!request || !request.identity.queryHouse || !supportsCounty(request)) return null;
         if (countyProvider(request) === 'erie') {
             if (!localityKey(request.municipality || request.city)) return null;
@@ -91,12 +92,13 @@
                 returnGeometry: 'false', resultRecordCount: '100', f: 'json'});
             return ERIE_ENDPOINT + '?' + params;
         }
+        if (!/^paStreetView(?:_\d+)?$/.test(callbackName)) return null;
         // Only validated decimal house numbers and ZIP digits reach SQL.
         const where = 'ADDR_NUM=' + request.identity.queryHouse + (request.zip5 ? " AND ZIP_CODE='" + request.zip5 + "'" : '');
         const params = new URLSearchParams({where,
             outFields: 'ADDR_NUM,FULL_ADDRESS,ZIP_CODE,STATE,MUNICIPALITY,STATUS',
             outSR: '4326', returnGeometry: 'true', resultRecordCount: '100',
-            f: 'json', callback: CALLBACK});
+            f: 'json', callback: callbackName});
         return ENDPOINT + '?' + params;
     }
 
@@ -198,7 +200,8 @@
 
     function resolveOnce(request, environment) {
         const env = environment;
-        const url = countyRequestUrl(request);
+        const callbackName = CALLBACK + '_' + (++callbackSequence);
+        const url = countyRequestUrl(request, callbackName);
         if (!url) {
             env.onResult({status: 'unavailable'});
             return {cancel() {}};
@@ -214,7 +217,7 @@
             if (script.parentNode) script.parentNode.removeChild(script);
             // A removed JSONP script can still finish. Keep a harmless callback
             // so a late server response can neither navigate nor throw.
-            env.window[CALLBACK] = function () {};
+            env.window[callbackName] = function () {};
         };
         const finish = (status, point) => {
             if (!active) return;
@@ -222,7 +225,7 @@
             cleanup();
             env.onResult({status, point});
         };
-        env.window[CALLBACK] = payload => {
+        env.window[callbackName] = payload => {
             if (!active) return;
             let point = null;
             try { point = validateCountyResponse(payload, request); } catch (_) {}
