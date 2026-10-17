@@ -306,9 +306,9 @@
                         <h4 id="modal-property-map-heading" class="text-base font-black text-emerald-300">הבית והסביבה</h4>
                         <p id="modal-property-map-address" dir="ltr" class="mt-1 text-sm text-gray-200 break-words"></p>
                     </div>
-                    <a id="modal-property-map-link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold shrink-0"><i data-lucide="map" class="w-4 h-4"></i>מפה ותמונת רחוב</a>
+                    <a id="modal-property-map-link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold shrink-0"><i data-lucide="camera" class="w-4 h-4"></i>STREET VIEW</a>
                 </div>
-                <p class="text-xs leading-relaxed text-gray-300">נפתח ב־Google Maps. בחר Street View לתמונת רחוב ולסיור בסביבה, או עבור לתצוגת לוויין. הזמינות תלויה בכיסוי הצילומים.</p>
+                <p class="text-xs leading-relaxed text-gray-300">פותח צילום רחוב בקרבת הכתובת בלשונית נפרדת. המיקום משוער; הזמינות תלויה בכיסוי הצילומים.</p>
             </section>
 
             <section id="modal-price-history" hidden class="bg-gray-950/70 p-4 rounded-xl border border-gray-800">
@@ -2996,16 +2996,19 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             if (!locality && !zip) return null;
             const query = [address, locality, ['PA', zip].filter(Boolean).join(' '), 'USA'].filter(Boolean).join(', ');
             const searchUrl = 'https://www.google.com/maps/search/?' + new URLSearchParams({api: '1', query}).toString();
-            return searchUrl.length <= 2048 ? {query, searchUrl} : null;
+            const county = typeof property.county === 'string' ? property.county.replace(/\s+/g, ' ').trim() : '';
+            const municipality = typeof property.municipality === 'string' ? property.municipality.replace(/\s+/g, ' ').trim() : '';
+            const streetViewUrl = 'street-view.html?' + new URLSearchParams({address, city: locality, zip, county, municipality}).toString();
+            return searchUrl.length <= 2048 && streetViewUrl.length <= 2048 ? {query, searchUrl, streetViewUrl} : null;
         }
 
         function renderPropertyMapDestination(destination) {
             document.getElementById('modal-property-map-section').hidden = !destination;
             document.getElementById('modal-property-map-address').textContent = destination?.query || '';
-            for (const id of ['modal-property-map-link', 'modal-footer-map-link']) {
+            for (const [id, url] of [['modal-property-map-link', destination?.streetViewUrl], ['modal-footer-map-link', destination?.searchUrl]]) {
                 const link = document.getElementById(id);
                 link.hidden = !destination;
-                if (destination) link.href = destination.searchUrl;
+                if (destination) link.href = url;
                 else link.removeAttribute('href');
             }
         }
