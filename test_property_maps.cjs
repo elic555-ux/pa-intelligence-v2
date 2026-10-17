@@ -1,5 +1,5 @@
 'use strict';
-// Offline regression tests for the actual page helper, renderer and map links.
+// Offline regressions for the actual page helper, renderer, map and Street View links.
 // Run: node test_property_maps.cjs (optional argument: another index.html path).
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -43,6 +43,13 @@ function inspect(property) {
     assert.deepEqual([...url.searchParams.keys()].sort(), ['api', 'query']);
     assert.equal(url.hash, '');
     assert.ok(result.searchUrl.length <= 2048);
+    const streetView = new URL(result.streetViewUrl, 'https://example.test/pa-intelligence-v2/index.html');
+    assert.equal(streetView.origin, 'https://example.test');
+    assert.equal(streetView.pathname, '/pa-intelligence-v2/street-view.html');
+    assert.deepEqual([...streetView.searchParams.keys()].sort(), ['address', 'city', 'county', 'municipality', 'zip']);
+    assert.equal(streetView.hash, '');
+    assert.ok(!result.streetViewUrl.startsWith('http'), 'Street View resolver must stay relative to this site');
+    assert.ok(result.streetViewUrl.length <= 2048);
     return result;
 }
 
@@ -50,18 +57,36 @@ test('uses full actual public address, locality, PA, ZIP, USA', () => {
     const before = {...base};
     const result = inspect(base);
     assert.equal(result.query, '233 Macfarlane Dr, Pittsburgh, PA 15235, USA');
+    const streetView = new URL(result.streetViewUrl, 'https://example.test/');
+    assert.equal(streetView.searchParams.get('address'), base.address);
+    assert.equal(streetView.searchParams.get('city'), base.city);
+    assert.equal(streetView.searchParams.get('zip'), base.zip);
+    assert.equal(streetView.searchParams.get('county'), base.county);
+    assert.equal(streetView.searchParams.get('municipality'), '');
+    const namedCounty = inspect({...base, county: ' \tAllegheny County\n '});
+    assert.equal(new URL(namedCounty.streetViewUrl, 'https://example.test/').searchParams.get('county'), 'Allegheny County');
+    const absentCounty = inspect({...base, county: undefined});
+    assert.equal(new URL(absentCounty.streetViewUrl, 'https://example.test/').searchParams.get('county'), '');
     assert.deepEqual(base, before, 'helper must not alter inventory');
 });
 
 test('normalizes whitespace without losing unit, fraction or apostrophe', () => {
     const result = inspect({address: '  12\t1/2 O\'Hara Ave\nApt 2  ', city: ' Pittsburgh\t ', zip: ' 15213-0042 '});
     assert.equal(result.query, "12 1/2 O'Hara Ave Apt 2, Pittsburgh, PA 15213-0042, USA");
+    const streetView = new URL(result.streetViewUrl, 'https://example.test/');
+    assert.equal(streetView.searchParams.get('address'), "12 1/2 O'Hara Ave Apt 2");
+    assert.equal(streetView.searchParams.get('city'), 'Pittsburgh');
+    assert.equal(streetView.searchParams.get('zip'), '15213-0042');
 });
 
 test('city takes precedence over municipality; blank city uses municipality', () => {
     assert.equal(inspect({...base, municipality: 'Penn Hills'}).query, '233 Macfarlane Dr, Pittsburgh, PA 15235, USA');
     assert.equal(inspect({...base, city: ' \n ', municipality: 'Penn Hills'}).query, '233 Macfarlane Dr, Penn Hills, PA 15235, USA');
     assert.equal(inspect({...base, city: 'Unknown', municipality: 'Penn Hills'}).query, '233 Macfarlane Dr, Penn Hills, PA 15235, USA');
+    const separateMunicipality = inspect({...base, municipality: ' \tPenn Hills\n '});
+    const streetView = new URL(separateMunicipality.streetViewUrl, 'https://example.test/');
+    assert.equal(streetView.searchParams.get('city'), 'Pittsburgh');
+    assert.equal(streetView.searchParams.get('municipality'), 'Penn Hills');
 });
 
 test('preserves leading-zero and ZIP+4 strings and accepts numeric ZIP', () => {
@@ -75,6 +100,19 @@ test('quotes, ampersands, hashes and percent sequences cannot inject URL paramet
     assert.equal(new URL(result.searchUrl).searchParams.get('query'), address + ', Pittsburgh, PA 15235, USA');
     assert.ok(!result.searchUrl.includes('"'));
     assert.ok(!new URL(result.searchUrl).searchParams.has('pano'));
+    const streetView = new URL(result.streetViewUrl, 'https://example.test/');
+    assert.equal(streetView.searchParams.get('address'), address);
+    assert.equal(streetView.searchParams.get('city'), base.city);
+    assert.equal(streetView.searchParams.get('zip'), base.zip);
+    assert.equal(streetView.searchParams.size, 5);
+    for (const field of ['city', 'zip', 'county', 'municipality']) {
+        const injected = {city: 'Pittsburgh&address=Wrong#hash', zip: '15235&city=Wrong%26pano=evil', county: 'Allegheny&provider=Wrong#hash', municipality: 'Penn Hills&county=Wrong#hash'}[field];
+        const changed = inspect({...base, [field]: injected});
+        const target = new URL(changed.streetViewUrl, 'https://example.test/');
+        assert.equal(target.searchParams.get(field), injected);
+        assert.equal(target.searchParams.get('address'), base.address);
+        assert.equal(target.searchParams.size, 5);
+    }
 });
 
 test('retains Unicode address characters as one decoded search value', () => {
@@ -110,6 +148,7 @@ test('switch A to B to invalid returns independent targets without stale address
     const first = inspect(base);
     const second = inspect({address: '9242 Valley St', city: 'Pittsburgh', zip: '15235', lat: 40.1, lng: -80.9});
     assert.notEqual(first.searchUrl, second.searchUrl);
+    assert.notEqual(first.streetViewUrl, second.streetViewUrl);
     assert.equal(second.query, '9242 Valley St, Pittsburgh, PA 15235, USA');
     assert.ok(!second.searchUrl.includes('Macfarlane'));
     assert.equal(propertyMapDestination({address: '', city: 'Pittsburgh', lat: 40.1, lng: -80.9}), null);
@@ -141,13 +180,13 @@ if (path.extname(helperFile) === '.html') {
             assert.equal(nodes['modal-property-map-address'].textContent, destination?.query || '');
             for (const id of ['modal-property-map-link', 'modal-footer-map-link']) {
                 assert.equal(nodes[id].hidden, !destination);
-                if (destination) assert.equal(nodes[id].href, destination.searchUrl);
+                if (destination) assert.equal(nodes[id].href, id === 'modal-property-map-link' ? destination.streetViewUrl : destination.searchUrl);
                 else assert.equal(Object.hasOwn(nodes[id], 'href'), false, 'hidden link must lose stale href');
             }
         }
     });
 
-    test('both actual external map anchors use a separate tab with opener protection', () => {
+    test('actual Street View and external map anchors use a separate tab with opener protection', () => {
         const source = fs.readFileSync(helperFile, 'utf8');
         for (const id of ['modal-property-map-link', 'modal-footer-map-link']) {
             const tag = source.match(new RegExp('<a\\b[^>]*\\bid="' + id + '"[^>]*>'))?.[0];
