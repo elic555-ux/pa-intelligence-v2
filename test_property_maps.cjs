@@ -204,14 +204,32 @@ if (path.extname(helperFile) === '.html') {
         assert.deepEqual(closeEvents, ['cancel', 'hidden'], 'closing the modal must cancel a pending preview before hiding it');
     });
 
-    test('actual Street View and external map anchors use a separate tab with opener protection', () => {
+    test('interactive Street View starts unloaded and keeps its external link below the frame with opener protection', () => {
         const source = fs.readFileSync(helperFile, 'utf8');
-        for (const id of ['modal-property-map-link', 'modal-footer-map-link']) {
+        for (const id of ['modal-property-map-link', 'modal-footer-map-link', 'modal-street-view-preview-link']) {
             const tag = source.match(new RegExp('<a\\b[^>]*\\bid="' + id + '"[^>]*>'))?.[0];
             assert.ok(tag, 'missing external anchor ' + id);
             assert.match(tag, /\btarget="_blank"/);
             assert.match(tag, /\brel="[^"]*\bnoopener\b[^"]*"/);
             assert.match(tag, /\brel="[^"]*\bnoreferrer\b[^"]*"/);
         }
+        const preview = source.match(/<figure\b[^>]*\bid="modal-street-view-preview"[^>]*>[\s\S]*?<\/figure>/)?.[0];
+        assert.ok(preview, 'missing interactive Street View figure');
+        assert.match(preview, /^<figure\b[^>]*\bhidden\b/);
+        const frame = preview.match(/<iframe\b[^>]*\bid="modal-street-view-preview-frame"[^>]*>/)?.[0];
+        assert.ok(frame, 'missing interactive Street View frame');
+        assert.doesNotMatch(frame, /\bsrc(?:doc)?\s*=/i, 'the frame must remain unloaded before gated rendering');
+        assert.match(frame, /\btitle="[^"]*[\u0590-\u05ff][^"]*"/);
+        assert.match(frame, /\breferrerpolicy="strict-origin-when-cross-origin"/);
+        assert.match(frame, /\bloading="eager"/);
+        assert.match(frame, /\ballowfullscreen\b/);
+        assert.match(frame, /\bw-full\b/);
+        assert.match(frame, /min-w-\[200px\]/);
+        assert.match(frame, /min-h-\[200px\]/);
+        assert.ok(preview.indexOf('</iframe>') < preview.indexOf('<figcaption'), 'caption must sit below the interactive frame');
+        assert.ok(preview.indexOf('</figcaption>') < preview.indexOf('<a '), 'external link must sit below the frame and caption');
+        assert.doesNotMatch(preview, /<img\b|\babsolute\b|\boverflow-hidden\b/i, 'controls and attribution must remain unobscured');
+        assert.doesNotMatch(source, /maps\/api\/(?:streetview|js)|streetview\/metadata/i, 'the page must contain no paid provider route');
+        assert.ok(source.indexOf('street-view.js?v=1.1.0') < source.indexOf('street-view-preview.js?v=1.2.0'), 'the shared locator must load before the Embed module');
     });
 }

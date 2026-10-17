@@ -1,33 +1,43 @@
-# Clickable Street View preview
+# Street View preview with no charged Google API path
 
-Property details can show a native Google Street View image. Clicking the image opens the same panorama and viewing direction in Google Maps. The existing STREET VIEW button remains available if imagery cannot load.
+The requested Street View feature must not create Google API charges. This implementation therefore uses **Maps Embed API `streetview` only**, which Google currently lists as unlimited and available at no charge. It does not use the Static Street View image service, Static metadata, Maps JavaScript, Places or Geocoding APIs. The existing keyless external STREET VIEW button stays available.
 
 ## Activation
 
-The feature is disabled in `street-view-preview-config.json`. With `enabled: false` or an empty/invalid key, opening a property does not request Google metadata or an image.
+The feature stays disabled in `street-view-preview-config.json`, with `provider: "maps-embed"` and an empty `apiKey`. Legacy configuration without that explicit provider cannot enable it. While disabled, property details send no preview-related county or Google requests.
 
-Before enabling it:
+Before enabling:
 
-1. Use a Google Cloud project with billing and Street View Static API enabled.
-2. Create a dedicated browser key, restricted to the website origin `https://elic555-ux.github.io` and to Street View Static API. Browsers may send only the origin as the cross-origin referrer, so a repository-path-only restriction may reject legitimate requests. Configure quotas for the intended budget.
-3. Provide the site's public Terms of Use and Privacy Policy links required by Google's policies. This change does not create legal policies on the operator's behalf.
-4. Set `enabled` to `true` and supply that restricted browser key as `apiKey`. Browser keys are public by design; never put a signing secret, server key or unrestricted key in this file.
-5. Test on the actual website origin, including no-coverage, quota/error fallback, a property switch and a modal close. Google metadata and native imagery have been tested privately with the supplied key; its website restrictions still need configuration before public activation.
+1. Enable **Maps Embed API** in the intended Google Cloud project. Google still requires a valid key and billing-enabled project even though Embed usage itself is free. Do not create or upgrade a billing account automatically.
+2. Restrict the browser key to **Maps Embed API only**. Do not leave it unrestricted or permit Street View Static API/other chargeable APIs. If the key is shared with other applications, use a dedicated key after checking its existing use.
+3. Restrict the key to the website origin `https://elic555-ux.github.io/*`. Cross-origin referrers may omit the repository path. Never publish a signing secret, server key or unrestricted key.
+4. Verify the restrictions in Google Cloud, then set `enabled: true` and supply only that restricted browser key. Inspect the actual production iframe and error fallback before deployment is considered complete.
 
-Current pricing lists 10,000 static Street View images per month without charge; additional use may be billed. Confirm the current pricing before activation. Metadata requests are not billed but require a key.
+The app configuration is not proof that a key is restricted in Google Cloud. The supplied key has not been published. Its earlier Static service tests accepted foreign referrers; those requests have stopped, the local preview was disabled and its server stopped when the user specified zero charges.
 
-## Behavior and limits
+## Cost boundary
 
-Only the property whose details are open requests imagery. After configuration is enabled, the shared address locator verifies a county address point or parcel centroid. Images load directly from Google and are neither downloaded into the repository nor cached by app code. The native image is shown in full so attribution remains visible. The caption is outside the image.
+Google's free allowance for Static Street View is not a zero-spend guarantee. Alert-only budgets do not cap Maps charges, and current Cloud spend-cap eligibility does not include Google Maps. This feature avoids that charged service entirely rather than relying on an allowance or budget alert.
 
-Metadata selects a panorama near the supplied address. Its camera position must be 1–50 meters from the verified county point. The preview calculates the bearing from that camera to the point, and both the native image and its external link use the same panorama ID, derived heading, pitch and field of view. Allegheny provides address points; Erie provides parcel centroids. This improves the camera direction but does not verify the pictured building's identity. Unsupported counties, unavailable or ambiguous county matches, implausible camera distance, missing coverage or request failure keep the preview hidden. The existing button remains available. Switching properties or closing details cancels lookups and discards late results. Each Allegheny JSONP request has a distinct callback to isolate late responses.
+The no-charge statement applies to Maps Embed usage under Google's current published pricing, not every unrelated service in a Google Cloud account. Account-wide zero spending cannot be verified from an API key. No billing account or unrelated service is changed by this code.
 
-Run `node test_street_view_preview.cjs`, `node test_street_view.cjs` and `node test_property_maps.cjs` for offline regressions. These tests do not contact Google and cannot validate billing, referrer restrictions or live coverage.
+## Behavior
+
+After explicit configuration, the shared county locator verifies a point for the open property. Only then does the app create a native Google Street View iframe at that location. Allegheny provides address points; Erie provides parcel centroids. Unknown counties, ambiguous addresses or failed lookups retain the external button.
+
+The iframe remains interactive, including Google's controls, attribution and links. There is no overlay that intercepts Google controls and no image extraction or rehosting. An additional link below the iframe opens a keyless Google Maps Street View URL near the same county point. Users can also use Google's native link for the current panorama. Without a metadata request, the app cannot verify the initial camera-to-building bearing or synchronize changes made inside the cross-origin iframe; the wording describes a street view near the address.
+
+Closing or switching property removes the frame source and ignores stale callbacks. A bounded load timeout prevents an indefinitely pending card. A frame load event alone cannot prove a cross-origin API response is successful, so live key/API restrictions must be verified in Google Cloud and the real iframe.
+
+## Verification
+
+Run `node test_street_view_preview.cjs`, `node test_street_view.cjs` and `node test_property_maps.cjs`. Offline tests verify that the only possible keyed preview endpoint is the free Embed `streetview` URL and that no chargeable fallback exists. Offline tests do not validate a user's billing settings, API restrictions or Google's live iframe contents.
 
 ## Official references
 
-- [Street View Static API setup](https://developers.google.com/maps/documentation/streetview/overview)
-- [Metadata](https://developers.google.com/maps/documentation/streetview/metadata)
-- [Pricing](https://developers.google.com/maps/billing-and-pricing/pricing)
-- [API key security](https://developers.google.com/maps/api-security-best-practices)
-- [Attribution and application policy requirements](https://developers.google.com/maps/documentation/streetview/policies)
+- [Embed usage and billing: unlimited, no charge](https://developers.google.com/maps/documentation/embed/usage-and-billing)
+- [Embed setup requirements](https://developers.google.com/maps/documentation/embed/quickstart)
+- [Street View iframe parameters](https://developers.google.com/maps/documentation/embed/embedding-map)
+- [API key restrictions](https://developers.google.com/maps/api-security-best-practices)
+- [Alert-only budgets are not spending caps](https://docs.cloud.google.com/billing/docs/how-to/budgets)
+- [Spend-cap eligible services](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps#eligible-services)
