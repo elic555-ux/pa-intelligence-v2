@@ -5,12 +5,16 @@ const test = require('node:test');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const api = require('./street-view-preview.js');
+const countyApi = require('./street-view.js');
 const TEST_KEY = 'AIza' + 'x'.repeat(35); // Synthetic test value, never used for a network request.
 const PANO = 'test_pano_same_camera_12345';
-const LOCATION = {lat: 40.4597766, lng: -79.8577718};
+const LOCATION = {lat: 40.4597766, lng: -79.8579718};
+const TARGET = {lat: 40.4597766, lng: -79.8577718, quality: 'county_address_point'};
 const okMetadata = (pano = PANO) => ({status: 'OK', pano_id: pano, location: {...LOCATION}});
-const A = {query: '9242 Valley St, Pittsburgh, PA 15235, USA'};
-const B = {query: '1915 Liberty St, Erie, PA 16502, USA'};
+const A = {query: '9242 Valley St, Pittsburgh, PA 15235, USA', streetViewUrl: 'street-view.html?' + new URLSearchParams({
+    address: '9242 Valley St', city: 'Pittsburgh', zip: '15235', county: 'Allegheny', municipality: 'Penn Hills'})};
+const B = {query: '233 Macfarlane Dr, Pittsburgh, PA 15235, USA', streetViewUrl: 'street-view.html?' + new URLSearchParams({
+    address: '233 Macfarlane Dr', city: 'Pittsburgh', zip: '15235', county: 'Allegheny', municipality: 'Penn Hills'})};
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
     let resolve, reject;
@@ -22,6 +26,8 @@ function environment() {
     const nodes = new Map();
     const calls = [];
     const images = [];
+    const lookups = [];
+    const settings = {autoLookup: true};
     const timers = new Map();
     let nextTimer = 0;
     function node(id) {
@@ -50,7 +56,15 @@ function environment() {
         fetch(url, options) { const pending = deferred(); calls.push({url, options, ...pending}); return pending.promise; },
         setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, {fn, delay}); return id; },
         clearTimeout(id) { timers.delete(id); }};
-    return {window, document, nodes, calls, images, timers, preview: api.createPreview({window, document})};
+    window.PAStreetView = {readRequest: countyApi.readRequest, supportsCounty: countyApi.supportsCounty,
+        resolveOnce(request, env) {
+            const value = {request, onResult: env.onResult, cancelled: false};
+            lookups.push(value);
+            if (settings.autoLookup) env.onResult({status: 'matched', point: {...TARGET,
+                quality: request.county === 'erie' ? 'county_parcel_centroid' : 'county_address_point'}});
+            return {cancel() { value.cancelled = true; env.onResult({status: 'cancelled'}); }};
+        }};
+    return {window, document, nodes, calls, images, timers, lookups, settings, preview: api.createPreview({window, document})};
 }
 
 async function config(env, value = {enabled: true, apiKey: TEST_KEY}) {
@@ -85,6 +99,7 @@ test('disabled, missing or invalid config performs zero Google calls and keeps p
         await config(env, value);
         await pending;
         assert.equal(env.calls.length, 1);
+        assert.equal(env.lookups.length, 0, 'disabled configuration must not query county GIS');
         assert.equal(env.images.length, 0);
         assert.equal(env.nodes.get('modal-street-view-preview').hidden, true);
         assert.equal(env.nodes.get('modal-street-view-preview-link').href, '');
@@ -169,7 +184,7 @@ test('native image and click URL bind the exact same pano and camera; key never 
     assert.equal(link.searchParams.get('api'), '1');
     assert.equal(link.searchParams.get('map_action'), 'pano');
     assert.equal(link.searchParams.get('pano'), PANO);
-    for (const [key, value] of [['heading', '0'], ['pitch', '0'], ['fov', '90']]) {
+    for (const [key, value] of [['heading', '90'], ['pitch', '0'], ['fov', '90']]) {
         assert.equal(imageUrl.searchParams.get(key), value);
         assert.equal(link.searchParams.get(key), value);
     }
@@ -211,8 +226,8 @@ test('address and panorama parameters cannot change fixed endpoints or inject ot
     assert.equal(url.hash, '');
     assert.equal(api.panoId('pano&key=evil'), null);
     const pano = 'F:sample/path/with_opaque-ID';
-    assert.equal(new URL(api.imageUrl(pano, TEST_KEY)).searchParams.get('pano'), pano);
-    assert.equal(new URL(api.panoramaUrl(pano)).searchParams.get('pano'), pano);
+    assert.equal(new URL(api.imageUrl(pano, TEST_KEY, '90')).searchParams.get('pano'), pano);
+    assert.equal(new URL(api.panoramaUrl(pano, '90')).searchParams.get('pano'), pano);
 });
 
 test('duplicate renders of one property do not duplicate metadata or image calls', async () => {
@@ -339,4 +354,82 @@ test('config timeout aborts and a late enabled response cannot start Google requ
     assert.equal(env.calls.length, 1);
     assert.equal(env.images.length, 0);
     assert.equal(env.timers.size, 0);
+});
+
+test('bearing aims from camera toward the verified target with no north-facing fallback for degenerate or distant points', () => {
+    const camera = {lat: 40, lng: -79};
+    assert.equal(api.bearingToTarget(camera, {lat: 40.0001, lng: -79}), '0');
+    assert.equal(api.bearingToTarget(camera, {lat: 40, lng: -78.9999}), '90');
+    assert.equal(api.bearingToTarget(camera, {lat: 39.9999, lng: -79}), '180');
+    assert.equal(api.bearingToTarget(camera, {lat: 40, lng: -79.0001}), '270');
+    assert.equal(api.bearingToTarget(camera, camera), null);
+    assert.equal(api.bearingToTarget(camera, {lat: 40.00000001, lng: -79}), null);
+    assert.equal(api.bearingToTarget(camera, {lat: 40.001, lng: -79}), null);
+    assert.equal(api.bearingToTarget(camera, {lat: 0, lng: 0}), null);
+    assert.equal(api.imageUrl(PANO, TEST_KEY), null);
+    assert.equal(api.panoramaUrl(PANO), null);
+});
+
+test('local resolver URL must match the full address and supported county before any Google request', async () => {
+    for (const destination of [{...A, streetViewUrl: 'https://evil.test/street-view.html?address=9242'},
+        {...A, streetViewUrl: 'other.html?' + A.streetViewUrl.split('?')[1]},
+        {...A, streetViewUrl: B.streetViewUrl},
+        {...A, streetViewUrl: A.streetViewUrl.replace('county=Allegheny', 'county=UnknownCounty')},
+        {query: A.query}]) {
+        const env = environment();
+        const pending = env.preview.render(destination);
+        await config(env); await pending;
+        assert.equal(env.lookups.length, 0);
+        assert.equal(env.calls.length, 1);
+        assert.equal(env.images.length, 0);
+    }
+});
+
+test('county lookup failure, nonmatching quality or implausible camera distance suppresses the image', async () => {
+    for (const point of [null, {...TARGET, quality: 'unverified_cache'}, {lat: 0, lng: 0, quality: 'county_address_point'}]) {
+        const env = environment(); env.settings.autoLookup = false;
+        const pending = env.preview.render(A);
+        await config(env);
+        env.lookups[0].onResult({status: point ? 'matched' : 'unavailable', point});
+        await pending;
+        assert.equal(env.calls.length, 1);
+        assert.equal(env.images.length, 0);
+    }
+    for (const location of [{...TARGET}, {lat: 40.46, lng: -79.86}]) {
+        const env = environment();
+        const pending = env.preview.render(A);
+        await config(env); await metadata(env, {...okMetadata(), location}); await pending;
+        assert.equal(env.images.length, 0);
+    }
+});
+
+test('closing or changing property cancels the county lookup and ignores late point results', async () => {
+    const env = environment(); env.settings.autoLookup = false;
+    const first = env.preview.render(A);
+    await config(env);
+    const lookupA = env.lookups[0];
+    const second = env.preview.render(B);
+    await tick();
+    assert.equal(lookupA.cancelled, true);
+    lookupA.onResult({status: 'matched', point: TARGET});
+    await first;
+    assert.equal(env.calls.length, 1);
+    env.preview.cancel();
+    assert.equal(env.lookups[1].cancelled, true);
+    env.lookups[1].onResult({status: 'matched', point: TARGET});
+    await second;
+    assert.equal(env.calls.length, 1);
+    assert.equal(env.images.length, 0);
+});
+
+test('changed county context for the same address clears the previous image instead of reusing its target', async () => {
+    const env = environment();
+    const pending = env.preview.render(A);
+    await config(env); await metadata(env); await pending;
+    env.nodes.get('modal-street-view-preview-image').onload();
+    assert.equal(env.nodes.get('modal-street-view-preview').hidden, false);
+    await env.preview.render({...A, streetViewUrl: A.streetViewUrl.replace('county=Allegheny', 'county=UnknownCounty')});
+    assert.equal(env.nodes.get('modal-street-view-preview').hidden, true);
+    assert.equal(env.nodes.get('modal-street-view-preview-link').href, '');
+    assert.equal(env.calls.length, 2, 'no metadata lookup for unsupported new context');
 });
