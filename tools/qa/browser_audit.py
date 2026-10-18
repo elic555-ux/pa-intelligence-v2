@@ -212,6 +212,7 @@ with sync_playwright() as p:
     print('QA_VISUAL_DESKTOP='+base64.b64encode(page.screenshot(type='jpeg',quality=50)).decode())
     card_opener=page.locator('#properties-container [data-property-open]').first
     opener_key=card_opener.get_attribute('data-property-open')
+    page.evaluate('(key)=>viewedDeals.delete(key)',opener_key)
     card_opener.focus()
     before_generation=value(page,'basicSourceGeneration')
     page.keyboard.press('Enter')
@@ -379,8 +380,11 @@ with sync_playwright() as p:
     probe=fixture_rows()[:1]
     probe[0]['baths']='<img src="/qa-missing-bath" onerror="window.__qaBathMarkup=true">'
     ctx,page,errors,traffic=scenario(browser,probe)
+    page.wait_for_timeout(150)
+    record('Imported bathroom value cannot execute HTML in table view',lambda:yes(not value(page,"Boolean(window.__qaBathMarkup)") and page.locator('#properties-container img').count()==0,'Harmless bathroom-field HTML canary executed in table rendering'),'P1')
+    page.evaluate('window.__qaBathMarkup=false')
     page.locator('#btn-view-grid').click();page.wait_for_timeout(200)
-    record('Imported bathroom value cannot execute HTML in cards',lambda:yes(not value(page,"Boolean(window.__qaBathMarkup)"),'Harmless bathroom-field HTML canary executed in grid rendering'),'P1')
+    record('Imported bathroom value cannot execute HTML in cards',lambda:yes(not value(page,"Boolean(window.__qaBathMarkup)") and page.locator('#properties-container img').count()==0,'Harmless bathroom-field HTML canary executed in grid rendering'),'P1')
     ctx.close()
     browser.close()
 
