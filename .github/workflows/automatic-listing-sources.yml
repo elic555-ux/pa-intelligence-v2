@@ -7,6 +7,7 @@ on:
       - 'secondary_sources.js'
       - 'listing_photo_fallback.py'
       - 'test_listing_photo_fallback.py'
+      - 'test_listing_photo_queue.py'
       - 'automatic_listing_sources.py'
       - 'completion_subjects.py'
       - 'completion_wakeup.py'
@@ -166,7 +167,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- COMPS_REPORTS/automatic_listing_sources COMPS_REPORTS/property_sources
+          git add -- COMPS_REPORTS/listing_photos COMPS_REPORTS/automatic_listing_sources COMPS_REPORTS/property_sources
           if [ -d COMPS_REPORTS/additional_sources ]; then git add COMPS_REPORTS/additional_sources; fi
           if [ -d COMPS_REPORTS/scan_review ]; then git add COMPS_REPORTS/scan_review; fi
           if git diff --cached --quiet; then exit 0; fi
@@ -217,6 +218,7 @@ jobs:
               for attempt in item.get('attempts',[]):
                   lines.append('- '+attempt['provider']+': '+attempt['status']+'; HTTP '+str(attempt.get('http_status')))
           Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('\n'.join(lines))
+          print(json.dumps(report, ensure_ascii=False))
           print('\n'.join(lines))
           PY
       - uses: actions/upload-artifact@v4

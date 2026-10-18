@@ -40,13 +40,14 @@ after offline validation. It writes only an expiring Actions artifact and
 summary, not production data. The CLI defaults to read-only; --save writes
 only photo receipts.
 
-This is the initial tested adapter stage. It does not yet schedule a second
-production worker or increase the existing completion budget. Automatic queue
-integration must share the current 60-property daily limit, 3-property batch,
-13-HTTP-request and 240-second worker budget and repository write concurrency;
-it must revalidate failed/missing photos in settled technical-detail records.
-Do not call the work fully deployed until that integration and real browser
-verification are complete.
+Automatic integration shares the existing completion worker and repository write
+concurrency, never a second scheduled worker. An enabled photo fallback reserves
+one turn from the configured 3–5-property batch; all technical and photo turns
+share the same daily property limit, 13 HTTP requests and 240-second deadline.
+Settled technical records can still receive photo completion. The idle gate sleeps
+until photo retry/expiry or new saved source evidence. The setting is explicit
+and preserved by the UI. Production remains unchanged until this PR is approved
+and deployed; browser verification is still needed.
 
 Offline: python -m unittest -v test_listing_photo_fallback;
 node test_secondary_sources.cjs; node --test test_photo_fallback_ui.cjs.
@@ -65,3 +66,12 @@ Candidate references:
 * https://www.coldwellbankerhomes.com/pa/brackenridge/812-prospect-st/pid_73713539/
 * https://www.coldwellbankerhomes.com/pa/pittsburgh/480-hamil-rd/pid_73712480/
 * https://www.weichert.com/PA/Allegheny/Verona/
+
+## First live trial (GitHub run 39132476005)
+
+812 Prospect St: three verified image files from Coldwell Banker Homes after
+stored source images failed. 480 Hamil Rd: zero verified photos; stored images
+failed, Coldwell rejected by the full-address identity guard, Weichert directory
+produced no candidate. This is a partial result, not a universal image solution.
+All offline regressions passed on the initial adapter commit. Later scheduling
+and discovery changes require their own successful checks and renewed trial.

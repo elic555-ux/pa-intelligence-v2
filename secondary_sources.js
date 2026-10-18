@@ -151,7 +151,7 @@
                 const provider=photo.provider,check=photo.verification;
                 const sourceAllowed=provider==='saved_source' ? Boolean(sourceUrl(source.href)) :
                     provider==='coldwellbanker' ? source.hostname==='www.coldwellbankerhomes.com' && /^\/pa\/[a-z0-9-]+\/[a-z0-9-]+\/pid_\d+\/$/.test(source.pathname) :
-                    provider==='weichert' && source.hostname==='www.weichert.com' && /^\/\d+\/$/.test(source.pathname);
+                    provider==='weichert' && source.hostname==='www.weichert.com' && /^\/\d+\/?$/.test(source.pathname);
                 if(!sourceAllowed || source.protocol!=='https:' || source.username || source.password || source.search || source.hash ||
                     (source.port && source.port!=='443') || photo.listing_id!==listing(p) ||
                     image.protocol!=='https:' || image.username || image.password || image.search || image.hash ||

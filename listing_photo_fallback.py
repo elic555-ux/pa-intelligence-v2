@@ -64,7 +64,7 @@ def safe_url(value, image=False):
         elif u.hostname == 'www.coldwellbankerhomes.com':
             if not re.fullmatch(r'/pa/[a-z0-9-]+/(?:[a-z0-9-]+/pid_\d+/)?', u.path):
                 return None
-        elif not re.fullmatch(r'/(?:\d+/|PA/[A-Za-z0-9-]+/[A-Za-z0-9-]+/)', u.path):
+        elif not re.fullmatch(r'/(?:\d+/?|PA/[A-Za-z0-9-]+/[A-Za-z0-9-]+/)', u.path):
             return None
         return u.geturl()
     except ValueError:
@@ -91,7 +91,7 @@ class Reader:
         self.deadline = clock() + min(240, max(1, seconds))
         self.max_requests = min(20, max(0, max_requests))
         self.requests, self.last, self.interval = 0, None, 10
-        self.rules, self.pages, self.blocked = {}, {}, {}
+        self.rules, self.pages, self.blocked, self.host_cooldowns = {}, {}, {}, {}
         self.opener = opener or build_opener(NoRedirect())
 
     def raw(self, url, limit, accept):
@@ -116,6 +116,7 @@ class Reader:
         except HTTPError as exc:
             if exc.code in (401, 403, 429):
                 self.blocked[urlparse(url).hostname] = exc.code
+                self.host_cooldowns[urlparse(url).hostname] = core.cooldown_until(exc.headers.get('Retry-After'), datetime.now(timezone.utc))
             raise Unavailable('blocked' if exc.code in (401, 403) else
                               'rate_limited' if exc.code == 429 else 'http_error', exc.code, exc.headers.get('Retry-After')) from exc
         except (URLError, TimeoutError, OSError) as exc:
@@ -125,7 +126,7 @@ class Reader:
         u = urlparse(url)
         host = u.hostname
         if host in self.blocked:
-            raise Unavailable('blocked_host', self.blocked[host])
+            raise Unavailable('host_cooldown', self.blocked[host], self.host_cooldowns.get(host))
         if host not in self.rules:
             robots_url = 'https://' + host + '/robots.txt'
             try:
@@ -151,6 +152,7 @@ class Reader:
                     self.rules[host] = None
                 else:
                     self.blocked[host] = exc.http_status
+                    self.host_cooldowns[host] = core.cooldown_until(exc.retry_after, datetime.now(timezone.utc))
                     raise
         rp = self.rules[host]
         if rp is not None and not rp.can_fetch(AGENT, url):
@@ -300,7 +302,13 @@ def discover(reader, row, provider):
         else:
             context = a.get_text(' ', strip=True) + ' ' + str(a.get('title', '')) + ' ' + str(a.get('aria-label', ''))
             context += ' '.join(img.get('alt', '') for img in a.find_all('img'))
-            if re.fullmatch(r'/\d+/', urlparse(url).path) and re.search(
+            for parent in list(a.parents)[:3]:
+                labels = re.findall(r'\bMLS\s*#?\s*(\d{4,10})\b', parent.get_text(' ', strip=True) + ' ' +
+                    ' '.join(img.get('alt', '') for img in parent.find_all('img')), re.I)
+                if set(labels) == {str(registry.listing_id(row))}:
+                    context += ' MLS#' + str(registry.listing_id(row))
+                    break
+            if re.fullmatch(r'/\d+/?', urlparse(url).path) and re.search(
                     r'\bMLS\s*#?\s*' + re.escape(str(registry.listing_id(row))) + r'\b', context, re.I):
                 return url
     raise Unavailable('no_candidate')
@@ -316,13 +324,27 @@ def primary_photos(repo, row):
     return None, None, []
 
 
+def cooldown(value, now):
+    parsed = core.parse_date(value)
+    return max(now + timedelta(days=1), parsed).isoformat() if parsed else core.cooldown_until(value, now)
+
+
+def source_fingerprint(repo, row):
+    source_url, _, urls = primary_photos(repo, row)
+    return hashlib.sha256(json.dumps([source_url, urls], sort_keys=True).encode()).hexdigest()
+
+
 def complete(repo, row, reader, previous=None, now=None):
     now = now or datetime.now(timezone.utc)
     checked = now.isoformat()
-    valid_old = previous if same_binding(row, previous) else {}
+    valid_old = dict(previous) if same_binding(row, previous) else {}
+    current_source = source_fingerprint(repo, row)
+    if valid_old.get('source_fingerprint') != current_source:
+        valid_old['attempts'] = []
     report = {'schema': 1, 'property_id': str(row['id']), 'listing_id': registry.listing_id(row),
         'identity': core.identity4(row), 'county': registry.identity(row)['county'],
         'inventory_source_url': registry.safe_url(row.get('url')), 'checked_at': checked,
+        'source_fingerprint': current_source,
         'photos': [], 'attempts': [], 'status': 'not_completed', 'new_rentcast_calls': 0}
     for photo in valid_old.get('photos', []):
         when = core.parse_date(photo.get('checked_at'))
@@ -373,18 +395,23 @@ def complete(repo, row, reader, previous=None, now=None):
                         'verification': {'status': 'image_verified', **verification}})
                 except Unavailable as exc:
                     failures.append({'url': url, 'status': exc.status, 'http_status': exc.http_status,
-                                     'retry_after_at': core.cooldown_until(exc.retry_after, now)})
+                                     'retry_after_at': cooldown(exc.retry_after, now)})
                     if exc.status in {'request_budget', 'time_budget'}:
                         raise
             attempt['image_failures'] = failures
             attempt['status'] = 'available' if any(p['provider'] == provider for p in report['photos']) else 'no_loadable_photos'
         except Unavailable as exc:
             attempt.update(status=exc.status, http_status=exc.http_status,
-                           retry_after_at=core.cooldown_until(exc.retry_after, now))
+                           retry_after_at=cooldown(exc.retry_after, now))
         if attempt['status'] in {'request_budget', 'time_budget'}:
             attempt.pop('retry_after_at', None)
+        if attempt.get('image_failures') and all(f['status'] == 'host_cooldown' for f in attempt['image_failures']):
+            attempt['status'] = 'host_cooldown'
         attempt['network_requests'] = reader.requests - before
-        if attempt['status'] not in {'available', 'request_budget', 'time_budget'}:
+        if attempt['status'] == 'host_cooldown':
+            attempt['retry_after_at'] = max([attempt.get('retry_after_at') or (now + timedelta(days=1)).isoformat()] +
+                [f['retry_after_at'] for f in attempt.get('image_failures', [])])
+        if attempt['status'] not in {'available', 'request_budget', 'time_budget', 'host_cooldown'}:
             attempt['unsuccessful_attempts'] += 1
             attempt['retry_after_at'] = max([attempt.get('retry_after_at') or (now + timedelta(days=1)).isoformat()] +
                 [f['retry_after_at'] for f in attempt.get('image_failures', [])])
@@ -395,6 +422,46 @@ def complete(repo, row, reader, previous=None, now=None):
     report['sources_exhausted'] = all(a.get('unsuccessful_attempts', 0) >= MAX_ATTEMPTS
         for a in report['attempts']) and len(report['attempts']) == 3
     return report
+
+
+
+def queue(repo, rows, now=None):
+    """Return due IDs, unfinished count and the next local wake time."""
+    now = now or datetime.now(timezone.utc)
+    due, pending, wake = [], 0, []
+    for key, row in rows.items():
+        path = Path(repo) / ROOT / (core.cache_key(key) + '.json')
+        record = registry.read_json(path) if path.exists() else None
+        if not same_binding(row, record):
+            record = {}
+        fresh = []
+        for item in record.get('photos', []):
+            checked = core.parse_date(item.get('checked_at'))
+            if (checked and checked <= now < checked + timedelta(days=FRESH_DAYS)
+                    and item.get('verification', {}).get('status') == 'image_verified'
+                    and safe_url(item.get('url'), image=True)):
+                fresh.append(checked + timedelta(days=FRESH_DAYS))
+        if fresh:
+            wake.append(min(fresh))
+            continue
+        attempts = {a.get('provider'): a for a in record.get('attempts', [])}
+        if record.get('source_fingerprint') != source_fingerprint(repo, row):
+            attempts = {}
+        open_sources = [attempts.get(provider, {}) for provider in ('saved_source', *SOURCES)
+                        if attempts.get(provider, {}).get('unsuccessful_attempts', 0) < MAX_ATTEMPTS]
+        if not open_sources:
+            continue
+        pending += 1
+        retries = [core.parse_date(a.get('retry_after_at')) for a in open_sources]
+        if any(r is None or r <= now for r in retries):
+            # New arrivals do not starve old retries: a checked property returns
+            # behind properties waiting since their publication, then rotates.
+            stamp = core.parse_date(record.get('checked_at')) or core.parse_date(row.get('listed_date')) or now
+            due.append((stamp, key))
+        else:
+            wake.append(min(retries))
+    due.sort()
+    return [key for _, key in due], pending, min(wake).isoformat() if wake else None
 
 
 def run(repo, ids, max_requests=13, reader=None, now=None, save=False):
@@ -409,6 +476,12 @@ def run(repo, ids, max_requests=13, reader=None, now=None, save=False):
         and registry.identity(r)['county'] in {'Allegheny', 'Erie'}
         and registry.safe_url(r.get('url')) and registry.listing_id(r)}
     reader = reader or Reader(max_requests=max_requests)
+    old_state = registry.read_json(repo / STATE) if (repo / STATE).exists() else {}
+    if hasattr(reader, 'host_cooldowns'):
+        for host, value in old_state.get('host_cooldowns', {}).items():
+            if host in PAGE_HOSTS | IMAGE_HOSTS and core.parse_date(value) and core.parse_date(value) > now:
+                reader.blocked[host] = None
+                reader.host_cooldowns[host] = value
     result = {'schema': 1, 'new_rentcast_calls': 0, 'results': [], 'new_source_network_requests': 0}
     before = reader.requests
     requested = list(dict.fromkeys(ids))[:3]
@@ -422,12 +495,17 @@ def run(repo, ids, max_requests=13, reader=None, now=None, save=False):
         if total_cap is not None:
             remaining_targets = len(requested) - index
             reader.max_requests = reader.requests + max(0, (total_cap - reader.requests) // remaining_targets)
+        row_before = reader.requests
         record = complete(repo, targets[key], reader, previous=previous, now=now)
+        record['new_source_network_requests'] = reader.requests - row_before
         if total_cap is not None:
             reader.max_requests = total_cap
         result['results'].append(record)
         if save:
             registry.atomic_json(path, record)
+    if save and hasattr(reader, 'host_cooldowns'):
+        registry.atomic_json(repo / STATE, {'schema': 1, 'updated_at': now.isoformat(),
+            'host_cooldowns': reader.host_cooldowns})
     result['new_source_network_requests'] = reader.requests - before
     return result
 

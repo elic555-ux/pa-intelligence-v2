@@ -5,17 +5,19 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import os
+import time
 from pathlib import Path
 
 import property_sources as registry
 import tarasa_listing_source as source
+import listing_photo_fallback as photo_source
 from completion_subjects import load_subjects, update_review
 from price_watch import watch_ceiling, classify_price
 from scan_schedule import completion_due, completion_batch_size, completion_daily_limit, due_slot
 from zoneinfo import ZoneInfo
 from completion_wakeup import input_fingerprint, idle_unchanged
 
-VERSION = 'automatic-mls-sources-1.10.2-complete-binding-wakeup-20261015'
+VERSION = 'automatic-mls-sources-1.11.0-photo-fallback-20261018'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -118,7 +120,8 @@ def select_candidates(due, entries, limit, scan_id, now, maximum=None):
     return (recent or backlog)[:limit]
 
 
-def run(repo, mode='check', upstream_sha='', reader=None, now=None):
+def run(repo, mode='check', upstream_sha='', reader=None, now=None, photo_reader=None):
+    work_started = time.monotonic()
     repo = Path(repo)
     if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic', 'scan'}:
         raise ValueError('Unsupported mode.')
@@ -131,6 +134,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     profile = registry.read_json(repo / 'scan_config.json') if (repo / 'scan_config.json').exists() else {}
     controlled = profile.get('scheduleControlVersion') == 2
     completion = profile.get('completionSettings') or {}
+    photos_enabled = completion.get('photoFallbackEnabled') is True
     enabled = completion.get('enabled') is True if controlled else bool(state.get('enabled'))
     caps = PROFILES.get(mode, PROFILES['automatic'])
     if controlled:
@@ -151,7 +155,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
         if not enabled:
             report['status'] = 'automatic_disabled'
             return report
-        if mode == 'automatic' and idle_unchanged(repo, profile, state, now.date()):
+        if mode == 'automatic' and idle_unchanged(repo, profile, state, now.date(), current=now):
             saved = registry.read_json(repo / STATUS) if (repo / STATUS).exists() else {}
             report.update({key: saved[key] for key in ('pending', 'review_required', 'incomplete_properties', 'completion_status') if key in saved})
             report['cached_properties'] = sum(entry.get('status') == 'cache_used' for entry in state['entries'].values())
@@ -232,6 +236,8 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             entry.update(status='completion_incomplete', retry_after_at=None, completion_reason='no_source_parameters')
         entries[key] = entry
     state['entries'] = entries
+    photo_due, photo_pending, next_photo_check = photo_source.queue(repo, rows, now) if photos_enabled else ([], 0, None)
+    report.update(photo_pending=photo_pending, photo_due=len(photo_due), photo_results=[], verified_photos=0)
     pending = {k: rows[k] for k, e in entries.items()
                if e.get('status') not in REVIEW_STATUSES | TERMINAL_COMPLETION | {'cache_used'}}
     report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
@@ -252,10 +258,12 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
             used = int(state.get('daily_attempted', 0)) if state.get('budget_day') == budget_day else 0
             remaining = max(0, min(remaining, completion_daily_limit(completion) - used))
             state.update(budget_day=budget_day, daily_attempted=used)
+        if photos_enabled and photo_due and remaining > 0:
+            remaining -= 1  # reserve one turn for a settled property's missing photos
         provider_state = registry.read_json(repo / source.SOURCE_STATE) if (repo / source.SOURCE_STATE).exists() else {}
         cooldown = source.parse_date(provider_state.get('retry_after_at'))
         if remaining <= 0:
-            report['status'] = 'daily_limit_reached'
+            report['status'] = 'photo_turn_reserved' if photos_enabled and photo_due else 'daily_limit_reached'
         elif cooldown and cooldown > now:
             report.update(status='source_cooldown', retry_after_at=cooldown.isoformat(),
                 http_status=provider_state.get('http_status'), request_url=provider_state.get('request_url'))
@@ -313,6 +321,30 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
                 report['status'] = 'batch_complete'
     else:
         report['status'] = 'waiting_for_retry' if pending else 'queue_current'
+    if photos_enabled and mode not in {'check', 'enable', 'disable'}:
+        photo_slots = max(0, caps[0] - len(report['results']))
+        if controlled:
+            budget_day = now.astimezone(ZoneInfo(completion.get('timezone', 'America/New_York'))).date().isoformat()
+            used = int(state.get('daily_attempted', 0)) if state.get('budget_day') == budget_day else 0
+            state.update(budget_day=budget_day, daily_attempted=used)
+            photo_slots = min(photo_slots, max(0, completion_daily_limit(completion) - used - report['attempted_properties']))
+        request_left = max(0, caps[1] - report['new_source_network_requests'])
+        seconds_left = max(0, caps[2] - (time.monotonic() - work_started))
+        if photo_due and photo_slots and request_left and seconds_left > 25:
+            bounded_reader = photo_reader or photo_source.Reader(max_requests=request_left, seconds=seconds_left)
+            if hasattr(bounded_reader, 'max_requests'):
+                bounded_reader.max_requests = min(bounded_reader.max_requests, bounded_reader.requests + request_left)
+            result = photo_source.run(repo, photo_due[:photo_slots], reader=bounded_reader, now=now, save=True)
+            report['photo_results'] = result['results']
+            report['new_source_network_requests'] += result['new_source_network_requests']
+            report['verified_photos'] = sum(len(r.get('photos', [])) for r in result['results'])
+            report['attempted_properties'] += sum(r.get('new_source_network_requests', 0) > 0 for r in result['results'])
+            if report['status'] in {'queue_current', 'photo_turn_reserved'} and result['results']:
+                report['status'] = 'batch_complete'
+        photo_due, photo_pending, next_photo_check = photo_source.queue(repo, rows, now)
+        report.update(photo_pending=photo_pending, photo_due=len(photo_due))
+        state.update(photo_fallback_schema=1, photo_pending=photo_pending,
+                     next_photo_check_at=now.isoformat() if photo_due else next_photo_check)
     report['pending'] = sum(e.get('status') not in REVIEW_STATUSES | TERMINAL_COMPLETION | {'cache_used'} for e in entries.values())
     report['review_required'] = sum(e.get('status') in REVIEW_STATUSES for e in entries.values())
     report['incomplete_properties'] = sum(e.get('status') in TERMINAL_COMPLETION for e in entries.values())
@@ -329,10 +361,10 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
     if mode not in {'enable', 'disable'}:
         report['review_updated'], report['review_filter_results'] = update_review(repo, rows, now)
     if mode not in {'enable', 'disable'}:
-        idle = report['pending'] == 0
+        idle = report['pending'] == 0 and not photo_due
         if idle:
             report['due'] = 0
-        reason = ('no_eligible_properties' if not entries else 'all_subjects_settled') if idle else None
+        reason = ('waiting_for_photo_retry' if photo_pending else 'no_eligible_properties' if not entries else 'all_subjects_settled') if idle else None
         report.update(worker_state='idle' if idle else 'active', idle_reason=reason)
         state.update(worker_state=report['worker_state'], idle_reason=reason,
                      input_fingerprint=input_fingerprint(repo, profile, now.date()))
@@ -347,7 +379,9 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None):
 def summary(report):
     lines = ['## AUTOMATIC_MLS_SOURCES', '', '- New RentCast calls: **0**',
         '- New source network requests: **' + str(report['new_source_network_requests']) + '**',
-        '- מקור פעיל: Tarasa / River Point Realty', '- מצב: ' + report['status'],
+        '- מקור מפרט פעיל: Tarasa / River Point Realty',
+        '- תמונות שנבדקו מקובץ תמונה בריצה זו: ' + str(report.get('verified_photos', 0)),
+        '- נכסים שממתינים להשלמת תמונות ממקורות נוספים: ' + str(report.get('photo_pending', 0)), '- מצב: ' + report['status'],
         '- השלמה בתוך הסריקה: ' + ('כן' if report.get('scan_integrated') else 'לא'),
         '- השלמה מתאריך פרסום: ' + str(report.get('completion_start_date', 'טרם נקבע')),
         '- קבוצה: עד ' + str(report['max_properties_per_run']) + ' נכסים; עד ' + str(report['max_source_requests_per_run']) + ' בקשות למקור בכל ריצה',
@@ -382,6 +416,8 @@ def summary(report):
         lines.append('- עמוד הבקשה: ' + report['request_url'])
     for item in report['results']:
         lines.append('- ' + item['property_id'] + ': ' + item['status'] + '; שדות ' + str(item['cached_facts']) + '; תמונות ' + str(item['cached_photos']))
+    for item in report.get('photo_results', []):
+        lines.append('- תמונות ' + item['property_id'] + ': ' + item['status'] + '; זמינות בזמן הבדיקה: ' + str(len(item.get('photos', []))))
     return '\n'.join(lines) + '\n'
 
 
