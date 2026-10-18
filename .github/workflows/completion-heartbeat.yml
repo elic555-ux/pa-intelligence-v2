@@ -1,0 +1,42 @@
+name: Completion Heartbeat
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '11 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/completion-heartbeat.yml'
+      - 'completion_heartbeat.py'
+      - '.github/workflows/automatic-listing-sources.yml'
+
+permissions: {}
+
+concurrency:
+  # Only one dispatcher. Do not occupy the scanner/source writer queue.
+  group: pa-completion-heartbeat
+  cancel-in-progress: false
+
+jobs:
+  heartbeat:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'elic555-ux/pa-intelligence-v2' &&
+      github.event.repository.private == false
+    permissions:
+      contents: read
+      actions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify the dispatcher without network requests
+        run: python3 -m unittest -v test_completion_heartbeat
+      - name: Wake the existing worker every 15 minutes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 -u completion_heartbeat.py
