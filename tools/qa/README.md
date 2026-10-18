@@ -1,6 +1,6 @@
 # Isolated system QA
 
-Audit the checked-out production frontend and saved public data without
+Audit the checked-out frontend and saved public data without
 production authentication, source scans, provider calls, Supabase writes,
 Telegram calls or RentCast calls.
 
@@ -20,4 +20,8 @@ desktop/mobile screenshots are uploaded as a seven-day Actions artifact.
 The script records individual failures so one defect does not suppress other
 scenarios. The final workflow step fails when any browser finding remains open;
 all earlier scenarios and evidence upload still run. Read the findings JSON
-and the report for severity and scope. No product code is modified by this suite.
+and the report for severity and scope. The suite itself does not modify product files. Candidate fixes in this QA branch
+are tested from its root index.html and are not deployed by this workflow.
+Keyboard coverage includes focus containment, restored focus after card rerenders,
+and native keyboard openers. Additional cases cover malformed inventory, partial
+file failure, storage quota failures and acknowledged/rejected in-memory writes.

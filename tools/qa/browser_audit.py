@@ -80,7 +80,7 @@ def yes(value,message):
     if not value:raise AssertionError(message)
     return True
 
-def scenario(browser,rows=None,mode='owner',mobile=False,cloud_fail=False,inventory_fail=False,images_fail=False,api_limit=None):
+def scenario(browser,rows=None,mode='owner',mobile=False,cloud_fail=False,inventory_fail=False,images_fail=False,api_limit=None,inventory_mode=None,sheriff_fail=False):
     context=browser.new_context(viewport={'width':390 if mobile else 1440,'height':844 if mobile else 1000},
                                 is_mobile=mobile,has_touch=mobile,service_workers='block')
     errors=[];traffic={'github_reads':0,'remote_write_attempts':0,'unexpected_remote':[],'inventory_reads':0}
@@ -95,7 +95,11 @@ def scenario(browser,rows=None,mode='owner',mobile=False,cloud_fail=False,invent
             if parsed.path=='/properties.json':
                 traffic['inventory_reads']+=1
                 if inventory_fail:req.fulfill(status=503,body='QA unavailable');return
+                if inventory_mode=='invalid_json':req.fulfill(content_type='application/json',body='{');return
+                if inventory_mode=='not_array':req.fulfill(content_type='application/json',body='{"rows":[]}');return
                 if rows is not None:req.fulfill(content_type='application/json',body=json.dumps(rows));return
+            if parsed.path=='/sheriff_listings.json' and sheriff_fail:
+                req.fulfill(status=503,body='QA sheriff unavailable');return
             if parsed.path=='/sheriff_listings.json' and rows is not None:
                 req.fulfill(content_type='application/json',body='[]');return
             req.continue_();return
@@ -190,14 +194,30 @@ with sync_playwright() as p:
     METRICS['map_destinations']={'street_view':page.locator('#modal-property-map-link').get_attribute('href'),'map':page.locator('#modal-footer-map-link').get_attribute('href')}
     record('Map footer points to Google Maps over HTTPS',lambda:yes(urlsplit(METRICS['map_destinations']['map']).scheme=='https' and urlsplit(METRICS['map_destinations']['map']).hostname=='www.google.com' and urlsplit(METRICS['map_destinations']['map']).path.startswith('/maps/'),'Map destination incorrect'))
     record('Street View uses the dedicated local page with property address',lambda:yes(urlsplit(METRICS['map_destinations']['street_view']).path=='street-view.html' and 'QA+Alpha' in METRICS['map_destinations']['street_view'],'Street View destination incorrect'))
-    record('Main modal exposes dialog semantics',lambda:yes(page.locator('#property-modal').get_attribute('role')=='dialog','Property modal lacks role=dialog and accessible dialog semantics'))
+    record('Main modal exposes dialog semantics',lambda:yes(page.locator('#property-modal').get_attribute('role')=='dialog' and page.locator('#property-modal').get_attribute('aria-modal')=='true' and page.locator('#property-modal').get_attribute('aria-labelledby')=='modal-address','Property modal lacks dialog semantics or accessible name'))
+    record('Dialog opening places focus on the property title',lambda:yes(value(page,"document.activeElement.id==='modal-address'"),'Initial focus stays outside the dialog'))
+    record('Dialog background is inert while property details are open',lambda:yes(value(page,"Array.from(document.getElementById('property-modal').parentElement.children).filter(n=>n.id!=='property-modal').every(n=>n.inert)"),'Background can still receive focus or interaction'))
+    page.evaluate("propertyModalFocusables().at(-1).focus()")
+    page.keyboard.press('Tab')
+    record('Tab wraps from the last dialog control to the first',lambda:yes(value(page,"document.activeElement===propertyModalFocusables()[0]"),'Tab escaped the dialog'))
+    page.keyboard.press('Shift+Tab')
+    record('Shift-Tab wraps from the first dialog control to the last',lambda:yes(value(page,"document.activeElement===propertyModalFocusables().at(-1)"),'Shift-Tab escaped the dialog'))
     page.keyboard.press('Escape')
     record('Escape closes the property dialog',lambda:yes(page.locator('#property-modal').is_hidden(),'Escape does not close property modal'))
+    record('Closing the dialog restores background interaction',lambda:yes(value(page,"!document.getElementById('app-header').inert"),'Background remains inert after close'))
     page.evaluate('closePropertyModal()')
     page.locator('#btn-view-grid').click()
     record('Grid and table preserve the filtered result count',lambda:yes(value(page,"document.querySelectorAll('#properties-container>div>div').length===getFilteredProperties().length"),'View switch count differs'))
     page.screenshot(path=str(OUT/'desktop-grid.png'))
     print('QA_VISUAL_DESKTOP='+base64.b64encode(page.screenshot(type='jpeg',quality=50)).decode())
+    card_opener=page.locator('#properties-container [data-property-open]').first
+    opener_key=card_opener.get_attribute('data-property-open')
+    card_opener.focus()
+    before_generation=value(page,'basicSourceGeneration')
+    page.keyboard.press('Enter')
+    record('Card property title opens details with Enter exactly once',lambda:yes(value(page,"!document.getElementById('property-modal').classList.contains('hidden')") and value(page,'basicSourceGeneration')==before_generation+1,'Card lacks a native keyboard opener or opens twice'))
+    page.keyboard.press('Escape')
+    record('Closing card details restores focus after cards rerender',lambda:yes(value(page,"document.activeElement.dataset.propertyOpen") == opener_key,'Focus did not return to the property opener'))
     record('Desktop page avoids document-level horizontal overflow',lambda:yes(value(page,"document.documentElement.scrollWidth<=innerWidth+2"),'Desktop document overflows'))
     record('Read-only browsing makes no network write requests',lambda:yes(traffic['remote_write_attempts']==0,'Network writes attempted'),'P1')
     ctx.close()
@@ -233,6 +253,8 @@ with sync_playwright() as p:
         page.screenshot(path=str(OUT/(engine+'-mobile-modal.png')))
         if engine=='webkit':print('QA_VISUAL_MOBILE='+base64.b64encode(page.screenshot(type='jpeg',quality=60)).decode())
         record(engine+' mobile modal stays within viewport width',lambda:yes(value(page,"document.getElementById('property-modal').getBoundingClientRect().width<=innerWidth+2"),'Mobile modal exceeds viewport'))
+        page.keyboard.press('Escape')
+        record(engine+' mobile Escape closes property details',lambda:yes(page.locator('#property-modal').is_hidden(),'Mobile dialog did not close'))
         record(engine+' mobile has no JavaScript exception',lambda:yes(not errors,str(errors)),'P1')
         ctx.close()
         if engine=='webkit':mobile_browser.close()
@@ -279,6 +301,65 @@ with sync_playwright() as p:
     record('Failed photo loads offer the source link and do not claim scanner failure',lambda:yes(page.locator('#modal-photo-load-status').count()==1 and 'התמונות לא נטענו' in page.locator('#modal-photo-load-status').inner_text() and 'הסריקה נכשלה' not in page.locator('#modal-source-coverage').inner_text(),'Image failure fallback text incorrect'))
     ctx.close()
 
+
+    for payload_kind in ('invalid_json','not_array'):
+        ctx,page,errors,traffic=scenario(browser,fixture_rows(),inventory_mode=payload_kind)
+        record(payload_kind+' inventory is rejected with a readable error',lambda:yes('לא נטענו' in page.locator('#properties-container').inner_text() and not errors,'Malformed inventory was accepted or crashed the page'),'P1')
+        ctx.close()
+
+    ctx,page,errors,traffic=scenario(browser,fixture_rows(),sheriff_fail=True)
+    record('Unavailable sheriff file retains the main property inventory',lambda:yes(value(page,"rawProperties.length===5&&dataLoadSummary.sheriffUnavailable===true") and not errors,'Sheriff failure discarded the main inventory'),'P1')
+    ctx.close()
+
+    ctx,page,errors,traffic=scenario(browser,[])
+    record('Empty inventory shows zero results without a false loading failure',lambda:yes(value(page,"rawProperties.length===0") and 'לא נטענו' not in page.locator('#properties-container').inner_text() and not errors,'Empty inventory treated as failed or non-empty'))
+    ctx.close()
+
+    ctx,page,errors,traffic=scenario(browser,[None,'invalid-row',{},fixture_rows()[0]])
+    record('Invalid rows do not prevent a valid property from rendering',lambda:yes(value(page,"rawProperties.length===1&&rawProperties[0].id==='QA-1'") and not errors,'Malformed rows interrupted valid inventory'),'P1')
+    ctx.close()
+
+    ctx,page,errors,traffic=scenario(browser,fixture_rows())
+    page.evaluate("""() => {
+        const originalSetItem=Storage.prototype.setItem;
+        Storage.prototype.setItem=function(key,value){
+            if(key==='pa_viewed_deals')throw new DOMException('QA storage full','QuotaExceededError');
+            return originalSetItem.call(this,key,value);
+        };
+    }""")
+    def opens_when_storage_full():
+        page.locator('#properties-container [data-property-open]').first.click()
+        return yes(page.locator('#property-modal').is_visible() and not errors,'Local storage failure stopped property details: '+str(errors))
+    record('Full local storage does not prevent opening property details',opens_when_storage_full)
+    ctx.close()
+
+    ctx,page,errors,traffic=scenario(browser,fixture_rows())
+    page.evaluate("localStorage.setItem('pa_viewed_deals','{not-json'); localStorage.setItem('pa_main_geo_selection_v1','{not-json')")
+    page.reload(wait_until='load')
+    page.wait_for_function("rawProperties.length===5")
+    record('Corrupt viewed and geographic preferences do not prevent startup',lambda:yes(not errors and page.locator('#pa-app-shell').is_visible(),'Corrupt local preferences crashed startup'))
+    ctx.close()
+
+    probe=fixture_rows()[:1]
+    probe[0]['url']='javascript:window.__qaBadSource=true'
+    ctx,page,errors,traffic=scenario(browser,probe)
+    open_first(page)
+    record('Non-HTTPS source link is hidden in property details',lambda:yes(page.locator('#modal-generic-source-link').is_hidden() and not value(page,"Boolean(window.__qaBadSource)"),'Unsafe source URL remains actionable'),'P1')
+    ctx.close()
+
+    ctx,page,errors,traffic=scenario(browser,fixture_rows())
+    page.evaluate("window.__qaWriteFail=true")
+    page.evaluate("async()=>{await toggleWatchlist(uiPropertyKey(rawProperties[1]));}")
+    record('Rejected watchlist addition is not shown as saved',lambda:yes(value(page,"!userWatchlist.has('QA-2')"),'Failed addition appeared saved'),'P1')
+    open_first(page)
+    page.evaluate("async()=>{await archiveFromModal();}")
+    record('Rejected archive write leaves the property on the board',lambda:yes(value(page,"!rawProperties[0].is_archived&&!archiveDeals['QA-1']"),'Rejected archive write removed a property'),'P1')
+    page.evaluate("window.__qaWriteFail=false")
+    page.evaluate("async()=>{await archiveFromModal();}")
+    record('Acknowledged archive records the property identity in memory',lambda:yes(value(page,"rawProperties[0].is_archived&&Boolean(archiveDeals['QA-1'].identity_key)"),'Archive did not retain a safe identity binding'),'P1')
+    record('Archive tests send no real write requests',lambda:yes(traffic['remote_write_attempts']==0,'Archive test attempted a network write'),'P1')
+    ctx.close()
+
     probe=fixture_rows()[:1]
     probe[0]['address']='<img src="/qa-missing-address" onerror="window.__qaAddressMarkup=true"> QA Safe St'
     ctx,page,errors,traffic=scenario(browser,probe)
@@ -298,7 +379,8 @@ server.shutdown()
 report={'checked_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
  'scope':'Current index.html and real saved inventory; browser authentication/database are mocks, remote writes and providers are blocked.',
  'live_authentication_or_rls_tested':False,'live_photo_or_maps_availability_tested':False,
- 'product_code_changed':False,'results':RESULTS,'metrics':METRICS,
+ 'application_source_scope':'Checked-out QA branch with candidate fixes; not deployed to production',
+ 'live_product_code_changed':False,'results':RESULTS,'metrics':METRICS,
  'summary':{'checks':len(RESULTS),'passed':sum(r['status']=='pass' for r in RESULTS),'failed':sum(r['status']=='fail' for r in RESULTS)}}
 (OUT/'browser-audit.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
 print('QA_BROWSER='+json.dumps(report,ensure_ascii=False))
