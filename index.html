@@ -943,6 +943,7 @@
         let activeCategory = 'all';
         let watchlistFilterActive = false;
         let userWatchlist = new Set();
+        const watchlistPendingIds = new Set();
         let pipelineDeals = [];
         let currentSelectedProperty = null;
         let currentViewMode = 'table';
@@ -1422,6 +1423,7 @@
             const includeUnknown = document.getElementById('filter-unknown-price')?.checked !== false;
             return rawProperties.filter(p => {
                 if (!propertyMatchesSearch(p, terms)) return false;
+                if (latestNewFilterActive && !isLatestNewProperty(p)) return false;
                 if (isPipelineProperty(p)) return false;
                 if (watchlistFilterActive && !isWatchlistedProperty(p)) return false;
                 if (activeCategory === 'archive' ? !p.is_archived : (p.is_archived || !matchesSourceCategory(p, activeCategory))) return false;
@@ -2256,14 +2258,22 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             if (event) event.stopPropagation();
             const p = rawProperties.find(row => uiPropertyKey(row) === String(key)) || rawProperties.find(row => String(row.id) === String(key));
             if (!cloudActionAllowed(p, 'watchlist')) return;
-            const id = String(p.id), remove = userWatchlist.has(id);
+            const id = String(p.id);
+            if (watchlistPendingIds.has(id)) return;
+            const remove = userWatchlist.has(id);
+            watchlistPendingIds.add(id);
             try {
+                renderCards(); updateModalWatchlistState();
                 const result = remove ? await supabaseClient.from('user_watchlist').delete().eq('property_id', id)
                     : await supabaseClient.from('user_watchlist').upsert({property_id: id});
                 if (result.error) throw result.error;
                 if (remove) userWatchlist.delete(id); else userWatchlist.add(id);
-                updateWatchlistCountDisplay(); renderCards(); updateModalWatchlistState();
+                updateWatchlistCountDisplay();
             } catch (error) { alert('השינוי במעקב לא נשמר בשרת. הבחירה הקודמת נשמרה.'); }
+            finally {
+                watchlistPendingIds.delete(id);
+                renderCards(); updateModalWatchlistState();
+            }
         }
 
         function toggleWatchlistFromModal() { if (currentSelectedProperty) toggleWatchlist(currentSelectedProperty.id); }
@@ -3186,7 +3196,6 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             const container = document.getElementById('properties-container');
             const displayNumberById = new Map(rawProperties.map((p, index) => [uiPropertyKey(p), index + 1]));
             let filtered = getFilteredProperties();
-            if (latestNewFilterActive) filtered = filtered.filter(isLatestNewProperty);
             const sortBy = document.getElementById('sort-by')?.value || 'date_desc';
             if (sortBy === 'date_desc') filtered.sort((a, b) => parseDate(b.listed_date) - parseDate(a.listed_date));
             else if (sortBy === 'price_asc') filtered.sort((a, b) => (getMarketAskingPrice(a) ?? Infinity) - (getMarketAskingPrice(b) ?? Infinity));
@@ -3198,6 +3207,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 container.innerHTML = `<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-x-auto shadow-xl custom-scrollbar"><table class="props-table text-right text-xs"><thead><tr class="bg-gray-950 text-gray-400 border-b border-gray-800 font-bold"><th class="p-3 col-location">מיקום</th><th class="p-3 col-price">מחיר</th><th class="p-3 col-area">שטח מגורים</th><th class="p-3 col-features">מאפיינים</th><th class="p-3 col-yield">שכירות / תשואה ברוטו</th><th class="p-3 col-date">תאריך</th><th class="p-3 col-actions text-center">פעולות</th></tr></thead><tbody class="divide-y divide-gray-800/60 font-medium text-gray-200">
                 ${filtered.map((p, index) => {
                     const isW = isWatchlistedProperty(p), isT = p.strategy==='turnkey';
+                    const watchlistPending = watchlistPendingIds.has(String(p.id));
                     const isV = viewedDeals.has(uiPropertyKey(p)) || (!p._idAmbiguous && viewedDeals.has(String(p.id)));
                     const askingPrice = getMarketAskingPrice(p);
                     const finance = financialSnapshot(p);
@@ -3220,11 +3230,12 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                         <td class="p-3 font-bold text-gray-300 whitespace-nowrap">${featureDisplayHtml(p)}</td>
                         <td class="p-3">${financialDisplayHtml(p)}</td>
                         <td class="p-3 font-mono text-amber-300">${propertyDateDisplayHtml(p)}</td>
-                        <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${uiPropertyKey(p)}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${uiPropertyKey(p)}', event)" class="p-1 bg-gray-800 rounded text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
+                        <td class="p-3 text-center space-x-2 space-x-reverse" onclick="event.stopPropagation()"><button onclick="openPropertyModal('${uiPropertyKey(p)}')" class="px-2 py-1 bg-gray-800 hover:bg-blue-600 text-blue-300 hover:text-white rounded transition">פרטים</button><button onclick="toggleWatchlist('${uiPropertyKey(p)}', event)" ${watchlistPending ? 'disabled' : ''} aria-busy="${watchlistPending}" class="p-1 bg-gray-800 rounded text-amber-400 disabled:opacity-50 disabled:cursor-wait"><i data-lucide="star" class="w-4 h-4 ${isW?'fill-amber-400':''}"></i></button></td>
                     </tr>`}).join('')}</tbody></table></div>`;
             } else {
                 container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">` + filtered.map((p, index) => {
                     const isW = isWatchlistedProperty(p), isT = p.strategy==='turnkey';
+                    const watchlistPending = watchlistPendingIds.has(String(p.id));
                     const isV = viewedDeals.has(uiPropertyKey(p)) || (!p._idAmbiguous && viewedDeals.has(String(p.id)));
                     const askingPrice = getMarketAskingPrice(p);
                     const finance = financialSnapshot(p);
@@ -3241,7 +3252,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                                 ${p.probate_keyword_candidate ? `<span class="bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-black text-[10px] px-2 py-1 rounded-md">🧾 מועמד עיזבון</span>` : ''}
                             </div>
 
-                            <button onclick="toggleWatchlist('${uiPropertyKey(p)}', event)" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
+                            <button onclick="toggleWatchlist('${uiPropertyKey(p)}', event)" ${watchlistPending ? 'disabled' : ''} aria-busy="${watchlistPending}" class="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-950/80 text-gray-400 z-10 hover:text-amber-400 disabled:opacity-50 disabled:cursor-wait"><i data-lucide="star" class="w-4 h-4 ${isW?'text-amber-400 fill-amber-400':''}"></i></button>
                             
                             <h4 class="text-xl font-black text-white group-hover:text-blue-400 mt-6 flex items-center gap-2 min-w-0" title="${escapeHtml(p.address)}"><span class="property-number-badge" title="מספר נכס במאגר הטעון">${displayNumberById.get(uiPropertyKey(p)) ?? index + 1}</span><span class="truncate">${escapeHtml(p.address)}</span></h4><p class="text-xs text-gray-400 mb-2 truncate" title="${escapeHtml(propertyCityDisplay(p))}">${escapeHtml(propertyCityDisplay(p))}</p>${propertyStatusDisplayHtml(p)}
                             <div class="text-2xl font-black text-emerald-400 font-mono mb-2">${propertyPriceDisplayHtml(p)}${priceDropDetailsHtml(p)}</div>
@@ -3679,8 +3690,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function updateModalWatchlistState() {
             if (!currentSelectedProperty) return;
             const w = isWatchlistedProperty(currentSelectedProperty);
-            document.getElementById('modal-watchlist-btn').disabled = Boolean(currentSelectedProperty._idAmbiguous || !cloudReady.watchlist);
-            document.getElementById('modal-watchlist-text').textContent = w ? 'במעקב ✓' : 'הוסף למעקב';
+            const pending = watchlistPendingIds.has(String(currentSelectedProperty.id));
+            document.getElementById('modal-watchlist-btn').disabled = Boolean(pending || currentSelectedProperty._idAmbiguous || !cloudReady.watchlist);
+            document.getElementById('modal-watchlist-btn').setAttribute('aria-busy', String(pending));
+            document.getElementById('modal-watchlist-text').textContent = pending ? 'שומר…' : w ? 'במעקב ✓' : 'הוסף למעקב';
             document.getElementById('modal-watchlist-btn').className = w ? 'p-2.5 rounded-xl bg-amber-500 text-gray-950 font-black text-xs flex gap-1.5' : 'p-2.5 rounded-xl bg-gray-800 text-amber-400 font-bold text-xs flex gap-1.5';
         }
 
