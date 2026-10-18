@@ -19,6 +19,9 @@ OUT.mkdir(exist_ok=True)
 HTML=(ROOT/'index.html').read_text()
 OWNER=re.search(r"const PA_OWNER_ID\s*=\s*'([^']+)'",HTML).group(1)
 INVENTORY=json.loads((ROOT/'properties.json').read_text())
+PROFILE=json.loads((ROOT/'scan_config.json').read_text())
+CEILING=float(PROFILE['maxPrice'])
+BACKGROUND_PRICE=CEILING+5000
 RESULTS=[]
 METRICS={}
 ASSETS={}
@@ -30,7 +33,7 @@ for key,url in [('tailwind','https://cdn.tailwindcss.com'),('lucide','https://un
         METRICS[key+'_sha256']=hashlib.sha256(raw).hexdigest()
 
 SDK=r"""
-window.__qaWrites=[];window.__qaDb={};
+window.__qaWrites=[];window.__qaDb={};window.__qaWriteFail=false;
 if(!sessionStorage.getItem('qa-auth-mode'))sessionStorage.setItem('qa-auth-mode',__MODE__);
 const qaOwner=__OWNER__;
 let qaAuthCallback=null;
@@ -41,8 +44,8 @@ window.supabase={createClient:()=>({
  signOut:async()=>{sessionStorage.setItem('qa-auth-mode','none');return{error:null};}},
  from:table=>({
  select:async()=>({data:window.__qaDb[table]||[],error:__CLOUD_FAIL__?{message:'QA cloud unavailable'}:null}),
- upsert:async data=>{window.__qaWrites.push({table,operation:'upsert',data});return{error:null};},
- delete:()=>({eq:async(key,value)=>{window.__qaWrites.push({table,operation:'delete',key,value});return{error:null};}})
+ upsert:async data=>{window.__qaWrites.push({table,operation:'upsert',data});return{error:window.__qaWriteFail?{message:'QA rejected save'}:null};},
+ delete:()=>({eq:async(key,value)=>{window.__qaWrites.push({table,operation:'delete',key,value});return{error:window.__qaWriteFail?{message:'QA rejected save'}:null};}})
  })
 })};
 """
@@ -57,7 +60,7 @@ LOCAL='http://127.0.0.1:8765/'
 
 def fixture_rows():
     rows=[]
-    for i,(word,price,kind) in enumerate([('Alpha',90000,'Single Family'),('Beta',120000,'Multi-Family'),('Gamma',160000,'Single Family'),('Unknown',None,'Single Family'),('Background',180000,'Single Family')],1):
+    for i,(word,price,kind) in enumerate([('Alpha',90000,'Single Family'),('Beta',120000,'Multi-Family'),('Gamma',160000,'Single Family'),('Unknown',None,'Single Family'),('Background',BACKGROUND_PRICE,'Single Family')],1):
         rows.append({'id':'QA-'+str(i),'source_type':'mls','address':str(i*100)+' QA '+word+' St',
           'city':'Pittsburgh','county':'Allegheny','state':'PA','zip':'15235','price':price,
           'beds':2,'baths':1,'sqft':1000,'type':kind,'listed_date':'2026-10-'+str(18-i).zfill(2),
@@ -158,7 +161,7 @@ with sync_playwright() as p:
     ctx,page,errors,traffic=scenario(browser,fixture_rows())
     record('Owner fixture boot has no JavaScript exceptions',lambda:yes(not errors,str(errors)),'P1')
     record('Desktop document uses RTL Hebrew',lambda:yes(value(page,"document.documentElement.dir==='rtl'&&document.documentElement.lang==='he'"),'Missing RTL metadata'))
-    record('Default board respects configured ceiling',lambda:yes(value(page,"!getFilteredProperties().some(p=>p.price===180000)"),'Above-budget listing shown'))
+    record('Default board respects configured ceiling',lambda:yes(value(page,"!getFilteredProperties().some(p=>p.id==='QA-5')"),'Above-budget listing shown'))
     page.locator('#filter-max-price').fill('120000')
     record('Typed maximum is formatted and filters inclusively',lambda:yes(page.locator('#filter-max-price').input_value()=='120,000' and value(page,"getFilteredProperties().some(p=>p.id==='QA-2')&&!getFilteredProperties().some(p=>p.id==='QA-3')"),'Typed maximum incorrect'))
     page.locator('#filter-unknown-price').uncheck()
@@ -184,7 +187,9 @@ with sync_playwright() as p:
     page.locator('#properties-container tbody tr').first.click()
     record('Native row click opens the correct property',lambda:yes('QA Alpha' in page.locator('#modal-address').inner_text(),'Wrong property opened'))
     record('Missing financial evidence is not displayed as a calculated yield',lambda:yes('אין נתון מבוסס' in page.locator('#modal-yield').inner_text(),'Unverified yield displayed'),'P1')
-    record('Map link points to Google Maps over HTTPS',lambda:yes(page.locator('#modal-property-map-link').get_attribute('href').startswith('https://www.google.com/maps/'),'Map destination incorrect'))
+    METRICS['map_destinations']={'street_view':page.locator('#modal-property-map-link').get_attribute('href'),'map':page.locator('#modal-footer-map-link').get_attribute('href')}
+    record('Map footer points to Google Maps over HTTPS',lambda:yes(urlsplit(METRICS['map_destinations']['map']).scheme=='https' and urlsplit(METRICS['map_destinations']['map']).hostname=='www.google.com' and urlsplit(METRICS['map_destinations']['map']).path.startswith('/maps/'),'Map destination incorrect'))
+    record('Street View uses the dedicated local page with property address',lambda:yes(urlsplit(METRICS['map_destinations']['street_view']).path=='street-view.html' and 'QA+Alpha' in METRICS['map_destinations']['street_view'],'Street View destination incorrect'))
     record('Main modal exposes dialog semantics',lambda:yes(page.locator('#property-modal').get_attribute('role')=='dialog','Property modal lacks role=dialog and accessible dialog semantics'))
     page.keyboard.press('Escape')
     record('Escape closes the property dialog',lambda:yes(page.locator('#property-modal').is_hidden(),'Escape does not close property modal'))
@@ -192,6 +197,7 @@ with sync_playwright() as p:
     page.locator('#btn-view-grid').click()
     record('Grid and table preserve the filtered result count',lambda:yes(value(page,"document.querySelectorAll('#properties-container>div>div').length===getFilteredProperties().length"),'View switch count differs'))
     page.screenshot(path=str(OUT/'desktop-grid.png'))
+    print('QA_VISUAL_DESKTOP='+base64.b64encode(page.screenshot(type='jpeg',quality=50)).decode())
     record('Desktop page avoids document-level horizontal overflow',lambda:yes(value(page,"document.documentElement.scrollWidth<=innerWidth+2"),'Desktop document overflows'))
     record('Read-only browsing makes no network write requests',lambda:yes(traffic['remote_write_attempts']==0,'Network writes attempted'),'P1')
     ctx.close()
@@ -201,6 +207,8 @@ with sync_playwright() as p:
     record('Complete current saved inventory renders',lambda:yes(value(page,"rawProperties.length>0&&databaseProperties.length>=rawProperties.length"),'Saved inventory not rendered'),'P1')
     record('Complete saved inventory causes no JavaScript exception',lambda:yes(not errors,str(errors)),'P1')
     METRICS['public_api_reads_on_boot']=traffic['github_reads']
+    METRICS['board_scan_price_range']=value(page,'boardScanPriceRange')
+    METRICS['fixture_background_price']=BACKGROUND_PRICE
     page.screenshot(path=str(OUT/'desktop-current-inventory.png'))
     eligible=value(page,"rawProperties.filter(p=>!p._idAmbiguous).slice(0,14).map(p=>uiPropertyKey(p))")
     before=traffic['github_reads']
@@ -223,6 +231,7 @@ with sync_playwright() as p:
         open_first(page)
         record(engine+' mobile can open property details',lambda:yes(page.locator('#modal-address').is_visible(),'Modal address offscreen'))
         page.screenshot(path=str(OUT/(engine+'-mobile-modal.png')))
+        if engine=='webkit':print('QA_VISUAL_MOBILE='+base64.b64encode(page.screenshot(type='jpeg',quality=60)).decode())
         record(engine+' mobile modal stays within viewport width',lambda:yes(value(page,"document.getElementById('property-modal').getBoundingClientRect().width<=innerWidth+2"),'Mobile modal exceeds viewport'))
         record(engine+' mobile has no JavaScript exception',lambda:yes(not errors,str(errors)),'P1')
         ctx.close()
@@ -236,6 +245,38 @@ with sync_playwright() as p:
 
     ctx,page,errors,traffic=scenario(browser,fixture_rows(),inventory_fail=True)
     record('Inventory fetch failure displays a readable error',lambda:yes('לא נטענו' in page.locator('#properties-container').inner_text(),'Inventory failure hidden'),'P1')
+    ctx.close()
+
+
+    # All SDK writes below remain in memory; every actual POST/DELETE is blocked.
+    ctx,page,errors,traffic=scenario(browser,fixture_rows())
+    page.evaluate("async()=>{await toggleWatchlist(uiPropertyKey(rawProperties[0]));}")
+    record('Watchlist add updates the in-memory UI only after acknowledgment',lambda:yes(value(page,"userWatchlist.has('QA-1')&&window.__qaWrites[0].table==='user_watchlist'&&window.__qaWrites[0].operation==='upsert'"),'Watchlist add did not acknowledge'),'P1')
+    page.evaluate("window.__qaWriteFail=true")
+    page.evaluate("async()=>{await toggleWatchlist(uiPropertyKey(rawProperties[0]));}")
+    record('Rejected watchlist removal preserves prior selection',lambda:yes(value(page,"userWatchlist.has('QA-1')"),'Failed save discarded watchlist selection'),'P1')
+    page.evaluate("window.__qaWriteFail=false")
+    page.evaluate("async()=>{await toggleWatchlist(uiPropertyKey(rawProperties[0]));}")
+    record('Acknowledged watchlist removal updates the selection',lambda:yes(value(page,"!userWatchlist.has('QA-1')"),'Acknowledged removal not reflected'),'P1')
+    record('Watchlist tests send no real write requests',lambda:yes(traffic['remote_write_attempts']==0,'Unexpected real network write'),'P1')
+    ctx.close()
+
+    # Simulated API quota still permits the existing local JSON fallback.
+    ctx,page,errors,traffic=scenario(browser,None,api_limit=2)
+    page.evaluate("openPropertyModal('PA-MLS-1774373')")
+    page.wait_for_timeout(900)
+    record('GitHub API 403 retains the board without JavaScript exceptions',lambda:yes(not errors and value(page,"rawProperties.length>0"),str(errors)),'P1')
+    record('GitHub API 403 still loads saved photo links through local fallback',lambda:yes(page.locator('#modal-additional-source-photos img').count()==3,'Cached saved photo links unavailable during API limit'))
+    METRICS['api_limit_fallback']={'github_reads':traffic['github_reads'],'gallery_images':page.locator('#modal-additional-source-photos img').count()}
+    ctx.close()
+
+    ctx,page,errors,traffic=scenario(browser,None,images_fail=True)
+    page.evaluate("openPropertyModal('PA-MLS-1774373')")
+    page.wait_for_timeout(500)
+    gallery=page.locator('#modal-additional-source-photos')
+    if gallery.count():gallery.scroll_into_view_if_needed()
+    page.wait_for_timeout(1200)
+    record('Failed photo loads offer the source link and do not claim scanner failure',lambda:yes(page.locator('#modal-photo-load-status').count()==1 and 'התמונות לא נטענו' in page.locator('#modal-photo-load-status').inner_text() and 'הסריקה נכשלה' not in page.locator('#modal-source-coverage').inner_text(),'Image failure fallback text incorrect'))
     ctx.close()
 
     probe=fixture_rows()[:1]

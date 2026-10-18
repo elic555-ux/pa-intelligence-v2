@@ -18,5 +18,6 @@ probes run only against local response fixtures, never production data.
 Run data_audit.py, then browser_audit.py. The generated JSON findings and
 desktop/mobile screenshots are uploaded as a seven-day Actions artifact.
 The script records individual failures so one defect does not suppress other
-scenarios. A passed infrastructure job is not an all-clear for product QA:
-read the findings JSON and the report. No product code is modified by this suite.
+scenarios. The final workflow step fails when any browser finding remains open;
+all earlier scenarios and evidence upload still run. Read the findings JSON
+and the report for severity and scope. No product code is modified by this suite.

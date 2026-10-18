@@ -51,3 +51,13 @@ jobs:
           name: system-qa-evidence
           path: qa-results/
           retention-days: 7
+      - name: Surface product QA findings
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('qa-results/browser-audit.json').read_text())
+          count=report['summary']['failed']
+          print(f"Product QA findings requiring review: {count}")
+          raise SystemExit(1 if count else 0)
+          PY

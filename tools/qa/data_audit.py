@@ -22,6 +22,7 @@ def number(value):
 rows=read('properties.json',[])
 sheriff=read('sheriff_listings.json',[])
 checks={}
+date_formats=Counter()
 checks['properties_is_array']=isinstance(rows,list)
 checks['sheriff_is_array']=isinstance(sheriff,list)
 if not all(checks.values()): raise SystemExit('Inventory must contain arrays')
@@ -48,9 +49,14 @@ for row in valid:
     text=str(row.get('listed_date') or '')
     if text:
         try:
-            day=datetime.fromisoformat(text.replace('Z','+00:00')).date()
+            if '/' in text:
+                day=datetime.strptime(text,'%d/%m/%Y').date()
+                date_formats['day/month/year']+=1
+            else:
+                day=datetime.fromisoformat(text.replace('Z','+00:00')).date()
+                date_formats['iso']+=1
             if day>datetime.now(timezone.utc).date(): issues['future_listing_date'].append(identifier)
-        except ValueError: issues['non_iso_listing_date'].append(identifier)
+        except ValueError: issues['invalid_listing_date'].append(identifier)
 photos=[]
 for path in (ROOT/'COMPS_REPORTS/listing_photos').glob('*.json'):
     record=json.loads(path.read_text())
@@ -70,6 +76,7 @@ report={
  'duplicate_id_rows':sum(len(v) for v in ids.values() if len(v)>1),
  'issues':{k:{'count':len(v),'example_ids':v[:5]} for k,v in issues.items()},
  'photo_receipts':photos,
+ 'listing_date_formats':dict(date_formats),
  'completion':{k:status.get(k) for k in ('version','checked_at','status','eligible_properties','pending','photo_pending','review_required','new_rentcast_calls')},
  'completion_settings':profile.get('completionSettings'),
  'checks':checks,
