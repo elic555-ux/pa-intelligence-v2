@@ -20,6 +20,11 @@ on:
       - 'street-view.html'
       - 'street-view.js'
       - 'test_street_view.cjs'
+      - 'street-view-local-settings.js'
+      - 'test_street_view_local_settings.cjs'
+      - 'street-view-preview.js'
+      - 'street-view-preview-config.json'
+      - 'test_street_view_preview.cjs'
       - 'test_inventory_source_identity.py'
       - 'tarasa_listing_source.py'
       - 'secondary_listing_source.py'
@@ -98,6 +103,8 @@ jobs:
           node test_saved_property_identity.cjs
           node test_property_maps.cjs
           node test_street_view.cjs
+          node test_street_view_preview.cjs
+          node test_street_view_local_settings.cjs
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
