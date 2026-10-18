@@ -57,12 +57,34 @@ def input_fingerprint(repo, profile, today=None):
     ambiguous = aliases.get('ambiguous', {})
     if not isinstance(ambiguous, dict):
         raise ValueError('Invalid saved identity aliases')
-    inputs = {'subjects': sorted(subjects), 'maxPrice': profile.get('maxPrice'),
+    photo_sources = []
+    if (profile.get('completionSettings') or {}).get('photoFallbackEnabled') is True:
+        for provider in ('tarasa', 'clearchoice'):
+            root = repo / 'COMPS_REPORTS/additional_sources' / provider
+            for path in sorted(root.glob('*.json')):
+                record = json.loads(path.read_text(encoding='utf-8'))
+                if str(record.get('property_id')) in property_ids:
+                    photo_sources.append([provider, path.name, record.get('inventory_source_url'),
+                                          record.get('identity'), record.get('photos')])
+    inputs = {'photo_sources': photo_sources, 'subjects': sorted(subjects), 'maxPrice': profile.get('maxPrice'),
               'startDate': (profile.get('completionSettings') or {}).get('startDate'),
               'ambiguous_subjects': sorted(property_ids.intersection(ambiguous))}
     return hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
 
 
-def idle_unchanged(repo, profile, state, today=None):
+def idle_unchanged(repo, profile, state, today=None, current=None):
+    if (profile.get('completionSettings') or {}).get('photoFallbackEnabled') is True:
+        if state.get('photo_fallback_schema') != 1:
+            return False
+        value = state.get('next_photo_check_at')
+        if value:
+            try:
+                when = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+                if when.tzinfo is None:
+                    when = when.replace(tzinfo=timezone.utc)
+                if when <= (current or datetime.now(timezone.utc)):
+                    return False
+            except (ValueError, TypeError):
+                return False
     return (state.get('worker_state') == 'idle'
             and state.get('input_fingerprint') == input_fingerprint(repo, profile, today))

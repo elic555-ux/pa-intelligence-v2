@@ -203,13 +203,39 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         ctx.p.address='12 First St';run('renderPropertyAreaFacts(p)');
     });
     check('all original property data and financial inputs remain unchanged',()=>assert.equal(JSON.stringify(ctx.p),before));
-    check('normal opening only reads four GitHub snapshots',()=>{
-        assert.equal(calls.length,4);assert.ok(calls.every(([url,options])=>url.startsWith('https://api.github.com/')&&!options?.method));
+    check('normal opening only reads five GitHub snapshots',()=>{
+        assert.equal(calls.length,5);assert.ok(calls.every(([url,options])=>url.startsWith('https://api.github.com/')&&!options?.method));
     });
     check('documented original fact still has precedence',()=>{
         ctx.p.technical_facts.roof_type={value:'Metal',source:'Contractor inspection'};
         assert.equal(run("propertyTechnicalFact(p,'roof_type').value"),'Metal');delete ctx.p.technical_facts.roof_type;
     });
+    const backupSource='https://www.coldwellbankerhomes.com/pa/pittsburgh/12-first-st/pid_12345/';
+    const backup={schema:1,property_id:row.id,listing_id:'1001',identity:api.identity(row),county:'Allegheny',
+        inventory_source_url:row.url,status:'available',photos:[1,2,3].map(n=>({
+            url:'https://m1.cbhomes.com/p/716/1001/image'+n+'.jpg',source_url:backupSource,source_name:'Coldwell Banker / MLS',
+            provider:'coldwellbanker',listing_id:'1001',checked_at:new Date().toISOString(),
+            verification:{status:'image_verified',content_type:'image/jpeg',bytes:200,sha256:'a'.repeat(64)}}))};
+    ctx.fetch=async(url,options)=>{
+        const result=url.includes('/listing_photos/')?backup:url.includes('/tarasa/')?tarasa:{};
+        return {ok:true,json:async()=>({encoding:'base64',content:Buffer.from(JSON.stringify(result)).toString('base64')})};
+    };
+    await ctx.window.SecondarySourceEvidence.load(ctx.p,1);
+    check('verified backup photos render with the correct source link',()=>{
+        const gallery=dom.getElementById('modal-additional-source-photos');
+        assert.equal(gallery.children[0].children[0].src,backup.photos[0].url);
+        assert.equal(gallery.children[0].href,backupSource);
+        assert.match(dom.getElementById('modal-photo-load-status').textContent,/בודק/);
+    });
+    check('browser load failure advances to an unused stored source photo',()=>{
+        const gallery=dom.getElementById('modal-additional-source-photos'),a=gallery.children[0],img=a.children[0];
+        img.onerror();
+        assert.equal(img.src,tarasa.photos[0].url);
+        assert.equal(a.href,tarasa.source_url);
+        img.onload();
+        assert.match(dom.getElementById('modal-photo-load-status').textContent,/בדפדפן: 1/);
+    });
+    check('fallback evidence never changes inventory or financial inputs',()=>assert.equal(JSON.stringify(ctx.p),before));
     const erieFile=path.join(__dirname,'test_fixtures/eriemoves_maxwell.json');
     const erie=JSON.parse(fs.readFileSync(erieFile,'utf8'));
     ctx.p={id:erie.property_id,docket_id:'MLS-'+erie.listing_id,source_type:'mls',address:'4117 Maxwell Ave',
@@ -237,7 +263,7 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
     });
     check('Erie rendering keeps inventory and financial data unchanged',()=>assert.equal(JSON.stringify(ctx.p),erieBefore));
     check('Erie opening reads existing snapshots without a workflow request',()=>{
-        assert.equal(calls.length,4);
+        assert.equal(calls.length,5);
         assert.ok(calls.every(([url,options])=>url.startsWith('https://api.github.com/')&&!options?.method));
     });
     const gallery=dom.getElementById('modal-additional-source-photos');
@@ -270,12 +296,12 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         assert.equal(gallery.children[0].href,hanna.source_url);
     });
     check('Howard Hanna opening preserves inventory and financial inputs without workflow requests',()=>{
-        assert.equal(JSON.stringify(ctx.p),hannaBefore);assert.equal(calls.length,4);
+        assert.equal(JSON.stringify(ctx.p),hannaBefore);assert.equal(calls.length,5);
         assert.ok(calls.every(([url,options])=>url.startsWith('https://api.github.com/')&&!options?.method));
     });
     const resolvers=[];let started;
     const ready=new Promise(resolve=>{started=resolve;});
-    ctx.fetch=()=>new Promise(resolve=>{resolvers.push(resolve);if(resolvers.length===4)started();});
+    ctx.fetch=()=>new Promise(resolve=>{resolvers.push(resolve);if(resolvers.length===5)started();});
     const pending=ctx.window.SecondarySourceEvidence.load(ctx.p,1);await ready;
     run('basicSourceGeneration=2;currentSelectedProperty=null');
     const prior=dom.getElementById('modal-additional-source-notice').textContent;

@@ -138,7 +138,45 @@
             return 'אין מפרט נוסף שמור לנכס זה. השלמה אוטומטית ממקור נוסף עדיין אינה זמינה למחוז Erie.';
         return 'טרם נאסף מפרט נוסף לנכס זה. ההשלמה תלויה בגישה למקור ובמידע שהוא מפרסם.';
     }
-    const api={identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
+    function fallbackPhotos(p,record) {
+        if (!record || record.schema!==1 || p._idAmbiguous || p.source_type!=='mls' ||
+            record.property_id!==String(p.id) || record.listing_id!==listing(p) ||
+            JSON.stringify(record.identity)!==JSON.stringify(identity(p)) ||
+            record.county!==String(p.county || '').replace(/ County$/,'') ||
+            record.inventory_source_url!==inventoryUrl(p.url)) return [];
+        const result=[],seen=new Set();
+        for (const photo of Array.isArray(record.photos)?record.photos:[]) {
+            try {
+                const image=new URL(photo.url),source=new URL(photo.source_url);
+                const provider=photo.provider,check=photo.verification;
+                const sourceAllowed=provider==='saved_source' ? Boolean(sourceUrl(source.href)) :
+                    provider==='coldwellbanker' ? source.hostname==='www.coldwellbankerhomes.com' && /^\/pa\/[a-z0-9-]+\/[a-z0-9-]+\/pid_\d+\/$/.test(source.pathname) :
+                    provider==='weichert' && source.hostname==='www.weichert.com' && /^\/\d+\/?$/.test(source.pathname);
+                if(!sourceAllowed || source.protocol!=='https:' || source.username || source.password || source.search || source.hash ||
+                    (source.port && source.port!=='443') || photo.listing_id!==listing(p) ||
+                    image.protocol!=='https:' || image.username || image.password || image.search || image.hash ||
+                    (image.port && image.port!=='443') ||
+                    !['cdn.listingphotos.sierrastatic.com','m.cbhomes.com','m1.cbhomes.com','m2.cbhomes.com','m3.cbhomes.com','d36xftgacqn2p.cloudfront.net'].includes(image.hostname) ||
+                    !/^\/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp)$/i.test(image.pathname) ||
+                    check?.status!=='image_verified' || !['image/jpeg','image/png','image/webp'].includes(check.content_type) ||
+                    !/^[a-f0-9]{64}$/.test(check.sha256) || !(check.bytes>=100 && check.bytes<=3000000) ||
+                    !Number.isFinite(Date.parse(photo.checked_at)) || seen.has(image.href)) continue;
+                seen.add(image.href);result.push(photo);
+            } catch(_) {}
+        }
+        return result.slice(0,3);
+    }
+    function fallbackNotice(p,record) {
+        if(!record || record.property_id!==String(p.id) ||
+            JSON.stringify(record.identity)!==JSON.stringify(identity(p)) ||
+            record.inventory_source_url!==inventoryUrl(p.url)) return '';
+        const count=fallbackPhotos(p,record).length;
+        if(count) return 'בדיקת מקורות נוספים: '+count+' קישורי תמונות החזירו קובץ תמונה בעת הבדיקה; הטעינה בדפדפן נבדקת בנפרד.';
+        const attempts=Array.isArray(record.attempts)?record.attempts:[];
+        return attempts.length ? 'מקורות תמונות שנבדקו: '+attempts.map(a=>({saved_source:'המקור השמור',coldwellbanker:'Coldwell Banker',weichert:'Weichert'}[a.provider] || '')).filter(Boolean).join(', ')+
+            '. '+(record.sources_exhausted?'לא נמצאו תמונות זמינות במקורות שנבדקו; הסריקה ממשיכה.':'טרם הושלמו תמונות זמינות; הסריקה ממשיכה.') : '';
+    }
+    const api={fallbackPhotos,fallbackNotice,identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
     if (typeof module !== 'undefined' && module.exports) { module.exports=api; return; }
     root.SecondarySourceEvidence=api;
     if (typeof document === 'undefined' || typeof openPropertyModal !== 'function') return;
@@ -162,7 +200,7 @@
         technicalPanel.appendChild(style);
     }
 
-    const records=new WeakMap(), attempts=new WeakMap(), baseFact=propertyTechnicalFact, baseOpen=openPropertyModal, baseTranslate=translateListingFact;
+    const photoReceipts=new WeakMap(), records=new WeakMap(), attempts=new WeakMap(), baseFact=propertyTechnicalFact, baseOpen=openPropertyModal, baseTranslate=translateListingFact;
     translateListingFact=function(v) {
         const translations={'composition':'גג מחומר מרוכב','forced air, gas':'חימום אוויר מאולץ בגז','wall/window unit(s)':'יחידות קיר/חלון',
             'full, walk-out access':'מרתף מלא עם יציאה החוצה','public':'רשת ציבורית','colonial, ranch':'Colonial, Ranch'};
@@ -205,7 +243,7 @@
         const supported=!p._idAmbiguous && p.source_type==='mls' && listing(p) && ['Allegheny','Erie'].includes(p.county);
         n.hidden=!supported; if(!supported) return;
         n.appendChild(element('h4','מפרט ותמונות שנאספו','text-blue-300 font-bold mb-2'));
-        const items=ordered(p,records.get(p)), r=items[0];
+        const items=ordered(p,records.get(p)), r=items[0], receipt=photoReceipts.get(p), extras=fallbackPhotos(p,receipt);
         const origin=p.listing_identifier_origin;
         const originText=origin==='redfin_csv_mls_column' ? 'מספר המודעה התקבל מקובץ הסריקה של Redfin.' :
             origin==='address_fallback' ? 'מזהה הנכס נוצר מהכתובת כי מספר MLS לא הופיע בסריקה.' :
@@ -215,13 +253,13 @@
         const identityStatus=element('p',originText+verified,'text-sm text-gray-300 my-2');
         identityStatus.id='modal-listing-identity-status'; n.appendChild(identityStatus);
         const status=element('p','','text-xs text-gray-400 my-2'); status.id='modal-additional-source-notice'; n.appendChild(status);
-        const coverage=element('p',collectionNotice(p,attempts.get(p) || items),'text-sm text-gray-300 my-2');
+        const coverage=element('p',collectionNotice(p,attempts.get(p) || items)+' '+fallbackNotice(p,receipt),'text-sm text-gray-300 my-2');
         coverage.id='modal-source-coverage'; n.appendChild(coverage);
-        if(!r) { status.textContent=message; return; }
-        const dated=parseDate(r.retrieved_at) ? displayDate(r.retrieved_at) : 'תאריך לא ידוע';
-        status.textContent=message || 'פרטים שמורים ממודעת '+PROVIDERS[r.provider].name+' · נאספו: '+dated+
+        if(!r && !extras.length) { status.textContent=message; return; }
+        const dated=parseDate(r?.retrieved_at) ? displayDate(r.retrieved_at) : 'תאריך לא ידוע';
+        status.textContent=message || (!r ? 'תמונות ממקורות נוספים שנבדקו.' : 'פרטים שמורים ממודעת '+PROVIDERS[r.provider].name+' · נאספו: '+dated+
             (r.source_updated_at ? ' · עודכנו במקור: '+r.source_updated_at : '')+
-            (parseDate(r.retrieved_at) && Date.now()-parseDate(r.retrieved_at)>7*86400000 ? ' · הנתונים בני יותר משבוע.' : '');
+            (parseDate(r.retrieved_at) && Date.now()-parseDate(r.retrieved_at)>7*86400000 ? ' · הנתונים בני יותר משבוע.' : ''));
         for(const item of items) {
             const link=element('a','פתח את המודעה: '+PROVIDERS[item.provider].name,'block text-blue-300 underline text-xs');
             link.href=item.source_url; link.target='_blank'; link.rel='noopener noreferrer'; n.appendChild(link);
@@ -243,23 +281,50 @@
         comparison.appendChild(table); n.appendChild(comparison);
         n.appendChild(element('p','סוג גג אינו בדיקה של מצב הגג; אין להסיק אכלוס מנתוני המפרט. שטח מגרש ב־Acres נשמר ביחידה המקורית ללא המרה.','text-xs text-gray-400 mt-2'));
         const gallery=element('div','','grid grid-cols-1 md:grid-cols-3 gap-2 mt-3'); gallery.id='modal-additional-source-photos';
-        const images=combinedPhotos(p,items);
-        for(const photo of images) {
-            const a=document.createElement('a'); a.href=photo.source_url; a.target='_blank'; a.rel='noopener noreferrer';
-            const img=document.createElement('img'); img.src=photo.url; img.alt='תמונת המודעה של '+p.address;
-            img.loading='lazy'; img.referrerPolicy='no-referrer'; img.className='w-full h-44 object-cover rounded-lg';
-            img.addEventListener('error',()=>{img.hidden=true; a.appendChild(element('span','התמונה לא נטענה; פתח את המודעה במקור.','text-xs text-gray-400'));},{once:true});
-            a.appendChild(img); gallery.appendChild(a);
+        const seen=new Set();
+        const images=[...extras,...combinedPhotos(p,items)].filter(photo=>!seen.has(photo.url) && seen.add(photo.url));
+        let cursor=0, loaded=0, exhausted=0;
+        const loading=element('p',images.length?'בודק טעינת תמונות בדפדפן…':'לא נשמרו קישורי תמונות זמינים.','text-xs text-gray-300 mt-2');
+        loading.id='modal-photo-load-status';
+        function update() {
+            if(currentSelectedProperty!==p || document.getElementById('modal-additional-source-photos')!==gallery) return;
+            loading.textContent=loaded ? 'תמונות שנטענו בדפדפן: '+loaded+'.' :
+                exhausted>=Math.min(3,images.length) ? 'התמונות לא נטענו. אפשר לפתוח את המודעה במקור; אין שינוי במצב הסריקה.' : 'בודק טעינת תמונות בדפדפן…';
         }
-        n.appendChild(gallery);
-        if(gallery.children.length) n.appendChild(element('p','התמונות מוצגות מהמודעה המקושרת. מועד הצילום לא פורסם.','text-xs text-gray-400 mt-1'));
+        for(let slot=0;slot<Math.min(3,images.length);slot++) {
+            const a=document.createElement('a'); a.target='_blank';a.rel='noopener noreferrer';
+            const img=document.createElement('img');
+            img.alt='תמונת המודעה של '+p.address;
+            img.loading='lazy';img.referrerPolicy='no-referrer';img.className='w-full h-44 object-cover rounded-lg';
+            function next() {
+                if(cursor>=images.length) {
+                    img.hidden=true;exhausted++;
+                    a.appendChild(element('span','התמונה לא נטענה; פתח את המודעה במקור.','text-xs text-gray-400'));
+                    update();return;
+                }
+                const photo=images[cursor++];
+                a.href=photo.source_url;img.title=photo.source_name || photo.source || 'מודעת המקור';img.src=photo.url;
+            }
+            img.addEventListener('load',()=>{loaded++;update();},{once:true});
+            img.addEventListener('error',()=>{
+                if(currentSelectedProperty!==p || document.getElementById('modal-additional-source-photos')!==gallery) return;
+                next();
+            });
+            a.appendChild(img);gallery.appendChild(a);next();
+        }
+        n.appendChild(gallery);n.appendChild(loading);
+        if(gallery.children.length) n.appendChild(element('p','התמונות מוצגות מהמודעות המקושרות. מועד הצילום לא פורסם.','text-xs text-gray-400 mt-1'));
+
     }
     async function load(p,generation) {
         try {
             const cacheKey=await key(p.id);
             const responses=await Promise.allSettled(Object.keys(PROVIDERS).map(provider=>
-                readBasicSourceJson('COMPS_REPORTS/additional_sources/'+provider+'/'+cacheKey+'.json')));
+                readBasicSourceJson('COMPS_REPORTS/additional_sources/'+provider+'/'+cacheKey+'.json')).concat([
+                readBasicSourceJson('COMPS_REPORTS/listing_photos/'+cacheKey+'.json') ]));
             if(generation!==basicSourceGeneration || currentSelectedProperty!==p) return;
+            const photoResponse=responses.pop();
+            photoReceipts.set(p,photoResponse.status==='fulfilled'?photoResponse.value:null);
             const snapshots=responses.filter(r=>r.status==='fulfilled').map(r=>r.value);
             attempts.set(p,snapshots);
             records.set(p,ordered(p,snapshots));

@@ -5,6 +5,10 @@ on:
     paths:
       - 'index.html'
       - 'secondary_sources.js'
+      - 'listing_photo_fallback.py'
+      - 'test_listing_photo_fallback.py'
+      - 'test_listing_photo_queue.py'
+      - 'test_photo_fallback_ui.cjs'
       - 'automatic_listing_sources.py'
       - 'completion_subjects.py'
       - 'completion_wakeup.py'
@@ -40,9 +44,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check = no requests; batch = 3–5 recent MLS properties using saved settings. Source: Tarasa.'
+        description: 'check = no requests; batch = saved completion settings; photo_trial = read-only photo test of two requested MLS IDs.'
         type: choice
-        options: [check, batch]
+        options: [check, batch, photo_trial]
         required: true
         default: check
   schedule:
@@ -105,10 +109,12 @@ jobs:
           node test_street_view.cjs
           node test_street_view_preview.cjs
           node test_street_view_local_settings.cjs
+          node test_photo_fallback_ui.cjs
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') &&
+      inputs.mode != 'photo_trial'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -134,13 +140,14 @@ jobs:
       - name: Verify cache, identities, queue and request limits
         if: steps.timing.outputs.due == 'true'
         run: |
-          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion test_price_watch test_completion_wakeup
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion test_price_watch test_completion_wakeup test_listing_photo_fallback test_listing_photo_queue
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
           node test_price_watch_ui.cjs
           node test_authentication.cjs
           node test_saved_property_identity.cjs
+          node test_photo_fallback_ui.cjs
       - name: Complete a bounded group or change activation
         if: steps.timing.outputs.due == 'true'
         id: worker
@@ -163,7 +170,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- COMPS_REPORTS/automatic_listing_sources COMPS_REPORTS/property_sources
+          git add -- COMPS_REPORTS/listing_photos COMPS_REPORTS/automatic_listing_sources COMPS_REPORTS/property_sources
           if [ -d COMPS_REPORTS/additional_sources ]; then git add COMPS_REPORTS/additional_sources; fi
           if [ -d COMPS_REPORTS/scan_review ]; then git add COMPS_REPORTS/scan_review; fi
           if git diff --cached --quiet; then exit 0; fi
@@ -183,3 +190,43 @@ jobs:
           git push origin HEAD:main
 
 
+
+  photo-trial:
+    # A bounded, read-only trial of two explicitly requested listings.
+    # No production state, cloud credentials or inventory writes.
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'photo_trial'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install public listing parser
+        run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz
+      - name: Validate the photo worker offline before live requests
+        run: python -m unittest -v test_listing_photo_fallback test_listing_photo_queue
+      - name: Try original photos and two public backup sources without saving
+        run: |
+          python listing_photo_fallback.py --id PA-MLS-1774373 --id PA-MLS-1774350 --max-requests 20 > photo-trial.json
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads(Path('photo-trial.json').read_text().splitlines()[0])
+          lines=['## Photo fallback: bounded read-only trial',
+                 'RentCast calls: 0; no inventory, credentials or Supabase writes.']
+          for item in report['results']:
+              lines.append(item['property_id']+': '+item['status']+'; verified photo files: '+str(len(item.get('photos',[]))))
+              for attempt in item.get('attempts',[]):
+                  lines.append('- '+attempt['provider']+': '+attempt['status']+'; HTTP '+str(attempt.get('http_status')))
+          Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('\n'.join(lines))
+          print(json.dumps(report, ensure_ascii=False))
+          print('\n'.join(lines))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photo-fallback-trial
+          path: photo-trial.json
+          retention-days: 7
