@@ -176,6 +176,17 @@ class PhotoTests(unittest.TestCase):
         self.assertEqual((self.repo / 'properties.json').read_bytes(), self.before)
         self.assertEqual(r['new_rentcast_calls'], 0)
 
+    def test_small_http_budget_reserves_a_viable_backup_turn(self):
+        other = {**ROW, 'id': 'PA-MLS-1002', 'docket_id': 'MLS-1002'}
+        registry.atomic_json(self.repo/'properties.json', [ROW, other])
+        reader = FakeReader()
+        reader.max_requests = 13
+        with patch.object(photo, 'primary_photos', return_value=(None, None, [])):
+            result = photo.run(self.repo, [ROW['id'], other['id']], reader=reader, now=self.now)
+        self.assertEqual(len(result['results']), 1)
+        self.assertEqual(len(result['results'][0]['photos']), 3)
+        self.assertLessEqual(reader.requests, 13)
+
     def test_duplicate_and_incomplete_property_never_requested(self):
         registry.atomic_json(self.repo / 'properties.json', [ROW, ROW])
         reader = FakeReader()

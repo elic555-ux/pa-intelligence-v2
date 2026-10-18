@@ -358,7 +358,9 @@ def complete(repo, row, reader, previous=None, now=None):
         return report
     attempts = {a.get('provider'): a for a in valid_old.get('attempts', [])}
     primary_url, primary_name, cached_urls = primary_photos(repo, row)
-    for provider in ('saved_source', 'coldwellbanker', 'weichert'):
+    providers = ('saved_source', 'coldwellbanker', 'weichert')
+    providers = sorted(providers, key=lambda provider: bool(attempts.get(provider, {}).get('unsuccessful_attempts', 0)))
+    for provider in providers:
         old = attempts.get(provider, {})
         if any(p['provider'] == provider for p in report['photos']):
             report['attempts'].append(old or {'provider': provider, 'status': 'available', 'unsuccessful_attempts': 0})
@@ -486,6 +488,10 @@ def run(repo, ids, max_requests=13, reader=None, now=None, save=False):
     before = reader.requests
     requested = list(dict.fromkeys(ids))[:3]
     total_cap = getattr(reader, 'max_requests', None)
+    if total_cap is not None:
+        # Do not divide a small HTTP budget into turns too short to reach a
+        # backup image. Fewer complete turns beat endlessly repeated robots/pages.
+        requested = requested[:max(1, (total_cap - reader.requests) // 8)]
     for index, key in enumerate(requested):
         if key not in targets:
             result['results'].append({'property_id': key, 'status': 'unsupported_or_ambiguous'})

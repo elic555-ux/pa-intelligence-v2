@@ -35,8 +35,10 @@ image sources; the available evidence does not establish a map regression.
 
 ## Scope and verification
 
-The PR adds an isolated read-only live trial job for the two requested IDs,
-after offline validation. It writes only an expiring Actions artifact and
+The draft workflow runs a bounded read-only trial for the two requested IDs
+after offline PR validation. A proposed change to make this trial manual-only
+is prepared but not saved, because approval review requires explicit production-
+workflow authorization even for storing that full workflow file. It writes only an expiring Actions artifact and
 summary, not production data. The CLI defaults to read-only; --save writes
 only photo receipts.
 
@@ -75,3 +77,24 @@ failed, Coldwell rejected by the full-address identity guard, Weichert directory
 produced no candidate. This is a partial result, not a universal image solution.
 All offline regressions passed on the initial adapter commit. Later scheduling
 and discovery changes require their own successful checks and renewed trial.
+
+## Integrated validation (run 39133493252)
+
+474 Python tests and 46 source UI integration checks passed, together with
+existing map/auth/identity controls and the focused photo tests. The renewed
+live trial again verified three image files for 812 Prospect St; 480 Hamil Rd
+remained incomplete. The verified 812 receipt is included so it can display
+immediately after approved deployment. Raw image bytes are not stored.
+
+The final change limits the number of photo turns when the HTTP budget is
+small, so a turn has enough room to reach a backup source. A fresh source is
+tried before repeating a known unsuccessful one. This remains inside the
+configured maximum batch/daily budget and requires final offline regression.
+
+## Publication boundary
+
+Approval review blocked the final workflow update because the full existing file
+contains a scheduled contents-write job and a push to main. This draft has not
+been merged. Explicit user authorization to publish PR #21 and enable automatic
+photo-receipt persistence is required before retrying the workflow update or
+production publication. Do not substitute another endpoint to avoid that block.
