@@ -1,0 +1,53 @@
+name: System QA (isolated)
+on:
+  pull_request:
+    paths:
+      - 'tools/qa/**'
+      - '.github/workflows/system-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: system-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated QA dependencies
+        run: |
+          python -m pip install 'playwright==1.64.0' 'beautifulsoup4==4.15.0' requests pytz PyYAML
+          python -m playwright install --with-deps chromium webkit
+      - name: Existing offline regressions
+        run: |
+          python - <<'PY'
+          import socket, unittest, requests
+          def blocked(*args, **kwargs):
+              raise AssertionError('Source network requests are disabled in QA regressions')
+          socket.create_connection = blocked
+          requests.sessions.Session.request = blocked
+          result=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.discover('.', pattern='test_*.py'))
+          raise SystemExit(0 if result.wasSuccessful() else 1)
+          PY
+          for test in test_secondary_sources.cjs test_completion_controls.cjs test_independent_completion_ui.cjs test_price_watch_ui.cjs test_authentication.cjs test_saved_property_identity.cjs test_property_maps.cjs test_street_view.cjs test_street_view_preview.cjs test_street_view_local_settings.cjs test_photo_fallback_ui.cjs; do node "$test"; done
+      - name: Inspect complete saved inventory and source evidence
+        run: python tools/qa/data_audit.py
+      - name: Run isolated desktop and mobile browser scenarios
+        run: python tools/qa/browser_audit.py
+      - name: Save QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-qa-evidence
+          path: qa-results/
+          retention-days: 7
