@@ -35,12 +35,10 @@ image sources; the available evidence does not establish a map regression.
 
 ## Scope and verification
 
-The draft workflow runs a bounded read-only trial for the two requested IDs
-after offline PR validation. A proposed change to make this trial manual-only
-is prepared but not saved, because approval review requires explicit production-
-workflow authorization even for storing that full workflow file. It writes only an expiring Actions artifact and
-summary, not production data. The CLI defaults to read-only; --save writes
-only photo receipts.
+The diagnostic trial is manual-only (`workflow_dispatch`, mode `photo_trial`).
+Normal pull-request validation makes no live requests. The diagnostic has read-only
+repository permission and writes an expiring Actions artifact and summary only.
+The CLI defaults to read-only; `--save` writes only photo receipts.
 
 Automatic integration shares the existing completion worker and repository write
 concurrency, never a second scheduled worker. An enabled photo fallback reserves
@@ -48,8 +46,8 @@ one turn from the configured 3–5-property batch; all technical and photo turns
 share the same daily property limit, 13 HTTP requests and 240-second deadline.
 Settled technical records can still receive photo completion. The idle gate sleeps
 until photo retry/expiry or new saved source evidence. The setting is explicit
-and preserved by the UI. Production remains unchanged until this PR is approved
-and deployed; browser verification is still needed.
+and preserved by the UI. The user explicitly approved production publication and automatic photo-receipt
+persistence on 18 October 2026. Browser verification is still needed after deployment.
 
 Offline: python -m unittest -v test_listing_photo_fallback;
 node test_secondary_sources.cjs; node --test test_photo_fallback_ui.cjs.
@@ -86,15 +84,30 @@ live trial again verified three image files for 812 Prospect St; 480 Hamil Rd
 remained incomplete. The verified 812 receipt is included so it can display
 immediately after approved deployment. Raw image bytes are not stored.
 
+## Final offline regression (run 39134000946)
+
+475 Python tests and 46 source UI integration checks passed at
+b20c142d900c1527f5f47778b4e6e17027523f3f. Existing map/auth/identity controls
+and three focused photo UI checks also passed. The diagnostic reused the fresh
+812 photo receipt; it did not newly download those three files in this run.
+480 Hamil Rd still had no accepted photo candidate.
+
 The final change limits the number of photo turns when the HTTP budget is
 small, so a turn has enough room to reach a backup source. A fresh source is
 tried before repeating a known unsuccessful one. This remains inside the
-configured maximum batch/daily budget and requires final offline regression.
+configured maximum batch/daily budget and passed the final offline regression above. The manual-only workflow cleanup
+requires its own passing PR validation before merge.
 
-## Publication boundary
+## Publication authorization and deployment checks
 
-Approval review blocked the final workflow update because the full existing file
-contains a scheduled contents-write job and a push to main. This draft has not
-been merged. Explicit user authorization to publish PR #21 and enable automatic
-photo-receipt persistence is required before retrying the workflow update or
-production publication. Do not substitute another endpoint to avoid that block.
+The user explicitly authorized publishing PR #21 to the live site and enabling
+automatic photo completion, including saving photo links and receipts to main,
+on 18 October 2026. This authorization covers the existing scheduled repository
+writer and the new photo-receipt path.
+
+Before merge: validate the exact final commit, preserve current main data and
+the shared writer concurrency, then merge with the expected PR head SHA.
+After merge: verify a successful Pages deployment, the enabled saved setting
+and the bound 812 receipt. Confirm actual browser photo loading separately.
+Do not describe incomplete photo collection as a scan failure or claim that
+all properties or all images can be collected.

@@ -8,6 +8,7 @@ on:
       - 'listing_photo_fallback.py'
       - 'test_listing_photo_fallback.py'
       - 'test_listing_photo_queue.py'
+      - 'test_photo_fallback_ui.cjs'
       - 'automatic_listing_sources.py'
       - 'completion_subjects.py'
       - 'completion_wakeup.py'
@@ -43,9 +44,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check = no requests; batch = 3–5 recent MLS properties using saved settings. Source: Tarasa.'
+        description: 'check = no requests; batch = saved completion settings; photo_trial = read-only photo test of two requested MLS IDs.'
         type: choice
-        options: [check, batch]
+        options: [check, batch, photo_trial]
         required: true
         default: check
   schedule:
@@ -112,7 +113,8 @@ jobs:
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') &&
+      inputs.mode != 'photo_trial'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -138,13 +140,14 @@ jobs:
       - name: Verify cache, identities, queue and request limits
         if: steps.timing.outputs.due == 'true'
         run: |
-          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion test_price_watch test_completion_wakeup
+          python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source test_automatic_listing_sources test_scan_schedule test_independent_completion test_price_watch test_completion_wakeup test_listing_photo_fallback test_listing_photo_queue
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
           node test_price_watch_ui.cjs
           node test_authentication.cjs
           node test_saved_property_identity.cjs
+          node test_photo_fallback_ui.cjs
       - name: Complete a bounded group or change activation
         if: steps.timing.outputs.due == 'true'
         id: worker
@@ -191,8 +194,7 @@ jobs:
   photo-trial:
     # A bounded, read-only trial of two explicitly requested listings.
     # No production state, cloud credentials or inventory writes.
-    if: github.event_name == 'pull_request'
-    needs: validate
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'photo_trial'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -204,6 +206,8 @@ jobs:
           python-version: '3.10'
       - name: Install public listing parser
         run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz
+      - name: Validate the photo worker offline before live requests
+        run: python -m unittest -v test_listing_photo_fallback test_listing_photo_queue
       - name: Try original photos and two public backup sources without saving
         run: |
           python listing_photo_fallback.py --id PA-MLS-1774373 --id PA-MLS-1774350 --max-requests 20 > photo-trial.json
