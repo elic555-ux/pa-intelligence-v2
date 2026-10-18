@@ -254,3 +254,29 @@ test('charged API paths and image/metadata fallbacks are absent, with no storage
     assert.ok(!/getElementById\('modal-street-view-preview-image'\)/.test(source));
     assert.equal(api.imageUrl, undefined); assert.equal(api.metadataUrl, undefined); assert.equal(api.bearingToTarget, undefined);
 });
+
+test('explicit browser-local provider avoids public config fetch and refresh removes frame after deletion', async () => {
+    const env = environment();
+    let local = ENABLED;
+    env.window.PAStreetLocalSettings = {read: () => local};
+    await env.preview.render(A);
+    assert.equal(env.calls.length, 0);
+    const frame = env.nodes.get('modal-street-view-preview-frame');
+    assert.equal(new URL(frame.src).searchParams.get('key'), TEST_KEY);
+    local = null;
+    await env.preview.refresh();
+    assert.equal(frame.src, '');
+    assert.equal(env.nodes.get('modal-street-view-preview').hidden, true);
+    assert.equal(env.calls.length, 0);
+});
+
+test('closing property prevents local settings refresh from reopening an old property', async () => {
+    const env = environment();
+    env.window.PAStreetLocalSettings = {read: () => ENABLED};
+    await env.preview.render(A);
+    env.preview.cancel();
+    const count = env.frames.length;
+    await env.preview.refresh();
+    assert.equal(env.frames.length, count);
+});
+

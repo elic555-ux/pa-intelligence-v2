@@ -50,6 +50,13 @@
         let activeSelection = null;
         let pointPending = null;
         let frameTimer = null;
+        let currentDestination = null;
+
+        function refresh() {
+            const destination = currentDestination;
+            cancel();
+            if (destination) return render(destination);
+        }
 
         function elements() {
             const container = doc.getElementById('modal-street-view-preview');
@@ -70,6 +77,7 @@
         }
 
         function cancel() {
+            currentDestination = null;
             generation += 1;
             activeSelection = null;
             if (pointPending) {
@@ -82,6 +90,10 @@
         }
 
         function loadConfig() {
+            if (win.PAStreetLocalSettings) {
+                try { return Promise.resolve(parseConfig(win.PAStreetLocalSettings.read())); }
+                catch (_) { return Promise.resolve(null); }
+            }
             if (configPromise) return configPromise;
             configPromise = (async () => {
                 let timer = null;
@@ -170,6 +182,7 @@
             const selection = query && typeof destination.streetViewUrl === 'string' ? query + '\n' + destination.streetViewUrl : null;
             if (selection && selection === activeSelection) return;
             cancel();
+            currentDestination = destination;
             if (!query || !elements()) return;
             activeSelection = selection;
             const token = generation;
@@ -183,8 +196,9 @@
             }
         }
 
-        return {render, cancel};
+        return {render, cancel, refresh};
     }
 
     return {createPreview, parseConfig, addressQuery, validLocation, embedUrl, panoramaUrl, TIMEOUT_MS};
 }));
+

@@ -230,6 +230,8 @@ if (path.extname(helperFile) === '.html') {
         assert.ok(preview.indexOf('</figcaption>') < preview.indexOf('<a '), 'external link must sit below the frame and caption');
         assert.doesNotMatch(preview, /<img\b|\babsolute\b|\boverflow-hidden\b/i, 'controls and attribution must remain unobscured');
         assert.doesNotMatch(source, /maps\/api\/(?:streetview|js)|streetview\/metadata/i, 'the page must contain no paid provider route');
-        assert.ok(source.indexOf('street-view.js?v=1.1.0') < source.indexOf('street-view-preview.js?v=1.2.0'), 'the shared locator must load before the Embed module');
+        assert.ok(source.indexOf('street-view.js?v=1.1.0') < source.indexOf('street-view-preview.js?v=1.3.0'), 'the shared locator must load before the Embed module');
+        assert.ok(source.indexOf('street-view-local-settings.js?v=1.0.0') < source.indexOf('street-view-preview.js?v=1.3.0'), 'local settings must load before the Embed module');
     });
 }
+

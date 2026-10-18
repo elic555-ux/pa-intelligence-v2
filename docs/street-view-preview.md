@@ -4,16 +4,18 @@ The requested Street View feature must not create Google API charges. This imple
 
 ## Activation
 
-The feature stays disabled in `street-view-preview-config.json`, with `provider: "maps-embed"` and an empty `apiKey`. Legacy configuration without that explicit provider cannot enable it. While disabled, property details send no preview-related county or Google requests.
+The public `street-view-preview-config.json` stays disabled with an empty key. The website instead loads `street-view-local-settings.js`: users can enter their restricted browser key once per browser in the property card's “הגדרת Street View במכשיר זה” section. No real credential is included in this implementation or sent to the repository, Supabase, telemetry or application servers. With the local-settings module present, public key configuration is never fetched or used. Without a saved local key, no preview-related county or Google request runs.
+
+The explicit save stores the key in this origin's localStorage. This is browser persistence, not encryption or secret isolation: scripts running on the website can access it, and Google receives it in the iframe URL. Only use a browser key restricted to Maps Embed API and this website origin. The form clears its input after submission and offers deletion, which also removes the current frame. Each device/browser requires separate setup; private browsing or clearing website data removes persistence. Other same-origin applications may access the same storage. No automatic transfer or synchronization of credentials is implemented.
 
 Before enabling:
 
 1. Enable **Maps Embed API** in the intended Google Cloud project. Google still requires a valid key and billing-enabled project even though Embed usage itself is free. Do not create or upgrade a billing account automatically.
 2. Restrict the browser key to **Maps Embed API only**. Do not leave it unrestricted or permit Street View Static API/other chargeable APIs. If the key is shared with other applications, use a dedicated key after checking its existing use.
 3. Restrict the key to the website origin `https://elic555-ux.github.io/*`. Cross-origin referrers may omit the repository path. Never publish a signing secret, server key or unrestricted key.
-4. Verify the restrictions in Google Cloud, then set `enabled: true` and supply only that restricted browser key. Inspect the actual production iframe and error fallback before deployment is considered complete.
+4. Verify the restrictions in Google Cloud, then enter the restricted browser key in the website's local settings form and choose “שמור במכשיר זה”. Do not put a real key in repository files. Inspect the actual iframe before live activation is considered verified.
 
-The app configuration is not proof that a key is restricted in Google Cloud. The supplied key has not been published. Its earlier Static service tests accepted foreign referrers; those requests have stopped, the local preview was disabled and its server stopped when the user specified zero charges.
+The app configuration is not proof that a key is restricted in Google Cloud. No user key is published by this change. Actual coverage and Cloud configuration require a user-side live check.
 
 ## Cost boundary
 
@@ -31,7 +33,7 @@ Closing or switching property removes the frame source and ignores stale callbac
 
 ## Verification
 
-Run `node test_street_view_preview.cjs`, `node test_street_view.cjs` and `node test_property_maps.cjs`. Offline tests verify that the only possible keyed preview endpoint is the free Embed `streetview` URL and that no chargeable fallback exists. Offline tests do not validate a user's billing settings, API restrictions or Google's live iframe contents.
+Run `node --test test_street_view_local_settings.cjs test_street_view_preview.cjs test_street_view.cjs test_property_maps.cjs`. Offline tests verify local persistence/removal, denied storage, the free Embed endpoint, absence of a chargeable fallback, refresh after deletion and cancellation on property close. Offline tests do not validate a user's billing settings, API restrictions or Google's live iframe contents.
 
 ## Official references
 
@@ -41,3 +43,4 @@ Run `node test_street_view_preview.cjs`, `node test_street_view.cjs` and `node t
 - [API key restrictions](https://developers.google.com/maps/api-security-best-practices)
 - [Alert-only budgets are not spending caps](https://docs.cloud.google.com/billing/docs/how-to/budgets)
 - [Spend-cap eligible services](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps#eligible-services)
+
