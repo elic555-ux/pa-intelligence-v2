@@ -12,6 +12,9 @@ on:
       - 'automatic_listing_sources.py'
       - 'completion_subjects.py'
       - 'completion_wakeup.py'
+      - 'completion_heartbeat.py'
+      - 'test_completion_heartbeat.py'
+      - '.github/workflows/completion-heartbeat.yml'
       - 'test_completion_wakeup.py'
       - 'test_independent_completion.py'
       - 'test_independent_completion_ui.cjs'
@@ -44,9 +47,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check = no requests; batch = saved completion settings; photo_trial = read-only photo test of two requested MLS IDs.'
+        description: 'check = no requests; batch = manual group; automatic = all saved timing/pause limits; photo_trial = read-only photo test.'
         type: choice
-        options: [check, batch, photo_trial]
+        options: [check, batch, automatic, photo_trial]
         required: true
         default: check
   schedule:
@@ -79,11 +82,11 @@ jobs:
         run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz PyYAML
       - name: Compile changed Python and validate workflow YAML
         run: |
-          python -m py_compile orchestrator.py automatic_listing_sources.py completion_subjects.py test_automatic_listing_sources.py
+          python -m py_compile orchestrator.py automatic_listing_sources.py completion_subjects.py test_automatic_listing_sources.py completion_heartbeat.py test_completion_heartbeat.py
           python - <<'PY'
           from pathlib import Path
           import yaml
-          for name in ('cron-daily-mls.yml', 'automatic-listing-sources.yml'):
+          for name in ('cron-daily-mls.yml', 'automatic-listing-sources.yml', 'completion-heartbeat.yml'):
               workflow = yaml.load((Path('.github/workflows') / name).read_text(), Loader=yaml.BaseLoader)
               assert 'on' in workflow and 'jobs' in workflow, name
           PY
@@ -125,7 +128,7 @@ jobs:
       - name: Check saved completion schedule
         id: timing
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mode }}" != "automatic" ]; then
             echo 'due=true' >> "$GITHUB_OUTPUT"
           else
             python3 scan_schedule.py completion
