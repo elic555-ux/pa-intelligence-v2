@@ -191,17 +191,27 @@ if (path.extname(helperFile) === '.html') {
         assert.equal(previewCalls.length, 4);
         const renderWithoutPreview = loadFunction(helperFile, 'renderPropertyMapDestination', {document, window: {}});
         assert.doesNotThrow(() => renderWithoutPreview(A), 'working map links must remain available without the preview module');
-        const closeEvents = [];
+        const closeEvents = [], focusEvents = [];
+        const background = {inert: true};
+        const opener = {isConnected: true, getClientRects() { return [1]; },
+            closest() { return null; }, focus() { focusEvents.push('opener'); }};
+        let modalHidden = false;
         const close = loadFunction(helperFile, 'closePropertyModal', {
-            basicSourceGeneration: 0,
+            basicSourceGeneration: 0, propertyModalReturnFocus: opener, propertyModalReturnKey: 'qa-property',
+            propertyModalInertState: [{node: background, inert: false}],
             window: {PAStreetPreview: {cancel() { closeEvents.push('cancel'); }}},
-            document: {getElementById(id) {
+            document: {body: {}, querySelectorAll() { return []; }, getElementById(id) {
                 assert.equal(id, 'property-modal');
-                return {classList: {add(value) { closeEvents.push(value); }}};
+                return {classList: {contains() { return modalHidden; },
+                    add(value) { modalHidden = true; closeEvents.push(value); }}};
             }}
         });
         close();
         assert.deepEqual(closeEvents, ['cancel', 'hidden'], 'closing the modal must cancel a pending preview before hiding it');
+        assert.equal(background.inert, false, 'closing must restore prior background interaction');
+        assert.deepEqual(focusEvents, ['opener'], 'closing must restore focus to the connected opener');
+        close();
+        assert.deepEqual(closeEvents, ['cancel', 'hidden'], 'a repeated close must be harmless');
     });
 
     test('interactive Street View starts unloaded and keeps its external link below the frame with opener protection', () => {
