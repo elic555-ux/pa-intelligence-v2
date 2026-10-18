@@ -302,6 +302,15 @@ with sync_playwright() as p:
     ctx.close()
 
 
+    ctx,page,errors,traffic=scenario(browser,fixture_rows())
+    open_first(page)
+    page.evaluate("async()=>{sessionStorage.setItem('qa-auth-mode','none'); await verifyPaAccess();}")
+    page.wait_for_function("!document.getElementById('pa-login-form').hidden")
+    page.locator('#pa-login-email').focus()
+    page.keyboard.press('Tab')
+    record('Authentication expiry while a dialog was open keeps login keyboard usable',lambda:yes(value(page,"document.activeElement.id==='pa-login-password'") and not errors,'Hidden property dialog trapped login keyboard focus'),'P1')
+    ctx.close()
+
     for payload_kind in ('invalid_json','not_array'):
         ctx,page,errors,traffic=scenario(browser,fixture_rows(),inventory_mode=payload_kind)
         record(payload_kind+' inventory is rejected with a readable error',lambda:yes('לא נטענו' in page.locator('#properties-container').inner_text() and not errors,'Malformed inventory was accepted or crashed the page'),'P1')

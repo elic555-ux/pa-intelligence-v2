@@ -1749,7 +1749,15 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             updateWatchlistCountDisplay();
         }
 
-        function saveViewed() { localStorage.setItem('pa_viewed_deals', JSON.stringify(Array.from(viewedDeals))); }
+        function saveViewed() {
+            try {
+                localStorage.setItem('pa_viewed_deals', JSON.stringify(Array.from(viewedDeals)));
+                return true;
+            } catch (_) {
+                // Viewing a property must remain available when browser storage is full or blocked.
+                return false;
+            }
+        }
 
         async function archiveFromModal() {
             const p = currentSelectedProperty;
@@ -3526,7 +3534,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         document.addEventListener('keydown', event => {
             const modal = document.getElementById('property-modal');
-            if (modal.classList.contains('hidden') || event.defaultPrevented) return;
+            if (modal.classList.contains('hidden') || !modal.getClientRects().length || event.defaultPrevented) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
                 closePropertyModal();
@@ -3547,7 +3555,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         document.addEventListener('focusin', event => {
             const modal = document.getElementById('property-modal');
-            if (!modal.classList.contains('hidden') && !modal.contains(event.target)) {
+            if (!modal.classList.contains('hidden') && modal.getClientRects().length && !modal.contains(event.target)) {
                 document.getElementById('modal-address').focus({preventScroll: true});
             }
         });
