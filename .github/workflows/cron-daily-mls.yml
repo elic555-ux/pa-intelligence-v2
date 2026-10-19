@@ -154,14 +154,21 @@ jobs:
           done
           if [ -d COMPS_REPORTS/scan_review ]; then git add COMPS_REPORTS/scan_review; fi
           if ! git diff --cached --quiet; then
-            git commit -m "Update scanner data and source status"
-            if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+            git commit -m "Update scanner data and source status [skip ci]"
+            pushed=false
+            for i in 1 2 3; do
+              if git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                pushed=true
+                break
+              fi
               # Never leave conflict markers in JSON files for the summary step.
               git rebase --abort || true
+              sleep 5
+            done
+            if [ "$pushed" != "true" ]; then
               echo "::error::Could not safely rebase scanner data. No conflicted files were pushed."
               exit 1
             fi
-            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
       - name: Publish scan summary
         if: always() && steps.timing.outputs.due == 'true'
@@ -193,4 +200,3 @@ jobs:
                   waiting = sum(item.get('needs_details', 0) for item in event.get('sources', {}).values())
                   out.write(f"\nתצפיות מקור שדורשות פרטים בסריקה זו (לפני איחוד אזורים): {waiting}. השלמת הפרטים מתבצעת בתהליך עצמאי לפי התזמון שלה.\n")
           PY
-
