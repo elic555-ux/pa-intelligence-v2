@@ -39,8 +39,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install existing dependency
-        run: python -m pip install requests
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          else
+            python -m pip install requests beautifulsoup4 pytz
+          fi
       - name: Check report installation without calling RentCast
         run: python expanded_report.py check
 
@@ -61,8 +66,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install existing dependency
-        run: python -m pip install requests
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          else
+            python -m pip install requests beautifulsoup4 pytz
+          fi
       - name: Build internal index and preserve existing quota
         run: python expanded_report.py maintain
       - name: Save internal database and migrated quota
@@ -71,13 +81,20 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add COMPS_REPORTS
           if ! git diff --cached --quiet; then
-            git commit -m 'Build internal property database and preserve RentCast quota'
-            if ! git pull --rebase origin main; then
+            git commit -m 'Build internal property database and preserve RentCast quota [skip ci]'
+            pushed=false
+            for i in 1 2 3; do
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                pushed=true
+                break
+              fi
               git rebase --abort || true
+              sleep 5
+            done
+            if [ "$pushed" != "true" ]; then
               echo '::error::Internal data was not pushed. No RentCast calls were made.'
               exit 1
             fi
-            git push origin HEAD:main
           fi
 
   report:
@@ -99,8 +116,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install existing API dependency
-        run: python -m pip install requests
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          else
+            python -m pip install requests beautifulsoup4 pytz
+          fi
       - name: Validate request and select saved cache
         run: python expanded_report.py prepare --event-file "$GITHUB_EVENT_PATH" --run-id "$GITHUB_RUN_ID"
       - name: Persist request before execution
@@ -109,13 +131,20 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add COMPS_REPORTS
           if ! git diff --cached --quiet; then
-            git commit -m 'Record requested property report and quota reservation'
-            if ! git pull --rebase origin main; then
+            git commit -m 'Record requested property report and quota reservation [skip ci]'
+            pushed=false
+            for i in 1 2 3; do
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                pushed=true
+                break
+              fi
               git rebase --abort || true
+              sleep 5
+            done
+            if [ "$pushed" != "true" ]; then
               echo '::error::Request was not persisted. Report execution will not start.'
               exit 1
             fi
-            git push origin HEAD:main
           fi
           echo 'REPORT_RESERVATION_PERSISTED=true' >> "$GITHUB_ENV"
       - name: Reuse saved report data
@@ -128,11 +157,18 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add COMPS_REPORTS
           if ! git diff --cached --quiet; then
-            git commit -m 'Save requested property report and source cache'
-            if ! git pull --rebase origin main; then
+            git commit -m 'Save requested property report and source cache [skip ci]'
+            pushed=false
+            for i in 1 2 3; do
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                pushed=true
+                break
+              fi
               git rebase --abort || true
+              sleep 5
+            done
+            if [ "$pushed" != "true" ]; then
               echo '::error::Report was not pushed. Earlier reservations remain recorded.'
               exit 1
             fi
-            git push origin HEAD:main
           fi
