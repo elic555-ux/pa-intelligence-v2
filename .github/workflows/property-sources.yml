@@ -16,7 +16,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: pa-property-sources-pilot
+  # Share the main write queue so registry builds never collide with scanner or completion pushes.
+  group: pa-repo-write-queue
   cancel-in-progress: false
 
 jobs:
@@ -24,10 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Test identity, duplicates and source evidence
@@ -53,21 +54,32 @@ jobs:
             echo "Registry is already current."
             exit 0
           fi
-          git commit -m "Build offline property identity and source registry"
-          if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
-            git rebase --abort || true
-            echo "::error::Registry was not pushed because the branch changed incompatibly."
+          git commit -m "Build offline property identity and source registry [skip ci]"
+          pushed=false
+          for i in 1 2 3; do
+            if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+              git rebase --abort || true
+              echo "::error::Registry was not pushed because the branch changed incompatibly."
+              exit 1
+            fi
+            # A scan may update inputs during this short pilot. Do not push
+            # a registry built against a different inventory/source cache.
+            python - <<'PY'
+            import json
+            from pathlib import Path
+            import property_sources
+            manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text())
+            _, current = property_sources.prepare(Path('.'))
+            if any(current[k] != manifest[k] for k in ('properties_sha256', 'input_fingerprint')):
+                raise SystemExit('Inventory or source cache changed during the pilot. Run build again; nothing was pushed.')
+            PY
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              pushed=true
+              break
+            fi
+            sleep 5
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "::error::Failed to push registry after 3 attempts."
             exit 1
           fi
-          # A scan may update inputs during this short pilot. Do not push
-          # a registry built against a different inventory/source cache.
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          import property_sources
-          manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text())
-          _, current = property_sources.prepare(Path('.'))
-          if any(current[k] != manifest[k] for k in ('properties_sha256', 'input_fingerprint')):
-              raise SystemExit('Inventory or source cache changed during the pilot. Run build again; nothing was pushed.')
-          PY
-          git push origin "HEAD:${GITHUB_REF_NAME}"
