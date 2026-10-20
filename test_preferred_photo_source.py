@@ -1,7 +1,9 @@
 import copy
+import io
 from datetime import timedelta
 from pathlib import Path
 import unittest
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 import listing_photo_fallback as photo
@@ -24,11 +26,14 @@ def preferred(row=ROW):
 
 
 class PreferredReader(FakeReader):
+    def __init__(self, row=ROW):
+        super().__init__()
+        self.row = row
     def page(self, url):
-        if url == ORIGIN + '1001/':
+        if url == ORIGIN + registry.listing_id(self.row) + '/':
             self.requests += 1
             self.urls.append(url)
-            return preferred()
+            return preferred(self.row)
         return super().page(url)
 
 
@@ -88,7 +93,86 @@ class PreferredQueueTests(unittest.TestCase):
         self.assertNotIn(erie['id'], specs)
         self.assertEqual(set(photos), {ROW['id'], erie['id']})
 
+    def test_erie_photo_turn_runs_even_without_a_tarasa_specification_candidate(self):
+        self.rows = [{**self.rows[0], 'county':'Erie', 'city':'Erie', 'zip':'16504'}]
+        self.save()
+        report = photo_worker().run(self.repo, 'automatic', now=self.now, photo_reader=PreferredReader(self.rows[0]))
+        self.assertEqual(report['eligible_properties'], 0)
+        self.assertEqual(report['photo_eligible_properties'], 1)
+        self.assertEqual(report['verified_photos'], 3)
+        self.assertEqual(report['attempted_properties'], 1)
+        self.assertEqual((self.repo/'properties.json').read_bytes(), self.before)
+
 
 def photo_worker():
     import automatic_listing_sources
     return automatic_listing_sources
+
+
+class MediaRedirectTests(unittest.TestCase):
+    target = ('https://media-cdn-v2.corelogic.com/5e313ecd4c32aa4a5940/photo_1024_768.jpg'
+              '?Expires=1792519200&KeyName=public-media&Signature=published-signature')
+
+    def reader(self, target=None, second_redirect=False, deny_cdn=False, budget=13, cdn_robots_status=None, image_status=None):
+        calls, clock = [], [0]
+        target = target or self.target
+        class Response(io.BytesIO):
+            status = 200
+            def __init__(self, body, mime):
+                super().__init__(body)
+                self.headers = {'Content-Type': mime}
+        class Opener:
+            def open(self, req, timeout):
+                calls.append(req.full_url)
+                if req.full_url.endswith('/robots.txt'):
+                    if cdn_robots_status and 'corelogic.com' in req.full_url:
+                        raise HTTPError(req.full_url, cdn_robots_status, 'robots', {}, None)
+                    deny = deny_cdn and 'corelogic.com' in req.full_url
+                    return Response(b'User-agent: *\nDisallow: /\n' if deny else b'User-agent: *\nAllow: /\n', 'text/plain')
+                if req.full_url == MEDIA.format(1) or second_redirect:
+                    raise photo.Unavailable('redirect_stopped',302,location=target)
+                if image_status:
+                    raise HTTPError(req.full_url,image_status,'image',{},None)
+                return Response(b'\xff\xd8\xff'+b'x'*200,'image/jpeg')
+        reader = photo.Reader(max_requests=budget, opener=Opener(), clock=lambda:clock[0],
+            sleep=lambda n:clock.__setitem__(0,clock[0]+n))
+        return reader, calls
+
+    def test_one_known_media_hop_checks_robots_bytes_and_shared_budget(self):
+        reader, calls = self.reader()
+        result = reader.image(MEDIA.format(1))
+        self.assertEqual(result['content_type'], 'image/jpeg')
+        self.assertEqual(reader.requests, 4)
+        self.assertEqual(calls[-1], self.target)
+        self.assertNotIn('Signature', str(result))
+        reader, calls = self.reader(budget=3)
+        with self.assertRaisesRegex(photo.Unavailable, 'request_budget'):
+            reader.image(MEDIA.format(1))
+        self.assertEqual(len(calls),3)
+
+    def test_arbitrary_redirects_credentials_queries_and_more_hops_rejected(self):
+        for target in [self.target.replace('corelogic.com','corelogic.com.evil.test'),
+                       self.target.replace('https://','http://'),self.target.replace('https://','https://user:pass@'),
+                       self.target+'&auth=x',self.target.replace('/5e313ecd4c32aa4a5940/','/../'),
+                       self.target.replace('media-cdn-v2.corelogic.com','127.0.0.1')]:
+            reader,calls=self.reader(target=target)
+            with self.assertRaises(photo.Unavailable): reader.image(MEDIA.format(1))
+            self.assertEqual(len(calls),2)
+        reader,calls=self.reader(second_redirect=True)
+        with self.assertRaises(photo.Unavailable): reader.image(MEDIA.format(1))
+        self.assertEqual(len(calls),4)
+        self.assertFalse(photo.public_media_redirect(legacy.IMAGES[0],self.target))
+
+    def test_cdn_robots_denial_prevents_asset_request(self):
+        reader,calls=self.reader(deny_cdn=True)
+        with self.assertRaisesRegex(photo.Unavailable,'robots_disallowed'):reader.image(MEDIA.format(1))
+        self.assertEqual(len(calls),3)
+
+    def test_missing_cdn_robots_object_is_distinct_from_a_denied_image(self):
+        reader,calls=self.reader(cdn_robots_status=403)
+        self.assertEqual(reader.image(MEDIA.format(1))['content_type'],'image/jpeg')
+        self.assertEqual(len(calls),4)
+        self.assertNotIn(photo.MEDIA_REDIRECT_HOST,reader.blocked)
+        for kwargs in [{'cdn_robots_status':503},{'image_status':403},{'image_status':429}]:
+            reader,calls=self.reader(**kwargs)
+            with self.assertRaises(photo.Unavailable):reader.image(MEDIA.format(1))

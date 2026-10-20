@@ -13,6 +13,15 @@ neighborhood suffix is removed from its postal city before comparison.
 
 Published Cotality media URLs are read from the verified gallery, never guessed.
 The reader checks robots rules, image MIME and magic bytes, size, and SHA-256.
+The single observed Cotality-to-CoreLogic media redirect is allowed only to the
+exact CDN host and JPEG path with its three public delivery signature parameters.
+Both hosts' robots rules and the shared request budget still apply. A second
+redirect is refused. The temporary destination signature is never saved.
+The known public media CDN returns 403 for its missing robots object. Only on
+this validated media hop this is treated as unavailable under
+[RFC 9309 section 2.3.1.3](https://www.rfc-editor.org/rfc/rfc9309.html#section-2.3.1.3).
+Explicit robots disallow, robots server failures, and 403/429 on the image
+itself still stop access. Other providers retain their existing stricter rule.
 Photo receipts retain the listing identity, source URL, verification and date.
 The frontend requires the same current binding and allowed media path, and
 counts images only after actual browser load events. Original Redfin photos

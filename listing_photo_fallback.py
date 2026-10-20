@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, parse_qs
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.robotparser import RobotFileParser
 
@@ -31,6 +31,7 @@ SOURCES = {
 PAGE_HOSTS = {'www.coldwellbankerhomes.com', 'www.weichert.com', 'www.thepreferredrealty.com'}
 IMAGE_HOSTS = {'cdn.listingphotos.sierrastatic.com', 'm.cbhomes.com', 'm1.cbhomes.com',
                'm2.cbhomes.com', 'm3.cbhomes.com', 'd36xftgacqn2p.cloudfront.net', 'api.cotality.com'}
+MEDIA_REDIRECT_HOST = 'media-cdn-v2.corelogic.com'
 # Observed public URLs, not invented pid or image URLs. Still require full
 # identity verification of the current page; a hidden address is rejected.
 SEEDS = {
@@ -42,14 +43,15 @@ FRESH_DAYS = 7
 
 
 class Unavailable(Exception):
-    def __init__(self, status, http_status=None, retry_after=None):
+    def __init__(self, status, http_status=None, retry_after=None, location=None):
         self.status, self.http_status, self.retry_after = status, http_status, retry_after
+        self.location = location
         super().__init__(status)
 
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise Unavailable('redirect_stopped', code)
+        raise Unavailable('redirect_stopped', code, location=newurl)
 
 
 def safe_url(value, image=False):
@@ -90,6 +92,24 @@ def image_type(body, content_type):
     return None
 
 
+def public_media_redirect(origin, target):
+    """One observed media hop; its temporary signature is never persisted."""
+    try:
+        u = urlparse(target or '')
+        query = parse_qs(u.query, keep_blank_values=True)
+        return bool(urlparse(origin).hostname == 'api.cotality.com' and safe_url(origin, image=True)
+            and u.scheme == 'https' and u.hostname == MEDIA_REDIRECT_HOST
+            and not u.username and not u.password and not u.fragment and u.port in (None, 443)
+            and re.fullmatch(r'/[a-f0-9]{20}/[A-Za-z0-9_-]+\.jpg', u.path)
+            and set(query) == {'Expires', 'KeyName', 'Signature'}
+            and all(len(v) == 1 for v in query.values())
+            and re.fullmatch(r'\d{10}', query['Expires'][0])
+            and re.fullmatch(r'[A-Za-z0-9_-]+', query['KeyName'][0])
+            and re.fullmatch(r'[A-Za-z0-9_-]+={0,2}', query['Signature'][0]))
+    except ValueError:
+        return False
+
+
 class Reader:
     def __init__(self, max_requests=13, seconds=240, clock=time.monotonic,
                  sleep=time.sleep, opener=None):
@@ -128,7 +148,7 @@ class Reader:
         except (URLError, TimeoutError, OSError) as exc:
             raise Unavailable('unavailable') from exc
 
-    def robots(self, url):
+    def robots(self, url, public_media=False):
         u = urlparse(url)
         host = u.hostname
         if host in self.blocked:
@@ -152,10 +172,19 @@ class Reader:
                 self.interval = max(self.interval, delay)
                 self.rules[host] = rp
             except Unavailable as exc:
-                # A real 404/410 means no robots document. 403/429, HTML,
-                # malformed rules and network failures are never treated as allow.
+                # A real 404/410 means no robots document. Other failures stop
+                # access except the narrowly scoped public-media case below.
                 if exc.status == 'http_error' and exc.http_status in (404, 410):
                     self.rules[host] = None
+                elif (public_media and host == MEDIA_REDIRECT_HOST and exc.status == 'blocked'
+                      and exc.http_status == 403 and not exc.retry_after):
+                    # The public signed-media CDN has no readable robots object.
+                    # RFC 9309 §2.3.1.3 permits resources when robots returns 4xx.
+                    # This exception is only for a validated public media hop;
+                    # a 403 on the image itself still stops and cools the host.
+                    self.rules[host] = None
+                    self.blocked.pop(host, None)
+                    self.host_cooldowns.pop(host, None)
                 else:
                     self.blocked[host] = exc.http_status
                     self.host_cooldowns[host] = core.cooldown_until(exc.retry_after, datetime.now(timezone.utc))
@@ -179,7 +208,14 @@ class Reader:
         if not safe_url(url, image=True):
             raise Unavailable('untrusted_image')
         self.robots(url)
-        body, mime = self.raw(url, 3_000_000, 'image/jpeg,image/png,image/webp')
+        try:
+            body, mime = self.raw(url, 3_000_000, 'image/jpeg,image/png,image/webp')
+        except Unavailable as exc:
+            if (exc.status != 'redirect_stopped' or exc.http_status != 302
+                    or not public_media_redirect(url, exc.location)):
+                raise
+            self.robots(exc.location, public_media=True)
+            body, mime = self.raw(exc.location, 3_000_000, 'image/jpeg,image/png,image/webp')
         kind = image_type(body, mime)
         if not kind or len(body) < 100:
             raise Unavailable('not_image')
@@ -520,7 +556,7 @@ def run(repo, ids, max_requests=13, reader=None, now=None, save=False):
     old_state = registry.read_json(repo / STATE) if (repo / STATE).exists() else {}
     if hasattr(reader, 'host_cooldowns'):
         for host, value in old_state.get('host_cooldowns', {}).items():
-            if host in PAGE_HOSTS | IMAGE_HOSTS and core.parse_date(value) and core.parse_date(value) > now:
+            if host in PAGE_HOSTS | IMAGE_HOSTS | {MEDIA_REDIRECT_HOST} and core.parse_date(value) and core.parse_date(value) > now:
                 reader.blocked[host] = None
                 reader.host_cooldowns[host] = value
     result = {'schema': 1, 'new_rentcast_calls': 0, 'results': [], 'new_source_network_requests': 0}
