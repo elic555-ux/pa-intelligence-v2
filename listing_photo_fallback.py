@@ -24,12 +24,13 @@ ROOT = Path('COMPS_REPORTS/listing_photos')
 STATE = ROOT / 'state.json'
 AGENT = 'PA-Property-PhotoReader/1.0'
 SOURCES = {
+    'preferredrealty': ('https://www.thepreferredrealty.com', 'Berkshire Hathaway The Preferred Realty / MLS'),
     'coldwellbanker': ('https://www.coldwellbankerhomes.com', 'Coldwell Banker / MLS'),
     'weichert': ('https://www.weichert.com', 'Weichert / MLS'),
 }
-PAGE_HOSTS = {'www.coldwellbankerhomes.com', 'www.weichert.com'}
+PAGE_HOSTS = {'www.coldwellbankerhomes.com', 'www.weichert.com', 'www.thepreferredrealty.com'}
 IMAGE_HOSTS = {'cdn.listingphotos.sierrastatic.com', 'm.cbhomes.com', 'm1.cbhomes.com',
-               'm2.cbhomes.com', 'm3.cbhomes.com', 'd36xftgacqn2p.cloudfront.net'}
+               'm2.cbhomes.com', 'm3.cbhomes.com', 'd36xftgacqn2p.cloudfront.net', 'api.cotality.com'}
 # Observed public URLs, not invented pid or image URLs. Still require full
 # identity verification of the current page; a hidden address is rejected.
 SEEDS = {
@@ -59,7 +60,12 @@ def safe_url(value, image=False):
                 or u.port not in (None, 443) or u.fragment or u.query):
             return None
         if image:
-            if not re.fullmatch(r'/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp)', u.path, re.I):
+            pattern = (r'/trestle/Media/Property/PHOTO-Jpeg/\d+/\d+/(?:[A-Za-z0-9_-]+/){2}[A-Za-z0-9_-]+'
+                       if u.hostname == 'api.cotality.com' else r'/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp)')
+            if not re.fullmatch(pattern, u.path, re.I):
+                return None
+        elif u.hostname == 'www.thepreferredrealty.com':
+            if not re.fullmatch(r'/real-estate/\d{4,10}/', u.path):
                 return None
         elif u.hostname == 'www.coldwellbankerhomes.com':
             if not re.fullmatch(r'/pa/[a-z0-9-]+/(?:[a-z0-9-]+/pid_\d+/)?', u.path):
@@ -217,6 +223,8 @@ def parse_listing(html, row, url, provider):
     if provider not in SOURCES or not safe_url(url) or urlparse(url).netloc != urlparse(SOURCES[provider][0]).netloc:
         raise Unavailable('untrusted_source')
     soup = BeautifulSoup(html, 'html.parser')
+    if provider == 'preferredrealty':
+        return parse_preferred(soup, row, url)
     title = soup.title.get_text(' ', strip=True) if soup.title else ''
     primary_title = title + ' ' + ' '.join(h.get_text(' ', strip=True) for h in soup.find_all('h1')[:1])
     if re.search(r'address not (?:provided|disclosed)|undisclosed address', primary_title, re.I):
@@ -279,7 +287,38 @@ def parse_listing(html, row, url, provider):
     return result[:6]
 
 
+def parse_preferred(soup, row, url):
+    """Bind the public MLS route and primary address before reading its gallery."""
+    mls = str(registry.listing_id(row))
+    canonical = soup.find('link', rel='canonical')
+    meta = soup.find('meta', attrs={'name': 'description'})
+    title = soup.title.get_text(' ', strip=True) if soup.title else ''
+    address = re.match(r'^(.+?),\s*([^,]+),\s*PA\s+(\d{5})(?:-\d{4})?\s*\|', title)
+    labels = re.findall(r'\bMLS\s*#\s*:\s*(\d{4,10})\b', meta.get('content', '') if meta else '')
+    if (not canonical or canonical.get('href') != url or
+            urlparse(url).path != '/real-estate/' + mls + '/' or labels != [mls] or not address):
+        raise Unavailable('identity_mismatch')
+    # This provider appends the neighborhood in parentheses to the postal city.
+    city = re.sub(r'\s+\([^()]+\)$', '', address[2]).strip()
+    if not address_match(row, address[1], city, 'PA', address[3]):
+        raise Unavailable('identity_mismatch')
+    photos = []
+    for img in soup.select('.flat-gallery-single img'):
+        alt = re.fullmatch(r'(.+?)\s+-\s+photo\s+\d+', img.get('alt', ''), re.I)
+        if not alt or registry.parse_address(alt[1])[0].upper() != core.identity4(row)[0]:
+            continue
+        image = safe_url(img.get('src'), image=True)
+        if image and urlparse(image).hostname == 'api.cotality.com' and image not in photos:
+            photos.append(image)
+    return photos[:3]
+
+
 def discover(reader, row, provider):
+    if provider == 'preferredrealty':
+        mls = str(registry.listing_id(row) or '')
+        if not re.fullmatch(r'\d{4,10}', mls):
+            raise Unavailable('unsupported_listing_id')
+        return SOURCES[provider][0] + '/real-estate/' + mls + '/'
     if provider == 'coldwellbanker' and registry.listing_id(row) in SEEDS:
         return SEEDS[registry.listing_id(row)]
     subject = registry.identity(row)
@@ -358,7 +397,7 @@ def complete(repo, row, reader, previous=None, now=None):
         return report
     attempts = {a.get('provider'): a for a in valid_old.get('attempts', [])}
     primary_url, primary_name, cached_urls = primary_photos(repo, row)
-    providers = ('saved_source', 'coldwellbanker', 'weichert')
+    providers = ('preferredrealty', 'saved_source', 'coldwellbanker', 'weichert')
     providers = sorted(providers, key=lambda provider: bool(attempts.get(provider, {}).get('unsuccessful_attempts', 0)))
     for provider in providers:
         old = attempts.get(provider, {})
@@ -422,7 +461,7 @@ def complete(repo, row, reader, previous=None, now=None):
             break
     report['status'] = 'available' if report['photos'] else 'not_completed'
     report['sources_exhausted'] = all(a.get('unsuccessful_attempts', 0) >= MAX_ATTEMPTS
-        for a in report['attempts']) and len(report['attempts']) == 3
+        for a in report['attempts']) and len(report['attempts']) == len(providers)
     return report
 
 

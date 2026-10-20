@@ -150,14 +150,18 @@
                 const image=new URL(photo.url),source=new URL(photo.source_url);
                 const provider=photo.provider,check=photo.verification;
                 const sourceAllowed=provider==='saved_source' ? Boolean(sourceUrl(source.href)) :
+                      provider==='preferredrealty' ? source.hostname==='www.thepreferredrealty.com' &&
+                          source.pathname==='/real-estate/'+listing(p)+'/' :
                     provider==='coldwellbanker' ? source.hostname==='www.coldwellbankerhomes.com' && /^\/pa\/[a-z0-9-]+\/[a-z0-9-]+\/pid_\d+\/$/.test(source.pathname) :
                     provider==='weichert' && source.hostname==='www.weichert.com' && /^\/\d+\/?$/.test(source.pathname);
                 if(!sourceAllowed || source.protocol!=='https:' || source.username || source.password || source.search || source.hash ||
                     (source.port && source.port!=='443') || photo.listing_id!==listing(p) ||
                     image.protocol!=='https:' || image.username || image.password || image.search || image.hash ||
                     (image.port && image.port!=='443') ||
-                    !['cdn.listingphotos.sierrastatic.com','m.cbhomes.com','m1.cbhomes.com','m2.cbhomes.com','m3.cbhomes.com','d36xftgacqn2p.cloudfront.net'].includes(image.hostname) ||
-                    !/^\/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp)$/i.test(image.pathname) ||
+                      !(provider==='preferredrealty' ? image.hostname==='api.cotality.com' &&
+                          /^\/trestle\/Media\/Property\/PHOTO-Jpeg\/\d+\/\d+\/(?:[A-Za-z0-9_-]+\/){2}[A-Za-z0-9_-]+$/.test(image.pathname) :
+                          ['cdn.listingphotos.sierrastatic.com','m.cbhomes.com','m1.cbhomes.com','m2.cbhomes.com','m3.cbhomes.com','d36xftgacqn2p.cloudfront.net'].includes(image.hostname) &&
+                          /^\/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp)$/i.test(image.pathname)) ||
                     check?.status!=='image_verified' || !['image/jpeg','image/png','image/webp'].includes(check.content_type) ||
                     !/^[a-f0-9]{64}$/.test(check.sha256) || !(check.bytes>=100 && check.bytes<=3000000) ||
                     !Number.isFinite(Date.parse(photo.checked_at)) || seen.has(image.href)) continue;
@@ -173,7 +177,7 @@
         const count=fallbackPhotos(p,record).length;
         if(count) return 'בדיקת מקורות נוספים: '+count+' קישורי תמונות החזירו קובץ תמונה בעת הבדיקה; הטעינה בדפדפן נבדקת בנפרד.';
         const attempts=Array.isArray(record.attempts)?record.attempts:[];
-        return attempts.length ? 'מקורות תמונות שנבדקו: '+attempts.map(a=>({saved_source:'המקור השמור',coldwellbanker:'Coldwell Banker',weichert:'Weichert'}[a.provider] || '')).filter(Boolean).join(', ')+
+          return attempts.length ? 'מקורות תמונות שנבדקו: '+attempts.map(a=>({preferredrealty:'The Preferred Realty',saved_source:'המקור השמור',coldwellbanker:'Coldwell Banker',weichert:'Weichert'}[a.provider] || '')).filter(Boolean).join(', ')+
             '. '+(record.sources_exhausted?'לא נמצאו תמונות זמינות במקורות שנבדקו; הסריקה ממשיכה.':'טרם הושלמו תמונות זמינות; הסריקה ממשיכה.') : '';
     }
     function originalPhotos(p) {

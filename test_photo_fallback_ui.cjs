@@ -15,6 +15,17 @@ function receipt(){
 test('independently bound and checked fallback images accepted',()=>{
     assert.equal(api.fallbackPhotos(row,receipt()).length,3);
 });
+test('public MLS gallery requires the current MLS route and its specific media path',()=>{
+    const r=receipt();
+    for(const p of r.photos) Object.assign(p,{provider:'preferredrealty',source_url:'https://www.thepreferredrealty.com/real-estate/1001/',
+        url:'https://api.cotality.com/trestle/Media/Property/PHOTO-Jpeg/1193411277/'+(r.photos.indexOf(p)+1)+'/encoded/encoded/signature'});
+    assert.equal(api.fallbackPhotos(row,r).length,3);
+    for(const mutate of [p=>p.source_url=p.source_url.replace('1001','9999'),p=>p.url+='?token=x',
+        p=>p.url=p.url.replace('api.cotality.com','api.cotality.com.evil.test'),p=>p.url='https://api.cotality.com/a.jpg',
+        p=>p.verification.status='candidate',p=>p.provider='weichert']) {
+        const wrong=structuredClone(r);mutate(wrong.photos[0]);assert.equal(api.fallbackPhotos(row,wrong).length,2);
+    }
+});
 test('original Redfin photos require the current address, listing and source binding',()=>{
     const p={...row,url:'https://www.redfin.com/PA/Pittsburgh/12-First-St-15216/home/1'};
     p.listing_source_details={status:'published',identity:api.identity(p),listing_id:'1001',source_url:p.url};
