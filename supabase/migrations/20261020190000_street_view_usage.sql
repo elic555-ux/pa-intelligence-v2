@@ -2,6 +2,11 @@
 -- Additive migration; existing property/deal tables are untouched.
 begin;
 
+-- Privileged implementations are kept outside the exposed API schema.
+create schema street_view_private;
+revoke all on schema street_view_private from public,anon,authenticated;
+grant usage on schema street_view_private to authenticated;
+
 create table public.street_view_usage_months (
     period date primary key check (extract(day from period)=1),
     used integer not null default 0 check (used between 0 and 9000),
@@ -18,7 +23,7 @@ alter table public.street_view_usage_attempts enable row level security;
 revoke all on public.street_view_usage_months from public,anon,authenticated;
 revoke all on public.street_view_usage_attempts from public,anon,authenticated;
 
-create function public.street_view_usage_status() returns jsonb
+create function street_view_private.street_view_usage_status() returns jsonb
 language plpgsql security definer set search_path=''
 as $$
 declare
@@ -35,7 +40,7 @@ begin
 end;
 $$;
 
-create function public.reserve_street_view_attempt(p_request_id uuid) returns jsonb
+create function street_view_private.reserve_street_view_attempt(p_request_id uuid) returns jsonb
 language plpgsql security definer set search_path=''
 as $$
 declare
@@ -67,6 +72,18 @@ begin
         'allowed',v_allowed,'reason',v_reason,'request_id',p_request_id);
 end;
 $$;
+revoke all on function street_view_private.street_view_usage_status() from public,anon,authenticated;
+revoke all on function street_view_private.reserve_street_view_attempt(uuid) from public,anon,authenticated;
+grant execute on function street_view_private.street_view_usage_status() to authenticated;
+grant execute on function street_view_private.reserve_street_view_attempt(uuid) to authenticated;
+
+create function public.street_view_usage_status() returns jsonb
+language sql security invoker set search_path=''
+as $$ select street_view_private.street_view_usage_status() $$;
+create function public.reserve_street_view_attempt(p_request_id uuid) returns jsonb
+language sql security invoker set search_path=''
+as $$ select street_view_private.reserve_street_view_attempt(p_request_id) $$;
+
 revoke all on function public.street_view_usage_status() from public,anon,authenticated;
 revoke all on function public.reserve_street_view_attempt(uuid) from public,anon,authenticated;
 grant execute on function public.street_view_usage_status() to authenticated;

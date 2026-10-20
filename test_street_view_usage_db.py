@@ -43,6 +43,8 @@ def main():
         return json.loads(next(line for line in text.splitlines() if line.startswith('{')))
 
     initial = response(as_owner('select public.street_view_usage_status()'))
+    assert sql("select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('street_view_usage_status','reserve_street_view_attempt') and p.prosecdef") == '0'
+    assert sql("select has_schema_privilege('anon','street_view_private','usage')") == 'f'
     assert initial['used'] == 0 and initial['allowed'] and initial['time_zone'] == 'Asia/Jerusalem'
     request_id = str(uuid.uuid4())
     first = response(as_owner(f"select public.reserve_street_view_attempt('{request_id}')"))
