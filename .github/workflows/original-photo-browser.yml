@@ -1,0 +1,26 @@
+name: Original Photo Browser Trial
+on:
+  pull_request:
+    paths:
+      - original_photo_browser.py
+      - .github/workflows/original-photo-browser.yml
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install beautifulsoup4==4.15.0 playwright==1.64.0
+      - run: python -m playwright install --with-deps --no-shell chromium
+      - name: Read two current source listings without production writes
+        run: python original_photo_browser.py --id PA-MLS-1779745 --id PA-MLS-1779799 > original-photo-trial.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-photo-trial
+          path: original-photo-trial.json
+          retention-days: 3
