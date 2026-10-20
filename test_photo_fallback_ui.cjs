@@ -15,6 +15,17 @@ function receipt(){
 test('independently bound and checked fallback images accepted',()=>{
     assert.equal(api.fallbackPhotos(row,receipt()).length,3);
 });
+test('original Redfin photos require the current address, listing and source binding',()=>{
+    const p={...row,url:'https://www.redfin.com/PA/Pittsburgh/12-First-St-15216/home/1'};
+    p.listing_source_details={status:'published',identity:api.identity(p),listing_id:'1001',source_url:p.url};
+    p.listing_photos=[{url:'https://ssl.cdn-redfin.com/photo/162/bigphoto/001/1001_0.jpg',source_url:p.url,source:'Redfin / MLS'}];
+    assert.equal(api.originalPhotos(p).length,1);
+    for(const change of [q=>q.address='14 First St',q=>q._idAmbiguous=true,q=>q.docket_id='MLS-9999',
+        q=>q.listing_source_details.status='source_blocked',q=>q.listing_photos[0].source_url+='wrong',
+        q=>q.listing_photos[0].url='https://evil.test/photo/a.jpg',q=>q.listing_photos[0].url+='?token=x']) {
+        const invalid=structuredClone(p);change(invalid);assert.equal(api.originalPhotos(invalid).length,0);
+    }
+});
 test('wrong source, listing, current identity, credentials, HTML and unverified images rejected',()=>{
     for(const mutate of [r=>r.identity[0]='14 FIRST ST',r=>r.inventory_source_url+='wrong',
         r=>r.photos[0].listing_id='9999',r=>r.photos[0].url='https://evil.test/a.jpg',
@@ -32,3 +43,4 @@ test('receipt reports attempted sources without claiming scan failure or browser
     assert.doesNotMatch(api.fallbackNotice(row,r),/הסריקה נכשלה/);
     assert.doesNotMatch(api.fallbackNotice(row,receipt()),/תמונות שנטענו בדפדפן/);
 });
+
