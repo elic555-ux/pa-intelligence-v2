@@ -7,6 +7,7 @@ on:
       - 'street-view-preview.js'
       - 'test_street_view_usage.cjs'
       - 'test_street_view_preview.cjs'
+      - 'test_property_maps.cjs'
       - 'test_street_view_usage_db.py'
       - 'supabase/migrations/*street_view_usage.sql'
       - '.github/workflows/street-view-usage-validation.yml'
@@ -43,6 +44,7 @@ jobs:
           node test_street_view_local_settings.cjs
           node test_street_view.cjs
           node test_authentication.cjs
+          node test_property_maps.cjs
       - name: Actual database limits, authorization and concurrent reservations
         env:
           PA_STREET_USAGE_TEST_DATABASE: isolated
