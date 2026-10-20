@@ -25,7 +25,7 @@ ROOT = Path("COMPS_REPORTS")
 ENDPOINTS = {"value": "/avm/value", "rent": "/avm/rent/long-term"}
 DOCS = {"value": "https://developers.rentcast.io/reference/value-estimate",
         "rent": "https://developers.rentcast.io/reference/rent-estimate-long-term"}
-VERSION = "expanded-report-8.15.1-internal-store-20261019"
+VERSION = "expanded-report-8.15.0-internal-store-20261008"
 MULTI = {"Multi-Family", "Apartment"}
 
 
@@ -290,18 +290,11 @@ def prepare(event_path: Path, run_id: str):
         manifest = read(ROOT / "internal_data/manifest.json") or {}
         digest = hashlib.sha256(inventory_path.read_bytes()).hexdigest()
         if manifest.get("source_inventory_sha256") != digest:
-            try:
-                store.build_inventory(ROOT.parent)
-            except Exception:
-                pass
+            store.build_inventory(ROOT.parent)
     existing = read(ROOT / "expanded_receipts" / (req["request_id"] + ".json"))
     if existing and existing.get("request_id") == req["request_id"]:
         if existing.get("subject_signature") != subject_signature(req["property"]):
             raise ValueError("Request identifier belongs to another property")
-        # Ensure the finalized report file also exists in expanded_reports/
-        report_file = ROOT / "expanded_reports" / (property_key(req["property"]["id"]) + ".json")
-        if not report_file.is_file():
-            write(report_file, existing)
         # GitHub manual job re-runs must never consume the quota twice.
         job = {**req, "run_id": run_id, "status": "already_completed", "slots": [], "generated_at": stamp()}
         write(ROOT / "expanded_requests" / (run_id + ".json"), job)
@@ -369,30 +362,19 @@ def execute(run_id: str):
     job = read(job_path)
     if not job:
         raise ValueError("No committed request reservation")
-    p = job.get("property")
-    if isinstance(p, dict) and p.get("id"):
-        result_path = ROOT / "expanded_reports" / (property_key(p["id"]) + ".json")
-    else:
-        result_path = None
     if job["status"] in {"already_completed", "completed"}:
-        if result_path and not result_path.is_file():
-            existing_receipt = read(ROOT / "expanded_receipts" / (job["request_id"] + ".json"))
-            if existing_receipt:
-                write(result_path, existing_receipt)
         return job
+    p = job["property"]
+    result_path = ROOT / "expanded_reports" / (property_key(p["id"]) + ".json")
     previous = read(result_path) or {}
     same_subject = previous.get("subject_signature") == subject_signature(p)
     result = {"version": VERSION, "property_id": p["id"], "property": p, "subject_signature": subject_signature(p),
               "request_id": job["request_id"], "run_id": run_id, "generated_at": stamp(),
               "status": job["status"], "sources": dict(previous.get("sources", {})) if same_subject else {},
               "usage": job.get("usage"), "calls_reserved": job.get("calls_reserved", 0), "calls_sent": 0, "errors": {}}
-    try:
-        result["internal_data"] = store.profile(p, ROOT,
-            allow_public=os.environ.get("FREE_COUNTY_LOOKUPS_ENABLED", "true").lower() == "true",
-            refresh=job.get("refresh") is True)
-    except Exception as exc:
-        result["internal_data"] = {}
-        result["errors"]["internal_data"] = f"store_lookup_failed: {str(exc)[:100]}"
+    result["internal_data"] = store.profile(p, ROOT,
+        allow_public=os.environ.get("FREE_COUNTY_LOOKUPS_ENABLED", "true").lower() == "true",
+        refresh=job.get("refresh") is True)
     result["api_policy"] = "enabled" if api_enabled() else "internal_data_and_free_county_sources"
     result["profile_only"] = job.get("mode") == "profile"
 
