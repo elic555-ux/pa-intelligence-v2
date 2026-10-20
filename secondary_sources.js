@@ -176,7 +176,29 @@
         return attempts.length ? 'מקורות תמונות שנבדקו: '+attempts.map(a=>({saved_source:'המקור השמור',coldwellbanker:'Coldwell Banker',weichert:'Weichert'}[a.provider] || '')).filter(Boolean).join(', ')+
             '. '+(record.sources_exhausted?'לא נמצאו תמונות זמינות במקורות שנבדקו; הסריקה ממשיכה.':'טרם הושלמו תמונות זמינות; הסריקה ממשיכה.') : '';
     }
-    const api={fallbackPhotos,fallbackNotice,identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
+    function originalPhotos(p) {
+        const record=p.listing_source_details, source=inventoryUrl(p.url);
+        if(p._idAmbiguous || p.source_type!=='mls' || record?.status!=='published' ||
+            record.source_url!==source || record.listing_id!==listing(p) ||
+            JSON.stringify(record.identity)!==JSON.stringify(identity(p))) return [];
+        try {
+            const url=new URL(source);
+            if(!['redfin.com','www.redfin.com'].includes(url.hostname) || url.search ||
+                !/^\/PA\/[^/]+\/[^/]+\/home\/\d+$/.test(url.pathname)) return [];
+        } catch(_) { return []; }
+        const seen=new Set();
+        return (Array.isArray(p.listing_photos)?p.listing_photos:[]).filter(photo=>{
+            try {
+                const url=new URL(photo.url);
+                if(photo.source_url!==source || photo.source!=='Redfin / MLS' ||
+                    url.protocol!=='https:' || url.hostname!=='ssl.cdn-redfin.com' ||
+                    url.username || url.password || (url.port && url.port!=='443') || url.search || url.hash ||
+                    !url.pathname.startsWith('/photo/') || seen.has(url.href)) return false;
+                seen.add(url.href); return true;
+            } catch(_) { return false; }
+        }).slice(0,3);
+    }
+    const api={originalPhotos,fallbackPhotos,fallbackNotice,identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
     if (typeof module !== 'undefined' && module.exports) { module.exports=api; return; }
     root.SecondarySourceEvidence=api;
     if (typeof document === 'undefined' || typeof openPropertyModal !== 'function') return;
@@ -243,7 +265,7 @@
         const supported=!p._idAmbiguous && p.source_type==='mls' && listing(p) && ['Allegheny','Erie'].includes(p.county);
         n.hidden=!supported; if(!supported) return;
         n.appendChild(element('h4','מפרט ותמונות שנאספו','text-blue-300 font-bold mb-2'));
-        const items=ordered(p,records.get(p)), r=items[0], receipt=photoReceipts.get(p), extras=fallbackPhotos(p,receipt);
+        const items=ordered(p,records.get(p)), r=items[0], receipt=photoReceipts.get(p), extras=fallbackPhotos(p,receipt), originals=originalPhotos(p);
         const origin=p.listing_identifier_origin;
         const originText=origin==='redfin_csv_mls_column' ? 'מספר המודעה התקבל מקובץ הסריקה של Redfin.' :
             origin==='address_fallback' ? 'מזהה הנכס נוצר מהכתובת כי מספר MLS לא הופיע בסריקה.' :
@@ -255,9 +277,15 @@
         const status=element('p','','text-xs text-gray-400 my-2'); status.id='modal-additional-source-notice'; n.appendChild(status);
         const coverage=element('p',collectionNotice(p,attempts.get(p) || items)+' '+fallbackNotice(p,receipt),'text-sm text-gray-300 my-2');
         coverage.id='modal-source-coverage'; n.appendChild(coverage);
-        if(!r && !extras.length) { status.textContent=message; return; }
+        if(!r && !extras.length && !originals.length) { status.textContent=message; return; }
+        if(originals.length) {
+            const originalSection=document.getElementById('modal-listing-photos-section');
+            if(originalSection) originalSection.hidden=true;
+            const link=element('a','פתח את המודעה: Redfin / MLS','block text-blue-300 underline text-xs');
+            link.href=originals[0].source_url;link.target='_blank';link.rel='noopener noreferrer';n.appendChild(link);
+        }
         const dated=parseDate(r?.retrieved_at) ? displayDate(r.retrieved_at) : 'תאריך לא ידוע';
-        status.textContent=message || (!r ? 'תמונות ממקורות נוספים שנבדקו.' : 'פרטים שמורים ממודעת '+PROVIDERS[r.provider].name+' · נאספו: '+dated+
+        status.textContent=message || (!r ? (originals.length?'תמונות שמורות ממודעת Redfin / MLS של הנכס.':'תמונות ממקורות נוספים שנבדקו.') : 'פרטים שמורים ממודעת '+PROVIDERS[r.provider].name+' · נאספו: '+dated+
             (r.source_updated_at ? ' · עודכנו במקור: '+r.source_updated_at : '')+
             (parseDate(r.retrieved_at) && Date.now()-parseDate(r.retrieved_at)>7*86400000 ? ' · הנתונים בני יותר משבוע.' : ''));
         for(const item of items) {
@@ -282,7 +310,7 @@
         n.appendChild(element('p','סוג גג אינו בדיקה של מצב הגג; אין להסיק אכלוס מנתוני המפרט. שטח מגרש ב־Acres נשמר ביחידה המקורית ללא המרה.','text-xs text-gray-400 mt-2'));
         const gallery=element('div','','grid grid-cols-1 md:grid-cols-3 gap-2 mt-3'); gallery.id='modal-additional-source-photos';
         const seen=new Set();
-        const images=[...extras,...combinedPhotos(p,items)].filter(photo=>!seen.has(photo.url) && seen.add(photo.url));
+        const images=[...originals,...extras,...combinedPhotos(p,items)].filter(photo=>!seen.has(photo.url) && seen.add(photo.url));
         let cursor=0, loaded=0, exhausted=0;
         const loading=element('p',images.length?'בודק טעינת תמונות בדפדפן…':'לא נשמרו קישורי תמונות זמינים.','text-xs text-gray-300 mt-2');
         loading.id='modal-photo-load-status';
@@ -316,6 +344,13 @@
         if(gallery.children.length) n.appendChild(element('p','התמונות מוצגות מהמודעות המקושרות. מועד הצילום לא פורסם.','text-xs text-gray-400 mt-1'));
 
     }
+    // The primary snapshot and secondary snapshots finish independently.
+    // Rebuild the shared gallery when the original photos arrive later.
+    const baseRenderListingPhotos=renderListingPhotos;
+    renderListingPhotos=function(p) {
+        baseRenderListingPhotos(p);
+        if(currentSelectedProperty===p) render(p);
+    };
     async function load(p,generation) {
         try {
             const cacheKey=await key(p.id);
@@ -337,3 +372,4 @@
     };
     root.SecondarySourceEvidence.load=load;
 })(typeof window !== 'undefined' ? window : globalThis);
+

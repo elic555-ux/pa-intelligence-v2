@@ -135,7 +135,7 @@ const dom={getElementById:id=>elements.get(id)||null,createElement:tag=>new Elem
     createTextNode:text=>({textContent:text}),querySelectorAll:()=>[],addEventListener(){}};
 for(const id of ['modal-listing-source-controls','modal-roof','modal-roof-source','modal-hvac','modal-hvac-source',
     'modal-parking','modal-parking-source','modal-occupancy','modal-occupancy-source','modal-listing-extra-facts',
-    'modal-sqft','modal-sqft-source','modal-lot-size','modal-lot-size-source']) {
+    'modal-sqft','modal-sqft-source','modal-lot-size','modal-lot-size-source','modal-listing-photos-section','modal-listing-photos']) {
     const e=new Element();e.id=id;e.parentNode=new Element();
 }
 const storage=new Map([['pa_github_token','test-token']]);let calls=[];
@@ -236,6 +236,21 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         assert.match(dom.getElementById('modal-photo-load-status').textContent,/בדפדפן: 1/);
     });
     check('fallback evidence never changes inventory or financial inputs',()=>assert.equal(JSON.stringify(ctx.p),before));
+    ctx.p.listing_source_details={status:'published',identity:api.identity(row),source_url:row.url,listing_id:'1001'};
+    ctx.p.listing_photos=[1,2,3].map(n=>({url:'https://ssl.cdn-redfin.com/photo/162/bigphoto/001/1001_'+n+'.jpg',source_url:row.url,source:'Redfin / MLS'}));
+    run('renderListingPhotos(p)');
+    check('late original source photos replace failed secondary candidates in the shared gallery',()=>{
+        const gallery=dom.getElementById('modal-additional-source-photos');
+        assert.deepEqual(gallery.children.map(a=>a.children[0].src),ctx.p.listing_photos.map(p=>p.url));
+        assert.ok(gallery.children.every(a=>a.href===row.url));
+        assert.equal(dom.getElementById('modal-listing-photos-section').hidden,true);
+        gallery.children[0].children[0].onload();
+        assert.match(dom.getElementById('modal-photo-load-status').textContent,/בדפדפן: 1/);
+    });
+    check('an original photo failure still advances to a verified backup provider',()=>{
+        const image=dom.getElementById('modal-additional-source-photos').children[1].children[0];
+        image.onerror();assert.equal(image.src,backup.photos[0].url);
+    });
     const erieFile=path.join(__dirname,'test_fixtures/eriemoves_maxwell.json');
     const erie=JSON.parse(fs.readFileSync(erieFile,'utf8'));
     ctx.p={id:erie.property_id,docket_id:'MLS-'+erie.listing_id,source_type:'mls',address:'4117 Maxwell Ave',
@@ -311,3 +326,4 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
     check('shared GitHub token never modified',()=>assert.equal(storage.get('pa_github_token'),'test-token'));
     console.log(passed+' source UI checks passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
