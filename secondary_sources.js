@@ -150,14 +150,18 @@
                 const image=new URL(photo.url),source=new URL(photo.source_url);
                 const provider=photo.provider,check=photo.verification;
                 const sourceAllowed=provider==='saved_source' ? Boolean(sourceUrl(source.href)) :
+                      provider==='preferredrealty' ? source.hostname==='www.thepreferredrealty.com' &&
+                          source.pathname==='/real-estate/'+listing(p)+'/' :
                     provider==='coldwellbanker' ? source.hostname==='www.coldwellbankerhomes.com' && /^\/pa\/[a-z0-9-]+\/[a-z0-9-]+\/pid_\d+\/$/.test(source.pathname) :
                     provider==='weichert' && source.hostname==='www.weichert.com' && /^\/\d+\/?$/.test(source.pathname);
                 if(!sourceAllowed || source.protocol!=='https:' || source.username || source.password || source.search || source.hash ||
                     (source.port && source.port!=='443') || photo.listing_id!==listing(p) ||
                     image.protocol!=='https:' || image.username || image.password || image.search || image.hash ||
                     (image.port && image.port!=='443') ||
-                    !['cdn.listingphotos.sierrastatic.com','m.cbhomes.com','m1.cbhomes.com','m2.cbhomes.com','m3.cbhomes.com','d36xftgacqn2p.cloudfront.net'].includes(image.hostname) ||
-                    !/^\/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp)$/i.test(image.pathname) ||
+                      !(provider==='preferredrealty' ? image.hostname==='api.cotality.com' &&
+                          /^\/trestle\/Media\/Property\/PHOTO-Jpeg\/\d+\/\d+\/(?:[A-Za-z0-9_-]+\/){2}[A-Za-z0-9_-]+$/.test(image.pathname) :
+                          ['cdn.listingphotos.sierrastatic.com','m.cbhomes.com','m1.cbhomes.com','m2.cbhomes.com','m3.cbhomes.com','d36xftgacqn2p.cloudfront.net'].includes(image.hostname) &&
+                          /^\/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp)$/i.test(image.pathname)) ||
                     check?.status!=='image_verified' || !['image/jpeg','image/png','image/webp'].includes(check.content_type) ||
                     !/^[a-f0-9]{64}$/.test(check.sha256) || !(check.bytes>=100 && check.bytes<=3000000) ||
                     !Number.isFinite(Date.parse(photo.checked_at)) || seen.has(image.href)) continue;
@@ -173,7 +177,7 @@
         const count=fallbackPhotos(p,record).length;
         if(count) return 'בדיקת מקורות נוספים: '+count+' קישורי תמונות החזירו קובץ תמונה בעת הבדיקה; הטעינה בדפדפן נבדקת בנפרד.';
         const attempts=Array.isArray(record.attempts)?record.attempts:[];
-        return attempts.length ? 'מקורות תמונות שנבדקו: '+attempts.map(a=>({saved_source:'המקור השמור',coldwellbanker:'Coldwell Banker',weichert:'Weichert'}[a.provider] || '')).filter(Boolean).join(', ')+
+          return attempts.length ? 'מקורות תמונות שנבדקו: '+attempts.map(a=>({preferredrealty:'The Preferred Realty',saved_source:'המקור השמור',coldwellbanker:'Coldwell Banker',weichert:'Weichert'}[a.provider] || '')).filter(Boolean).join(', ')+
             '. '+(record.sources_exhausted?'לא נמצאו תמונות זמינות במקורות שנבדקו; הסריקה ממשיכה.':'טרם הושלמו תמונות זמינות; הסריקה ממשיכה.') : '';
     }
     function originalPhotos(p) {
@@ -270,7 +274,8 @@
         const originText=origin==='redfin_csv_mls_column' ? 'מספר המודעה התקבל מקובץ הסריקה של Redfin.' :
             origin==='address_fallback' ? 'מזהה הנכס נוצר מהכתובת כי מספר MLS לא הופיע בסריקה.' :
             'מקור מספר המודעה לא תועד בסריקה קודמת.';
-        const verified=items.length ? ' נמצאה מודעת מקור שנבדקה מול זהות הנכס: '+items.map(item=>PROVIDERS[item.provider].name).join(' / ')+'.' :
+        const verifiedNames=[...new Set([...items.map(item=>PROVIDERS[item.provider].name),...extras.map(photo=>photo.source_name)].filter(Boolean))];
+        const verified=verifiedNames.length ? ' נמצאה מודעת מקור שנבדקה מול זהות הנכס: '+verifiedNames.join(' / ')+'.' :
             ' טרם נמצאה במערכת מודעת מקור נוספת שאומתה לזהות הנכס.';
         const identityStatus=element('p',originText+verified,'text-sm text-gray-300 my-2');
         identityStatus.id='modal-listing-identity-status'; n.appendChild(identityStatus);
@@ -291,6 +296,11 @@
         for(const item of items) {
             const link=element('a','פתח את המודעה: '+PROVIDERS[item.provider].name,'block text-blue-300 underline text-xs');
             link.href=item.source_url; link.target='_blank'; link.rel='noopener noreferrer'; n.appendChild(link);
+        }
+        for(const photo of extras.filter((photo,index,all)=>all.findIndex(other=>other.source_url===photo.source_url)===index &&
+            !items.some(item=>item.source_url===photo.source_url))) {
+            const link=element('a','פתח את מודעת התמונות: '+photo.source_name,'block text-blue-300 underline text-xs');
+            link.href=photo.source_url;link.target='_blank';link.rel='noopener noreferrer';n.appendChild(link);
         }
         const table=document.createElement('table'); table.className='w-full mt-3 text-xs';
         const head=document.createElement('tr'); ['נתון','במקור הקיים',...items.map(s=>PROVIDERS[s.provider].name)].forEach(t=>head.appendChild(element('th',t,'p-2 text-right text-gray-400'))); table.appendChild(head);

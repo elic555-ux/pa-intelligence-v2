@@ -251,6 +251,21 @@ ctx.p=structuredClone(row);const before=JSON.stringify(ctx.p),run=c=>vm.runInCon
         const image=dom.getElementById('modal-additional-source-photos').children[1].children[0];
         image.onerror();assert.equal(image.src,backup.photos[0].url);
     });
+    delete ctx.p.listing_source_details;delete ctx.p.listing_photos;
+    const preferred=structuredClone(backup),preferredUrl='https://www.thepreferredrealty.com/real-estate/1001/';
+    for(const photo of preferred.photos) Object.assign(photo,{provider:'preferredrealty',source_url:preferredUrl,
+        source_name:'Berkshire Hathaway The Preferred Realty / MLS',
+        url:'https://api.cotality.com/trestle/Media/Property/PHOTO-Jpeg/1193411277/'+(preferred.photos.indexOf(photo)+1)+'/encoded/encoded/signature'});
+    ctx.fetch=async(url)=>({ok:true,json:async()=>({encoding:'base64',content:Buffer.from(JSON.stringify(url.includes('/listing_photos/')?preferred:{})).toString('base64')})});
+    await ctx.window.SecondarySourceEvidence.load(ctx.p,1);
+    check('a photo-only MLS gallery has a verified source notice and visible listing link',()=>{
+        assert.match(dom.getElementById('modal-listing-identity-status').textContent,/The Preferred Realty/);
+        assert.ok(dom.getElementById('modal-additional-source').children.some(n=>n.href===preferredUrl && /מודעת התמונות/.test(n.textContent)));
+        const gallery=dom.getElementById('modal-additional-source-photos');
+        assert.deepEqual(gallery.children.map(a=>a.children[0].src),preferred.photos.map(p=>p.url));
+        gallery.children.forEach(a=>a.children[0].onload());
+        assert.match(dom.getElementById('modal-photo-load-status').textContent,/בדפדפן: 3/);
+    });
     const erieFile=path.join(__dirname,'test_fixtures/eriemoves_maxwell.json');
     const erie=JSON.parse(fs.readFileSync(erieFile,'utf8'));
     ctx.p={id:erie.property_id,docket_id:'MLS-'+erie.listing_id,source_type:'mls',address:'4117 Maxwell Ave',
