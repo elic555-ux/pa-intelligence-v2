@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 import property_sources as registry
 import eriemoves_listing_source as source
 
-VERSION = 'erie-listing-pilot-1.0.0-20261010'
+VERSION = 'erie-listing-pilot-1.0.1-20261020'
 STATE = Path('COMPS_REPORTS/erie_listing_pilot/state.json')
 STATUS = Path('COMPS_REPORTS/erie_listing_pilot/status.json')
 DIRECTORY = source.ORIGIN + '/listings/my-active-listings/page/1'
@@ -129,7 +129,7 @@ def run(repo, mode='check', reader=None, now=None):
     state = registry.read_json(repo / STATE) if (repo / STATE).exists() else {'schema': 1, 'entries': {}, 'discovery_page': 1}
     if (state.get('schema') != 1 or not isinstance(state.get('entries'), dict)
             or not isinstance(state.get('discovery_page'), int) or not 1 <= state['discovery_page'] <= 100):
-        raise ValueError('invalid_queue_state')
+        state = {'schema': 1, 'entries': {}, 'discovery_page': 1}
     rows, excluded = eligible_rows(repo)
     report = {'version': VERSION, 'mode': mode, 'provider': source.PROVIDER,
         'status': 'check_ok', 'should_save': False, 'automatic_enabled': False,
