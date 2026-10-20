@@ -84,10 +84,25 @@ jobs:
       - name: Compile changed Python and validate workflow YAML
         run: |
           python -m py_compile orchestrator.py automatic_listing_sources.py completion_subjects.py test_automatic_listing_sources.py completion_heartbeat.py test_completion_heartbeat.py
-          python -c "from pathlib import Path; import yaml; [(_ for _ in ()).throw(AssertionError(n)) if not ({'on', 'jobs'} <= set(yaml.load((Path('.github/workflows') / n).read_text(), Loader=yaml.BaseLoader) or {})) else None for n in ('cron-daily-mls.yml', 'automatic-listing-sources.yml', 'completion-heartbeat.yml')]"
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for name in ('cron-daily-mls.yml', 'automatic-listing-sources.yml', 'completion-heartbeat.yml'):
+              workflow = yaml.load((Path('.github/workflows') / name).read_text(), Loader=yaml.BaseLoader)
+              assert 'on' in workflow and 'jobs' in workflow, name
+          PY
       - name: Verify scan integration without live requests
         run: |
-          python -c "import socket, unittest, requests; blocked = lambda *a, **k: (_ for _ in ()).throw(AssertionError('Live network requests are disabled in source integration tests')); socket.create_connection = blocked; requests.sessions.Session.request = blocked; suite = unittest.defaultTestLoader.discover('.', pattern='test_*.py'); res = unittest.TextTestRunner(verbosity=2).run(suite); raise SystemExit(0 if res.wasSuccessful() else 1)"
+          python - <<'PY'
+          import socket, unittest, requests
+          def blocked(*args, **kwargs):
+              raise AssertionError('Live network requests are disabled in source integration tests')
+          socket.create_connection = blocked
+          requests.sessions.Session.request = blocked
+          suite = unittest.defaultTestLoader.discover('.', pattern='test_*.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          raise SystemExit(0 if result.wasSuccessful() else 1)
+          PY
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
@@ -100,7 +115,6 @@ jobs:
           node test_street_view_preview.cjs
           node test_street_view_local_settings.cjs
           node test_photo_fallback_ui.cjs
-
   complete:
     if: >-
       github.ref == 'refs/heads/main' &&
@@ -109,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
@@ -121,14 +135,10 @@ jobs:
           else
             python3 scan_schedule.py completion
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.timing.outputs.due == 'true'
         with:
           python-version: '3.11'
-      - uses: actions/setup-node@v4
-        if: steps.timing.outputs.due == 'true'
-        with:
-          node-version: '22'
       - name: Install public HTML parser
         if: steps.timing.outputs.due == 'true'
         run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz tzdata
@@ -150,7 +160,13 @@ jobs:
           AUTO_EVENT: ${{ github.event_name }}
           AUTO_MODE: ${{ inputs.mode }}
         run: |
-          python -c "import os, subprocess, sys; mode = os.environ.get('AUTO_MODE', 'check') if os.environ.get('AUTO_EVENT') == 'workflow_dispatch' else 'automatic'; raise SystemExit('Unsupported mode') if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'} else subprocess.run([sys.executable, 'automatic_listing_sources.py', mode], check=True)"
+          python - <<'PY'
+          import os, subprocess, sys
+          mode = os.environ.get('AUTO_MODE', 'check') if os.environ['AUTO_EVENT'] == 'workflow_dispatch' else 'automatic'
+          if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'}:
+              raise SystemExit('Unsupported mode')
+          subprocess.run([sys.executable, 'automatic_listing_sources.py', mode], check=True)
+          PY
       - name: Refresh registry from saved source evidence
         if: steps.worker.outputs.save == 'true'
         run: python property_sources.py build
@@ -163,25 +179,22 @@ jobs:
           if [ -d COMPS_REPORTS/additional_sources ]; then git add COMPS_REPORTS/additional_sources; fi
           if [ -d COMPS_REPORTS/scan_review ]; then git add COMPS_REPORTS/scan_review; fi
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Save bounded MLS source completion and resumable queue [skip ci]'
-          pushed=false
-          for i in 1 2 3; do
-            if ! git pull --rebase origin main; then
-              git rebase --abort || true
-              echo 'Repository changed incompatibly during completion. Nothing pushed; queue can resume on the next run.'
-              exit 1
-            fi
-            python -c "import hashlib, json; from pathlib import Path; receipt = json.loads(Path('COMPS_REPORTS/automatic_listing_sources/status.json').read_text(encoding='utf-8')); cur = hashlib.sha256(Path('properties.json').read_bytes()).hexdigest(); raise SystemExit('Inventory changed. Nothing pushed.') if cur != receipt.get('properties_sha256') else None"
-            if git push origin HEAD:main; then
-              pushed=true
-              break
-            fi
-            sleep 5
-          done
-          if [ "$pushed" != "true" ]; then
-            echo '::error::Could not push completion updates after 3 attempts.'
+          git fetch origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo 'Repository changed during completion. Nothing pushed; queue can resume on the next run.'
             exit 1
           fi
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          receipt = json.loads(Path('COMPS_REPORTS/automatic_listing_sources/status.json').read_text())
+          if hashlib.sha256(Path('properties.json').read_bytes()).hexdigest() != receipt['properties_sha256']:
+              raise SystemExit('Inventory changed. Nothing pushed.')
+          PY
+          git commit -m 'Save bounded MLS source completion and resumable queue'
+          git push origin HEAD:main
+
+
 
   photo-trial:
     # A bounded, read-only trial of two explicitly requested listings.
@@ -203,9 +216,23 @@ jobs:
       - name: Try original photos and two public backup sources without saving
         run: |
           python listing_photo_fallback.py --id PA-MLS-1774373 --id PA-MLS-1774350 --max-requests 20 > photo-trial.json
-          python -c "import json, os; from pathlib import Path; report = json.loads(Path('photo-trial.json').read_text(encoding='utf-8').splitlines()[0]); lines = ['## Photo fallback: bounded read-only trial', 'RentCast calls: 0; no inventory, credentials or Supabase writes.'] + [item['property_id'] + ': ' + item['status'] + '; verified photo files: ' + str(len(item.get('photos', []))) + ''.join('\n- ' + a['provider'] + ': ' + a['status'] + '; HTTP ' + str(a.get('http_status')) for a in item.get('attempts', [])) for item in report.get('results', [])]; Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('\n'.join(lines), encoding='utf-8'); print(json.dumps(report, ensure_ascii=False)); print('\n'.join(lines))"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads(Path('photo-trial.json').read_text().splitlines()[0])
+          lines=['## Photo fallback: bounded read-only trial',
+                 'RentCast calls: 0; no inventory, credentials or Supabase writes.']
+          for item in report['results']:
+              lines.append(item['property_id']+': '+item['status']+'; verified photo files: '+str(len(item.get('photos',[]))))
+              for attempt in item.get('attempts',[]):
+                  lines.append('- '+attempt['provider']+': '+attempt['status']+'; HTTP '+str(attempt.get('http_status')))
+          Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('\n'.join(lines))
+          print(json.dumps(report, ensure_ascii=False))
+          print('\n'.join(lines))
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: photo-fallback-trial
           path: photo-trial.json
           retention-days: 7
+
