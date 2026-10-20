@@ -274,7 +274,8 @@
         const originText=origin==='redfin_csv_mls_column' ? 'מספר המודעה התקבל מקובץ הסריקה של Redfin.' :
             origin==='address_fallback' ? 'מזהה הנכס נוצר מהכתובת כי מספר MLS לא הופיע בסריקה.' :
             'מקור מספר המודעה לא תועד בסריקה קודמת.';
-        const verified=items.length ? ' נמצאה מודעת מקור שנבדקה מול זהות הנכס: '+items.map(item=>PROVIDERS[item.provider].name).join(' / ')+'.' :
+        const verifiedNames=[...new Set([...items.map(item=>PROVIDERS[item.provider].name),...extras.map(photo=>photo.source_name)].filter(Boolean))];
+        const verified=verifiedNames.length ? ' נמצאה מודעת מקור שנבדקה מול זהות הנכס: '+verifiedNames.join(' / ')+'.' :
             ' טרם נמצאה במערכת מודעת מקור נוספת שאומתה לזהות הנכס.';
         const identityStatus=element('p',originText+verified,'text-sm text-gray-300 my-2');
         identityStatus.id='modal-listing-identity-status'; n.appendChild(identityStatus);
@@ -295,6 +296,11 @@
         for(const item of items) {
             const link=element('a','פתח את המודעה: '+PROVIDERS[item.provider].name,'block text-blue-300 underline text-xs');
             link.href=item.source_url; link.target='_blank'; link.rel='noopener noreferrer'; n.appendChild(link);
+        }
+        for(const photo of extras.filter((photo,index,all)=>all.findIndex(other=>other.source_url===photo.source_url)===index &&
+            !items.some(item=>item.source_url===photo.source_url))) {
+            const link=element('a','פתח את מודעת התמונות: '+photo.source_name,'block text-blue-300 underline text-xs');
+            link.href=photo.source_url;link.target='_blank';link.rel='noopener noreferrer';n.appendChild(link);
         }
         const table=document.createElement('table'); table.className='w-full mt-3 text-xs';
         const head=document.createElement('tr'); ['נתון','במקור הקיים',...items.map(s=>PROVIDERS[s.provider].name)].forEach(t=>head.appendChild(element('th',t,'p-2 text-right text-gray-400'))); table.appendChild(head);
