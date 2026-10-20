@@ -38,15 +38,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install public HTML parser
-        run: python -m pip install 'beautifulsoup4==4.15.0'
+        run: python -m pip install 'beautifulsoup4==4.15.0' requests pytz tzdata
       - name: Verify identities, cache, blocks and source evidence
         run: |
           python -m unittest -v test_property_sources test_secondary_listing_source test_tarasa_listing_source
@@ -58,16 +61,7 @@ jobs:
           SOURCE_URL: ${{ inputs.source_url }}
           REQUEST_ID: ${{ inputs.request_id }}
         run: |
-          python - <<'PY'
-          import os, subprocess, sys
-          mode = os.environ.get('SOURCE_MODE', 'check')
-          if mode not in {'check', 'fetch'}:
-              raise SystemExit('Invalid source mode')
-          subprocess.run([sys.executable, 'tarasa_listing_source.py', mode,
-              '--property-id', os.environ.get('PROPERTY_ID', '').strip(),
-              '--source-url', os.environ.get('SOURCE_URL', '').strip(),
-              '--request-id', os.environ.get('REQUEST_ID', '')], check=True)
-          PY
+          python -c "import os, subprocess, sys; mode = os.environ.get('SOURCE_MODE', 'check'); raise SystemExit('Invalid source mode') if mode not in {'check', 'fetch'} else subprocess.run([sys.executable, 'tarasa_listing_source.py', mode, '--property-id', os.environ.get('PROPERTY_ID', '').strip(), '--source-url', os.environ.get('SOURCE_URL', '').strip(), '--request-id', os.environ.get('REQUEST_ID', '')], check=True)"
       - name: Update the separate registry from saved snapshots
         if: inputs.mode == 'fetch'
         run: python property_sources.py build
@@ -81,21 +75,22 @@ jobs:
             echo "Source cache is already current."
             exit 0
           fi
-          git fetch origin main
-          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
-            echo "::error::Repository changed during enrichment. Nothing pushed; run again."
+          git commit -m "Save requested Tarasa listing source and provenance [skip ci]"
+          pushed=false
+          for i in 1 2 3; do
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              echo "::error::Repository changed during enrichment. Nothing pushed; run again."
+              exit 1
+            fi
+            python -c "import hashlib, json, property_sources; from pathlib import Path; receipt = json.loads(Path('COMPS_REPORTS/additional_source_status.json').read_text(encoding='utf-8')); manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text(encoding='utf-8')); _, current = property_sources.prepare(Path('.')); inv_sha = hashlib.sha256(Path('properties.json').read_bytes()).hexdigest(); raise SystemExit('Inventory or source inputs changed during the pilot. Nothing was pushed; run again.') if inv_sha != receipt.get('properties_sha256') or any(current.get(k) != manifest.get(k) for k in ('properties_sha256', 'input_fingerprint')) else None"
+            if git push origin HEAD:main; then
+              pushed=true
+              break
+            fi
+            sleep 5
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "::error::Failed to push Tarasa source cache after 3 attempts."
             exit 1
           fi
-          python - <<'PY'
-          import hashlib, json
-          from pathlib import Path
-          import property_sources
-          receipt = json.loads(Path('COMPS_REPORTS/additional_source_status.json').read_text())
-          manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text())
-          _, current = property_sources.prepare(Path('.'))
-          inventory_sha = hashlib.sha256(Path('properties.json').read_bytes()).hexdigest()
-          if inventory_sha != receipt['properties_sha256'] or any(current[k] != manifest[k] for k in ('properties_sha256', 'input_fingerprint')):
-              raise SystemExit('Inventory or source inputs changed during the pilot. Nothing was pushed; run again.')
-          PY
-          git commit -m "Save requested Tarasa listing source and provenance"
-          git push origin HEAD:main
