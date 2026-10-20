@@ -37,13 +37,7 @@ jobs:
         env:
           PILOT_MODE: ${{ inputs.mode }}
         run: |
-          python - <<'PY'
-          import os, subprocess, sys
-          mode = os.environ.get('PILOT_MODE', 'check')
-          if mode not in {'check', 'build'}:
-              raise SystemExit('Invalid pilot mode')
-          subprocess.run([sys.executable, 'property_sources.py', mode], check=True)
-          PY
+          python -c "import os, subprocess, sys; mode = os.environ.get('PILOT_MODE', 'check'); raise SystemExit('Invalid pilot mode') if mode not in {'check', 'build'} else subprocess.run([sys.executable, 'property_sources.py', mode], check=True)"
       - name: Save separate registry after successful checks
         if: inputs.mode == 'build'
         run: |
@@ -64,15 +58,7 @@ jobs:
             fi
             # A scan may update inputs during this short pilot. Do not push
             # a registry built against a different inventory/source cache.
-            python - <<'PY'
-            import json
-            from pathlib import Path
-            import property_sources
-            manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text())
-            _, current = property_sources.prepare(Path('.'))
-            if any(current[k] != manifest[k] for k in ('properties_sha256', 'input_fingerprint')):
-                raise SystemExit('Inventory or source cache changed during the pilot. Run build again; nothing was pushed.')
-            PY
+            python -c "import json, property_sources; from pathlib import Path; manifest = json.loads(Path('COMPS_REPORTS/property_sources/manifest.json').read_text(encoding='utf-8')); _, current = property_sources.prepare(Path('.')); raise SystemExit('Inventory or source cache changed during the pilot. Run build again; nothing was pushed.') if any(current.get(k) != manifest.get(k) for k in ('properties_sha256', 'input_fingerprint')) else None"
             if git push origin "HEAD:${GITHUB_REF_NAME}"; then
               pushed=true
               break
