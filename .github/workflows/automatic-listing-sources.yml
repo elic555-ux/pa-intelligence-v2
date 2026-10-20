@@ -84,25 +84,10 @@ jobs:
       - name: Compile changed Python and validate workflow YAML
         run: |
           python -m py_compile orchestrator.py automatic_listing_sources.py completion_subjects.py test_automatic_listing_sources.py completion_heartbeat.py test_completion_heartbeat.py
-          python - <<'PY'
-          from pathlib import Path
-          import yaml
-          for name in ('cron-daily-mls.yml', 'automatic-listing-sources.yml', 'completion-heartbeat.yml'):
-              workflow = yaml.load((Path('.github/workflows') / name).read_text(), Loader=yaml.BaseLoader)
-              assert 'on' in workflow and 'jobs' in workflow, name
-          PY
+          python -c "from pathlib import Path; import yaml; [(_ for _ in ()).throw(AssertionError(n)) if not ({'on', 'jobs'} <= set(yaml.load((Path('.github/workflows') / n).read_text(), Loader=yaml.BaseLoader) or {})) else None for n in ('cron-daily-mls.yml', 'automatic-listing-sources.yml', 'completion-heartbeat.yml')]"
       - name: Verify scan integration without live requests
         run: |
-          python - <<'PY'
-          import socket, unittest, requests
-          def blocked(*args, **kwargs):
-              raise AssertionError('Live network requests are disabled in source integration tests')
-          socket.create_connection = blocked
-          requests.sessions.Session.request = blocked
-          suite = unittest.defaultTestLoader.discover('.', pattern='test_*.py')
-          result = unittest.TextTestRunner(verbosity=2).run(suite)
-          raise SystemExit(0 if result.wasSuccessful() else 1)
-          PY
+          python -c "import socket, unittest, requests; blocked = lambda *a, **k: (_ for _ in ()).throw(AssertionError('Live network requests are disabled in source integration tests')); socket.create_connection = blocked; requests.sessions.Session.request = blocked; suite = unittest.defaultTestLoader.discover('.', pattern='test_*.py'); res = unittest.TextTestRunner(verbosity=2).run(suite); raise SystemExit(0 if res.wasSuccessful() else 1)"
           node test_secondary_sources.cjs
           node test_completion_controls.cjs
           node test_independent_completion_ui.cjs
@@ -165,13 +150,7 @@ jobs:
           AUTO_EVENT: ${{ github.event_name }}
           AUTO_MODE: ${{ inputs.mode }}
         run: |
-          python - <<'PY'
-          import os, subprocess, sys
-          mode = os.environ.get('AUTO_MODE', 'check') if os.environ['AUTO_EVENT'] == 'workflow_dispatch' else 'automatic'
-          if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'}:
-              raise SystemExit('Unsupported mode')
-          subprocess.run([sys.executable, 'automatic_listing_sources.py', mode], check=True)
-          PY
+          python -c "import os, subprocess, sys; mode = os.environ.get('AUTO_MODE', 'check') if os.environ.get('AUTO_EVENT') == 'workflow_dispatch' else 'automatic'; raise SystemExit('Unsupported mode') if mode not in {'check', 'pilot', 'group10', 'batch', 'enable', 'disable', 'automatic'} else subprocess.run([sys.executable, 'automatic_listing_sources.py', mode], check=True)"
       - name: Refresh registry from saved source evidence
         if: steps.worker.outputs.save == 'true'
         run: python property_sources.py build
@@ -192,13 +171,7 @@ jobs:
               echo 'Repository changed incompatibly during completion. Nothing pushed; queue can resume on the next run.'
               exit 1
             fi
-            python - <<'PY'
-            import hashlib, json
-            from pathlib import Path
-            receipt = json.loads(Path('COMPS_REPORTS/automatic_listing_sources/status.json').read_text())
-            if hashlib.sha256(Path('properties.json').read_bytes()).hexdigest() != receipt['properties_sha256']:
-                raise SystemExit('Inventory changed. Nothing pushed.')
-            PY
+            python -c "import hashlib, json; from pathlib import Path; receipt = json.loads(Path('COMPS_REPORTS/automatic_listing_sources/status.json').read_text(encoding='utf-8')); cur = hashlib.sha256(Path('properties.json').read_bytes()).hexdigest(); raise SystemExit('Inventory changed. Nothing pushed.') if cur != receipt.get('properties_sha256') else None"
             if git push origin HEAD:main; then
               pushed=true
               break
@@ -230,20 +203,7 @@ jobs:
       - name: Try original photos and two public backup sources without saving
         run: |
           python listing_photo_fallback.py --id PA-MLS-1774373 --id PA-MLS-1774350 --max-requests 20 > photo-trial.json
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          report=json.loads(Path('photo-trial.json').read_text().splitlines()[0])
-          lines=['## Photo fallback: bounded read-only trial',
-                 'RentCast calls: 0; no inventory, credentials or Supabase writes.']
-          for item in report['results']:
-              lines.append(item['property_id']+': '+item['status']+'; verified photo files: '+str(len(item.get('photos',[]))))
-              for attempt in item.get('attempts',[]):
-                  lines.append('- '+attempt['provider']+': '+attempt['status']+'; HTTP '+str(attempt.get('http_status')))
-          Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('\n'.join(lines))
-          print(json.dumps(report, ensure_ascii=False))
-          print('\n'.join(lines))
-          PY
+          python -c "import json, os; from pathlib import Path; report = json.loads(Path('photo-trial.json').read_text(encoding='utf-8').splitlines()[0]); lines = ['## Photo fallback: bounded read-only trial', 'RentCast calls: 0; no inventory, credentials or Supabase writes.'] + [item['property_id'] + ': ' + item['status'] + '; verified photo files: ' + str(len(item.get('photos', []))) + ''.join('\n- ' + a['provider'] + ': ' + a['status'] + '; HTTP ' + str(a.get('http_status')) for a in item.get('attempts', [])) for item in report.get('results', [])]; Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('\n'.join(lines), encoding='utf-8'); print(json.dumps(report, ensure_ascii=False)); print('\n'.join(lines))"
       - uses: actions/upload-artifact@v4
         with:
           name: photo-fallback-trial
