@@ -190,7 +190,17 @@
                 const config = await loadConfig();
                 if (!config || token !== generation) return;
                 const target = await lookupTarget(destination, query, token);
-                if (target && token === generation) prepareFrame(target, config.apiKey, token);
+                if (!target || token !== generation) return;
+                const usage = environment.usage || win.PAStreetUsage;
+                if (!usage || typeof usage.reserve !== 'function') {
+                    const status = doc.getElementById('street-view-usage-status');
+                    if (status) status.textContent = 'המונה המרכזי אינו זמין. לא נשלחה בקשת תצוגת רחוב.';
+                    return;
+                }
+                // Reserve centrally before assigning a provider URL. A failed,
+                // timed-out or cancelled attempt is deliberately not refunded.
+                const allowed = await usage.reserve();
+                if (allowed === true && token === generation) prepareFrame(target, config.apiKey, token);
             } catch (_) {
                 if (token === generation) hide();
             }
@@ -201,4 +211,5 @@
 
     return {createPreview, parseConfig, addressQuery, validLocation, embedUrl, panoramaUrl, TIMEOUT_MS};
 }));
+
 
