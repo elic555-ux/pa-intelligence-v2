@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, parse_qs
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.robotparser import RobotFileParser
 
@@ -24,12 +24,14 @@ ROOT = Path('COMPS_REPORTS/listing_photos')
 STATE = ROOT / 'state.json'
 AGENT = 'PA-Property-PhotoReader/1.0'
 SOURCES = {
+    'preferredrealty': ('https://www.thepreferredrealty.com', 'Berkshire Hathaway The Preferred Realty / MLS'),
     'coldwellbanker': ('https://www.coldwellbankerhomes.com', 'Coldwell Banker / MLS'),
     'weichert': ('https://www.weichert.com', 'Weichert / MLS'),
 }
-PAGE_HOSTS = {'www.coldwellbankerhomes.com', 'www.weichert.com'}
+PAGE_HOSTS = {'www.coldwellbankerhomes.com', 'www.weichert.com', 'www.thepreferredrealty.com'}
 IMAGE_HOSTS = {'cdn.listingphotos.sierrastatic.com', 'm.cbhomes.com', 'm1.cbhomes.com',
-               'm2.cbhomes.com', 'm3.cbhomes.com', 'd36xftgacqn2p.cloudfront.net'}
+               'm2.cbhomes.com', 'm3.cbhomes.com', 'd36xftgacqn2p.cloudfront.net', 'api.cotality.com'}
+MEDIA_REDIRECT_HOST = 'media-cdn-v2.corelogic.com'
 # Observed public URLs, not invented pid or image URLs. Still require full
 # identity verification of the current page; a hidden address is rejected.
 SEEDS = {
@@ -41,14 +43,15 @@ FRESH_DAYS = 7
 
 
 class Unavailable(Exception):
-    def __init__(self, status, http_status=None, retry_after=None):
+    def __init__(self, status, http_status=None, retry_after=None, location=None):
         self.status, self.http_status, self.retry_after = status, http_status, retry_after
+        self.location = location
         super().__init__(status)
 
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise Unavailable('redirect_stopped', code)
+        raise Unavailable('redirect_stopped', code, location=newurl)
 
 
 def safe_url(value, image=False):
@@ -59,7 +62,12 @@ def safe_url(value, image=False):
                 or u.port not in (None, 443) or u.fragment or u.query):
             return None
         if image:
-            if not re.fullmatch(r'/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp)', u.path, re.I):
+            pattern = (r'/trestle/Media/Property/PHOTO-Jpeg/\d+/\d+/(?:[A-Za-z0-9_-]+/){2}[A-Za-z0-9_-]+'
+                       if u.hostname == 'api.cotality.com' else r'/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp)')
+            if not re.fullmatch(pattern, u.path, re.I):
+                return None
+        elif u.hostname == 'www.thepreferredrealty.com':
+            if not re.fullmatch(r'/real-estate/\d{4,10}/', u.path):
                 return None
         elif u.hostname == 'www.coldwellbankerhomes.com':
             if not re.fullmatch(r'/pa/[a-z0-9-]+/(?:[a-z0-9-]+/pid_\d+/)?', u.path):
@@ -82,6 +90,24 @@ def image_type(body, content_type):
     if (content_type == 'image/webp' and body[:4] == b'RIFF' and body[8:12] == b'WEBP'):
         return content_type
     return None
+
+
+def public_media_redirect(origin, target):
+    """One observed media hop; its temporary signature is never persisted."""
+    try:
+        u = urlparse(target or '')
+        query = parse_qs(u.query, keep_blank_values=True)
+        return bool(urlparse(origin).hostname == 'api.cotality.com' and safe_url(origin, image=True)
+            and u.scheme == 'https' and u.hostname == MEDIA_REDIRECT_HOST
+            and not u.username and not u.password and not u.fragment and u.port in (None, 443)
+            and re.fullmatch(r'/[a-f0-9]{20}/[A-Za-z0-9_-]+\.jpg', u.path)
+            and set(query) == {'Expires', 'KeyName', 'Signature'}
+            and all(len(v) == 1 for v in query.values())
+            and re.fullmatch(r'\d{10}', query['Expires'][0])
+            and re.fullmatch(r'[A-Za-z0-9_-]+', query['KeyName'][0])
+            and re.fullmatch(r'[A-Za-z0-9_-]+={0,2}', query['Signature'][0]))
+    except ValueError:
+        return False
 
 
 class Reader:
@@ -122,7 +148,7 @@ class Reader:
         except (URLError, TimeoutError, OSError) as exc:
             raise Unavailable('unavailable') from exc
 
-    def robots(self, url):
+    def robots(self, url, public_media=False):
         u = urlparse(url)
         host = u.hostname
         if host in self.blocked:
@@ -146,10 +172,19 @@ class Reader:
                 self.interval = max(self.interval, delay)
                 self.rules[host] = rp
             except Unavailable as exc:
-                # A real 404/410 means no robots document. 403/429, HTML,
-                # malformed rules and network failures are never treated as allow.
+                # A real 404/410 means no robots document. Other failures stop
+                # access except the narrowly scoped public-media case below.
                 if exc.status == 'http_error' and exc.http_status in (404, 410):
                     self.rules[host] = None
+                elif (public_media and host == MEDIA_REDIRECT_HOST and exc.status == 'blocked'
+                      and exc.http_status == 403 and not exc.retry_after):
+                    # The public signed-media CDN has no readable robots object.
+                    # RFC 9309 §2.3.1.3 permits resources when robots returns 4xx.
+                    # This exception is only for a validated public media hop;
+                    # a 403 on the image itself still stops and cools the host.
+                    self.rules[host] = None
+                    self.blocked.pop(host, None)
+                    self.host_cooldowns.pop(host, None)
                 else:
                     self.blocked[host] = exc.http_status
                     self.host_cooldowns[host] = core.cooldown_until(exc.retry_after, datetime.now(timezone.utc))
@@ -173,7 +208,14 @@ class Reader:
         if not safe_url(url, image=True):
             raise Unavailable('untrusted_image')
         self.robots(url)
-        body, mime = self.raw(url, 3_000_000, 'image/jpeg,image/png,image/webp')
+        try:
+            body, mime = self.raw(url, 3_000_000, 'image/jpeg,image/png,image/webp')
+        except Unavailable as exc:
+            if (exc.status != 'redirect_stopped' or exc.http_status != 302
+                    or not public_media_redirect(url, exc.location)):
+                raise
+            self.robots(exc.location, public_media=True)
+            body, mime = self.raw(exc.location, 3_000_000, 'image/jpeg,image/png,image/webp')
         kind = image_type(body, mime)
         if not kind or len(body) < 100:
             raise Unavailable('not_image')
@@ -217,6 +259,8 @@ def parse_listing(html, row, url, provider):
     if provider not in SOURCES or not safe_url(url) or urlparse(url).netloc != urlparse(SOURCES[provider][0]).netloc:
         raise Unavailable('untrusted_source')
     soup = BeautifulSoup(html, 'html.parser')
+    if provider == 'preferredrealty':
+        return parse_preferred(soup, row, url)
     title = soup.title.get_text(' ', strip=True) if soup.title else ''
     primary_title = title + ' ' + ' '.join(h.get_text(' ', strip=True) for h in soup.find_all('h1')[:1])
     if re.search(r'address not (?:provided|disclosed)|undisclosed address', primary_title, re.I):
@@ -279,7 +323,38 @@ def parse_listing(html, row, url, provider):
     return result[:6]
 
 
+def parse_preferred(soup, row, url):
+    """Bind the public MLS route and primary address before reading its gallery."""
+    mls = str(registry.listing_id(row))
+    canonical = soup.find('link', rel='canonical')
+    meta = soup.find('meta', attrs={'name': 'description'})
+    title = soup.title.get_text(' ', strip=True) if soup.title else ''
+    address = re.match(r'^(.+?),\s*([^,]+),\s*PA\s+(\d{5})(?:-\d{4})?\s*\|', title)
+    labels = re.findall(r'\bMLS\s*#\s*:\s*(\d{4,10})\b', meta.get('content', '') if meta else '')
+    if (not canonical or canonical.get('href') != url or
+            urlparse(url).path != '/real-estate/' + mls + '/' or labels != [mls] or not address):
+        raise Unavailable('identity_mismatch')
+    # This provider appends the neighborhood in parentheses to the postal city.
+    city = re.sub(r'\s+\([^()]+\)$', '', address[2]).strip()
+    if not address_match(row, address[1], city, 'PA', address[3]):
+        raise Unavailable('identity_mismatch')
+    photos = []
+    for img in soup.select('.flat-gallery-single img'):
+        alt = re.fullmatch(r'(.+?)\s+-\s+photo\s+\d+', img.get('alt', ''), re.I)
+        if not alt or registry.parse_address(alt[1])[0].upper() != core.identity4(row)[0]:
+            continue
+        image = safe_url(img.get('src'), image=True)
+        if image and urlparse(image).hostname == 'api.cotality.com' and image not in photos:
+            photos.append(image)
+    return photos[:3]
+
+
 def discover(reader, row, provider):
+    if provider == 'preferredrealty':
+        mls = str(registry.listing_id(row) or '')
+        if not re.fullmatch(r'\d{4,10}', mls):
+            raise Unavailable('unsupported_listing_id')
+        return SOURCES[provider][0] + '/real-estate/' + mls + '/'
     if provider == 'coldwellbanker' and registry.listing_id(row) in SEEDS:
         return SEEDS[registry.listing_id(row)]
     subject = registry.identity(row)
@@ -358,7 +433,7 @@ def complete(repo, row, reader, previous=None, now=None):
         return report
     attempts = {a.get('provider'): a for a in valid_old.get('attempts', [])}
     primary_url, primary_name, cached_urls = primary_photos(repo, row)
-    providers = ('saved_source', 'coldwellbanker', 'weichert')
+    providers = ('preferredrealty', 'saved_source', 'coldwellbanker', 'weichert')
     providers = sorted(providers, key=lambda provider: bool(attempts.get(provider, {}).get('unsuccessful_attempts', 0)))
     for provider in providers:
         old = attempts.get(provider, {})
@@ -422,7 +497,7 @@ def complete(repo, row, reader, previous=None, now=None):
             break
     report['status'] = 'available' if report['photos'] else 'not_completed'
     report['sources_exhausted'] = all(a.get('unsuccessful_attempts', 0) >= MAX_ATTEMPTS
-        for a in report['attempts']) and len(report['attempts']) == 3
+        for a in report['attempts']) and len(report['attempts']) == len(providers)
     return report
 
 
@@ -481,7 +556,7 @@ def run(repo, ids, max_requests=13, reader=None, now=None, save=False):
     old_state = registry.read_json(repo / STATE) if (repo / STATE).exists() else {}
     if hasattr(reader, 'host_cooldowns'):
         for host, value in old_state.get('host_cooldowns', {}).items():
-            if host in PAGE_HOSTS | IMAGE_HOSTS and core.parse_date(value) and core.parse_date(value) > now:
+            if host in PAGE_HOSTS | IMAGE_HOSTS | {MEDIA_REDIRECT_HOST} and core.parse_date(value) and core.parse_date(value) > now:
                 reader.blocked[host] = None
                 reader.host_cooldowns[host] = value
     result = {'schema': 1, 'new_rentcast_calls': 0, 'results': [], 'new_source_network_requests': 0}

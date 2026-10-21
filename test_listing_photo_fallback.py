@@ -113,7 +113,7 @@ class PhotoTests(unittest.TestCase):
         broken = 'https://cdn.listingphotos.sierrastatic.com/pics3x/v1/56/56_1001_01.jpg'
         r = self.complete(FakeReader(broken=[broken]), primary=('https://www.tarasa.com/a', 'Tarasa', [broken]))
         self.assertEqual(len(r['photos']), 3)
-        self.assertEqual([a['provider'] for a in r['attempts']], ['saved_source', 'coldwellbanker'])
+        self.assertEqual([a['provider'] for a in r['attempts']], ['preferredrealty', 'saved_source', 'coldwellbanker'])
         self.assertEqual(r['photos'][0]['verification']['status'], 'image_verified')
         self.assertEqual((self.repo / 'properties.json').read_bytes(), self.before)
         self.assertEqual(r['new_rentcast_calls'], 0)
@@ -127,12 +127,12 @@ class PhotoTests(unittest.TestCase):
                 return super().page(url)
         r = self.complete(Blocked())
         self.assertEqual(r['photos'][0]['provider'], 'weichert')
-        self.assertEqual(r['attempts'][1]['status'], 'blocked')
+        self.assertEqual(next(a for a in r['attempts'] if a['provider'] == 'coldwellbanker')['status'], 'blocked')
 
     def test_missing_images_is_completion_not_scan_failure(self):
         r = self.complete(FakeReader(broken=IMAGES + ['https://d36xftgacqn2p.cloudfront.net/p/1001/a.jpg']))
         self.assertEqual(r['status'], 'not_completed')
-        self.assertEqual(len(r['attempts']), 3)
+        self.assertEqual(len(r['attempts']), 4)
         self.assertNotIn('scanner_status', r)
 
     def test_two_unsuccessful_attempts_then_no_further_requests(self):

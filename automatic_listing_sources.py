@@ -17,7 +17,7 @@ from scan_schedule import completion_due, completion_batch_size, completion_dail
 from zoneinfo import ZoneInfo
 from completion_wakeup import input_fingerprint, idle_unchanged
 
-VERSION = 'automatic-mls-sources-1.11.0-photo-fallback-20261018'
+VERSION = 'automatic-mls-sources-1.12.0-public-gallery-20261020'
 STATE = Path('COMPS_REPORTS/automatic_listing_sources/state.json')
 STATUS = Path('COMPS_REPORTS/automatic_listing_sources/status.json')
 # Property cap, HTTP cap (robots included), worker time in seconds.
@@ -53,7 +53,7 @@ def published_day(row):
         return None
 
 
-def eligible_rows(repo, start_day=None, today=None):
+def eligible_rows(repo, start_day=None, today=None, photo_scope=False):
     inventory = load_subjects(repo)
     profile = registry.read_json(repo / 'scan_config.json') if (repo / 'scan_config.json').exists() else {}
     maximum = profile.get('maxPrice')
@@ -70,7 +70,7 @@ def eligible_rows(repo, start_day=None, today=None):
             excluded['ambiguous_identity'] += 1
         elif registry.norm(row.get('county')).removesuffix(' county') not in registry.COUNTIES:
             excluded['outside_initial_source_coverage'] += 1
-        elif registry.norm(row.get('county')).removesuffix(' county') != 'allegheny':
+        elif not photo_scope and registry.norm(row.get('county')).removesuffix(' county') != 'allegheny':
             # The guessed Tarasa detail route returned 404 for current Erie
             # listings. Keep their existing snapshots in the shared registry,
             # but do not spend new Tarasa requests on this unverified route.
@@ -236,7 +236,9 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None, photo_reader
             entry.update(status='completion_incomplete', retry_after_at=None, completion_reason='no_source_parameters')
         entries[key] = entry
     state['entries'] = entries
-    photo_due, photo_pending, next_photo_check = photo_source.queue(repo, rows, now) if photos_enabled else ([], 0, None)
+    photo_rows, photo_excluded = eligible_rows(repo, start_day, now.date(), photo_scope=True) if photos_enabled else ({}, {})
+    photo_due, photo_pending, next_photo_check = photo_source.queue(repo, photo_rows, now) if photos_enabled else ([], 0, None)
+    report.update(photo_eligible_properties=len(photo_rows), photo_excluded=photo_excluded)
     report.update(photo_pending=photo_pending, photo_due=len(photo_due), photo_results=[], verified_photos=0)
     pending = {k: rows[k] for k, e in entries.items()
                if e.get('status') not in REVIEW_STATUSES | TERMINAL_COMPLETION | {'cache_used'}}
@@ -341,7 +343,7 @@ def run(repo, mode='check', upstream_sha='', reader=None, now=None, photo_reader
             report['attempted_properties'] += sum(r.get('new_source_network_requests', 0) > 0 for r in result['results'])
             if report['status'] in {'queue_current', 'photo_turn_reserved'} and result['results']:
                 report['status'] = 'batch_complete'
-        photo_due, photo_pending, next_photo_check = photo_source.queue(repo, rows, now)
+        photo_due, photo_pending, next_photo_check = photo_source.queue(repo, photo_rows, now)
         report.update(photo_pending=photo_pending, photo_due=len(photo_due))
         state.update(photo_fallback_schema=1, photo_pending=photo_pending,
                      next_photo_check_at=now.isoformat() if photo_due else next_photo_check)

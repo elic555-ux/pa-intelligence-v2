@@ -40,13 +40,15 @@ function environment() {
         Object.defineProperty(value, 'href', {get() { return attributes.href || ''; }, set(url) { attributes.href = url; }});
         return value;
     }
-    for (const id of ['modal-street-view-preview', 'modal-street-view-preview-link', 'modal-street-view-preview-frame']) nodes.set(id, node(id));
+    for (const id of ['modal-street-view-preview', 'modal-street-view-preview-link', 'modal-street-view-preview-frame', 'street-view-usage-status']) nodes.set(id, node(id));
     const container = nodes.get('modal-street-view-preview'); container.hidden = true;
     nodes.get('modal-street-view-preview-frame').parentNode = container;
     nodes.get('modal-street-view-preview-frame').attributes.class = 'block w-full min-h-200';
     nodes.get('modal-street-view-preview-link').parentNode = container;
     const document = {getElementById(id) { assert.ok(nodes.has(id), 'Unexpected DOM access: ' + id); return nodes.get(id); }};
-    const window = {location: {href: 'https://example.test/project/index.html?ignored=1'}, document, AbortController,
+    const reservations = [];
+    const window = {PAStreetUsage: {async reserve() { reservations.push(true); return true; }},
+        location: {href: 'https://example.test/project/index.html?ignored=1'}, document, AbortController,
         fetch(url, options) { const pending = deferred(); calls.push({url, options, ...pending}); return pending.promise; },
         setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, {fn, delay}); return id; },
         clearTimeout(id) { timers.delete(id); }};
@@ -57,7 +59,7 @@ function environment() {
                 quality: request.county === 'erie' ? 'county_parcel_centroid' : 'county_address_point'}});
             return {cancel() { lookup.cancelled = true; env.onResult({status: 'cancelled'}); }};
         }};
-    return {window, document, nodes, calls, frames, lookups, timers, settings, preview: api.createPreview({window, document})};
+    return {window, document, nodes, calls, frames, lookups, timers, settings, reservations, preview: api.createPreview({window, document})};
 }
 async function config(env, value = ENABLED) {
     assert.equal(env.calls.length, 1);
@@ -279,4 +281,44 @@ test('closing property prevents local settings refresh from reopening an old pro
     await env.preview.refresh();
     assert.equal(env.frames.length, count);
 });
+
+test('a denied or missing central counter never assigns a Google frame URL', async () => {
+    for (const missing of [false,true]) {
+        const env=environment();
+        if(missing)delete env.window.PAStreetUsage;
+        else env.window.PAStreetUsage.reserve=async()=>false;
+        const pending=env.preview.render(A);await config(env);await pending;
+        assert.equal(env.frames.length,0);assert.equal(env.lookups.length,1);
+        assert.equal(env.nodes.get('modal-street-view-preview').hidden,true);
+        if(missing)assert.match(env.nodes.get('street-view-usage-status').textContent,/לא נשלחה/);
+    }
+});
+
+test('closing or switching while reservation is pending consumes no late Google load', async () => {
+    const env=environment(),reservations=[];
+    env.window.PAStreetUsage.reserve=()=>{const p=deferred();reservations.push(p);return p.promise;};
+    const first=env.preview.render(A);await config(env);assert.equal(reservations.length,1);
+    const second=env.preview.render(B);await tick();assert.equal(reservations.length,2);
+    reservations[0].resolve(true);await first;assert.equal(env.frames.length,0);
+    env.preview.cancel();reservations[1].resolve(true);await second;
+    assert.equal(env.frames.length,0);
+});
+
+test('one reservation per attempted frame including failure; same selection does not reserve twice',async()=>{
+    const env=environment(),frame=await ready(env);
+    assert.equal(env.reservations.length,1);frame.onerror();
+    await env.preview.render(A);assert.equal(env.reservations.length,1);
+    env.preview.cancel();await env.preview.render(A);
+    assert.equal(env.reservations.length,2);assert.equal(env.frames.length,2);
+});
+
+test('missing key or unresolved county match never reserves a slot',async()=>{
+    const env=environment();env.window.PAStreetLocalSettings={read:()=>null};
+    await env.preview.render(A);assert.equal(env.reservations.length,0);
+    env.window.PAStreetLocalSettings={read:()=>ENABLED};env.settings.autoLookup=false;
+    const pending=env.preview.render(B);await tick();
+    env.lookups[0].onResult({status:'not_found'});await pending;
+    assert.equal(env.reservations.length,0);assert.equal(env.frames.length,0);
+});
+
 

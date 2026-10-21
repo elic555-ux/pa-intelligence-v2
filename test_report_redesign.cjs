@@ -125,13 +125,13 @@ function harness(p = property()) {
     const storage = new Map();
     const context = vm.createContext({
         console, URL, document, currentDeal: plain(p), currentSavedReportId: null,
-        cloudAvailable: true, reportSavePending: false,
+        cloudAvailable: true, reportSavePending: false, reportReady: true,
         copy: plain, referenceTime: () => Date.now(),
         EVIDENCE_LABELS: {arv: 'ARV', rent: 'Rent', flipRehab: 'Flip rehabilitation'},
         window: {PARehabReport: {mount: (root, options) => mounted.push({root, options})}},
         localStorage: {getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value)},
         matchedCountyRecord: () => null, validInspection: () => null,
-        renderComparables: () => {}, renderInspection: () => {}, renderInternalData: () => {},
+        renderComparables: () => {}, renderInspection: () => {}, renderInternalData: () => {}, renderAvailability: () => {},
         renderImages: () => {}, renderSourceLinks: () => {},
         setEditability: () => editability.push(context.reportSavePending),
         latestCloudDeal: async () => plain(latest),

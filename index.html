@@ -322,6 +322,11 @@
                         <p id="street-view-local-status" role="status" aria-live="polite" class="text-xs text-gray-300"></p>
                     </form>
                 </details>
+                <div class="space-y-2 border border-gray-700 rounded-xl p-3">
+                    <p id="street-view-usage-status" role="status" aria-live="polite" class="text-sm text-gray-200">המונה המרכזי יתעדכן לאחר התחברות.</p>
+                    <p class="text-xs text-gray-400">ספירת ניסיונות הטעינה במערכת מתחילת ההפעלה. עצירה ב־9,000 בכל חודש לפי שעון ישראל; התראה מ־8,000. ניסיונות שנכשלו נכללים. ניווט בתוך התצוגה וקישור למפות אינם נספרים. זה אינו מונה החיוב של Google.</p>
+                    <button id="street-view-usage-refresh" type="button" class="text-xs underline underline-offset-2 text-emerald-300">רענן מונה</button>
+                </div>
                 <figure id="modal-street-view-preview" hidden class="space-y-2">
                     <iframe id="modal-street-view-preview-frame" title="תצוגת רחוב אינטראקטיבית בקרבת הנכס" referrerpolicy="strict-origin-when-cross-origin" loading="eager" allowfullscreen class="block w-full min-w-[200px] min-h-[200px] h-64 sm:h-80 border-0"></iframe>
                     <figcaption class="text-xs text-gray-300">תצוגת רחוב אינטראקטיבית בקרבת הכתובת</figcaption>
@@ -831,7 +836,8 @@
     </div>
     <script src="street-view.js?v=1.1.0"></script>
     <script src="street-view-local-settings.js?v=1.0.0"></script>
-    <script src="street-view-preview.js?v=1.3.0"></script>
+    <script src="street-view-usage.js?v=1.0.0"></script>
+    <script src="street-view-preview.js?v=1.4.0"></script>
     <!-- Script Logic -->
     <script>
         // Supabase Initialization
@@ -843,8 +849,14 @@
         let paAuthGeneration = 0;
         let paInitPromise = null;
 
+        window.PAStreetUsage = window.PAStreetUsageFactory?.createCounter({
+            window, document, getClient: () => paAuthVerified ? supabaseClient : null
+        });
+
         function showPaAuthPending(message = 'בודק התחברות…') {
             paAuthVerified = false;
+            window.PAStreetUsage?.clear();
+            window.PAStreetPreview?.cancel();
             document.getElementById('pa-account-email').textContent = '';
             document.getElementById('pa-account-status').hidden = true;
             document.getElementById('pa-app-shell').hidden = true;
@@ -872,6 +884,7 @@
                     return false;
                 }
                 paAuthVerified = true;
+                window.PAStreetUsage?.refreshStatus();
                 document.getElementById('pa-login-form').hidden = true;
                 document.getElementById('pa-auth-heading').textContent = 'טוען את המערכת';
                 document.getElementById('pa-login-status').textContent = 'טוען את המערכת…';
@@ -4084,8 +4097,9 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
 
         window.onload = bootstrapPaAuthentication;
     </script>
-    <script src="secondary_sources.js?v=1.7.0-photo-fallback-20261018"></script>
+    <script src="secondary_sources.js?v=1.9.0-public-gallery-20261020"></script>
 </body>
 </html>
+
 
 

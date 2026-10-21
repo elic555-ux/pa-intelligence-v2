@@ -15,3 +15,14 @@ The rehabilitation plan has 24 items in three groups. Each item stores a conditi
 ## Limits
 
 Browser persistence was tested with the existing isolated preview storage and synthetic/reference data. No production Supabase writes, live RentCast calls or Google key changes were made. Cloud schema, RLS and real authenticated persistence were not revalidated in this pass. Production deployment requires merging the reviewed change and a final smoke check on the live report.
+
+## Empty-report investigation - 21 October 2026
+
+The production page loads real property details. The four existing saved snapshots contain property data; none contains accepted financial evidence. One Saltsburg snapshot contains one matching rental comparable, below the required minimum of three. Missing returns and purchase ceilings are therefore missing inputs, not lost calculated values. Historical snapshots remain immutable.
+
+The production PDF renderer could clip content in narrow RTL windows. The export anchors its capture coordinates, preserves Hebrew word spacing, removes empty upload frames and keeps comparison headings/tables together. The overview now explains exactly which source results and financial inputs are missing. Rendering failure keeps a visible error and disables export; a later supplementary-source failure preserves the populated report with a visible warning. Empty snapshots and mismatched property records cannot enable export.
+
+- 17 rehabilitation groups, 14 integration checks and 13 new loading/error/snapshot checks pass offline (44 total), with no network calls or credentials.
+- Authenticated production read: 43 Kenwood Ave displays the property, price and facts. The real saved Saltsburg report displays its historical property and county data. Owner-only RLS remains enabled for pipeline_deals and saved_reports; no schema/policy changes were made.
+- An isolated local adapter seeded with copies of the three real properties and four snapshots verified the revised historical report and actual PDF export at desktop and 390px widths. No live database writes or paid research calls were made. Page renders were inspected with Poppler.
+- Only report/UI/test/documentation files are included. Photos, Street View, scanner settings, source receipts and live property data are preserved.

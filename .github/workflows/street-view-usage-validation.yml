@@ -1,0 +1,56 @@
+name: Street View Counter Validation
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'street-view-usage.js'
+      - 'street-view-preview.js'
+      - 'test_street_view_usage.cjs'
+      - 'test_street_view_preview.cjs'
+      - 'test_property_maps.cjs'
+      - 'test_street_view_usage_db.py'
+      - 'supabase/migrations/*street_view_usage.sql'
+      - '.github/workflows/street-view-usage-validation.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: isolated-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Client and preview regressions without live requests
+        run: |
+          node test_street_view_usage.cjs
+          node test_street_view_preview.cjs
+          node test_street_view_local_settings.cjs
+          node test_street_view.cjs
+          node test_authentication.cjs
+          node test_property_maps.cjs
+      - name: Actual database limits, authorization and concurrent reservations
+        env:
+          PA_STREET_USAGE_TEST_DATABASE: isolated
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGDATABASE: postgres
+          PGUSER: postgres
+          PGPASSWORD: isolated-ci-only
+        run: python test_street_view_usage_db.py
