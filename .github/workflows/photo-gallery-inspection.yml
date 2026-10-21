@@ -1,0 +1,27 @@
+name: Photo Gallery Inspection
+on:
+  pull_request:
+    paths:
+      - inspect_photo_gallery.py
+      - .github/workflows/photo-gallery-inspection.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install 'beautifulsoup4==4.15.0'
+      - run: python inspect_photo_gallery.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: photo-gallery-inspection
+          path: photo-gallery-inspection/
+          retention-days: 3
