@@ -20,6 +20,8 @@ test('public MLS gallery requires the current MLS route and its specific media p
     for(const p of r.photos) Object.assign(p,{provider:'preferredrealty',source_url:'https://www.thepreferredrealty.com/real-estate/1001/',
         url:'https://api.cotality.com/trestle/Media/Property/PHOTO-Jpeg/1193411277/'+(r.photos.indexOf(p)+1)+'/encoded/encoded/signature'});
     assert.equal(api.fallbackPhotos(row,r).length,3);
+    r.photos[0].url='https://api.cotality.com/trestle/Media/Property/2006023965177/encoded/encoded/signature';
+    assert.equal(api.fallbackPhotos(row,r).length,3);
     for(const mutate of [p=>p.source_url=p.source_url.replace('1001','9999'),p=>p.url+='?token=x',
         p=>p.url=p.url.replace('api.cotality.com','api.cotality.com.evil.test'),p=>p.url='https://api.cotality.com/a.jpg',
         p=>p.verification.status='candidate',p=>p.provider='weichert']) {

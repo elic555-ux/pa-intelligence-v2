@@ -40,6 +40,7 @@ SEEDS = {
 }
 MAX_ATTEMPTS = 2
 FRESH_DAYS = 7
+PREFERRED_PARSER_REVISION = 2
 
 
 class Unavailable(Exception):
@@ -62,7 +63,7 @@ def safe_url(value, image=False):
                 or u.port not in (None, 443) or u.fragment or u.query):
             return None
         if image:
-            pattern = (r'/trestle/Media/Property/PHOTO-Jpeg/\d+/\d+/(?:[A-Za-z0-9_-]+/){2}[A-Za-z0-9_-]+'
+            pattern = (r'/trestle/Media/Property/(?:PHOTO-Jpeg/\d+/\d+|\d+)/(?:[A-Za-z0-9_-]+/){2}[A-Za-z0-9_-]+'
                        if u.hostname == 'api.cotality.com' else r'/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp)')
             if not re.fullmatch(pattern, u.path, re.I):
                 return None
@@ -409,6 +410,17 @@ def source_fingerprint(repo, row):
     return hashlib.sha256(json.dumps([source_url, urls], sort_keys=True).encode()).hexdigest()
 
 
+def provider_attempts(record):
+    attempts = {a.get('provider'): dict(a) for a in record.get('attempts', [])}
+    old = attempts.get('preferredrealty', {})
+    if (old.get('parser_revision', 1) < PREFERRED_PARSER_REVISION
+            and old.get('status') == 'no_loadable_photos' and not old.get('image_failures')):
+        # Reconsider galleries the previous URL parser could not read. Preserve
+        # actual HTTP failures, host cooldowns and every other provider's limits.
+        attempts.pop('preferredrealty', None)
+    return attempts
+
+
 def complete(repo, row, reader, previous=None, now=None):
     now = now or datetime.now(timezone.utc)
     checked = now.isoformat()
@@ -431,7 +443,7 @@ def complete(repo, row, reader, previous=None, now=None):
         report['status'] = 'cache_used'
         report['attempts'] = valid_old.get('attempts', [])
         return report
-    attempts = {a.get('provider'): a for a in valid_old.get('attempts', [])}
+    attempts = provider_attempts(valid_old)
     primary_url, primary_name, cached_urls = primary_photos(repo, row)
     providers = ('preferredrealty', 'saved_source', 'coldwellbanker', 'weichert')
     providers = sorted(providers, key=lambda provider: bool(attempts.get(provider, {}).get('unsuccessful_attempts', 0)))
@@ -448,6 +460,8 @@ def complete(repo, row, reader, previous=None, now=None):
             report['attempts'].append(old)
             continue
         attempt = {'provider': provider, 'checked_at': checked, 'unsuccessful_attempts': old.get('unsuccessful_attempts', 0)}
+        if provider == 'preferredrealty':
+            attempt['parser_revision'] = PREFERRED_PARSER_REVISION
         before = reader.requests
         try:
             if provider == 'saved_source':
@@ -521,7 +535,7 @@ def queue(repo, rows, now=None):
         if fresh:
             wake.append(min(fresh))
             continue
-        attempts = {a.get('provider'): a for a in record.get('attempts', [])}
+        attempts = provider_attempts(record)
         if record.get('source_fingerprint') != source_fingerprint(repo, row):
             attempts = {}
         open_sources = [attempts.get(provider, {}) for provider in ('saved_source', *SOURCES)

@@ -12,6 +12,9 @@ inside the listing gallery. Only this provider's explicit parenthesized
 neighborhood suffix is removed from its postal city before comparison.
 
 Published Cotality media URLs are read from the verified gallery, never guessed.
+Both observed delivery routes are supported: a property/photo-number route and
+a direct numeric media-key route. Their host and signed path structure remain
+restricted to published Cotality media URLs.
 The reader checks robots rules, image MIME and magic bytes, size, and SHA-256.
 The single observed Cotality-to-CoreLogic media redirect is allowed only to the
 exact CDN host and JPEG path with its three public delivery signature parameters.
@@ -35,5 +38,11 @@ request, time and host cooldown limits remain in effect. Backfill is gradual;
 missing, blocked or mismatched listings remain explicitly unavailable while
 the rest of the scan continues. Provider coverage is not a promise that every
 listing has publicly accessible photos.
+
+Parser revision 2 reconsiders only an older Preferred Realty attempt that
+yielded zero usable gallery URLs and no image HTTP failures. This lets a
+previously unsupported media-key gallery recover without resetting identity
+failures, real image failures, other providers' attempt limits or cooldowns.
+Fresh verified galleries retain their normal cache lifetime.
 
 No browser extension, local component, paid API, or credentials are required.

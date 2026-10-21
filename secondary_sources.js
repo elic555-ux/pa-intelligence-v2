@@ -159,7 +159,7 @@
                     image.protocol!=='https:' || image.username || image.password || image.search || image.hash ||
                     (image.port && image.port!=='443') ||
                       !(provider==='preferredrealty' ? image.hostname==='api.cotality.com' &&
-                          /^\/trestle\/Media\/Property\/PHOTO-Jpeg\/\d+\/\d+\/(?:[A-Za-z0-9_-]+\/){2}[A-Za-z0-9_-]+$/.test(image.pathname) :
+                          /^\/trestle\/Media\/Property\/(?:PHOTO-Jpeg\/\d+\/\d+|\d+)\/(?:[A-Za-z0-9_-]+\/){2}[A-Za-z0-9_-]+$/.test(image.pathname) :
                           ['cdn.listingphotos.sierrastatic.com','m.cbhomes.com','m1.cbhomes.com','m2.cbhomes.com','m3.cbhomes.com','d36xftgacqn2p.cloudfront.net'].includes(image.hostname) &&
                           /^\/[A-Za-z0-9_./-]+\.(jpg|jpeg|png|webp)$/i.test(image.pathname)) ||
                     check?.status!=='image_verified' || !['image/jpeg','image/png','image/webp'].includes(check.content_type) ||

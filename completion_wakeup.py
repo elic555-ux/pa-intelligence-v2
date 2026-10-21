@@ -66,7 +66,7 @@ def input_fingerprint(repo, profile, today=None):
                 if str(record.get('property_id')) in property_ids:
                     photo_sources.append([provider, path.name, record.get('inventory_source_url'),
                                           record.get('identity'), record.get('photos')])
-    inputs = {'photo_provider_version': 2, 'photo_sources': photo_sources, 'subjects': sorted(subjects), 'maxPrice': profile.get('maxPrice'),
+    inputs = {'photo_provider_version': 3, 'photo_sources': photo_sources, 'subjects': sorted(subjects), 'maxPrice': profile.get('maxPrice'),
               'startDate': (profile.get('completionSettings') or {}).get('startDate'),
               'ambiguous_subjects': sorted(property_ids.intersection(ambiguous))}
     return hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
