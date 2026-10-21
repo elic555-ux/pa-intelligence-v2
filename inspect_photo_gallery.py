@@ -5,10 +5,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import listing_photo_fallback as photo
 
-cases = [('1774389','e0c453d1115683e0cc91470cba6e7fb6'),
-         ('1774350','c845a999fdab0cc24417112295a0b8ab'),
-         ('1773867','e2d01801e96a6005e36408e5aa483fc8'),
-         ('1774318','2adc5b14f37f0980dfc37555494f664e')]
+cases = [('1774389','e0c453d1115683e0cc91470cba6e7fb6')]
 reader=photo.Reader(max_requests=5,seconds=120)
 out=Path('photo-gallery-inspection');out.mkdir(exist_ok=True)
 results=[]
@@ -28,7 +25,8 @@ for mls,key in cases:
         item['images']=[]
         for img in soup.find_all('img'):
             if urlparse(img.get('src','')).hostname!='api.cotality.com':continue
-            item['images'].append({'alt':img.get('alt'),'ancestors':[
+            if not img.find_parent(class_='flat-gallery-single'):continue
+            item['images'].append({'alt':img.get('alt'),'url':img.get('src'),'accepted_url':photo.safe_url(img.get('src'),image=True),'ancestors':[
                 {'tag':p.name,'class':p.get('class')} for p in list(img.parents)[:5]]})
         try:item['parsed_photos']=len(photo.parse_listing(html,row,url,'preferredrealty'))
         except photo.Unavailable as error:item['parser_status']=error.status
