@@ -1,0 +1,30 @@
+name: Expanded Report Validation
+on:
+  pull_request:
+    paths:
+      - 'report.html'
+      - 'report-design.css'
+      - 'rehab-report.js'
+      - 'rehab-report.css'
+      - 'test_rehab_report.cjs'
+      - 'test_report_redesign.cjs'
+      - 'test_report_loading.cjs'
+      - '.github/workflows/report-validation.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check report module syntax
+        run: node --check rehab-report.js
+      - name: Validate calculations, persistence and PDF lifecycle offline
+        run: |
+          node test_rehab_report.cjs
+          node test_report_redesign.cjs
+          node test_report_loading.cjs
