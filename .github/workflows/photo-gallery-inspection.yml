@@ -20,12 +20,26 @@ jobs:
       - run: python -m pip install 'beautifulsoup4==4.15.0'
       - name: Verify direct media-key photos through the production reader
         run: |
-          python listing_photo_fallback.py --id PA-MLS-1774389 --max-requests 13 --save > photo-gallery-report.txt
+          python listing_photo_fallback.py --id PA-MLS-1774389 --max-requests 13 --save | tee photo-gallery-report.txt
           python - <<'PY'
           import json
           from pathlib import Path
+          from urllib.parse import urlparse,parse_qs
+          import listing_photo_fallback as photo
           record=json.loads(Path('COMPS_REPORTS/listing_photos/e0c453d1115683e0cc91470cba6e7fb6.json').read_text())
           print(record['property_id'], record['status'], len(record['photos']))
+          if not record['photos']:
+              failures=record['attempts'][0].get('image_failures',[])
+              if failures:
+                  reader=photo.Reader(max_requests=2,seconds=60)
+                  url=failures[0]['url']
+                  try:
+                      reader.robots(url)
+                      reader.raw(url,3000000,'image/jpeg,image/png,image/webp')
+                  except photo.Unavailable as error:
+                      destination=urlparse(error.location or '')
+                      print(json.dumps({'delivery_status':error.status,'http':error.http_status,'host':destination.hostname,
+                          'path':destination.path,'query_keys':list(parse_qs(destination.query))}))
           assert len(record['photos'])==3
           assert all(p['verification']['status']=='image_verified' and p['provider']=='preferredrealty' for p in record['photos'])
           assert record['attempts'][0]['parser_revision']==2
