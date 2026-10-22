@@ -10,6 +10,10 @@ on:
       - 'test_report_redesign.cjs'
       - 'test_report_loading.cjs'
       - 'test_report_collection.cjs'
+      - 'test_report_provider_budget.py'
+      - 'rentcast_budget.py'
+      - 'COMPS_REPORTS/rentcast_usage.json'
+      - '.github/workflows/expanded-report.yml'
       - '.github/workflows/report-validation.yml'
 permissions:
   contents: read
@@ -24,6 +28,11 @@ jobs:
           node-version: '22'
       - name: Check report module syntax
         run: node --check rehab-report.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify shared provider quota offline
+        run: python -m unittest test_report_provider_budget.py
       - name: Validate calculations, persistence and PDF lifecycle offline
         run: |
           node test_rehab_report.cjs
