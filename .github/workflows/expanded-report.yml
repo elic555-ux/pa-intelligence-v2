@@ -88,8 +88,9 @@ jobs:
     timeout-minutes: 8
     env:
       RENTCAST_API_KEY: ${{ secrets.RENTCAST_API_KEY }}
-      # Keep new calls disabled until the shared quota ledger is migrated.
-      RENTCAST_REPORT_API_ENABLED: 'false'
+      # Owner verified current-period usage: 0/50 on 2026-10-22.
+      # Every explicit request remains protected by the shared 45-call guard.
+      RENTCAST_REPORT_API_ENABLED: 'true'
       FREE_COUNTY_LOOKUPS_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v4
@@ -118,7 +119,7 @@ jobs:
             git push origin HEAD:main
           fi
           echo 'REPORT_RESERVATION_PERSISTED=true' >> "$GITHUB_ENV"
-      - name: Reuse saved report data
+      - name: Collect requested estimates or reuse saved report data
         run: python expanded_report.py execute --run-id "$GITHUB_RUN_ID"
       - name: Persist result even when a source is unavailable
         if: always()

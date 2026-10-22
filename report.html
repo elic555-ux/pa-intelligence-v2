@@ -52,7 +52,7 @@
 
         <div class="flex items-center gap-3 flex-wrap">
             <button onclick="configureRentCast()" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-amber-400 border border-amber-500/30 rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
-                <i data-lucide="key" class="w-4 h-4"></i> חיבור RentCast
+                <i data-lucide="search" class="w-4 h-4"></i> איסוף נתונים לדוח
             </button>
             <button id="save-report" onclick="saveReportToHistory()" disabled class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-black shadow-lg transition flex items-center gap-2">
                 <i data-lucide="bookmark" class="w-4 h-4"></i> שמור דוח
@@ -238,11 +238,12 @@
   <div class="section-heading"><h2 id="rentcast-title">מאגר פנימי ומקורות הנתונים</h2><span class="version">מקורות הנתונים</span></div>
   <p id="rentcast-status" role="status">טוען נתונים שמורים…</p>
   <div class="api-controls no-print">
-    <label>הנתונים לבקשה<select id="rentcast-mode"><option value="profile">פרטי נכס ותמונות מהמחוז — ללא RentCast</option><option value="rent">שכירות והשוואות — עד קריאה אחת</option><option value="value">שווי והשוואות — עד קריאה אחת</option><option value="both">שווי ושכירות — עד שתי קריאות</option></select></label>
-    <button id="request-report" onclick="requestRentCastReport()" disabled>טען נתונים ובדוק מקורות חינמיים</button>
+    <label>הנתונים לבקשה<select id="rentcast-mode" onchange="updateRequestMode()"><option value="both" selected>אומדני שווי ושכירות — עד שתי קריאות</option><option value="rent">אומדן שכירות והשוואות — עד קריאה אחת</option><option value="value">אומדן שווי והשוואות — עד קריאה אחת</option><option value="profile">פרטי נכס ומקור מחוז בלבד — ללא אומדנים</option></select></label>
+    <button id="request-report" onclick="requestRentCastReport()" disabled>אסוף אומדני שווי ושכירות</button>
     <button class="secondary" id="resume-report" onclick="resumePendingReport()" hidden>בדוק תוצאה של בקשה קיימת</button>
     <label class="checkbox"><input id="force-refresh" type="checkbox">עדכן נתונים גם אם קיימת תוצאה שמורה</label>
   </div>
+  <p id="request-mode-note" class="small">שווי ושכירות נאספים רק בלחיצה על איסוף. RentCast אינו מספק בדיקת מצב או עלות שיפוץ לנכס.</p>
   <p id="quota-status" class="small muted">מכסה: ממתין למונה המערכת.</p>
   <p class="small muted">פתיחת הדוח וטעינת תוצאה שמורה אינן מפעילות את RentCast. המונה כולל קריאות שמורות מראש; שימוש באותו מפתח מחוץ למערכת אינו כלול בו.</p>
   <details class="no-print"><summary>הגדרות החיבור</summary><div class="connection-settings"><label>מפתח GitHub של המערכת<input id="github-token" type="password" autocomplete="off" placeholder="המפתח שנשמר בהגדרות הסריקה"></label><button class="secondary" onclick="saveGitHubConnection()">שמור חיבור</button><p class="small muted">מפתח RentCast נשאר בסוד RENTCAST_API_KEY בשרת GitHub. הוא אינו נשמר בדוח או בדפדפן.</p></div></details>
@@ -459,7 +460,7 @@ let currentDeal=null, cloudAvailable=false, currentSavedReportId=null, reportSav
 let savedReferenceTime=null, reportRequestPending=false, activePoll=null, lastUsage=null;
 let pdfExportPending=false, reportReady=false;
 const REPO_API='https://api.github.com/repos/elic555-ux/pa-intelligence-v2';
-const REPORT_VERSION='8.22.2';
+const REPORT_VERSION='8.22.3';
 const EVIDENCE_LABELS={rent:'שכירות חודשית',arv:'שווי לאחר שיפוץ',flipRehab:'שיפוץ לפליפ',rentalRehab:'שיפוץ להשכרה',operatingExpenses:'הוצאות תפעול שנתיות',vacancyLoss:'אובדן שכירות שנתי',acquisitionCosts:'עלויות רכישה',sellingCosts:'עלויות מכירה',holdingCosts:'עלויות החזקה',financingCosts:'עלויות מימון'};
 const METHOD_LABELS={lease:'חוזה שכירות לנכס',rent_roll:'דוח שכירויות של הנכס',market_rent_estimate:'הערכת שכירות של מקור מזוהה',appraisal_after_repair:'שמאות למצב לאחר השיפוץ',comparable_sales_after_repair:'ניתוח מכירות דומות למצב לאחר השיפוץ',contractor_quote:'הצעת קבלן לנכס',inspection_scope_estimate:'הערכת היקף עבודה מבדיקה בנכס',operating_budget:'תקציב תפעול מפורט לנכס',documented_expenses:'הוצאות מתועדות לנכס',closing_estimate:'אומדן סגירה מפורט לנכס',settlement_statement:'מסמך סגירה לנכס',selling_quote:'הצעת עלויות מכירה לנכס',holding_budget:'תקציב החזקה מפורט לנכס',lender_quote:'הצעת מימון לנכס'};
 const SOURCE_MESSAGES={accepted:'האומדן עבר בקרת התאמה ומוצג כהערכת הספק',stale:'התוצאה השמורה אינה עדכנית מספיק להצגת אומדן',subject_mismatch:'פרטי הנכס בתשובת הספק אינם תואמים',insufficient_comparables:'לא התקבלו מספיק מודעות דומות ועדכניות להצגת אומדן',estimate_range_unreliable:'טווח ההערכה רחב מדי או חסר',api_key_missing:'סוד RentCast אינו זמין לשרת GitHub',usage_guard_blocked:'קריאות RentCast חדשות חסומות כרגע. הנתונים השמורים והמקורות הציבוריים זמינים',usage_ledger_missing:'מונה השימוש בשרת חסר. לא בוצעה קריאה',billing_cycle_not_configured:'מחזור החיוב לא הוגדר. לא בוצעה קריאה',api_rerun_blocked:'הפעלה חוזרת של אותה משימה נחסמה. לא בוצעה קריאה חוזרת',request_already_reserved:'הבקשה הזאת כבר נרשמה במכסה',authentication_failed:'RentCast דחה את פרטי החיבור',rate_limited:'RentCast עצר את הבקשה. אין ניסיון חוזר אוטומטי',request_failed_without_retry:'בקשת RentCast לא הושלמה. אין ניסיון חוזר אוטומטי',invalid_response:'הספק החזיר תשובה שאינה מתאימה לדוח',attempt_already_reserved_and_sent:'הבקשה כבר נשלחה ולא נשלחה שוב'};
@@ -473,7 +474,19 @@ function put(id,text){document.getElementById(id).textContent=String(text??'לא
 function statusText(id,message,error=false){const el=document.getElementById(id);el.textContent=message;el.className='status '+(error?'error':'success');}
 function switchTab(tabId){for(const tab of ['overview','financials','rehab']){const active=tabId==='tab-'+tab;document.getElementById('tab-'+tab).classList.toggle('hidden',!active);const button=document.getElementById('btn-tab-'+tab);button.classList.toggle('bg-blue-600',active);button.classList.toggle('bg-gray-800',!active);button.setAttribute('aria-selected',String(active));}}
 function closeReportWindow(){if(window.opener)window.close();else window.location.href='deals.html';}
-function configureRentCast(){switchTab('tab-financials');document.getElementById('source-settings').open=true;const panel=document.querySelector('.api-panel details');panel.open=true;document.getElementById('github-token').focus();}
+function configureRentCast(){
+    if(currentSavedReportId){window.location.href='report.html?id='+encodeURIComponent(String(currentDeal.id));return;}
+    switchTab('tab-financials');document.getElementById('source-settings').open=true;
+    updateRequestMode();
+    if(!githubToken()){document.querySelector('.api-panel details').open=true;document.getElementById('github-token').focus();}
+    else document.getElementById('request-report').focus();
+}
+function updateRequestMode(){
+    const mode=document.getElementById('rentcast-mode').value;
+    const labels={both:'אסוף אומדני שווי ושכירות',rent:'אסוף אומדן שכירות והשוואות',value:'אסוף אומדן שווי והשוואות',profile:'בדוק פרטי נכס ומקור מחוז בלבד'};
+    put('request-report',labels[mode]||labels.both);
+    put('request-mode-note',mode==='profile'?'הבדיקה הזו אינה אוספת שווי, שכירות או עלות שיפוץ, ואינה נשמרת אוטומטית כדוח ניתוח.':'האיסוף יבוצע רק בלחיצה ובמסגרת המכסה המאומתת. אומדן שווי שוק אינו ARV, ו־RentCast אינו מספק עלויות שיפוץ.');
+}
 async function saveGitHubConnection(){
     const value=document.getElementById('github-token').value.trim();
     if(!value){statusText('report-status','הזן את מפתח GitHub שכבר משמש את המערכת.',true);return;}
@@ -564,6 +577,7 @@ function renderAvailability(){
         lines.push(label+': '+message+(source?' · '+rows+' מודעות השוואה שמורות'+(source.observed_at?' · '+String(source.observed_at).slice(0,10):''):'')+'.');
     }
     if(valid&&SOURCE_MESSAGES[report.status])lines.push('תוצאת הבקשה: '+SOURCE_MESSAGES[report.status]+'.');
+    if(valid&&report.profile_only)lines.push('הבקשה האחרונה בדקה פרטי נכס ומקור מחוז בלבד. לא התבקשו בה אומדני שווי או שכירות.');
     if(!f.evidence.arv)lines.push('שווי לאחר שיפוץ (ARV): חסר מסמך או ניתוח מכירות שמתייחס למצב לאחר שיפוץ.');
     if(!f.evidence.flipRehab&&!f.evidence.rentalRehab)lines.push('עלות שיפוץ: חסרה הצעת קבלן או הערכת היקף עבודה מתועדת. תקציב ידני מוצג בנפרד.');
     if(currentSavedReportId)lines.push('זהו דוח היסטורי. נתונים שנאספו לאחר מועד השמירה אינם משנים אותו.');
@@ -666,25 +680,35 @@ async function saveReportToHistory(automatic=false){
 async function getRepoJson(path){const headers={'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};const token=githubToken();if(token)headers.Authorization='Bearer '+token;const response=await fetch(REPO_API+'/contents/'+path+'?ref=main',{headers,cache:'no-store'});if(response.status===404)return null;if(!response.ok)throw new Error(response.status===401||response.status===403?'GitHub דחה את החיבור או הרשאות הקריאה':'לא ניתן לקרוא את נתוני הדוח מ-GitHub');const envelope=await response.json();if(typeof envelope.content!=='string'||envelope.encoding!=='base64')throw new Error('קובץ הנתונים לא התקבל');const bytes=Uint8Array.from(atob(envelope.content.replace(/\s/g,'')),c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));}
 async function reportKey(id){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(id)));return [...new Uint8Array(bytes)].map(n=>n.toString(16).padStart(2,'0')).join('').slice(0,32);}
 async function failedWorkflow(requestId){try{const token=githubToken();if(!token)return null;const response=await fetch(REPO_API+'/actions/workflows/expanded-report.yml/runs?event=workflow_dispatch&per_page=100',{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'},cache:'no-store'});if(!response.ok)return null;const data=await response.json();const run=(data.workflow_runs||[]).find(r=>String(r.display_title||'').endsWith(requestId));return run?.status==='completed'&&run.conclusion!=='success'?run.conclusion:null;}catch(_){return null;}}
-function showUsage(usage){if(!usage){put('quota-status','מונה השימוש אינו זמין. נתונים שמורים נשארים זמינים.');return;}
-    const used=financialNumber(usage.used??usage.successful_api_calls);let message=used===null?'מונה המכסה לא התקבל':'תקציב שמור: '+used+' / 50 · זמינות עד עצירה ב־45: '+Math.max(0,45-used)+' · תחילת מחזור: '+(usage.cycle_start||'לא פורסם')+' · חידוש מתוכנן: '+(usage.next_reset||'לא פורסם');
+function quotaBlockReason(usage,needed=1){
+    if(!usage)return 'מונה השימוש אינו זמין. יש לאמת את המכסה לפני איסוף חדש.';
+    const today=new Date().toISOString().slice(0,10),start=String(usage.cycle_start||''),end=String(usage.next_reset||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>today||end<=today||start>=end)return 'מונה השימוש שייך למחזור אחר. יש לאמת את השימוש ומועד האיפוס בחשבון RentCast.';
+    if(usage.billing_cycle_verified!==true)return 'מחזור השימוש טרם אומת מול חשבון RentCast. מפתח GitHub אינו מאמת את המכסה.';
+    const used=financialNumber(usage.used??usage.successful_api_calls);
+    if(used===null||!Number.isInteger(used)||used<0)return 'מונה השימוש אינו תקין. לא תישלח בקשת אומדן חדשה.';
+    if(used+needed>45)return 'אין מספיק מכסה עד העצירה ב־45. נתונים שמורים נשארים זמינים.';
+    return null;
+}
+function showUsage(usage){lastUsage=usage||null;if(!usage){put('quota-status',quotaBlockReason(usage));return;}
+    const used=financialNumber(usage.used??usage.successful_api_calls),blocked=quotaBlockReason(usage);let message=used===null?'מונה המכסה לא התקבל':'מונה שמור: '+used+' / 50'+(blocked?'':' · זמינות עד עצירה ב־45: '+Math.max(0,45-used))+' · תחילת מחזור: '+(usage.cycle_start||'לא פורסם')+' · חידוש מתוכנן: '+(usage.next_reset||'לא פורסם');
     if(usage.schema_version===2||usage.count_basis==='legacy_baseline_plus_confirmed_calls_and_held_reservations')message+=' · שימוש קודם שנשמר: '+(usage.legacy_budget_used??0)+' · הצלחות חדשות: '+(usage.confirmed_successful_calls??0)+' · שמור מראש או לא ידוע: '+(usage.reserved_or_unknown_calls??Object.values(usage.reserved_requests||{}).reduce((sum,item)=>sum+(item.count||0),0));
-    put('quota-status',message+' · שימוש שבוצע מחוץ למערכת אינו כלול.');}
+    put('quota-status',(blocked?blocked+' ':'')+message+' · שימוש שבוצע מחוץ למערכת אינו כלול.');}
 async function applySourceReport(report,automatic=false){
     if(!sameProperty(report))throw new Error('תוצאת הבדיקה אינה שייכת לנכס שנבחר');const next=copy(currentDeal);next.expanded_source_report=copy(report);
     const prior=currentDeal;currentDeal=next;const source=sourceAccepted(report,'rent');currentDeal=prior;
     const existing=financialEvidence(next,'rent');
     if(source&&(!existing||existing.method==='market_rent_estimate'&&existing.source_name==='RentCast')){next.financial_evidence={...(next.financial_evidence||{}),rent:{value:source.estimate.value,property_id:String(next.id),source_name:'RentCast',source_url:'https://github.com/elic555-ux/pa-intelligence-v2/blob/main/COMPS_REPORTS/expanded_receipts/'+encodeURIComponent(report.request_id)+'.json',document_ref:'RentCast '+report.request_id,observed_at:source.observed_at,method:'market_rent_estimate',period:'monthly',status:'provider_estimate',property_match_confirmed:true,notes:'אומדן שכירות לפי מודעות דומות. טווח: '+financialMoney(source.estimate.range_low)+'–'+financialMoney(source.estimate.range_high)+'. אין הוכחה לחוזה שכירות.'}};}
-    if(cloudAvailable&&!currentSavedReportId){try{await commitCurrentDeal(next);if(automatic)await saveReportToHistory(true);}catch(error){currentDeal=next;cacheLocally(next);renderReport();statusText('report-status','התוצאה נשמרה בשרת הדוחות; השמירה בחדר העסקאות לא הושלמה: '+error.message,true);}}
+    if(cloudAvailable&&!currentSavedReportId){try{await commitCurrentDeal(next);if(automatic&&!report.profile_only&&(sourceAccepted(report,'value')||sourceAccepted(report,'rent')))await saveReportToHistory(true);}catch(error){currentDeal=next;cacheLocally(next);renderReport();statusText('report-status','התוצאה נשמרה בשרת הדוחות; השמירה בחדר העסקאות לא הושלמה: '+error.message,true);}}
     else{currentDeal=next;cacheLocally(next);renderReport();}
     if(report.usage)showUsage(report.usage);
 }
 async function refreshRepositoryData(){
     if(!currentDeal||currentSavedReportId)return;const key=await reportKey(currentDeal.id);
     const settled=await Promise.allSettled([getRepoJson('COMPS_REPORTS/expanded_reports/'+key+'.json'),getRepoJson('COMPS_REPORTS/rentcast_usage.json'),loadInternalPropertyData()]);
-    if(settled[0].status==='fulfilled'&&settled[0].value&&sameProperty(settled[0].value)){const result=settled[0].value;if(currentDeal.expanded_source_report?.request_id!==result.request_id)await applySourceReport(result,true);statusText('rentcast-status','תוצאה שמורה מ־'+String(result.generated_at||'').slice(0,10)+' נטענה ללא קריאת RentCast.');}
+    if(settled[0].status==='fulfilled'&&settled[0].value&&sameProperty(settled[0].value)){const result=settled[0].value;if(currentDeal.expanded_source_report?.request_id!==result.request_id)await applySourceReport(result,true);statusText('rentcast-status','תוצאה שמורה מ־'+String(result.generated_at||'').slice(0,10)+': '+reportCollectionMessage(result));}
     else if(settled[0].status==='rejected')statusText('rentcast-status',settled[0].reason.message,true);
-    else statusText('rentcast-status','נטענו הנתונים הפנימיים הזמינים. הכפתור בודק מקורות מחוז חינמיים; קריאות RentCast חדשות חסומות כרגע.');
+    else statusText('rentcast-status','נטענו פרטי הנכס הזמינים. לא בוצע איסוף אומדנים בפתיחת הדוח. בחר את הנתונים לבקשה ולחץ על איסוף.');
     // The current ledger is authoritative; an old report carries only its past quota snapshot.
     if(settled[1].status==='fulfilled')showUsage(settled[1].value);else put('quota-status',settled[1].reason.message);
     document.getElementById('resume-report').hidden=!pendingRequest();setEditability();
@@ -694,6 +718,7 @@ async function requestRentCastReport(modeOverride=null){
     const existing=pendingRequest();if(existing){statusText('rentcast-status','קיימת בקשה שעדיין לא נבדקה. בדוק את התוצאה שלה לפני בקשה נוספת.');document.getElementById('resume-report').hidden=false;return;}
     const token=githubToken();if(!token){statusText('rentcast-status','חסר מפתח GitHub. פתח את הגדרות החיבור והשתמש במפתח של המערכת.',true);configureRentCast();return;}
     const property=reportProperty(),mode=modeOverride||document.getElementById('rentcast-mode').value;
+    if(mode!=='profile'){const blocked=quotaBlockReason(lastUsage,mode==='both'?2:1);if(blocked){statusText('rentcast-status',blocked,true);return;}}
     if(mode!=='profile'&&!propertyType(property.property_type)){statusText('rentcast-status','סוג הנכס אינו מזוהה. נדרש סוג מגורים מאומת לפני בדיקת RentCast.',true);return;}
     if(!/^\d+[A-Za-z]?\s/.test(property.address)||!property.city||property.state!=='PA'||!/^\d{5}(?:-\d{4})?$/.test(property.zip)||['id','address','city','state','zip'].some(key=>property[key].length>180||/[\x00-\x1f<>]/.test(property[key]))){statusText('rentcast-status','נדרשים כתובת רחוב מלאה בפנסילבניה, עיר ומיקוד תקין לפני בדיקת RentCast.',true);return;}
     if(mode!=='profile'&&['beds','baths','sqft'].some(key=>property[key]!==null&&(property[key]<0||(key==='sqft'?(property[key]<100||property[key]>100000):property[key]>100)))){statusText('rentcast-status','בדוק את מספר החדרים ואת שטח הנכס לפני בדיקת RentCast.',true);return;}
@@ -707,10 +732,16 @@ async function requestRentCastReport(modeOverride=null){
         document.getElementById('resume-report').hidden=false;await pollReceipt(request.request_id);
     }catch(error){statusText('rentcast-status',error.message,true);}finally{reportRequestPending=false;setEditability();}
 }
+function reportCollectionMessage(report){
+    if(report.profile_only)return 'הסתיימה בדיקת פרטי נכס ומקור מחוז בלבד. לא נאספו אומדני שווי, שכירות או עלויות שיפוץ.';
+    const accepted=[['value','שווי שוק'],['rent','שכירות']].filter(([kind])=>sourceAccepted(report,kind)).map(([,label])=>label);
+    const errors=[...new Set(Object.values(report.errors||{}))].map(code=>SOURCE_MESSAGES[code]||'מקור מידע לא זמין');
+    return (accepted.length?'נטענו אומדני '+accepted.join(' ו־')+'.':'לא התקבל אומדן שעבר את בקרת ההתאמה והעדכניות.')+(errors.length?' '+errors.join(' · '):'');
+}
 async function pollReceipt(requestId){
     if(activePoll)return;activePoll=requestId;try{for(let attempt=0;attempt<24;attempt++){
         const receipt=await getRepoJson('COMPS_REPORTS/expanded_receipts/'+encodeURIComponent(requestId)+'.json');
-        if(receipt&&receipt.request_id===requestId){if(!sameProperty(receipt))throw new Error('התקבלה תוצאה עבור נכס אחר');await applySourceReport(receipt,true);savePending(null);document.getElementById('resume-report').hidden=true;const errors=Object.values(receipt.errors||{});statusText('rentcast-status',(receipt.profile_only?'טעינת הנתונים הפנימיים ובדיקת מקור המחוז הסתיימו. לא בוצעה קריאת RentCast.':SOURCE_MESSAGES[receipt.status])||(errors.length?errors.map(code=>SOURCE_MESSAGES[code]||'מקור מידע לא זמין').join(' · '):'בדיקת RentCast הסתיימה. התוצאות והמקורות נטענו.'),!['completed','partial'].includes(receipt.status)||!!errors.length);return;}
+        if(receipt&&receipt.request_id===requestId){if(!sameProperty(receipt))throw new Error('התקבלה תוצאה עבור נכס אחר');await applySourceReport(receipt,true);savePending(null);document.getElementById('resume-report').hidden=true;const errors=Object.values(receipt.errors||{});statusText('rentcast-status',reportCollectionMessage(receipt),!['completed','partial'].includes(receipt.status)||!!errors.length);return;}
         if(attempt>=2&&attempt%3===2&&await failedWorkflow(requestId)){savePending(null);document.getElementById('resume-report').hidden=true;statusText('rentcast-status','משימת הדוח נכשלה ב-GitHub. בדוק את פרטי המשימה. אם נרשמה מכסה לפני הכשל, היא נשארת במונה.',true);return;}
         statusText('rentcast-status','הבקשה נשלחה. ממתין לתוצאה בשרת; פתיחה חוזרת תמשיך לבדוק את אותה בקשה.');await new Promise(resolve=>setTimeout(resolve,15000));
     }statusText('rentcast-status','השרת עדיין לא החזיר תוצאה. הבקשה נשמרה; השתמש בבדיקת תוצאה קיימת. אפשר לבדוק את המשימה ב-GitHub Actions.',true);
@@ -831,6 +862,7 @@ async function loadReport(){
         reportReady=true;setEditability();
         document.getElementById('loading').hidden=true;document.getElementById('report-content').hidden=false;
         if(/multi|duplex|triplex|apartment/i.test(reportProperty().property_type)&&document.getElementById('rentcast-mode').value!=='profile')document.getElementById('rentcast-mode').value='value';
+        updateRequestMode();
         if(snapshot){statusText('report-status','עותק דוח שמור מ־'+new Date(savedReferenceTime).toLocaleDateString('he-IL')+'. מוצגים המקורות והתחשיבים כפי שהיו במועד הדוח.');statusText('rentcast-status','צפייה בדוח שמור — לא מתבצעות קריאות RentCast.');showUsage(currentDeal.expanded_source_report?.usage);}
         else{await refreshRepositoryData();if(pendingRequest())statusText('rentcast-status','קיימת בקשת דוח שנשלחה קודם. בדוק את תוצאתה; אין צורך לשלוח בקשה חדשה.');}
     }catch(error){
@@ -883,3 +915,4 @@ async function saveFinancialTargets(){
 
 </script>
 </body></html>
+
