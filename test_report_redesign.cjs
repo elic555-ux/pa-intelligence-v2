@@ -324,6 +324,25 @@ for (const fail of [false, true]) test('PDF export restores RTL, unlocks control
     assert.ok(statuses.some(message => fail ? message.includes('Simulated canvas failure') : message.includes('נוצר')));
 });
 
+test('Saving investment assumptions preserves new server fields and documented evidence', async () => {
+    const p = property(), h = harness(p), latest = plain(p);
+    latest.user_notes='Updated on another device'; latest.tracker={stage:'inspection'};
+    h.setLatest(latest);
+    const next=plain(p); next.investment_scenario={version:1,property_id:p.id,identity:[p.id,p.address,p.city,p.state,p.zip],inputs:{purchase:99000}};
+    await h.context.commitCurrentDeal(next);
+    assert.equal(h.writes.length,1);
+    assert.equal(h.writes[0].deal_data.user_notes,latest.user_notes);
+    assert.deepEqual(h.writes[0].deal_data.financial_evidence,p.financial_evidence);
+    assert.deepEqual(h.writes[0].deal_data.investment_scenario,next.investment_scenario);
+});
+test('Conflicting investment assumptions from another device reject overwrite and release lock', async () => {
+    const p=property(), h=harness(p), latest=plain(p);
+    latest.investment_scenario={inputs:{purchase:100000}};h.setLatest(latest);
+    const next=plain(p);next.investment_scenario={inputs:{purchase:90000}};
+    await assert.rejects(h.context.commitCurrentDeal(next),/התרחיש עודכן במכשיר אחר/);
+    assert.equal(h.writes.length,0);assert.equal(h.context.reportSavePending,false);
+});
+
 (async () => {
     let passed = 0;
     for (const {name, fn} of tests) {
