@@ -36,7 +36,15 @@
       if(!n.valid)errors[key]=label+': יש להזין מספר שאינו שלילי, עד שתי ספרות אחרי הנקודה.';
       if(n.value===0&&['purchase','arv','rent','targetYield','rulePct','years'].includes(key))errors[key]=label+': הערך חייב להיות גדול מאפס.';
     }
-    return {version:VERSION,property_id:String(p.id??''),identity:identity(p),inputs,
+    const rehab_links={};
+    for(const key of ['flipRehab','rentalRehab']){
+      const link=obj(obj(source.rehab_links)[key]);
+      if(link.property_id===String(p.id)&&link.amount===inputs[key]&&number(link.amount).valid&&link.amount!==null&&
+        number(link.low).valid&&link.low!==null&&link.low<=link.amount&&typeof link.revision==='string'&&link.revision.length<=200000&&
+        typeof link.updated_at==='string'&&Number.isFinite(Date.parse(link.updated_at))&&link.strategy===(key==='flipRehab'?'flip':'rental'))
+        rehab_links[key]={property_id:String(p.id),strategy:link.strategy,amount:link.amount,low:link.low,revision:link.revision,updated_at:link.updated_at};
+    }
+    return {version:VERSION,property_id:String(p.id??''),identity:identity(p),inputs,rehab_links,
       updated_at:typeof source.updated_at==='string'&&Number.isFinite(Date.parse(source.updated_at))?source.updated_at:null,errors};
   }
   function serialize(s,p){const n=normalize(s,p);if(Object.keys(n.errors).length)throw Error('יש לתקן את השדות המסומנים לפני שמירה.');delete n.errors;return n;}
@@ -49,11 +57,29 @@
     const n=years*12,r=apr/1200;
     return r===0?principal/n:principal*r/(1-Math.pow(1+r,-n));
   }
+  function applyRehabBudget(p,s,budget,strategy){
+    if(!['flip','rental'].includes(strategy))throw Error('יש לבחור ייעוד לתקציב');
+    if(!budget||budget.property_id!==String(p.id)||!budget.ready_for_scenario||budget.dirty||!budget.updated_at||!number(budget.total).valid||budget.total===null)
+      throw Error('יש לשמור בסעיף 07 תקציב מלא: לתמחר ולבדוק כל סעיף רלוונטי, ולבחור ייעוד. טיוטה שלא נשמרה אינה מועתקת.');
+    if(budget.strategy!==strategy)throw Error('ייעוד התקציב בסעיף 07 אינו מתאים לתרחיש שנבחר.');
+    const next=serialize(s,p),key=strategy==='flip'?'flipRehab':'rentalRehab';
+    next.inputs[key]=budget.total;
+    next.rehab_links[key]={property_id:String(p.id),strategy,amount:budget.total,low:budget.low,updated_at:budget.updated_at,revision:budget.revision};
+    return next;
+  }
+  function rehabStatusHTML(s,budget){
+    let html='<p>תקציב סעיף 07: '+(!budget?'לא נשמר תקציב':budget.priced_count+' מתוך '+budget.active_count+' סעיפים תומחרו; '+budget.reviewed_count+' נבדקו לפי הזנה'+(budget.dirty?' · קיימת טיוטה שלא נשמרה':budget.ready_for_scenario?' · מוכן להעתקה מפורשת':' · עדיין אינו מוכן להעברה'))+'. העתקה משתמשת בקצה הגבוה של הטווח, כולל הרזרבה שנבחרה.</p>';
+    for(const [key,link]of Object.entries(s.rehab_links||{})){
+      const stale=!budget||budget.revision!==link.revision;
+      html+='<p class="'+(stale?'da-budget-stale':'')+'">'+(key==='flipRehab'?'פליפ':'השכרה')+': הועתק תקציב '+esc(money(link.amount))+' (טווח '+esc(money(link.low))+' – '+esc(money(link.amount))+'), גרסה שמורה '+esc(link.updated_at.slice(0,10))+'. '+(stale?'סעיף 07 השתנה מאז ההעתקה. התרחיש עדיין משתמש בסכום השמור; יש לבדוק ולהעתיק מחדש לפי הצורך.':'הסכום תואם לגרסת התקציב השמורה.')+'</p>';
+    }
+    return html;
+  }
   function calculate(p,s,source={}){
     const n=normalize(s,p),values={},origins={};
     for(const key of Object.keys(FIELDS)){
       if(n.errors[key]){values[key]=null;origins[key]='invalid';continue;}
-      if(n.inputs[key]!==null){values[key]=n.inputs[key];origins[key]='assumption';continue;}
+      if(n.inputs[key]!==null){values[key]=n.inputs[key];origins[key]=n.rehab_links[key]?'rehab_plan':'assumption';continue;}
       let v=source[SOURCE_KEYS[key]];
       if(key==='operatingAnnual')v=sum(source.operatingExpenses,source.vacancyLoss);
       if(key==='targetYield')v=source.targetCap;
@@ -76,7 +102,7 @@
     const monthlyDebt=payment(loan,v.apr,v.years);
     const cashRequired=all([rentalAllIn,loan,v.loanFees])?rentalAllIn-loan+v.loanFees:null;
     const annualCashFlow=all([noi,monthlyDebt])?noi-monthlyDebt*12:null;
-    const result={version:VERSION,inputs:v,origins,errors:n.errors,annualRent,operating,noi,rentalAllIn,rentalMao,
+    const result={version:VERSION,inputs:v,origins,rehabLinks:n.rehab_links,errors:n.errors,annualRent,operating,noi,rentalAllIn,rentalMao,
       capRate:pct(noi,v.purchase),yieldOnCost:pct(noi,rentalAllIn),grossYield:pct(annualRent,v.purchase),
       flipAllIn,flipProfit,flipMao,ruleMao,flipRoi:pct(flipProfit,flipAllIn),loan,monthlyDebt,cashRequired,
       monthlyCashFlow:annualCashFlow===null?null:annualCashFlow/12,cashOnCash:pct(annualCashFlow,cashRequired),
@@ -86,7 +112,7 @@
   }
   function documentPreset(p,s){
     const n=serialize(s,p),sqft=number(p.sqft).value;
-    n.inputs.operatingAnnual=null;n.inputs.operatingPct=26;
+    n.rehab_links={};n.inputs.operatingAnnual=null;n.inputs.operatingPct=26;
     if(n.inputs.acquisition===null)n.inputs.acquisition=5000;
     if(sqft>0){n.inputs.flipRehab=Math.round(sqft*45*100)/100;n.inputs.rentalRehab=Math.round(sqft*27*100)/100;}
     return n;
@@ -102,6 +128,7 @@
     if(r.monthlyCashFlow!==null)lines.push('תזרים חודשי לאחר החזר ההלוואה: '+money(r.monthlyCashFlow)+'.');
     if(r.flipProfit!==null)lines.push('רווח פליפ לפני מס לפי העלויות שהוזנו: '+money(r.flipProfit)+'.');
     if(r.flipMao!==null)lines.push('תקרת רכישה לפליפ לפי יעד הרווח: '+money(r.flipMao)+'.');
+    for(const [key,link]of Object.entries(r.rehabLinks||{}))lines.push('תקציב '+(key==='flipRehab'?'פליפ':'השכרה')+' הועתק מסעיף 07 בתאריך '+link.updated_at.slice(0,10)+'; זהו סכום שמור שאינו מתעדכן אוטומטית.');
     if(r.inputs.arv===null)lines.push('חסר שווי לאחר שיפוץ; אומדן שווי שוק ומחירי מודעות אינם ARV מאומת.');
     if(r.noi===null)lines.push('להשלמת ניתוח ההשכרה נדרשים שכירות ותקציב תפעול הכולל אי־תפוסה.');
     return lines.join(' ');
@@ -116,7 +143,7 @@
       metric('סכום הלוואה · מימון מחיר הרכישה בלבד',r.loan)+metric('הון מזומן לרכישה, שיפוץ, סגירה והקמת הלוואה',r.cashRequired)+metric('החזר הלוואה חודשי · קרן וריבית',r.monthlyDebt)+metric('תזרים חודשי לאחר החזר הלוואה',r.monthlyCashFlow)+metric('תשואה שנתית על ההון המזומן',r.cashOnCash,percent)+
       '</div><p>הוצאות התפעול צריכות לכלול מסי נכס, ביטוח, תחזוקה, ניהול ואי־תפוסה. מודל המימון אינו הצעת מלווה ואינו כולל מחזור הלוואה.</p></section>';
   }
-  function inputsTable(r){return '<table><thead><tr><th>נתון</th><th>ערך בתרחיש</th><th>בסיס</th></tr></thead><tbody>'+Object.entries(FIELDS).map(([key,[label]])=>'<tr><td>'+esc(label)+'</td><td dir="ltr">'+(r.inputs[key]===null?'חסר':esc(r.inputs[key]))+'</td><td>'+({source:'נתון מהמקורות / יעד שנשמר',assumption:'הנחה שהוזנה בתרחיש',setting:'הגדרת מודל מוצעת',missing:'חסר נתון',invalid:'הזנה לא תקינה',overridden:'מוחלף באחוז ההוצאות שהוזן'}[r.origins[key]])+'</td></tr>').join('')+'</tbody></table>';}
+  function inputsTable(r){return '<table><thead><tr><th>נתון</th><th>ערך בתרחיש</th><th>בסיס</th></tr></thead><tbody>'+Object.entries(FIELDS).map(([key,[label]])=>'<tr><td>'+esc(label)+'</td><td dir="ltr">'+(r.inputs[key]===null?'חסר':esc(r.inputs[key]))+'</td><td>'+({source:'נתון מהמקורות / יעד שנשמר',rehab_plan:'תקציב שיפוץ שהועתק מסעיף 07 · גרסה שמורה',assumption:'הנחה שהוזנה בתרחיש',setting:'הגדרת מודל מוצעת',missing:'חסר נתון',invalid:'הזנה לא תקינה',overridden:'מוחלף באחוז ההוצאות שהוזן'}[r.origins[key]])+'</td></tr>').join('')+'</tbody></table>';}
   function reportHTML(p,s,source){const r=calculate(p,s,source);return '<h2>מחשבון עסקה · הנחות ותרחיש</h2><p>'+esc(summary(p,r))+'</p>'+metricsHTML(r)+'<h3>הנתונים ששימשו לחישוב</h3>'+inputsTable(r);}
   function mount(container,config){
     if(!container)return null;
@@ -132,7 +159,7 @@
       s=draft.scenario;dirty=true;status='שוחזרה טיוטה מקומית שטרם נשמרה בענן. לחץ שמירה כדי לאשר אותה.';
     }
     const groups=[['מחיר, שווי ושכירות',['purchase','arv','rent']],['שיפוץ ורכישה',['flipRehab','rentalRehab','acquisition']],['הוצאות ויעד להשכרה',['operatingAnnual','operatingPct','targetYield']],['עלויות ויעד לפליפ',['selling','holding','financing','targetProfit','rulePct']],['מימון להשכרה',['ltv','apr','years','loanFees']]];
-    container.innerHTML='<div class="da-heading"><div><span class="da-kicker">בדיקת כדאיות · תרחיש שמור לנכס</span><h2>מחשבון פליפ והשכרה</h2></div><a href="#source-settings" class="no-print">איסוף נתונים מהמקורות</a></div><p>נתון ממקור מוצע כבסיס. כל ערך שתזין כאן הוא הנחת עבודה בתרחיש ואינו משנה את המקור. שדה ריק משתמש במקור, אם קיים; אפס מחייב הזנה מפורשת.</p><div class="da-tools no-print"><button type="button" data-da-action="preset">טען הנחות עבודה מהמסמך</button><button type="button" data-da-action="rehab">העתק תקציב שיפוץ ידני לפליפ</button></div><p class="da-preset-note no-print">הנחות המסמך: $45 לרגל רבועה לפליפ, $27 להשכרה, הוצאות כולל אי־תפוסה 26% מהשכירות, וסגירה $5,000 אם טרם הוזנה. אלו הנחות לבדיקה; העלויות בפועל תלויות בנכס. יעדי המודל המוצעים: תשואה על העלות 10%, כלל פליפ 70%, מימון 75% ותקופה 30 שנה. ריבית ויתר העלויות דורשות הזנה.</p><details class="da-editor no-print"><summary>עריכת הנחות העבודה</summary>'+groups.map(([title,keys])=>'<fieldset><legend>'+title+'</legend><div class="da-inputs">'+keys.map(key=>'<label>'+esc(FIELDS[key][0])+'<input inputmode="decimal" dir="ltr" type="text" autocomplete="off" data-da-field="'+key+'" aria-describedby="da-note-'+key+'"><small id="da-note-'+key+'"></small></label>').join('')+'</div></fieldset>').join('')+'<div class="da-tools"><button type="button" data-da-action="save">שמור תרחיש</button><button type="button" data-da-action="reset">חזור למקורות ללא ההנחות</button></div></details><p class="da-status no-print" role="status" aria-live="polite"></p><div class="da-results"></div><details class="da-basis"><summary>הנתונים ששימשו לחישוב</summary><div class="da-input-table"></div></details>';
+    container.innerHTML='<div class="da-heading"><div><span class="da-kicker">בדיקת כדאיות · תרחיש שמור לנכס</span><h2>מחשבון פליפ והשכרה</h2></div><a href="#source-settings" class="no-print">איסוף נתונים מהמקורות</a></div><p>נתון ממקור מוצע כבסיס. כל ערך שתזין כאן הוא הנחת עבודה בתרחיש ואינו משנה את המקור. שדה ריק משתמש במקור, אם קיים; אפס מחייב הזנה מפורשת.</p><div class="da-tools no-print"><button type="button" data-da-action="preset">טען הנחות עבודה מהמסמך</button><button type="button" data-da-action="rehab">העתק תקציב 07 לפליפ</button><button type="button" data-da-action="rehab-rental">העתק תקציב 07 להשכרה</button></div><div class="da-rehab-link-status"></div><p class="da-preset-note no-print">הנחות המסמך: $45 לרגל רבועה לפליפ, $27 להשכרה, הוצאות כולל אי־תפוסה 26% מהשכירות, וסגירה $5,000 אם טרם הוזנה. אלו הנחות לבדיקה; העלויות בפועל תלויות בנכס. יעדי המודל המוצעים: תשואה על העלות 10%, כלל פליפ 70%, מימון 75% ותקופה 30 שנה. ריבית ויתר העלויות דורשות הזנה.</p><details class="da-editor no-print"><summary>עריכת הנחות העבודה</summary>'+groups.map(([title,keys])=>'<fieldset><legend>'+title+'</legend><div class="da-inputs">'+keys.map(key=>'<label>'+esc(FIELDS[key][0])+'<input inputmode="decimal" dir="ltr" type="text" autocomplete="off" data-da-field="'+key+'" aria-describedby="da-note-'+key+'"><small id="da-note-'+key+'"></small></label>').join('')+'</div></fieldset>').join('')+'<div class="da-tools"><button type="button" data-da-action="save">שמור תרחיש</button><button type="button" data-da-action="reset">חזור למקורות ללא ההנחות</button></div></details><p class="da-status no-print" role="status" aria-live="polite"></p><div class="da-results"></div><details class="da-basis"><summary>הנתונים ששימשו לחישוב</summary><div class="da-input-table"></div></details>';
     const statusNode=container.querySelector('.da-status'),results=container.querySelector('.da-results'),basis=container.querySelector('.da-input-table');
     function show(text){status=text;statusNode.textContent=text;}
     function draftSave(){try{storage?.setItem(draftKey,JSON.stringify({base:JSON.stringify(cfg.scenario||null),scenario:s}));}catch(_){show('הטיוטה לא נשמרה בדפדפן. שמור לענן לפני יציאה.');}}
@@ -142,8 +169,8 @@
       if(!dirty&&!saving){s=normalize(cfg.scenario,cfg.property);renderFields();}
       const r=calculate(cfg.property,s,cfg.source);
       results.innerHTML='<p class="da-summary">'+esc(summary(cfg.property,r))+'</p>'+metricsHTML(r);
-      basis.innerHTML=inputsTable(r);
-      container.querySelectorAll('[data-da-field]').forEach(input=>{const key=input.dataset.daField, note=container.querySelector('#da-note-'+key);input.placeholder=r.origins[key]==='source'||r.origins[key]==='setting'?String(r.inputs[key]??''):'נדרש נתון';input.disabled=!!cfg.readOnly;input.setAttribute('aria-invalid',r.errors[key]?'true':'false');note.textContent=r.errors[key]||({source:'בסיס מהמקורות / יעד שנשמר',assumption:'הנחה בתרחיש',setting:'הגדרת מודל מוצעת',missing:'חסר נתון',invalid:'הזנה לא תקינה',overridden:'מוחלף באחוז ההוצאות שהוזן'}[r.origins[key]]);});
+      basis.innerHTML=inputsTable(r);container.querySelector('.da-rehab-link-status').innerHTML=rehabStatusHTML(normalize(s,cfg.property),cfg.rehabBudget);
+      container.querySelectorAll('[data-da-field]').forEach(input=>{const key=input.dataset.daField, note=container.querySelector('#da-note-'+key);input.placeholder=r.origins[key]==='source'||r.origins[key]==='setting'?String(r.inputs[key]??''):'נדרש נתון';input.disabled=!!cfg.readOnly;input.setAttribute('aria-invalid',r.errors[key]?'true':'false');note.textContent=r.errors[key]||({source:'בסיס מהמקורות / יעד שנשמר',rehab_plan:'תקציב שהועתק מסעיף 07 · גרסה שמורה',assumption:'הנחה בתרחיש',setting:'הגדרת מודל מוצעת',missing:'חסר נתון',invalid:'הזנה לא תקינה',overridden:'מוחלף באחוז ההוצאות שהוזן'}[r.origins[key]]);});
       container.querySelectorAll('button').forEach(b=>b.disabled=!!cfg.readOnly||!!saving||!!cfg.busy);
       if(cfg.readOnly)show('צפייה בתרחיש שמור. עריכת הנחות זמינה בדוח הנכס העדכני.');else statusNode.textContent=status;
     }
@@ -162,16 +189,13 @@
       }catch(error){show('התרחיש לא נשמר לענן: '+error.message+'. הטיוטה נשארה בדפדפן.');throw error;}finally{saving=null;refresh();}})();
       refresh();return saving;
     }
-    function input(event){const key=event.target?.dataset?.daField;if(!FIELDS[key]||cfg.readOnly)return;s.inputs[key]=event.target.value;changed();}
+    function input(event){const key=event.target?.dataset?.daField;if(!FIELDS[key]||cfg.readOnly)return;s.inputs[key]=event.target.value;if(s.rehab_links)delete s.rehab_links[key];changed();}
     async function click(event){const action=event.target.closest('[data-da-action]')?.dataset.daAction;if(!action||cfg.readOnly)return;
       try{
         if(action==='save'){await save();return;}
         if(action==='reset')s=normalize(null,cfg.property);
         if(action==='preset'){s=documentPreset(cfg.property,s);s=normalize(s,cfg.property);}
-        if(action==='rehab'){
-          const budget=cfg.rehabBudget;if(!budget?.complete)throw Error('יש לתמחר את כל סעיפי השיפוץ הרלוונטיים לפני העתקת התקציב');
-          s.inputs.flipRehab=budget.total;
-        }
+        if(action==='rehab'||action==='rehab-rental')s=normalize(applyRehabBudget(cfg.property,s,cfg.rehabBudget,action==='rehab'?'flip':'rental'),cfg.property);
         changed();renderFields();
       }catch(error){show(error.message);}
     }
@@ -180,5 +204,5 @@
       destroy(){clearTimeout(timer);container.removeEventListener('input',input);container.removeEventListener('click',click);}};
     instances.set(container,state);renderFields();refresh();return state;
   }
-  return {VERSION,FIELDS,identity,matches,normalize,serialize,calculate,payment,documentPreset,summary,reportHTML,mount};
+  return {VERSION,FIELDS,identity,matches,normalize,serialize,calculate,payment,documentPreset,applyRehabBudget,rehabStatusHTML,summary,reportHTML,mount};
 });

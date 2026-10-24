@@ -11,10 +11,11 @@ function renderDealAnalysis(){
     overview.hidden=!window.PADealAnalysis.matches(currentDeal.investment_scenario,currentDeal);
     if(!overview.hidden)document.getElementById('investment-scenario-summary').textContent=window.PADealAnalysis.summary(currentDeal,window.PADealAnalysis.calculate(currentDeal,currentDeal.investment_scenario,financialSnapshot(currentDeal,referenceTime())));
     const budget=window.PARehabReport&&currentDeal.rehab_plan?.property_id===String(currentDeal.id)?window.PARehabReport.summarize(currentDeal.rehab_plan):null;
+    if(!overview.hidden&&Object.values(window.PADealAnalysis.normalize(currentDeal.investment_scenario,currentDeal).rehab_links||{}).some(link=>budget?.revision!==link.revision))document.getElementById('investment-scenario-summary').textContent+=' תקציב סעיף 07 השתנה מאז ההעתקה. יש לבדוק את הסכום המקושר בסעיף 08.';
     dealAnalysisController=window.PADealAnalysis.mount(document.getElementById('deal-analysis-root'),{
         property:currentDeal,scenario:currentDeal.investment_scenario,source:financialSnapshot(currentDeal,referenceTime()),
         readOnly:!reportReady||!!currentSavedReportId||!cloudAvailable,busy:reportSavePending,
-        storage:window.localStorage,rehabBudget:budget,
+        storage:window.localStorage,rehabBudget:budget?{...budget,dirty:!!rehabPlanController?.isDirty()}:null,
         onSave:async function(scenario){
             if(!window.PADealAnalysis.matches(scenario,currentDeal))throw new Error('התרחיש אינו מתאים לזהות הנכס');
             const next=copy(currentDeal);next.investment_scenario=copy(scenario);
@@ -24,6 +25,7 @@ function renderDealAnalysis(){
     });
 }
 async function flushDealAnalysis(){
+    if(typeof rehabPlanController!=='undefined'&&rehabPlanController?.isDirty())throw new Error('יש לשמור את טיוטת השיפוץ בסעיף 07 לפני שמירת הדוח.');
     if(dealAnalysisController&&!currentSavedReportId){
         await dealAnalysisController.save();
         if(dealAnalysisController.dirty)throw new Error('יש לשמור את טיוטת המחשבון לפני ייצוא או שמירת דוח.');
@@ -53,6 +55,7 @@ async function loadReportListingMedia(){
     const value=i=>results[i].status==='fulfilled'?results[i].value:null;
     reportListingMedia={property_id:String(p.id),identity:api.identity(p),details:value(0),receipt:value(1),additional:results.slice(2).filter(r=>r.status==='fulfilled').map(r=>r.value).filter(Boolean)};
     renderImages();
+    if(typeof renderRehabPlan==='function')renderRehabPlan();
 }
 function renderReportPriceHistory(){
     const root=document.getElementById('report-price-history');if(!root||!currentDeal)return;

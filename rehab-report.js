@@ -1,10 +1,10 @@
 (function (root, factory) {
   'use strict';
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.PARehabReport = factory();
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./rehab-estimate.js'));
+  else root.PARehabReport = factory(root.PARehabEstimate);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (pricing) {
   'use strict';
-  const VERSION = 1;
+  const VERSION = 2;
   const MAX_COST = 100000000;
   const CONDITIONS = {
     unassessed: 'טרם נבדק', repair: 'נדרש טיפול', good: 'תקין לפי הזנה ידנית', not_applicable: 'לא רלוונטי'
@@ -52,20 +52,21 @@
     const matches = subject !== '' && String(supplied.property_id == null ? '' : supplied.property_id) === subject;
     const source = matches ? supplied : {};
     const sourceItems = object(source.items);
-    const result = { version: VERSION, property_id: subject, items: {}, contingency_pct: 0, updated_at: normalizedDate(source.updated_at), validation_errors: {} };
+    const result = { version: VERSION, property_id: subject, strategy: own(pricing.STRATEGIES,source.strategy)?source.strategy:'unspecified', items: {}, contingency_pct: 0, updated_at: normalizedDate(source.updated_at), validation_errors: {} };
     ITEMS.forEach(item => {
       const entry = object(own(sourceItems, item.id) ? sourceItems[item.id] : null);
-      const amount = parseAmount(entry.cost, MAX_COST);
+      const detail = pricing.normalizeEntry(entry);
       const condition = own(CONDITIONS, entry.condition) ? entry.condition : 'unassessed';
       let scope = typeof entry.scope === 'string' ? entry.scope.trim() : '';
-      if (!amount.valid) result.validation_errors[item.id] = 'יש להזין סכום חיובי או אפס, עד שתי ספרות אחרי הנקודה.';
+      if (detail.errors.length) result.validation_errors[item.id] = detail.errors.join(' ');
       if (entry.condition != null && !own(CONDITIONS, entry.condition)) result.validation_errors[item.id] = 'מצב הסעיף אינו תקין.';
       if (scope.length > 1000) { result.validation_errors[item.id] = 'תיאור העבודה מוגבל ל־1,000 תווים.'; scope = scope.slice(0, 1000); }
-      result.items[item.id] = { cost: amount.value, condition, scope };
+      result.items[item.id] = { ...detail.entry, condition, scope };
     });
     const contingency = parseAmount(source.contingency_pct, 100);
     if (!contingency.valid) result.validation_errors.contingency_pct = 'יש להזין אחוז בין 0 ל־100, עד שתי ספרות אחרי הנקודה.';
     result.contingency_pct = contingency.value == null ? 0 : contingency.value;
+    if(Object.values(result.items).filter(e=>e.condition!=='not_applicable').reduce((sum,e)=>sum+(e.cost||0),0)*(1+result.contingency_pct/100)>MAX_COST)result.validation_errors.total='סכום התקציב חורג מהסכום המרבי.';
     return result;
   }
   function summarize(plan) {
@@ -75,15 +76,20 @@
       const active = entries.filter(entry => entry.condition !== 'not_applicable');
       const priced = active.filter(entry => entry.cost !== null);
       return { id: group.id, name: group.name, active_count: active.length, priced_count: priced.length,
-        excluded_count: entries.length - active.length, subtotal: rounded(priced.reduce((total, entry) => total + entry.cost, 0)) };
+        excluded_count: entries.length - active.length, subtotal: rounded(priced.reduce((total, entry) => total + entry.cost, 0)), low:rounded(priced.reduce((total,entry)=>total+pricing.estimate(entry).low,0)) };
     });
     const active_count = groups.reduce((total, group) => total + group.active_count, 0);
     const priced_count = groups.reduce((total, group) => total + group.priced_count, 0);
     const subtotal = rounded(groups.reduce((total, group) => total + group.subtotal, 0));
     const contingency_amount = rounded(subtotal * normalized.contingency_pct / 100);
-    return { groups, active_count, priced_count, excluded_count: ITEMS.length - active_count, subtotal,
+    const low=rounded(groups.reduce((sum,group)=>sum+group.low,0)*(1+normalized.contingency_pct/100));
+    const reviewed_count=Object.values(normalized.items).filter(e=>e.condition!=='not_applicable'&&e.condition!=='unassessed'&&(e.finding||e.scope)).length;
+    const complete=active_count>0&&priced_count===active_count&&Object.keys(normalized.validation_errors).length===0;
+    return { groups, property_id:normalized.property_id, strategy:normalized.strategy, updated_at:normalized.updated_at, revision:pricing.revision(normalized), low, high:rounded(subtotal+contingency_amount), reviewed_count,
+      ready_for_scenario:complete&&reviewed_count===active_count&&normalized.strategy!=='unspecified'&&!!normalized.updated_at,
+      active_count, priced_count, excluded_count: ITEMS.length - active_count, subtotal,
       contingency_pct: normalized.contingency_pct, contingency_amount, total: rounded(subtotal + contingency_amount),
-      complete: active_count > 0 && priced_count === active_count && Object.keys(normalized.validation_errors).length === 0,
+      complete,
       validation_errors: normalized.validation_errors };
   }
   function coverageText(summary) {
@@ -99,7 +105,8 @@
       const width = sum.subtotal > 0 ? Math.max(0, Math.min(100, info.subtotal / sum.subtotal * 100)) : 0;
       return '<article class="rh-group-card rh-group-' + group.id + '"><div class="rh-group-card-top"><span class="rh-group-number">' + group.number + '</span><h3>' + group.name + '</h3></div><strong class="rh-group-amount" dir="ltr">' + (info.priced_count ? money(info.subtotal) : 'טרם תומחר') + '</strong><p>' + info.priced_count + ' מתוך ' + info.active_count + ' סעיפים תומחרו</p><div class="rh-bar-track" aria-hidden="true"><span style="width:' + width.toFixed(2) + '%"></span></div></article>';
     }).join('');
-    return '<div class="rh-budget-summary"><section class="rh-total-card"><span class="rh-eyebrow">תקציב עבודה ידני · USD</span><h3>סכום הסעיפים שתומחרו</h3><strong class="rh-grand-amount" dir="ltr">' + amount + '</strong><p>' + coverageText(sum) + '</p><span class="rh-completeness' + (sum.complete ? ' rh-complete' : '') + '">' + (sum.complete ? 'כל הסעיפים הרלוונטיים תומחרו' : 'התקציב עדיין חלקי') + '</span></section><section class="rh-budget-breakdown"><h3>הרכב התקציב</h3><div><span>סעיפים שתומחרו</span><strong dir="ltr">' + amount + '</strong></div><div><span>רזרבה לפי הזנה ידנית <bdi>(' + sum.contingency_pct + '%)</bdi></span><strong dir="ltr">' + (sum.priced_count ? money(sum.contingency_amount) : '—') + '</strong></div><div class="rh-final-row"><span>סעיפים שתומחרו + רזרבה</span><strong dir="ltr">' + all + '</strong></div><p>הרזרבה מחושבת רק על הסעיפים שתומחרו. עלויות שלא הוזנו אינן כלולות.</p></section></div><div class="rh-group-cards">' + groups + '</div>';
+    const review='<p class="rh-review-status">ייעוד: '+escapeHTML(pricing.STRATEGIES[normalizePlan(plan,object(plan).property_id).strategy])+' · '+sum.reviewed_count+' מתוך '+sum.active_count+' סעיפים רלוונטיים נבדקו לפי הזנה. לתחשיב נדרש תקציב שמור, מתומחר ונבדק.</p><p class="rh-budget-range">טווח הסעיפים שתומחרו, כולל רזרבה: <bdi>'+(sum.priced_count?money(sum.low)+' – '+money(sum.high):'טרם תומחר')+'</bdi>. סכום העבודה הוא הקצה הגבוה; סעיפים חסרים אינם כלולים.</p><p class="rh-field-error">'+escapeHTML(sum.validation_errors.total||'')+'</p>';
+    return review+'<div class="rh-budget-summary"><section class="rh-total-card"><span class="rh-eyebrow">תקציב לפי הזנה · USD</span><h3>סכום הסעיפים שתומחרו</h3><strong class="rh-grand-amount" dir="ltr">' + amount + '</strong><p>' + coverageText(sum) + '</p><span class="rh-completeness' + (sum.complete ? ' rh-complete' : '') + '">' + (sum.complete ? 'כל הסעיפים הרלוונטיים תומחרו' : 'התקציב עדיין חלקי') + '</span></section><section class="rh-budget-breakdown"><h3>הרכב התקציב</h3><div><span>סעיפים שתומחרו</span><strong dir="ltr">' + amount + '</strong></div><div><span>רזרבה לפי הזנה ידנית <bdi>(' + sum.contingency_pct + '%)</bdi></span><strong dir="ltr">' + (sum.priced_count ? money(sum.contingency_amount) : '—') + '</strong></div><div class="rh-final-row"><span>סעיפים שתומחרו + רזרבה</span><strong dir="ltr">' + all + '</strong></div><p>הרזרבה מחושבת רק על הסעיפים שתומחרו. עלויות שלא הוזנו אינן כלולות.</p></section></div><div class="rh-group-cards">' + groups + '</div>';
   }
   function dateText(value) {
     const text = String(value || '');
@@ -121,13 +128,38 @@
     const metadata = [source.source_name, source.observed_at ? dateText(source.observed_at) : null, source.document_ref].filter(Boolean);
     return '<section class="rh-inspection"><div class="rh-section-intro"><span class="rh-section-kicker">ממצאי בדיקה</span><h3>מה תועד בנכס</h3><p>' + escapeHTML(available ? metadata.join(' · ') || 'פרטי המקור לא נמסרו לתצוגה' : 'לא נשמרו ממצאי בדיקה מתועדים. רשימת הסעיפים אינה קביעה על מצב הנכס.') + '</p></div><div class="rh-inspection-grid">' + [['main', 'מערכות מרכזיות'], ['interior', 'גימורי פנים'], ['exterior', 'חוץ ומבנה']].map(([key, name]) => '<article><h4>' + name + '</h4><p>' + escapeHTML(typeof findings[key] === 'string' && findings[key].trim() ? findings[key].trim() : 'לא נשמר ממצא מתועד.') + '</p></article>').join('') + '</div></section>';
   }
-  function itemHTML(item, plan, editable) {
-    const entry = plan.items[item.id];
-    const error = plan.validation_errors[item.id] || '';
-    const conditionOptions = Object.entries(CONDITIONS).map(([value, label]) => '<option value="' + value + '"' + (value === entry.condition ? ' selected' : '') + '>' + label + '</option>').join('');
-    const condition = '<span class="rh-static rh-condition-value">' + CONDITIONS[entry.condition] + '</span>' + (editable ? '<select class="rh-editor rh-condition-input" data-field="condition" aria-label="מצב ' + item.name + '">' + conditionOptions + '</select>' : '');
-    const costText = entry.condition === 'not_applicable' ? 'מחוץ לתקציב' : entry.cost === null ? 'לא תומחר' : money(entry.cost);
-    return '<tr data-item="' + item.id + '" class="' + (entry.condition === 'not_applicable' ? 'rh-excluded' : '') + '"><th scope="row"><span class="rh-item-name">' + item.name + '</span>' + condition + '</th><td class="rh-scope-cell" data-label="תיאור העבודה"><span class="rh-static rh-scope-value">' + escapeHTML(entry.scope || 'לא הוזן תיאור עבודה') + '</span>' + (editable ? '<textarea class="rh-editor rh-scope-input" rows="2" maxlength="1000" data-field="scope" placeholder="תיאור העבודה לפי בדיקה או תכנון" aria-label="תיאור עבודה — ' + item.name + '">' + escapeHTML(entry.scope) + '</textarea>' : '') + '</td><td class="rh-cost-cell" data-label="תקציב שהוזן"><span class="rh-static rh-cost-value" dir="ltr">' + costText + '</span>' + (editable ? '<label class="rh-editor rh-cost-input-wrap"><span aria-hidden="true">$</span><input type="text" inputmode="decimal" autocomplete="off" data-field="cost" aria-label="תקציב ' + item.name + ' בדולרים" value="' + (entry.cost === null ? '' : entry.cost) + '" placeholder="טרם תומחר"' + (entry.condition === 'not_applicable' ? ' disabled' : '') + '></label>' : '') + '<span class="rh-field-error" role="status">' + escapeHTML(error) + '</span></td></tr>';
+  const optionsHTML=(values,selected)=>Object.entries(values).map(([value,label])=>'<option value="'+escapeHTML(value)+'"'+(value===selected?' selected':'')+'>'+escapeHTML(label)+'</option>').join('');
+  function detailInput(field,label,value,editable,extra=''){
+    return '<label class="rh-detail-field"><span>'+label+'</span><span class="rh-static">'+escapeHTML(value==null||value===''?'לא הוזן':value)+'</span>'+(editable?'<input class="rh-editor" data-field="'+field+'" aria-label="'+label+'" value="'+escapeHTML(value??'')+'" '+extra+'>':'')+'</label>';
+  }
+  function rangeText(entry){const e=pricing.estimate(entry);return e.low===null?'טרם תומחר':money(e.low)+(e.high!==e.low?' – '+money(e.high):'');}
+  function priceSourceText(entry){return [pricing.BASES[entry.price_basis],entry.price_source,entry.price_date,entry.price_reference].filter(Boolean).join(' · ');}
+  function photoLinkHTML(entry,photos){const photo=(Array.isArray(photos)?photos:[]).find(p=>p.id===entry.photo_ref);return photo&&/^https:\/\//.test(photo.url||'')?'<a href="'+escapeHTML(photo.url)+'" target="_blank" rel="noopener noreferrer">פתח את '+escapeHTML(photo.name)+'</a>':entry.photo_ref?'<span>תמונה מקושרת: '+escapeHTML(photo?.name||'אינה זמינה ברשימה הנוכחית')+'</span>':'';}
+  function itemHTML(item,plan,editable,photos=[]){
+    const e=plan.items[item.id],excluded=e.condition==='not_applicable',quantity=e.pricing_mode==='quantity';
+    const select=(field,label,values,value)=>'<label class="rh-detail-field"><span>'+label+'</span><span class="rh-static">'+escapeHTML(values[value]||'לא הוזן')+'</span>'+(editable?'<select class="rh-editor" data-field="'+field+'" aria-label="'+label+' — '+item.name+'">'+optionsHTML(values,value)+'</select>':'')+'</label>';
+    const available=Array.isArray(photos)?photos.filter(photo=>typeof photo.id==='string'&&typeof photo.name==='string'):[];
+    const photoOptions={'':'ללא תמונה מקושרת',...Object.fromEntries(available.map(photo=>[photo.id,photo.name]))};
+    if(e.photo_ref&&!own(photoOptions,e.photo_ref))photoOptions[e.photo_ref]='התמונה שנשמרה אינה זמינה ברשימה הנוכחית';
+    const observation='<details class="rh-detail-box"><summary>ממצא, תמונה ובסיס המחיר</summary><div class="rh-detail-fields">'+
+      detailInput('finding','מה נראה / תועד — '+item.name,e.finding,editable,'maxlength="1000"')+
+      select('photo_ref','תמונת מקור',photoOptions,e.photo_ref)+'<span class="rh-photo-link">'+photoLinkHTML(e,photos)+'</span>'+
+      select('confidence','רמת ביטחון בממצא שהוזנה',pricing.CONFIDENCE,e.confidence)+
+      select('price_basis','בסיס התמחור',pricing.BASES,e.price_basis)+
+      detailInput('price_source','שם מקור המחיר — '+item.name,e.price_source,editable,'maxlength="200"')+
+      detailInput('price_date','תאריך מקור המחיר — '+item.name,e.price_date,editable,'type="date"')+
+      detailInput('price_reference','אסמכתה / גרסת מחירון — '+item.name,e.price_reference,editable,'maxlength="500"')+
+      '</div><p>ממצא ותמחור הם הערכות נפרדות. בחירה בתמונה אינה פענוח אוטומטי או אישור תקינות. מחירון או הצעת קבלן דורשים מקור, תאריך ואסמכתה.</p></details>';
+    const quantities='<div class="rh-quantity-fields">'+detailInput('quantity','כמות — '+item.name,e.quantity,editable,'inputmode="decimal" autocomplete="off"')+
+      select('unit','יחידת מידה',pricing.UNITS,e.unit)+
+      detailInput('unit_low','מחיר יחידה נמוך בדולרים — '+item.name,e.unit_low,editable,'inputmode="decimal" autocomplete="off"')+
+      detailInput('unit_high','מחיר יחידה גבוה בדולרים — '+item.name,e.unit_high,editable,'inputmode="decimal" autocomplete="off"')+'</div>';
+    return '<tr data-item="'+item.id+'" class="'+(excluded?'rh-excluded ':'')+(quantity?'rh-quantity':'rh-total')+'"><th scope="row"><span class="rh-item-name">'+item.name+'</span><span class="rh-static rh-condition-value">'+CONDITIONS[e.condition]+'</span>'+(editable?'<select class="rh-editor rh-condition-input" data-field="condition" aria-label="מצב '+item.name+'">'+optionsHTML(CONDITIONS,e.condition)+'</select>':'')+'</th>'+
+      '<td class="rh-scope-cell" data-label="ממצא ועבודה"><span class="rh-static rh-scope-value">'+escapeHTML(e.scope||'לא הוזן תיאור עבודה')+'</span>'+(editable?'<textarea class="rh-editor rh-scope-input" rows="2" maxlength="1000" data-field="scope" placeholder="איזו עבודה נדרשת" aria-label="תיאור עבודה — '+item.name+'">'+escapeHTML(e.scope)+'</textarea>':'')+observation+'</td>'+
+      '<td class="rh-cost-cell" data-label="תמחור ותקציב">'+select('pricing_mode','שיטת תמחור',{'total':'סכום כולל שהוזן','quantity':'כמות × טווח מחיר יחידה'},e.pricing_mode)+quantities+
+      '<span class="rh-static rh-cost-value" dir="ltr">'+(excluded?'מחוץ לתקציב':e.cost===null?'לא תומחר':money(e.cost))+'</span>'+
+      (editable?'<label class="rh-editor rh-cost-input-wrap"><span>$</span><input type="text" inputmode="decimal" autocomplete="off" data-field="cost" aria-label="תקציב '+item.name+' בדולרים" value="'+(e.cost??'')+'" placeholder="טרם תומחר"'+(excluded||quantity?' disabled':'')+'></label>':'')+
+      '<strong class="rh-range" dir="ltr">'+(excluded?'מחוץ לתקציב':rangeText(e))+'</strong><p class="rh-upper-note">סכום העבודה מחושב לפי הקצה הגבוה של הטווח.</p><p class="rh-price-source">'+escapeHTML(priceSourceText(e))+'</p><span class="rh-field-error" role="status">'+escapeHTML(plan.validation_errors[item.id]||'')+'</span></td></tr>';
   }
   function renderHTML(options, draft) {
     const opts = options || {};
@@ -137,7 +169,7 @@
     const editable = !opts.readOnly;
     const address = property.address || 'מפרט הנכס';
     const location = [property.city, property.state, property.zip].filter(Boolean).join(' · ');
-    return '<div class="rh-report' + (editable ? ' rh-editable' : ' rh-readonly') + '" dir="rtl"><header class="rh-hero"><div><span class="rh-eyebrow">PROPERTY REHAB REVIEW</span><h2>מפרט שיפוץ ותכנון תקציב</h2><p class="rh-property-address">' + escapeHTML(address) + '</p><p class="rh-property-location">' + escapeHTML(location) + '</p></div><div class="rh-hero-mark" aria-hidden="true"><span>24</span><small>סעיפי בדיקה</small></div></header><p class="rh-draft-notice">טיוטה ידנית לתכנון השיפוץ. אינה הצעת קבלן ואינה מעדכנת תחשיבי השקעה. מצב הסעיפים נקבע רק לפי הזנה ידנית.</p><div class="rh-overview">' + overviewHTML(suppliedPlan && String(suppliedPlan.property_id) === String(property.id) ? suppliedPlan : plan) + '</div><section class="rh-reserve-settings"><label><span>רזרבה לתכנון (%)</span>' + (editable ? '<input class="rh-editor" type="text" inputmode="decimal" autocomplete="off" data-field="contingency_pct" value="' + plan.contingency_pct + '" aria-label="אחוז רזרבה לתכנון" placeholder="0">' : '') + '<strong class="rh-static rh-reserve-value">' + plan.contingency_pct + '%</strong></label><p>אחוז לבחירתך, ללא ברירת מחדל כספית.</p><span class="rh-reserve-error rh-field-error" role="status">' + escapeHTML(plan.validation_errors.contingency_pct || '') + '</span></section><div class="rh-detail-heading"><span class="rh-section-kicker">פירוט העבודה</span><h3>רשימת הסעיפים</h3><p>סכום ריק = לא תומחר. אפס הוא סכום שהוזן במפורש. סעיף לא רלוונטי אינו נכלל בתקציב.</p></div>' + GROUPS.map(group => '<section class="rh-detail-group rh-group-' + group.id + '"><div class="rh-table-heading"><span class="rh-group-number">' + group.number + '</span><div><h3>' + group.name + '</h3><p>' + group.subtitle + '</p></div></div><table class="rh-items-table"><thead><tr><th scope="col">סעיף ומצב</th><th scope="col">תיאור העבודה</th><th scope="col">תקציב שהוזן</th></tr></thead><tbody>' + ITEMS.filter(item => item.group === group.id).map(item => itemHTML(item, plan, editable)).join('') + '</tbody></table></section>').join('') + inspectionHTML(opts.inspection) + documentedHTML(opts.documentedTotals) + '<footer class="rh-save-panel"><div><strong>' + (editable ? 'שמירת טיוטת השיפוץ' : 'תצוגת מפרט שמור') + '</strong><p class="rh-save-status" role="status" aria-live="polite">' + (plan.updated_at ? 'עודכן: ' + escapeHTML(dateText(plan.updated_at)) : 'עדיין לא נשמרה טיוטה לנכס') + '</p></div>' + (editable ? '<button type="button" class="rh-save-button">שמור טיוטת שיפוץ</button>' : '<span class="rh-readonly-badge">לצפייה בלבד</span>') + '</footer></div>';
+    return '<div class="rh-report' + (editable ? ' rh-editable' : ' rh-readonly') + '" dir="rtl"><header class="rh-hero"><div><span class="rh-eyebrow">PROPERTY REHAB REVIEW</span><h2>מפרט שיפוץ ותכנון תקציב</h2><p class="rh-property-address">' + escapeHTML(address) + '</p><p class="rh-property-location">' + escapeHTML(location) + '</p></div><div class="rh-hero-mark" aria-hidden="true"><span>24</span><small>סעיפי בדיקה</small></div></header><p class="rh-draft-notice">תכנון שיפוץ לפי ממצאים והנחות שהוזנו. אינו הצעת קבלן ואינו פענוח תמונות אוטומטי. שמירה אינה מעדכנת תחשיבי השקעה; העברת תקציב לסעיף 08 נעשית בבחירה מפורשת.</p><div class="rh-overview">' + overviewHTML(suppliedPlan && String(suppliedPlan.property_id) === String(property.id) ? suppliedPlan : plan) + '</div><section class="rh-plan-strategy"><label>ייעוד תקציב השיפוץ '+(editable?'<select class="rh-editor" data-field="strategy" aria-label="ייעוד תקציב השיפוץ">'+optionsHTML(pricing.STRATEGIES,plan.strategy)+'</select>':'<strong>'+pricing.STRATEGIES[plan.strategy]+'</strong>')+'</label><p>התקציב מתאר היקף עבודה אחד. שינוי הייעוד אינו משנה מחירים אוטומטית. ניתן לשמור סכום בתרחיש אחד ואז לתכנן תקציב שונה לאחר.</p></section><section class="rh-reserve-settings"><label><span>רזרבה לתכנון (%)</span>' + (editable ? '<input class="rh-editor" type="text" inputmode="decimal" autocomplete="off" data-field="contingency_pct" value="' + plan.contingency_pct + '" aria-label="אחוז רזרבה לתכנון" placeholder="0">' : '') + '<strong class="rh-static rh-reserve-value">' + plan.contingency_pct + '%</strong></label><p>אחוז לבחירתך, ללא ברירת מחדל כספית.</p><span class="rh-reserve-error rh-field-error" role="status">' + escapeHTML(plan.validation_errors.contingency_pct || '') + '</span></section><div class="rh-detail-heading"><span class="rh-section-kicker">פירוט העבודה</span><h3>רשימת הסעיפים</h3><p>סכום ריק = לא תומחר. אפס הוא הנחה מפורשת, ואינו מוכיח תקינות. סעיף לא רלוונטי אינו נכלל בתקציב. ניתן לתמחר סכום כולל או כמות כפול טווח מחיר יחידה.</p></div>' + GROUPS.map(group => '<section class="rh-detail-group rh-group-' + group.id + '"><div class="rh-table-heading"><span class="rh-group-number">' + group.number + '</span><div><h3>' + group.name + '</h3><p>' + group.subtitle + '</p></div></div><table class="rh-items-table"><thead><tr><th scope="col">סעיף ומצב</th><th scope="col">ממצא ועבודה</th><th scope="col">תמחור ותקציב</th></tr></thead><tbody>' + ITEMS.filter(item => item.group === group.id).map(item => itemHTML(item, plan, editable,opts.photos)).join('') + '</tbody></table></section>').join('') + inspectionHTML(opts.inspection) + documentedHTML(opts.documentedTotals) + '<footer class="rh-save-panel"><div><strong>' + (editable ? 'שמירת טיוטת השיפוץ' : 'תצוגת מפרט שמור') + '</strong><p class="rh-save-status" role="status" aria-live="polite">' + (plan.updated_at ? 'עודכן: ' + escapeHTML(dateText(plan.updated_at)) : 'עדיין לא נשמרה טיוטה לנכס') + '</p></div>' + (editable ? '<button type="button" class="rh-save-button">שמור טיוטת שיפוץ</button>' : '<span class="rh-readonly-badge">לצפייה בלבד</span>') + '</footer></div>';
   }
   function mount(element, options) {
     if (!element || typeof element.addEventListener !== 'function') throw new TypeError('A DOM element is required');
@@ -153,7 +185,11 @@
       const node = element.querySelector('.rh-save-status');
       if (node) { node.textContent = message; node.classList.toggle('rh-error', !!error); }
     };
+    function draftKey(){const p=object(opts.property);return 'pa_rehab_draft_v2:'+JSON.stringify([p.id,p.address,p.city,p.state,p.zip]);}
+    function cacheDraft(){try{opts.storage?.setItem(draftKey(),JSON.stringify({base:JSON.stringify(opts.plan||null),plan:draft}));}catch(_){status('לא ניתן לשמור טיוטה בדפדפן. שמור לענן לפני יציאה.',true);}}
+    function restoreDraft(){try{const saved=JSON.parse(opts.storage?.getItem(draftKey())||'null');if(!opts.readOnly&&saved?.base===JSON.stringify(opts.plan||null)&&String(saved.plan?.property_id)===propertyId){draft=saved.plan;dirty=true;}}catch(_){}}
     function paint() { element.innerHTML = renderHTML(opts, draft); }
+
     function refreshSummary() {
       const normalized = normalizePlan(draft, propertyId);
       const overview = element.querySelector('.rh-overview');
@@ -169,11 +205,14 @@
         if (!row) return;
         const entry = normalized.items[item.id];
         row.classList.toggle('rh-excluded', entry.condition === 'not_applicable');
+        row.classList.toggle('rh-quantity',entry.pricing_mode==='quantity');row.classList.toggle('rh-total',entry.pricing_mode!=='quantity');
+        const photo=row.querySelector('.rh-photo-link');if(photo)photo.innerHTML=photoLinkHTML(entry,opts.photos);
+        const range=row.querySelector('.rh-range'),source=row.querySelector('.rh-price-source');if(range)range.textContent=entry.condition==='not_applicable'?'מחוץ לתקציב':rangeText(entry);if(source)source.textContent=priceSourceText(entry);
         row.querySelector('.rh-condition-value').textContent = CONDITIONS[entry.condition];
         row.querySelector('.rh-scope-value').textContent = entry.scope || 'לא הוזן תיאור עבודה';
         row.querySelector('.rh-cost-value').textContent = entry.condition === 'not_applicable' ? 'מחוץ לתקציב' : entry.cost === null ? 'לא תומחר' : money(entry.cost);
         const input = row.querySelector('[data-field="cost"]');
-        if (input) { input.disabled = entry.condition === 'not_applicable' || !!opts.readOnly || saving; input.setAttribute('aria-invalid', String(!!normalized.validation_errors[item.id])); }
+        if (input) { input.disabled = entry.condition === 'not_applicable' || entry.pricing_mode==='quantity' || !!opts.readOnly || saving; input.setAttribute('aria-invalid', String(!!normalized.validation_errors[item.id])); }
         row.querySelector('.rh-field-error').textContent = normalized.validation_errors[item.id] || '';
       });
     }
@@ -182,16 +221,16 @@
       const target = event.target;
       const field = target && target.getAttribute && target.getAttribute('data-field');
       if (!field) return;
-      if (field === 'contingency_pct') draft.contingency_pct = target.value;
+      if (field === 'contingency_pct'||field==='strategy') draft[field] = target.value;
       else {
         const row = target.closest('[data-item]');
         const id = row && row.getAttribute('data-item');
-        if (!ITEM_IDS.has(id) || !['cost', 'condition', 'scope'].includes(field)) return;
+        if (!ITEM_IDS.has(id) || !['cost','condition','scope','pricing_mode','quantity','unit','unit_low','unit_high','finding','photo_ref','confidence','price_basis','price_source','price_date','price_reference'].includes(field)) return;
         draft.items[id][field] = target.value;
       }
       dirty = true;
       refreshSummary();
-      status('יש שינויים שטרם נשמרו.', false);
+      cacheDraft();status('יש שינויים שטרם נשמרו.', false);if(typeof opts.onChange==='function')opts.onChange();
     }
     async function onClick(event) {
       const button = event.target && event.target.closest && event.target.closest('.rh-save-button');
@@ -211,7 +250,7 @@
       status('שומר את הטיוטה…', false);
       try {
         await callback(plan);
-        if (!destroyed && propertyId === savingId && generation === savingGeneration) { draft = normalizePlan(plan, propertyId); dirty = false; saving = false; paint(); status('טיוטת השיפוץ נשמרה. תחשיבי ההשקעה לא השתנו.', false); }
+        if (!destroyed && propertyId === savingId && generation === savingGeneration) { draft = normalizePlan(plan, propertyId); dirty = false; saving = false;try{opts.storage?.removeItem(draftKey());}catch(_){}paint();if(typeof opts.onChange==='function')opts.onChange();status('טיוטת השיפוץ נשמרה. להעברה מפורשת של תקציב מלא, עבור לסעיף 08.', false); }
       } catch (error) {
         if (!destroyed && propertyId === savingId && generation === savingGeneration) { saving = false; paint(); status('הטיוטה לא נשמרה. ' + (error && error.message ? error.message : 'נסה שוב.'), true); }
       } finally {
@@ -238,8 +277,9 @@
     element.addEventListener('change', onInput);
     element.addEventListener('click', onClick);
     if (instances) instances.set(element, api);
-    paint();
+    restoreDraft();paint();if(dirty)status('שוחזרה טיוטת שיפוץ מקומית שטרם נשמרה לענן.',false);
     return api;
   }
   return { VERSION, GROUPS, ITEMS, CONDITIONS, normalizePlan, summarize, renderHTML, mount };
 });
+

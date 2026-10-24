@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>דוח נכס מורחב 8.24 — PA Intelligence Hub</title>
+    <title>דוח נכס מורחב 8.25 — PA Intelligence Hub</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -33,12 +33,14 @@
     @media(max-width:640px){#tab-financials>section,#tab-rehab>section{padding:18px}}
 </style>
 <link rel="stylesheet" href="report-design.css?v=8.22.1">
-<link rel="stylesheet" href="rehab-report.css?v=8.22.1">
-<script src="rehab-report.js?v=8.22.1"></script>
+<link rel="stylesheet" href="rehab-report.css?v=8.25.1">
+<link rel="stylesheet" href="rehab-estimate.css?v=8.25.1">
+<script src="rehab-estimate.js?v=8.25.1"></script>
+<script src="rehab-report.js?v=8.25.1"></script>
 <link rel="stylesheet" href="deal-analysis.css?v=8.23.1">
-<script src="deal-analysis.js?v=8.23.1"></script>
+<script src="deal-analysis.js?v=8.25.1"></script>
 <script src="secondary_sources.js?v=1.9.0-public-gallery-20261020"></script>
-<script src="deal-analysis-adapter.js?v=8.23.1"></script>
+<script src="deal-analysis-adapter.js?v=8.25.1"></script>
 <link rel="stylesheet" href="report-sections.css?v=8.24.1">
 <script src="report-sections.js?v=8.24.1"></script>
 </head>
@@ -474,7 +476,7 @@ let currentDeal=null, cloudAvailable=false, currentSavedReportId=null, reportSav
 let savedReferenceTime=null, reportRequestPending=false, activePoll=null, lastUsage=null;
 let pdfExportPending=false, reportReady=false;
 const REPO_API='https://api.github.com/repos/elic555-ux/pa-intelligence-v2';
-const REPORT_VERSION='8.24.1';
+const REPORT_VERSION='8.25.1';
 const EVIDENCE_LABELS={rent:'שכירות חודשית',arv:'שווי לאחר שיפוץ',flipRehab:'שיפוץ לפליפ',rentalRehab:'שיפוץ להשכרה',operatingExpenses:'הוצאות תפעול שנתיות',vacancyLoss:'אובדן שכירות שנתי',acquisitionCosts:'עלויות רכישה',sellingCosts:'עלויות מכירה',holdingCosts:'עלויות החזקה',financingCosts:'עלויות מימון'};
 const METHOD_LABELS={lease:'חוזה שכירות לנכס',rent_roll:'דוח שכירויות של הנכס',market_rent_estimate:'הערכת שכירות של מקור מזוהה',appraisal_after_repair:'שמאות למצב לאחר השיפוץ',comparable_sales_after_repair:'ניתוח מכירות דומות למצב לאחר השיפוץ',contractor_quote:'הצעת קבלן לנכס',inspection_scope_estimate:'הערכת היקף עבודה מבדיקה בנכס',operating_budget:'תקציב תפעול מפורט לנכס',documented_expenses:'הוצאות מתועדות לנכס',closing_estimate:'אומדן סגירה מפורט לנכס',settlement_statement:'מסמך סגירה לנכס',selling_quote:'הצעת עלויות מכירה לנכס',holding_budget:'תקציב החזקה מפורט לנכס',lender_quote:'הצעת מימון לנכס'};
 const SOURCE_MESSAGES={accepted:'האומדן עבר בקרת התאמה ומוצג כהערכת הספק',stale:'התוצאה השמורה אינה עדכנית מספיק להצגת אומדן',subject_mismatch:'פרטי הנכס בתשובת הספק אינם תואמים',insufficient_comparables:'לא התקבלו מספיק מודעות דומות ועדכניות להצגת אומדן',estimate_range_unreliable:'טווח ההערכה רחב מדי או חסר',api_key_missing:'סוד RentCast אינו זמין לשרת GitHub',usage_guard_blocked:'קריאות RentCast חדשות חסומות כרגע. הנתונים השמורים והמקורות הציבוריים זמינים',usage_ledger_missing:'מונה השימוש בשרת חסר. לא בוצעה קריאה',billing_cycle_not_configured:'מחזור החיוב לא הוגדר. לא בוצעה קריאה',api_rerun_blocked:'הפעלה חוזרת של אותה משימה נחסמה. לא בוצעה קריאה חוזרת',request_already_reserved:'הבקשה הזאת כבר נרשמה במכסה',authentication_failed:'RentCast דחה את פרטי החיבור',rate_limited:'RentCast עצר את הבקשה. אין ניסיון חוזר אוטומטי',request_failed_without_retry:'בקשת RentCast לא הושלמה. אין ניסיון חוזר אוטומטי',invalid_response:'הספק החזיר תשובה שאינה מתאימה לדוח',attempt_already_reserved_and_sent:'הבקשה כבר נשלחה ולא נשלחה שוב'};
@@ -667,11 +669,14 @@ function renderInspection(){const item=validInspection();for(const category of [
     document.getElementById('contractor-quotes').innerHTML=contractors.length?'<table><thead><tr><th>שם קבלן שהוזן</th><th>סכום שהוזן</th></tr></thead><tbody>'+contractors.map(c=>'<tr><td>'+escapeHtml(c.name||'לא הוזן שם')+'</td><td>'+moneyOrMissing(positiveFinancialNumber(c.amount))+'</td></tr>').join('')+'</tbody></table><p class="small muted">לשילוב הצעה בתחשיב, שמור את המסמך והמועד שלה בנתונים המתועדים.</p>':'<p class="muted">לא הוזנו הצעות קבלן בחדר העסקאות.</p>';
 }
 function setEditability(){const locked=!reportReady||!!currentSavedReportId||!cloudAvailable||reportSavePending;document.querySelectorAll('.entry-form input,.entry-form textarea,.entry-form select,.entry-form button,.upload-input').forEach(el=>el.disabled=locked);document.getElementById('save-report').disabled=locked;document.getElementById('btn-download-pdf').disabled=!reportReady||pdfExportPending;document.getElementById('request-report').disabled=!reportReady||!!currentSavedReportId||reportRequestPending;document.getElementById('request-profile').disabled=!reportReady||!!currentSavedReportId||reportRequestPending;document.getElementById('rentcast-mode').disabled=!reportReady||!!currentSavedReportId||reportRequestPending;document.getElementById('force-refresh').disabled=!reportReady||!!currentSavedReportId||reportRequestPending;renderRehabPlan();if(typeof renderDealAnalysis==='function')renderDealAnalysis();if(reportReady&&window.PAReportSections)window.PAReportSections.mount(document.getElementById('report-content'),{finance:financialSnapshot(currentDeal,referenceTime()),onNavigate:switchTab,hash:window.location.hash,onLocation:id=>window.history.replaceState(null,'','#'+id)});}
+let rehabPlanController=null;
 function renderRehabPlan(){
     if(!currentDeal||!window.PARehabReport)return;
     const f=financialSnapshot(currentDeal,referenceTime());
-    window.PARehabReport.mount(document.getElementById('rehab-report-root'),{
-        property:currentDeal,plan:currentDeal.rehab_plan,inspection:validInspection(),
+    rehabPlanController=window.PARehabReport.mount(document.getElementById('rehab-report-root'),{
+        property:currentDeal,plan:currentDeal.rehab_plan,inspection:validInspection(),storage:window.localStorage,
+        photos:[...(typeof reportOriginalPhotos==='function'?reportOriginalPhotos():[]).map((photo,i)=>({id:photo.url,url:photo.url,name:'תמונת מקור '+(i+1)})),...(Array.isArray(currentDeal.custom_images)?currentDeal.custom_images:[]).map((photo,i)=>({id:'upload:'+i,name:'תמונה שהועלתה '+(i+1)}))],
+        onChange:()=>{if(typeof renderDealAnalysis==='function')renderDealAnalysis();},
         documentedTotals:{flip:f.evidence.flipRehab,rental:f.evidence.rentalRehab},
         readOnly:!reportReady||!!currentSavedReportId||!cloudAvailable||reportSavePending,
         onSave:async function(plan){
@@ -689,6 +694,7 @@ async function commitCurrentDeal(next){
     try{const latest=await latestCloudDeal();
         if(String(latest.id)!==String(currentDeal.id)||addressNorm(latest.address)!==addressNorm(currentDeal.address)||addressNorm(latest.city)!==addressNorm(currentDeal.city)||(latest.state||'PA')!==(currentDeal.state||'PA')||String(latest.zip||'').slice(0,5)!==String(currentDeal.zip||'').slice(0,5))throw new Error('זיהוי הנכס השתנה בחדר העסקאות. פתח מחדש את הדוח לפני שמירה.');
         if(JSON.stringify(next.investment_scenario)!==JSON.stringify(currentDeal.investment_scenario)&&JSON.stringify(latest.investment_scenario)!==JSON.stringify(currentDeal.investment_scenario))throw new Error('התרחיש עודכן במכשיר אחר. רענן את הדוח לפני שמירה; הטיוטה נשארה בדפדפן.');
+        if(JSON.stringify(next.rehab_plan)!==JSON.stringify(currentDeal.rehab_plan)&&JSON.stringify(latest.rehab_plan)!==JSON.stringify(currentDeal.rehab_plan))throw new Error('תקציב השיפוץ עודכן במכשיר אחר. רענן לפני שמירה; הטיוטה נשארה בדפדפן.');
         for(const key of ['financial_targets','custom_images','inspection_evidence','expanded_source_report','rehab_plan','investment_scenario','report_listing_media'])if(JSON.stringify(next[key])!==JSON.stringify(currentDeal[key]))latest[key]=copy(next[key]??null);
         const before=currentDeal.financial_evidence||{},after=next.financial_evidence||{};latest.financial_evidence={...(latest.financial_evidence||{})};
         for(const key of new Set([...Object.keys(before),...Object.keys(after)]))if(JSON.stringify(before[key])!==JSON.stringify(after[key])){if(key in after)latest.financial_evidence[key]=copy(after[key]);else delete latest.financial_evidence[key];}
