@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'report.html'
+      - 'report-sections.js'
+      - 'report-sections.css'
+      - 'test_report_sections.cjs'
       - 'deal-analysis.js'
       - 'deal-analysis-adapter.js'
       - 'deal-analysis.css'
@@ -32,6 +35,7 @@ jobs:
           node-version: '22'
       - name: Check report module syntax
         run: |
+          node --check report-sections.js
           node --check rehab-report.js
           node --check deal-analysis.js
           node --check deal-analysis-adapter.js
@@ -42,6 +46,7 @@ jobs:
         run: python -m unittest test_report_provider_budget.py
       - name: Validate calculations, persistence and PDF lifecycle offline
         run: |
+          node test_report_sections.cjs
           node test_deal_analysis.cjs
           node test_rehab_report.cjs
           node test_report_redesign.cjs
