@@ -1,0 +1,90 @@
+import copy,json,os,unittest
+from pathlib import Path
+from unittest.mock import patch,MagicMock
+import requests
+import report_gemini as g
+
+class GeminiReportTests(unittest.TestCase):
+    def setUp(self):
+        self.p={'id':'qa-1','address':'18 Main St','city':'Pittsburgh','state':'PA','zip':'15203'}
+        self.photo={'id':'photo_1','url':'https://ssl.cdn-redfin.com/photo/test.jpg',
+                    'source_url':'https://www.redfin.com/PA/Pittsburgh/18-Main-St-15203/home/123',
+                    'sha256':'a'*64}
+        self.data={'summary':'ממצא מתמונת פנים','limitations':['הגג אינו נראה'],
+                   'items':[{'name':'רצפה','group':'interior','status':'observed',
+                    'finding':'בלאי נראה לעין','scope':'בדיקת הרצפה לפני קביעת היקף העבודה',
+                    'rationale':'פני הרצפה נראים בתמונה','photo_ids':['photo_1'],'fact_keys':[]}]}
+        self.root=Path('offline-gemini-test/COMPS_REPORTS');self.saved={}
+        for guard in [patch.object(g.store,'read',side_effect=lambda path:copy.deepcopy(self.saved.get(str(path)))),
+                      patch.object(g.store,'write',side_effect=lambda path,value:self.saved.__setitem__(str(path),copy.deepcopy(value)))]:
+            guard.start();self.addCleanup(guard.stop)
+        self.env=patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'true','GEMINI_API_KEY':'unit-test-only-key'})
+        self.env.start();self.addCleanup(self.env.stop)
+    def fake_response(self,status=200,data=None):
+        r=MagicMock();r.__enter__.return_value=r;r.status_code=status
+        r.iter_content.return_value=[json.dumps({'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(data or self.data)}]}}]}).encode()]
+        return r
+    def run_collect(self,response=None,error=None,before_send=None):
+        inputs={'property_id':'qa-1','identity':['18 MAIN ST','PITTSBURGH','PA','15203'],'photos':[self.photo],'facts':{}}
+        with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',return_value=('image/jpeg',b'test-image','a'*64)),patch.object(g.requests,'post',return_value=response or self.fake_response(),side_effect=error) as post:
+            result=g.collect(self.p,self.root,before_send=before_send)
+            return result,post
+    def test_disabled_guard_never_reads_images_or_contacts_api(self):
+        with patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'false'}),patch.object(g,'verified_inputs',side_effect=AssertionError('unexpected network')):
+            self.assertEqual(g.collect(self.p,self.root)['status'],'provider_not_configured')
+    def test_missing_key_never_contacts_any_source(self):
+        with patch.dict(os.environ,{'GEMINI_API_KEY':''}),patch.object(g,'verified_inputs',side_effect=AssertionError('unexpected source')):
+            self.assertEqual(g.collect(self.p,self.root)['reason'],'gemini_key_not_configured')
+    def test_findings_never_create_a_budget_or_prices(self):
+        r=g.normalize(self.data,self.p,[self.photo],{})
+        self.assertEqual(r['status'],'partial');self.assertFalse(r['complete'])
+        self.assertIsNone(r['total_high']);self.assertIsNone(r['items'][0]['cost_high'])
+    def test_rejects_hallucinated_photo_reference(self):
+        self.data['items'][0]['photo_ids']=['photo_99']
+        with self.assertRaises(ValueError):g.normalize(self.data,self.p,[self.photo],{})
+    def test_observed_requires_photo_and_listing_requires_fact(self):
+        self.data['items'][0]['photo_ids']=[]
+        with self.assertRaises(ValueError):g.normalize(self.data,self.p,[self.photo],{})
+        self.data['items'][0]['status']='listing_reported'
+        with self.assertRaises(ValueError):g.normalize(self.data,self.p,[self.photo],{})
+    def test_model_cannot_supply_dollar_costs(self):
+        self.data['items'][0]['cost_high']=100
+        with self.assertRaises(ValueError):g.normalize(self.data,self.p,[self.photo],{})
+    def test_api_uses_fixed_endpoint_header_key_no_tools_and_is_cached(self):
+        r,post=self.run_collect()
+        self.assertEqual(r['status'],'partial');self.assertEqual(post.call_count,1)
+        args,kw=post.call_args
+        self.assertEqual(args[0],g.API);self.assertNotIn('key=',args[0]);self.assertFalse(kw['allow_redirects'])
+        self.assertNotIn('tools',kw['json']);self.assertNotIn('unit-test-only-key',json.dumps(kw['json']))
+        second,next_post=self.run_collect()
+        self.assertEqual(next_post.call_count,0);self.assertEqual(second['signature'],r['signature'])
+        self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
+    def test_quota_error_no_retry_or_alternate_model(self):
+        r,post=self.run_collect(self.fake_response(status=429))
+        self.assertEqual(r['status'],'quota_exhausted');self.assertEqual(post.call_count,1)
+        again,next_post=self.run_collect();self.assertEqual(again['status'],'quota_exhausted');self.assertEqual(next_post.call_count,0)
+    def test_timeout_is_reserved_and_not_automatically_retried(self):
+        r,post=self.run_collect(error=requests.Timeout())
+        self.assertEqual(r['status'],'source_unavailable');self.assertEqual(post.call_count,1)
+        again,next_post=self.run_collect();self.assertEqual(next_post.call_count,0)
+        self.assertEqual(g.store.read(self.root/'gemini_findings/usage.json')['reserved_calls'],1)
+    def test_local_daily_cap_blocks_api(self):
+        g.store.write(self.root/'gemini_findings/usage.json',{'date':g.store.stamp()[:10],'reserved_calls':5})
+        r,post=self.run_collect();self.assertEqual(r['status'],'quota_exhausted');self.assertEqual(post.call_count,0)
+    def test_failed_reservation_persistence_prevents_model_request(self):
+        def fail():raise OSError('repository write failed')
+        r,post=self.run_collect(before_send=fail)
+        self.assertEqual(r['status'],'source_unavailable');self.assertEqual(post.call_count,0)
+        self.assertEqual(g.store.read(self.root/'gemini_findings/usage.json')['reserved_calls'],1)
+    def test_invalid_or_truncated_response_rejected(self):
+        response=self.fake_response();response.iter_content.return_value=[b'{"candidates":[]}']
+        r,post=self.run_collect(response);self.assertEqual(r['status'],'source_unavailable')
+    def test_no_photos_no_api(self):
+        with patch.object(g,'verified_inputs',return_value={'photos':[]}),patch.object(g.requests,'post',side_effect=AssertionError('API called')):
+            self.assertEqual(g.collect(self.p,self.root)['status'],'photos_unavailable')
+    def test_untrusted_image_url_is_never_fetched(self):
+        for url in ['http://ssl.cdn-redfin.com/photo/a.jpg','https://localhost/image.jpg','https://ssl.cdn-redfin.com@evil.example/a.jpg','https://ssl.cdn-redfin.com/photo/a.jpg?token=abc']:
+            with patch.object(g.requests,'get',side_effect=AssertionError('source called')):
+                with self.assertRaises(ValueError):g.fetch_image({'url':url})
+
+if __name__=='__main__':unittest.main()
