@@ -55,6 +55,7 @@ class GeminiReportTests(unittest.TestCase):
         self.assertEqual(r['status'],'partial');self.assertEqual(post.call_count,1)
         args,kw=post.call_args
         self.assertEqual(args[0],g.API);self.assertNotIn('key=',args[0]);self.assertFalse(kw['allow_redirects'])
+        self.assertEqual(kw['timeout'],(5,180));self.assertEqual(r['input_photo_count'],1)
         self.assertNotIn('tools',kw['json']);self.assertNotIn('unit-test-only-key',json.dumps(kw['json']))
         second,next_post=self.run_collect()
         self.assertEqual(next_post.call_count,0);self.assertEqual(second['signature'],r['signature'])
@@ -66,6 +67,8 @@ class GeminiReportTests(unittest.TestCase):
     def test_timeout_is_reserved_and_not_automatically_retried(self):
         r,post=self.run_collect(error=requests.Timeout())
         self.assertEqual(r['status'],'source_unavailable');self.assertEqual(post.call_count,1)
+        self.assertEqual(r['reason'],'provider_timeout');self.assertEqual(r['failure_stage'],'transport')
+        self.assertIsNone(r['http_status']);self.assertEqual(r['input_photo_count'],1)
         again,next_post=self.run_collect();self.assertEqual(next_post.call_count,0)
         self.assertEqual(g.store.read(self.root/'gemini_findings/usage.json')['reserved_calls'],1)
     def test_local_daily_cap_blocks_api(self):
@@ -75,10 +78,21 @@ class GeminiReportTests(unittest.TestCase):
         def fail():raise OSError('repository write failed')
         r,post=self.run_collect(before_send=fail)
         self.assertEqual(r['status'],'source_unavailable');self.assertEqual(post.call_count,0)
+        self.assertEqual(r['reason'],'attempt_reservation_not_persisted')
         self.assertEqual(g.store.read(self.root/'gemini_findings/usage.json')['reserved_calls'],1)
     def test_invalid_or_truncated_response_rejected(self):
         response=self.fake_response();response.iter_content.return_value=[b'{"candidates":[]}']
         r,post=self.run_collect(response);self.assertEqual(r['status'],'source_unavailable')
+        self.assertEqual(r['http_status'],200);self.assertEqual(r['error_code'],'model_response_incomplete')
+    def test_invalid_json_is_distinct_from_timeout_or_key_error(self):
+        response=self.fake_response();response.iter_content.return_value=[b'not-json']
+        r,post=self.run_collect(response)
+        self.assertEqual(r['reason'],'provider_json_invalid');self.assertEqual(r['http_status'],200)
+    def test_unexpected_exception_text_is_not_saved(self):
+        with patch.object(g,'normalize',side_effect=ValueError('unit-test-only-key')):
+            r,post=self.run_collect()
+        self.assertEqual(r['error_code'],'response_validation_failed')
+        self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
     def test_no_photos_no_api(self):
         with patch.object(g,'verified_inputs',return_value={'photos':[]}),patch.object(g.requests,'post',side_effect=AssertionError('API called')):
             self.assertEqual(g.collect(self.p,self.root)['status'],'photos_unavailable')

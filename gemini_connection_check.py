@@ -45,6 +45,10 @@ def check(property_id,repo=Path('.'),persist=False):
         'checked_at':store.stamp(),'property_id':str(property_id),'model':gemini.MODEL,
         'connection_verified':success,'status':result.get('status'),
         'reason':result.get('reason'),'photo_count':result.get('photo_count',0),
+        'input_photo_count':result.get('input_photo_count',result.get('photo_count',0)),
+        'http_status':result.get('http_status'),'failure_stage':result.get('failure_stage'),
+        'error_code':result.get('error_code'),'response_seconds':result.get('response_seconds'),
+        'read_timeout_seconds':result.get('read_timeout_seconds'),
         'findings_count':len(result.get('items') or []),
         'renovation_budget_complete':False,'rentcast_calls':0}
     store.write(repo/ROOT/'gemini_connection_check.json',summary)
