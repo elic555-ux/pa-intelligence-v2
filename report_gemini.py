@@ -13,17 +13,19 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import time
 from urllib.parse import urlsplit
 import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.8-flash'
-VERSION = 'gemini-photo-findings-1'
+VERSION = 'gemini-photo-findings-2'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash'
 MAX_IMAGE_BYTES = 3_000_000
 MAX_TOTAL_IMAGE_BYTES = 12_000_000
 MAX_DAILY_CALLS = 5
+READ_TIMEOUT_SECONDS = 180
 GROUPS = ['interior', 'systems', 'exterior']
 STATES = ['observed', 'listing_reported', 'not_visible']
 SYSTEM = '''Analyze the attached real-estate listing photos and verified listing facts.
@@ -163,11 +165,15 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
         if type(count) is not int or count<0 or count>=MAX_DAILY_CALLS:
             return empty(p,'quota_exhausted','local_daily_call_limit')
         ledger['reserved_calls']=count+1;store.write(ledger_path,ledger)
-        pending=empty(p,'source_unavailable','attempt_reserved_no_automatic_retry')|{'signature':signature}
+        pending=empty(p,'source_unavailable','attempt_reserved_no_automatic_retry')|{
+            'signature':signature,'input_photo_count':len(photos),'failure_stage':'reserved'}
         store.write(cache_path,pending)
         # The diagnostic workflow commits this reservation before contacting AI.
         # A failed persistence callback must prevent the model request entirely.
-        if before_send is not None:before_send()
+        if before_send is not None:
+            try:before_send()
+            except (OSError,ValueError,subprocess.SubprocessError):
+                return empty(p,'source_unavailable','attempt_reservation_not_persisted')|{'input_photo_count':len(photos)}
         parts=[{'text':json.dumps({'identity':inputs['identity'],'verified_listing_facts':facts},ensure_ascii=False)}]
         for photo in photos:
             parts.extend([{'text':photo['id']},{'inlineData':{'mimeType':photo['mime'],
@@ -177,11 +183,14 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
             'generationConfig':{'candidateCount':1,'maxOutputTokens':8192,
                 'thinkingConfig':{'thinkingLevel':'LOW'},'responseMimeType':'application/json',
                 'responseJsonSchema':SCHEMA}}
+        started=time.monotonic()
+        http_status=None
         try:
-            with requests.post(API,json=payload,headers={'x-goog-api-key':key},timeout=(5,60),allow_redirects=False,stream=True) as response:
+            with requests.post(API,json=payload,headers={'x-goog-api-key':key},timeout=(5,READ_TIMEOUT_SECONDS),allow_redirects=False,stream=True) as response:
+                http_status=response.status_code
                 if response.status_code!=200:
                     status='quota_exhausted' if response.status_code==429 else 'source_unavailable'
-                    result=empty(p,status,'provider_http_'+str(response.status_code))
+                    result=empty(p,status,'provider_http_'+str(response.status_code))|{'failure_stage':'provider_http'}
                 else:
                     raw=bytearray()
                     for chunk in response.iter_content(65536):
@@ -193,8 +202,21 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                     if len(candidates)!=1 or candidates[0].get('finishReason')!='STOP':raise ValueError('model_response_incomplete')
                     output=''.join(part.get('text','') for part in candidates[0].get('content',{}).get('parts',[]) if not part.get('thought'))
                     result=normalize(json.loads(output),p,photos,facts)
-        except (requests.RequestException,ValueError,TypeError,KeyError):
-            result=empty(p,'source_unavailable','analysis_failed_no_automatic_retry')
+        except requests.Timeout:
+            result=empty(p,'source_unavailable','provider_timeout')|{'failure_stage':'transport','error_code':'timeout'}
+        except requests.RequestException:
+            result=empty(p,'source_unavailable','provider_transport_error')|{'failure_stage':'transport','error_code':'request_exception'}
+        except json.JSONDecodeError:
+            result=empty(p,'source_unavailable','provider_json_invalid')|{'failure_stage':'response_parse','error_code':'invalid_json'}
+        except (ValueError,TypeError,KeyError) as exc:
+            allowed={'model_response_too_large','invalid_model_envelope','model_response_incomplete',
+                'invalid_model_schema','invalid_model_text','invalid_limitations','invalid_items',
+                'invalid_item_schema','invalid_item_status','invalid_evidence_reference',
+                'observed_without_photo','listing_without_fact'}
+            code=str(exc) if str(exc) in allowed else 'response_validation_failed'
+            result=empty(p,'source_unavailable','provider_response_rejected')|{'failure_stage':'response_validation','error_code':code}
+        result.update(input_photo_count=len(photos),http_status=http_status,
+            response_seconds=round(time.monotonic()-started,2),read_timeout_seconds=READ_TIMEOUT_SECONDS)
         result['signature']=signature;store.write(cache_path,result)
         return result
     except (ValueError,OSError,subprocess.SubprocessError):
