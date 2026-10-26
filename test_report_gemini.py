@@ -39,6 +39,12 @@ class GeminiReportTests(unittest.TestCase):
         r=g.normalize(self.data,self.p,[self.photo],{})
         self.assertEqual(r['status'],'partial');self.assertFalse(r['complete'])
         self.assertIsNone(r['total_high']);self.assertIsNone(r['items'][0]['cost_high'])
+    def test_listing_fact_text_is_grounded_and_never_claims_work_unnecessary(self):
+        self.data['summary']='invented provider summary'
+        row=self.data['items'][0];row.update(status='listing_reported',photo_ids=[],fact_keys=['heating'],finding='invented system',scope='no work needed')
+        r=g.normalize(self.data,self.p,[self.photo],{'heating':{'value':'Forced Air'}})
+        self.assertEqual(r['items'][0]['finding'],'חימום: Forced Air')
+        self.assertNotIn('no work needed',r['items'][0]['scope']);self.assertNotIn('invented',r['summary'])
     def test_rejects_hallucinated_photo_reference(self):
         self.data['items'][0]['photo_ids']=['photo_99']
         with self.assertRaises(ValueError):g.normalize(self.data,self.p,[self.photo],{})

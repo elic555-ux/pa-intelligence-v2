@@ -55,6 +55,21 @@ model after repeated503 failures from3.8Flash. The selected3.5Flash-Lite support
 image input and structured output and has free input/output on Google's Free
 Tier. This is an explicit model selection, not an automatic fallback chain.
 
+The3.5Flash-Lite live check succeeded on2026-10-26: HTTP200, three verified
+images and three validated finding records. Its listing-reported equipment text
+is grounded back to exact source values; equipment presence is never described
+as proof of condition. Successful cached findings are reused for the subsequent
+public-source integration audit, with no additional inference or RentCast call.
+
+The diagnostic now also checks county records, parcel geography, closed sales,
+published lender terms and the sourced national unit-price catalog. It preserves
+the original rental receipt and its dates while attaching report_analysis.
+The shared persistence helper saves all controlled source-cache changes in the
+clean Actions checkout, so unrelated unstaged county/cache updates cannot prevent
+the durable AI reservation. A failed source connection fails the check; missing
+ARV, operating-cost evidence, renovation quantities and neighborhood class remain
+explicit data gaps, not invented results. The report UI is deployed separately.
+
 Official references, checked 2026-10-25:
 
 - https://ai.google.dev/gemini-api/docs/pricing

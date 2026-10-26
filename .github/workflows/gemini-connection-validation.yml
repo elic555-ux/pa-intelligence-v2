@@ -8,6 +8,16 @@ on:
       - 'test_report_gemini.py'
       - 'test_report_photo_inputs.cjs'
       - 'test_gemini_connection_check.py'
+      - 'report_enrichment.py'
+      - 'report_source_audit.py'
+      - 'report_provider_reservation.py'
+      - 'closed_sales.py'
+      - 'report_financing.py'
+      - 'rehab_pricebook.py'
+      - 'rehab_pricebook.json'
+      - 'test_rehab_pricebook.py'
+      - 'test_report_source_audit.py'
+      - 'test_report_provider_reservation.py'
       - '.github/workflows/gemini-report-check.yml'
       - '.github/workflows/gemini-connection-validation.yml'
 permissions:
@@ -26,6 +36,6 @@ jobs:
           node-version: '22'
       - run: python -m pip install requests==2.34.2
       - name: Offline Gemini and check-runner tests (no secrets)
-        run: python -m unittest test_report_gemini.py test_gemini_connection_check.py
+        run: python -m unittest test_report_gemini.py test_gemini_connection_check.py test_rehab_pricebook.py test_report_source_audit.py test_report_provider_reservation.py test_closed_sales.py test_report_financing.py test_report_enrichment.py test_report_provider_budget.py
       - name: Photo provenance checks
         run: node test_report_photo_inputs.cjs

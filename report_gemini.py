@@ -130,6 +130,22 @@ def provider_error(response):
         return result
     except (requests.RequestException,ValueError,TypeError,AttributeError):return {}
 
+def ground_listing_facts(result,facts):
+    """Listing equipment is not a photo inspection; show its exact source value."""
+    if result.get('status')!='partial':return result
+    result=json.loads(json.dumps(result))
+    labels={'heating':'חימום','cooling':'מיזוג','roof_type':'סוג גג','construction':'מבנה',
+        'basement':'מרתף','stories':'קומות','water':'מים','sewer':'ביוב','hvac_type':'מערכת חימום ומיזוג'}
+    for row in result.get('items',[]):
+        if row.get('status')=='listing_reported':
+            refs=[key for key in row.get('fact_keys',[]) if key in facts]
+            row['finding']='; '.join(labels.get(key,key)+': '+str(facts[key]['value']) for key in refs)
+            row['scope']='מצב ותקינות לא אומתו בתמונות; נדרשת בדיקה לפני קביעת עבודה.'
+            row['rationale']='נתון ממודעת מקור שאומתה לכתובת הנכס. עצם קיום המערכת אינו מוכיח את מצבה.'
+    count=result.get('photo_count',0)
+    result['summary']='פוענחו '+str(count)+' תמונות מקור. הממצאים להלן מובחנים ממידע שפורסם במודעה; מערכות שאינן נראות בתמונות לא נבדקו.'
+    return result
+
 def normalize(data,p,photos,facts):
     if not isinstance(data,dict) or set(data)!={'summary','limitations','items'}:raise ValueError('invalid_model_schema')
     summary=text(data['summary'],2400)
@@ -152,10 +168,10 @@ def normalize(data,p,photos,facts):
         items.append({k:text(row[k]) for k in ['name','finding','scope','rationale']}|
             {k:row[k] for k in ['group','status','photo_ids','fact_keys']}|
             {'cost_low':None,'cost_high':None,'price_source':None})
-    return empty(p,'partial','pricing_sources_not_connected')|{'summary':summary,
+    return ground_listing_facts(empty(p,'partial','pricing_sources_not_connected')|{'summary':summary,
         'limitations':limitations,'items':items,'photo_count':len(photos),
         'photos':[{k:r[k] for k in ['id','url','source_url','sha256']} for r in photos],
-        'model':MODEL,'version':VERSION}
+        'model':MODEL,'version':VERSION},facts)
 
 def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
     if os.environ.get('GEMINI_REPORT_FREE_TIER_ENABLED','false').lower()!='true':
@@ -184,7 +200,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
         cached=store.read(cache_path)
         if isinstance(cached,dict) and cached.get('signature')==signature:
             age=store.age_days(cached.get('observed_at'))
-            if age is not None and 0<=age<cache_days(cached):return cached
+            if age is not None and 0<=age<cache_days(cached):return ground_listing_facts(cached,facts)
         # The existing workflow serializes report jobs. Reserve before sending;
         # timeouts and invalid responses still count, and are not auto-retried.
         ledger_path=root/'gemini_findings/usage.json';ledger=store.read(ledger_path) or {}

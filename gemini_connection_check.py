@@ -11,28 +11,11 @@ import re
 import subprocess
 import report_gemini as gemini
 import internal_report_store as store
+from report_provider_reservation import persist_gemini_reservation as persist_reservation
 
 ROOT=Path('COMPS_REPORTS')
 
-def persist_reservation(repo):
-    """Persist only the attempt ledger/cache; a failure prevents the AI call."""
-    if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('reservation_persistence_requires_actions')
-    def git(*args,check=True):
-        return subprocess.run(['git',*args],cwd=repo,check=check,capture_output=True,text=True)
-    git('config','user.name','github-actions[bot]')
-    git('config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
-    git('add','COMPS_REPORTS/gemini_findings')
-    diff=git('diff','--cached','--quiet',check=False)
-    if diff.returncode not in (0,1):raise ValueError('reservation_diff_failed')
-    if diff.returncode==1:
-        git('commit','-m','Reserve explicit Gemini photo check before API request')
-        try:git('pull','--rebase','origin','main')
-        except subprocess.SubprocessError:
-            git('rebase','--abort',check=False)
-            raise
-        git('push','origin','HEAD:main')
-
-def check(property_id,repo=Path('.'),persist=False):
+def check(property_id,repo=Path('.'),persist=False,verify_sources=False):
     repo=Path(repo)
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}',str(property_id)):
         raise ValueError('invalid_property_id')
@@ -52,6 +35,13 @@ def check(property_id,repo=Path('.'),persist=False):
         'read_timeout_seconds':result.get('read_timeout_seconds'),
         'findings_count':len(result.get('items') or []),
         'renovation_budget_complete':False,'rentcast_calls':0}
+    if success and verify_sources:
+        import report_source_audit
+        audit=report_source_audit.collect(rows[0],result,repo)
+        summary['report_sources_verified']=audit['sources_verified']
+        summary['report_source_checks']=audit['checks']
+        summary['reason']='renovation_scope_and_quantities_missing' if audit['sources_verified'] else 'report_sources_partial'
+        if persist:persist_reservation(repo,'Save expanded-report source verification')
     store.write(repo/ROOT/'gemini_connection_check.json',summary)
     return summary
 
@@ -59,8 +49,8 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--property-id',required=True)
     args=parser.parse_args()
-    summary=check(args.property_id,persist=os.environ.get('GITHUB_ACTIONS')=='true')
+    summary=check(args.property_id,persist=os.environ.get('GITHUB_ACTIONS')=='true',verify_sources=True)
     print(json.dumps(summary,ensure_ascii=True))
-    return 0 if summary['connection_verified'] else 1
+    return 0 if summary['connection_verified'] and summary.get('report_sources_verified',True) else 1
 
 if __name__=='__main__':raise SystemExit(main())
