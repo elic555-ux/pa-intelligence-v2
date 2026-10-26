@@ -1,0 +1,77 @@
+name: Report Gallery Source Check
+on:
+  pull_request:
+    paths:
+      - 'report_gallery.py'
+      - 'secondary_listing_source.py'
+      - 'tarasa_listing_source.py'
+      - 'secondary_sources.js'
+      - 'test_report_gallery.py'
+      - 'test_report_gallery.cjs'
+      - '.github/workflows/report-gallery-check.yml'
+  push:
+    branches: [main]
+    paths: ['report_gallery.py']
+  workflow_dispatch:
+    inputs:
+      property_id:
+        description: Existing inventory property ID
+        type: string
+        required: true
+        default: PA-MLS-1779799
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('report-gallery-validation-{0}', github.event.pull_request.number) || 'pa-repo-write-queue' }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install beautifulsoup4==4.15.0 requests
+      - run: python -m unittest test_report_gallery test_secondary_listing_source test_tarasa_listing_source
+      - run: node test_report_gallery.cjs && node test_secondary_sources.cjs
+  public-source-check:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      REPORT_PROPERTY_ID: ${{ inputs.property_id || 'PA-MLS-1779799' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install beautifulsoup4==4.15.0
+      - name: Check bounded public gallery without RentCast or Gemini
+        run: python report_gallery.py --property-id "$REPORT_PROPERTY_ID"
+      - name: Preserve gallery or failure receipt
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for path in COMPS_REPORTS/report_galleries COMPS_REPORTS/additional_sources/tarasa COMPS_REPORTS/additional_sources/tarasa_state.json; do
+            if [ -e "$path" ]; then git add -- "$path"; fi
+          done
+          if ! git diff --cached --quiet; then
+            git commit -m 'Save bounded report gallery source check'
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              exit 1
+            fi
+            git push origin HEAD:main
+          fi

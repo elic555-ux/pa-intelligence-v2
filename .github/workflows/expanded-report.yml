@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install existing dependency
-        run: python -m pip install requests
+        run: python -m pip install requests beautifulsoup4==4.15.0
       - name: Check report installation without calling RentCast
         run: python expanded_report.py check
 
@@ -62,7 +62,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install existing dependency
-        run: python -m pip install requests
+        run: python -m pip install requests beautifulsoup4==4.15.0
       - name: Build internal index and preserve existing quota
         run: python expanded_report.py maintain
       - name: Save internal database and migrated quota
@@ -106,7 +106,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install existing API dependency
-        run: python -m pip install requests
+        run: python -m pip install requests beautifulsoup4==4.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -145,4 +145,3 @@ jobs:
             fi
             git push origin HEAD:main
           fi
-

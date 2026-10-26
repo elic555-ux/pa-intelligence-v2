@@ -49,6 +49,13 @@ def collect(p,profile,root=Path('COMPS_REPORTS'),allow_public=True,previous=None
         'neighborhood':point.get('neighborhood'),'tract':point.get('tract'),
         'source_name':'WPRDC parcel geography','source_url':closed_sales.GEO_SOURCE,
         'observed_at':now,'source_as_of':point.get('source_as_of')}
+    if allow_public and rehab_result is None:
+        try:
+            import report_gallery
+            result['gallery']=report_gallery.collect(p,Path(root).parent)
+        except Exception as exc:
+            result['gallery']={'status':'source_unavailable','property_id':property_id}
+            result['errors']['gallery']=type(exc).__name__
     # Gemini returns observed findings only. Costs remain missing until a sourced
     # price book is connected; a model response cannot supply dollar estimates.
     try:

@@ -130,7 +130,7 @@ def numeric(text):
     return int(value) if value.is_integer() else value
 
 
-def parse_detail(html, row, url, checked_at=None, provider=PROVIDER):
+def parse_detail(html, row, url, checked_at=None, provider=PROVIDER, photo_limit=3):
     """Extract only the subject's labeled fields, never nearby cards/agent data."""
     url = source_url(url, provider)
     if not url:
@@ -224,18 +224,23 @@ def parse_detail(html, row, url, checked_at=None, provider=PROVIDER):
         # The published acreage is rounded. Do not convert it into an exact
         # square-foot measurement or replace the scanner's original lot size.
         fact('lot_area_acres', float(acres[1]), 'Lot Size', 'acre')
+    photo_limit = min(60, max(1, int(photo_limit)))
     photos, seen = [], set()
-    for img in soup.find_all('img', src=True):
-        photo = img['src']
-        if not photo_url(photo, mls):
-            continue
-        seq = re.search(r'_(\d{2,3})\.jpg$', photo)[1]
-        if seq in seen:
-            continue
-        seen.add(seq)
-        photos.append({'url': photo, 'source': source_name, 'source_url': url, 'listing_id': mls,
-                       'retrieved_at': checked_at, 'capture_date': None})
-        if len(photos) == 3:
+    for img in soup.find_all('img'):
+        # Read published image attributes only; do not synthesize sequence URLs.
+        for attr in ('src', 'data-src', 'data-lazy-src'):
+            photo = img.get(attr)
+            if not photo_url(photo, mls):
+                continue
+            seq = re.search(r'_(\d{2,3})\.jpg$', photo)[1]
+            if seq in seen:
+                continue
+            seen.add(seq)
+            photos.append({'url': photo, 'source': source_name, 'source_url': url, 'listing_id': mls,
+                           'retrieved_at': checked_at, 'capture_date': None})
+            if len(photos) == photo_limit:
+                break
+        if len(photos) == photo_limit:
             break
     return {'schema': 1, 'version': VERSION, 'provider': provider, 'property_id': str(row['id']),
         'listing_id': mls, 'identity': identity4(row), 'subject': expected,

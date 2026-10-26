@@ -29,8 +29,9 @@ or a provider-side spending cap. Free-tier availability and quotas may change.
 
 Photos and source facts pass the existing gallery's identity/provenance checks.
 Image bytes are checked before sending and credentials are supplied only in an
-HTTP header to Google's fixed endpoint. The current gallery evidence collectors
-cap each source at three photos; the analyzer describes actual photo coverage.
+HTTP header to Google's fixed endpoint. The report gallery retains up to 60 verified source photo links; the basic modal
+still defaults to three. Gemini remains capped at 12 candidate images and its
+existing byte/attempt limits. Gallery collection does not itself call Gemini.
 
 This phase returns photo findings, scope, evidence references and explanations.
 The AI cannot return dollar costs. The connected national unit-price catalog
@@ -79,4 +80,3 @@ Official references, checked 2026-10-25:
 - https://ai.google.dev/gemini-api/docs/billing
 - https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash
 - https://ai.google.dev/api/generate-content
-

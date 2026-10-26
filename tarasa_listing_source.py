@@ -51,7 +51,7 @@ def target_url(row):
     return ORIGIN + '/property-search/detail/56/' + mls + '/' + slug + '/'
 
 
-def parse_detail(html, row, requested_url, checked_at=None):
+def parse_detail(html, row, requested_url, checked_at=None, photo_limit=3):
     """Accept a canonical slug only on this host and the same current MLS."""
     requested_url = source_url(requested_url)
     if not requested_url or urlparse(requested_url).path.split('/')[4] != registry.listing_id(row):
@@ -61,7 +61,7 @@ def parse_detail(html, row, requested_url, checked_at=None):
     canonical = source_url(link.get('href')) if link else None
     if not canonical or urlparse(canonical).path.split('/')[4] != registry.listing_id(row):
         raise ValueError('source_identity_mismatch: canonical MLS')
-    record = core.parse_detail(html, row, canonical, checked_at, PROVIDER)
+    record = core.parse_detail(html, row, canonical, checked_at, PROVIDER, photo_limit=photo_limit)
     record.update(version=VERSION, requested_url=requested_url)
     return record
 
@@ -152,7 +152,11 @@ def run(repo, mode, property_id, requested_url='', request_id='', reader=None, w
             reader.initialize()
             listing_before = reader.requests
             html = reader.get(url)
-            record = parse_detail(html, row, url, now.isoformat())
+            gallery_version = (own or cached or {}).get('report_gallery_version')
+            photo_limit = 60 if gallery_version == 'report-gallery-1' else 3
+            record = parse_detail(html, row, url, now.isoformat(), photo_limit=photo_limit)
+            if photo_limit == 60:
+                record['report_gallery_version'] = gallery_version
             registry.atomic_json(path, record)
             report.update(status='published', cache_saved=True, cached_facts=len(record['facts']),
                 cached_photos=len(record['photos']), cache_provider=PROVIDER, source_url=record['source_url'])

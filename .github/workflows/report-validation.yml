@@ -8,6 +8,9 @@ on:
       - 'report-readonly.css'
       - 'report-financials.js'
       - 'report_enrichment.py'
+      - 'report_gallery.py'
+      - 'test_report_gallery.py'
+      - 'test_report_gallery.cjs'
       - 'closed_sales.py'
       - 'report_financing.py'
       - 'report_gemini.py'
@@ -68,9 +71,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install existing backend dependency
-        run: python -m pip install requests
+        run: python -m pip install requests beautifulsoup4==4.15.0
       - name: Verify sources, transfer filtering and shared provider quota offline
-        run: python -m unittest test_report_provider_budget.py test_closed_sales.py test_report_financing.py test_report_enrichment.py test_report_gemini.py test_rehab_pricebook.py test_report_source_audit.py test_report_provider_reservation.py test_expanded_report_enrichment.py
+        run: python -m unittest test_report_provider_budget.py test_closed_sales.py test_report_financing.py test_report_enrichment.py test_report_gemini.py test_rehab_pricebook.py test_report_source_audit.py test_report_provider_reservation.py test_expanded_report_enrichment.py test_report_gallery.py
       - name: Check report installation without provider calls
         run: python expanded_report.py check
       - name: Validate the read-only report and financial source boundaries
@@ -78,5 +81,5 @@ jobs:
           node test_report_readonly.cjs
           node test_report_photo_inputs.cjs
           node test_report_readonly_collection.cjs
-
+          node test_report_gallery.cjs
 
