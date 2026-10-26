@@ -64,6 +64,19 @@ class GeminiReportTests(unittest.TestCase):
         r,post=self.run_collect(self.fake_response(status=429))
         self.assertEqual(r['status'],'quota_exhausted');self.assertEqual(post.call_count,1)
         again,next_post=self.run_collect();self.assertEqual(again['status'],'quota_exhausted');self.assertEqual(next_post.call_count,0)
+    def test_transient_503_requires_cooldown_and_another_explicit_run(self):
+        result,post=self.run_collect(self.fake_response(status=503))
+        self.assertEqual(result['http_status'],503);self.assertEqual(post.call_count,1)
+        again,next_post=self.run_collect()
+        self.assertEqual(again['reason'],'provider_http_503');self.assertEqual(next_post.call_count,0)
+        with patch.object(g.store,'age_days',return_value=16/(24*60)):
+            result,post=self.run_collect()
+        self.assertEqual(post.call_count,1);self.assertEqual(result['status'],'partial')
+        self.assertEqual(g.store.read(self.root/'gemini_findings/usage.json')['reserved_calls'],2)
+    def test_503_cooldown_does_not_shorten_quota_or_unknown_failure_cache(self):
+        self.assertEqual(g.cache_days({'status':'quota_exhausted','reason':'provider_http_429','http_status':429}),1)
+        self.assertEqual(g.cache_days({'status':'source_unavailable','reason':'provider_http_503'}),1)
+        self.assertEqual(g.cache_days({'status':'partial'}),30)
     def test_timeout_is_reserved_and_not_automatically_retried(self):
         r,post=self.run_collect(error=requests.Timeout())
         self.assertEqual(r['status'],'source_unavailable');self.assertEqual(post.call_count,1)
