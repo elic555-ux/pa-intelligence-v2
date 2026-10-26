@@ -67,7 +67,7 @@ class TarasaTests(unittest.TestCase):
         old['report_gallery_version'] = 'report-gallery-1'
         self.put(old)
         images = ''.join('<img src="https://cdn.listingphotos.sierrastatic.com/pics1x/v123/56/56_1001_' + str(n).zfill(2) + '.jpg">' for n in range(1, 41))
-        html = tarasa_page().replace('</body>', images + '</body>')
+        html = tarasa_page().replace('</html>', images + '</html>')
         source.run(self.repo, 'fetch', ROW['id'], reader=FakeReader(html=html), now=self.now)
         saved = registry.read_json(self.repo/source.ROOT/(source.cache_key(ROW['id'])+'.json'))
         self.assertEqual(len(saved['photos']), 40)

@@ -12,7 +12,7 @@ from test_tarasa_listing_source import tarasa_page,FakeReader
 def many_photos(count=80):
     html=tarasa_page()
     images=''.join('<img src="https://cdn.listingphotos.sierrastatic.com/pics1x/v123/56/56_1001_'+str(n).zfill(2)+'.jpg">' for n in range(1,count+1))
-    return html.replace('</body>',images+'</body>')
+    return html.replace('</html>',images+'</html>')
 
 class ReportGalleryTest(unittest.TestCase):
     def setUp(self):
