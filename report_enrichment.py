@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime,timezone
 import closed_sales
 import report_financing
+import report_property_taxes
 import report_gemini
 import rehab_pricebook
 import internal_report_store as store
@@ -44,6 +45,10 @@ def collect(p,profile,root=Path('COMPS_REPORTS'),allow_public=True,previous=None
     else:
         result['closed_sales']={'status':'lookup_disabled','property_id':property_id,'comparables':[]}
         result['financing']={'status':'lookup_disabled','observed_at':now,'products':[]}
+    try:result['property_taxes']=report_property_taxes.collect(p,county,Path(root),allow_public=allow_public)
+    except Exception as exc:
+        result['property_taxes']={'status':'source_unavailable','property_id':property_id,'complete':False,'total_property_tax':None}
+        result['errors']['property_taxes']=type(exc).__name__
     point=result['closed_sales'].get('subject_location') or {}
     result['area']={'status':'available' if point else 'not_collected','class':None,'class_verified':False,
         'neighborhood':point.get('neighborhood'),'tract':point.get('tract'),

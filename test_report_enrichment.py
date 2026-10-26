@@ -5,6 +5,8 @@ import report_enrichment as enrich
 
 class ReportEnrichmentTest(unittest.TestCase):
     def setUp(self):
+        patch.object(enrich.report_property_taxes,'collect',return_value={'status':'lookup_disabled'}).start()
+        self.addCleanup(patch.stopall)
         self.p={'id':'qa-1','address':'18 Main St','city':'Pittsburgh','state':'PA','zip':'15203','sqft':1400,'beds':3}
         self.profile={'inventory':{'status':'matched'},'county_record':{'status':'matched','county':'Allegheny','parcel_id':'0012E00199000000','subject':self.p,'fields':{'sqft':1500,'beds':3}}}
     def test_county_fields_require_matching_address(self):
