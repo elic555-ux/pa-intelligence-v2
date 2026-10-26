@@ -16,7 +16,7 @@ repository. No live Gemini call was made while implementing the adapter.
    receipt and API usage dashboard. Do not claim the connection works before this
    live check succeeds. Installation-check mode never calls Gemini.
 
-The fixed model is `gemini-3.8-flash`; no alternate model, paid fallback, Search,
+The fixed model is `gemini-3.5-flash-lite`; no alternate model, paid fallback, Search,
 Maps, external tools, file storage, or automatic retry is used. HTTP 429 stops
 analysis, retains other report data, and suppresses another attempt for the same
 inputs for one day. A confirmed HTTP503 service failure instead has a15-minute
@@ -49,6 +49,11 @@ reservation push failure blocks that request. It then preserves results and
 prints a safe summary with `connection_verified`, photo/findings counts, and
 `rentcast_calls: 0`. It never prints the secret or opens a paid billing flow.
 The current report display remains unchanged during this diagnostic phase.
+
+On2026-10-26 the owner explicitly approved testing another free-tier Gemini
+model after repeated503 failures from3.8Flash. The selected3.5Flash-Lite supports
+image input and structured output and has free input/output on Google's Free
+Tier. This is an explicit model selection, not an automatic fallback chain.
 
 Official references, checked 2026-10-25:
 
