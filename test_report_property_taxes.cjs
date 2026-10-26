@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict'),m=require('./report-readonly-model.js'),f=require('./report-financials.js');
+const now=Date.parse('2026-10-26T12:00:00Z');
+const p={id:'qa-1',address:'1822 Fox Way',city:'Pittsburgh',state:'PA',zip:'15203'};
+const county={status:'matched',county:'Allegheny',subject:p,parcel_id:'0012E00199000000'};
+const tax={version:'allegheny-county-bill-1',property_id:p.id,property:p,parcel_id:county.parcel_id,status:'partial',basis:'current_owner_annual_county_bill',currency:'USD',forecast_for_new_owner:false,complete:false,total_property_tax:null,county_face_amount:372.23,county_discount_amount:364.79,tax_year:2026,observed_at:'2026-10-26T11:00:00Z',source_url:'https://realestate.alleghenycounty.us/Tax?ID='+county.parcel_id};
+const a={property:p,property_id:p.id,property_taxes:tax};
+assert.equal(m.propertyTaxes(a,p,county,now).county_face_amount,372.23);
+for(const update of [{property_id:'other'},{parcel_id:'other'},{tax_year:2025},{observed_at:'2026-01-01'},{observed_at:'2026-10-27'},{county_face_amount:null},{county_face_amount:0},{total_property_tax:372.23},{forecast_for_new_owner:true},{source_url:'https://example.com/Tax?ID='+county.parcel_id},{property:{...p,zip:'15204'}}])assert.equal(m.propertyTaxes({...a,property_taxes:{...tax,...update}},p,county,now),null);
+assert.equal(m.propertyTaxes(a,p,{...county,parcel_id:'other'},now),null);
+assert.equal(m.metrics(p,a,null,f,now).noi,null);
+assert.equal(m.metrics({...p,property_tax:372.23,operating_expenses:372.23},a,null,f,now).noi,null);
+assert.equal(m.unitMoney(m.propertyTaxes(a,p,county,now).county_face_amount),'$372.23');
+console.log('PASS Exact current-year county bill is partial evidence, never total operating expenses or NOI');

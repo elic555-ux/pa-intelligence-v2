@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='9.0.3';
+  const VERSION='9.0.4';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -42,6 +42,17 @@
     if(!['available','partial','provider_not_configured','photos_unavailable','source_unavailable','quota_exhausted'].includes(r.status))return null;
     return r;
   }
+  function propertyTaxes(a,p,county,now=Date.now()){
+    const t=matches(a,p)?a.property_taxes:null;
+    if(!t||!matches(t,p)||county?.status!=='matched'||county.county!=='Allegheny'||
+       !matches({property:county.subject,property_id:String(p.id)},p)||county.parcel_id!==t.parcel_id||
+       t.version!=='allegheny-county-bill-1'||t.status!=='partial'||
+       t.basis!=='current_owner_annual_county_bill'||t.currency!=='USD'||
+       t.forecast_for_new_owner!==false||t.complete!==false||t.total_property_tax!==null||
+       !fresh(t.observed_at,30,now)||t.tax_year!==new Date(now).getUTCFullYear()||number(t.county_face_amount)<=0)return null;
+    try{const u=new URL(t.source_url);if(u.origin!=='https://realestate.alleghenycounty.us'||u.pathname!=='/Tax'||u.searchParams.get('ID')!==t.parcel_id||u.username||u.password)return null;}catch(_){return null;}
+    return t;
+  }
   function metrics(p,a,report,financials,now=Date.now()){
     const f=financials?.financialSnapshot(p,now)||{},rent=rentSource(report,p,now),rehab=rehabSource(a,p,now);
     const price=number(f.price),rentValue=rent?.value??number(f.rent);
@@ -57,5 +68,5 @@
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing};
+  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes};
 });

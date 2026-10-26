@@ -67,11 +67,23 @@
       '<p class="muted">התאמה לשם שכונה ולמרחק אינה מוכיחה התאמה לדירוג A–D. לא הוקצה דירוג על סמך מחיר הנכס.</p>';
     if(area?.metrics&&M.fresh(area.observed_at,100,state.reference))$('area-view').insertAdjacentHTML('beforeend','<div class="facts">'+Object.entries(area.metrics).map(([k,v])=>fact(k,v)).join('')+'</div>'+source(area.source_name,area.observed_at,area.source_url));
   }
+  function renderPropertyTaxes(){
+    const t=M.propertyTaxes(state.analysis,state.property,state.county,state.reference);
+    if(!t)return '<details class="pricebook"><summary>מסי נכס והוצאות תפעול · נדרש מידע נוסף</summary>'+missing('לא אומת חשבון מס עדכני התואם לנכס. מסי עירייה, בתי ספר והיטלים מקומיים, וכן שאר הוצאות התפעול, טרם הושלמו.')+'</details>';
+    const discount=n(t.county_discount_amount),validDiscount=discount>0&&discount<=t.county_face_amount;
+    return '<details class="pricebook"><summary>מסי נכס והוצאות תפעול · אומת מס המחוז בלבד</summary>'+
+      '<p class="notice">חשבון מס מחוז לשנת '+e(t.tax_year)+' לפי רישום הבעלים הנוכחי. '+(t.homestead_exclusion_applied===true?'הרישום מציין הטבת Homestead. ':'')+'זכאות של רוכש חדש להטבות לא אומתה; החשבון אינו תחזית מס למשקיע או יתרה לתשלום.</p>'+
+      '<div class="table-scroll"><table><thead><tr><th>רכיב מס שנתי</th><th>סכום מתועד</th><th>בסיס הנתון</th></tr></thead><tbody><tr><td>מחוז Allegheny</td><td>'+e(M.unitMoney(t.county_face_amount))+'</td><td>חיוב שנתי לפני הנחת תשלום מוקדם · '+e(date(t.face_due_date))+'</td></tr>'+
+      '<tr><td>עירייה</td><td>טרם אומת</td><td>נדרש חשבון עירוני תואם</td></tr><tr><td>בתי ספר</td><td>טרם אומת</td><td>לא נכלל בחשבון המחוז</td></tr><tr><td>היטלים מקומיים נוספים</td><td>טרם אומתו</td><td>יש לבדוק בחשבון העירוני</td></tr></tbody></table></div>'+
+      (validDiscount?'<p class="source-note">בחשבון פורסם גם סכום לאחר הנחת תשלום מוקדם: '+e(M.unitMoney(discount))+' עד '+e(date(t.discount_due_date))+'. הסכום אינו נוסף לחיוב השנתי.</p>':'')+
+      missing('סך מסי הנכס ומלוא הוצאות התפעול עדיין חסרים. מס המחוז לבדו אינו משמש לחישוב NOI או תשואה נטו.')+
+      source(t.source_name,t.observed_at,t.source_url)+'</details>';
+  }
   function renderAnalysis(){
     const m=M.metrics(state.property,state.analysis,state.report,F,state.reference);
     $('analysis-view').innerHTML='<div class="metric-grid">'+metric('מחיר מבוקש',m.price)+metric('שכירות שנתית ברוטו',m.annualRent)+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות, שיפוץ ומימון',M.percent)+metric('רכישה ושיפוץ בלבד',m.purchaseAndRehab,'לא כולל עלויות עסקה, החזקה ומימון')+'</div>'+
       '<div class="strategy-grid"><article class="strategy"><h3>השכרה</h3><div class="metric-grid">'+metric('NOI שנתי',m.noi)+metric('תשואה תפעולית',m.capRate,'לפני מימון',M.percent)+metric('תקרת רכישה לפי יעד מתועד',m.maoRental)+'</div>'+(m.noi===null?missing('לחישוב נטו דרושות הוצאות תפעול ואי־תפוסה עם בסיס מתועד.'): '')+'</article><article class="strategy"><h3>פליפ</h3><div class="metric-grid">'+metric('שווי לאחר שיפוץ',m.arv)+metric('רווח לפני מס',m.flipProfit)+metric('תקרת רכישה לפי יעד מתועד',m.maoFlip)+'</div>'+(m.flipProfit===null?missing('לתחשיב מלא דרושים שווי למצב לאחר שיפוץ, תקציב שיפוץ ועלויות העסקה, ההחזקה והמימון.'): '')+'</article></div>'+
-      '<p class="source-note">התחשיבים מוצגים לפי מקורות הנכס. אומדן שוק המבוסס על מכירות אינו מוכיח שווי לאחר שיפוץ. סכומים חסרים אינם מוחלפים באפס או באחוז קבוע.</p>';
+      '<p class="source-note">התחשיבים מוצגים לפי מקורות הנכס. אומדן שוק המבוסס על מכירות אינו מוכיח שווי לאחר שיפוץ. סכומים חסרים אינם מוחלפים באפס או באחוז קבוע.</p>'+renderPropertyTaxes();
   }
   function renderComparisons(){
     const a=state.analysis,p=state.property,rows=M.recordedSales(a,p,state.reference),rent=M.rentSource(state.report,p,state.reference);
