@@ -20,12 +20,14 @@ from typing import Any
 import requests
 import rentcast_budget as budget
 import internal_report_store as store
+import report_enrichment
+import report_provider_reservation
 
 ROOT = Path("COMPS_REPORTS")
 ENDPOINTS = {"value": "/avm/value", "rent": "/avm/rent/long-term"}
 DOCS = {"value": "https://developers.rentcast.io/reference/value-estimate",
         "rent": "https://developers.rentcast.io/reference/rent-estimate-long-term"}
-VERSION = "expanded-report-8.15.0-internal-store-20261008"
+VERSION = "expanded-report-9.0.1-readonly-sources-20261026"
 MULTI = {"Multi-Family", "Apartment"}
 
 
@@ -436,6 +438,11 @@ def execute(run_id: str):
             else:
                 result["errors"][kind] = "invalid_response"
         result["status"] = "partial" if result["errors"] else "completed"
+    result["report_analysis"] = report_enrichment.collect(p, result["internal_data"], ROOT,
+        allow_public=os.environ.get("FREE_COUNTY_LOOKUPS_ENABLED", "true").lower() == "true",
+        before_gemini_send=(lambda:report_provider_reservation.persist_gemini_reservation(ROOT.parent)) if os.environ.get('GITHUB_ACTIONS')=='true' else None)
+    if result["report_analysis"].get("status") != "available":
+        result["status"] = "partial"
     result["generated_at"] = stamp()
     write(result_path, result)
     write(ROOT / "expanded_receipts" / (job["request_id"] + ".json"), result)
@@ -448,14 +455,15 @@ def check_installation():
     """Read local files only; never mutate the ledger or contact a provider."""
     base = ROOT.parent
     checks = {}
-    required = ("expanded_report.py", "rentcast_budget.py", "internal_report_store.py",
+    required = ("expanded_report.py", "rentcast_budget.py", "internal_report_store.py", "report_enrichment.py", "closed_sales.py", "report_financing.py", "report_gemini.py", "rehab_pricebook.py", "rehab_pricebook.json", "report_provider_reservation.py", "report_photo_inputs.cjs", "report-readonly-model.js", "report-readonly.js", "report-financials.js", "report-readonly.css",
                 ".github/workflows/expanded-report.yml", "report.html", "deals.html", "comps_engine.py")
     for relative in required:
         checks[relative] = "ok" if (base / relative).is_file() else "missing"
     report_path = base / "report.html"
     if report_path.is_file():
         html = report_path.read_text(encoding="utf-8")
-        checks["report_dispatch_path"] = "ok" if "actions/workflows/expanded-report.yml/dispatches" in html else "missing"
+        controller = base / "report-readonly.js"
+        checks["report_dispatch_path"] = "ok" if controller.is_file() and "actions/workflows/expanded-report.yml/dispatches" in controller.read_text(encoding="utf-8") else "missing"
     errors = [key for key, status in checks.items() if status != "ok"]
     usage, warning = None, None
     try:
@@ -528,3 +536,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
