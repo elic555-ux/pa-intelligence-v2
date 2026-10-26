@@ -32,9 +32,26 @@
       '<div class="source-links">'+(M.url(p.url||p.source_url)?'<a href="'+e(M.url(p.url||p.source_url))+'" target="_blank" rel="noopener noreferrer">מודעת המקור</a>':'')+'<span>נבדק בפרסום: '+e(date(p.last_source_check))+'</span></div>';
   }
   function renderPhotos(){
-    const photos=state.media;
-    $('photos-view').innerHTML=photos.length?'<div class="gallery">'+photos.map((p,i)=>'<img '+(i?'loading="lazy" ':'')+'src="'+e(p.url)+'" alt="'+e('תמונת מקור '+(i+1)+' — '+state.property.address)+'" data-report-photo="'+i+'">').join('')+'</div><p class="source-note">'+e(photos[0].source||photos[0].source_name||'תמונות מודעת הנכס')+' · '+photos.length+' תמונות מקור. מועד האיסוף אינו בהכרח מועד הצילום.</p>':missing('לא התקבלו תמונות מקור מאומתות לנכס הזה.');
-    $('photos-view').querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{const note=document.createElement('p');note.className='missing';note.textContent='תמונת מקור '+(Number(img.dataset.reportPhoto)+1)+' אינה זמינה כעת מהספק.';img.replaceWith(note);},{once:true}));
+    const photos=state.media,view=$('photos-view');
+    if(!photos.length){view.innerHTML=missing('לא התקבלו תמונות מקור מאומתות לנכס הזה.');return;}
+    view.innerHTML='<div class="gallery">'+photos.map((p,i)=>'<img '+(i?'loading="lazy" ':'')+'src="'+e(p.url)+'" alt="'+e('תמונת מקור '+(i+1)+' — '+state.property.address)+'" data-report-photo="'+i+'">').join('')+'</div><p id="photos-summary" class="source-note"></p><p id="photos-unavailable" class="missing" hidden></p>';
+    const summary=$('photos-summary'),unavailable=$('photos-unavailable'),loaded=new Set(),failed=new Set();
+    function update(){
+      const pending=photos.length-loaded.size-failed.size;
+      const sources=[...new Set([...loaded].map(i=>photos[i].source||photos[i].source_name||'מודעת הנכס'))];
+      summary.textContent=(loaded.size?'מוצגות '+loaded.size+' תמונות מקור. '+sources.join(' · ')+'. ':pending?'ממתין לטעינת תמונות המקור. ':'לא נטענו תמונות מקור כרגע. ')+(pending?pending+' תמונות טרם נטענו. ':'')+'מועד האיסוף אינו בהכרח מועד הצילום.';
+      unavailable.hidden=!failed.size;
+      unavailable.textContent=failed.size+' קישורי תמונות נוספים אינם נטענים כרגע מהספק.';
+    }
+    view.querySelectorAll('img').forEach(img=>{
+      const index=Number(img.dataset.reportPhoto);
+      function success(){failed.delete(index);loaded.add(index);update();}
+      function failure(){loaded.delete(index);failed.add(index);img.remove();update();}
+      img.addEventListener('load',success,{once:true});
+      img.addEventListener('error',failure,{once:true});
+      if(img.complete){if(img.naturalWidth>0)success();else failure();}
+    });
+    update();
   }
   function renderCounty(){
     const c=state.county;
