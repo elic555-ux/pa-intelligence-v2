@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),m=require('./report-readonly-model.js');
+const r={photo_count:4,photos:[1,2,3,4].map(i=>({id:'photo_'+i})),photo_coverage:[{photo_id:'photo_1',scene:'exterior'},{photo_id:'photo_2',scene:'kitchen'},{photo_id:'photo_3',scene:'kitchen'},{photo_id:'photo_4',scene:'unclear'}]};
+let c=m.photoCoverage(r);assert.equal(c.interior,2);assert.equal(c.exterior,1);assert.equal(c.unclear,1);assert.deepEqual(c.scenes,['kitchen']);assert.deepEqual(c.missing,['bathroom','bedroom','living_dining']);
+assert.equal(m.photoCoverage({...r,photo_coverage:r.photo_coverage.slice(0,3)}),null);
+assert.equal(m.photoCoverage({...r,photo_coverage:[r.photo_coverage[0],r.photo_coverage[1],r.photo_coverage[2],r.photo_coverage[2]]}),null);
+assert.equal(m.photoCoverage({...r,photo_coverage:r.photo_coverage.map((x,i)=>i===3?{...x,photo_id:'foreign'}:x)}),null);
+assert.equal(m.photoCoverage({...r,photo_coverage:r.photo_coverage.map((x,i)=>i===3?{...x,scene:'invented-room'}:x)}),null);
+assert.equal(m.photoCoverage({photo_count:12}),null);
+console.log('PASS Photo coverage distinguishes interior/exterior/unclear images and never counts angles as rooms');

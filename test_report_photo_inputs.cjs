@@ -12,5 +12,7 @@ try{
   rows=[p];assert.deepEqual(collect(p,'offline').photos,[]);checked++;
   S.reportPhotos=()=>[{url:'https://ssl.cdn-redfin.com/photo/verified.jpg',source_url:'https://www.redfin.com/PA/Pittsburgh/x/home/1'}];
   assert.equal(collect(p,'offline').photos.length,1);checked++;
+  S.reportPhotos=()=>Array.from({length:70},(_,i)=>({url:'https://ssl.cdn-redfin.com/photo/'+i+'.jpg',source_url:'https://www.redfin.com/PA/Pittsburgh/x/home/1'}));
+  const wide=collect(p,'offline');assert.equal(wide.photos.length,60);assert.ok(wide.photos[59].url.endsWith('/59.jpg'));checked++;
   console.log(checked+' photo input identity checks passed');
 }finally{fs.readFileSync=originalRead;S.reportPhotos=reportPhotos;}
