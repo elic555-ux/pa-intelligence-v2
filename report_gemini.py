@@ -101,6 +101,14 @@ def text(value,limit=1600):
     if not isinstance(value,str) or not value.strip() or len(value)>limit:raise ValueError('invalid_model_text')
     return value.strip()
 
+def cache_days(result):
+    if result.get('status')=='partial':return 30
+    # A service-capacity 503 is transient, unlike a key/permission or quota error.
+    # Still no automatic retry: another explicit run is required after cooldown.
+    if result.get('reason')=='provider_http_503' and result.get('http_status')==503:
+        return 15/(24*60)
+    return 1
+
 def normalize(data,p,photos,facts):
     if not isinstance(data,dict) or set(data)!={'summary','limitations','items'}:raise ValueError('invalid_model_schema')
     summary=text(data['summary'],2400)
@@ -155,7 +163,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
         cached=store.read(cache_path)
         if isinstance(cached,dict) and cached.get('signature')==signature:
             age=store.age_days(cached.get('observed_at'))
-            if age is not None and 0<=age<(30 if cached.get('status')=='partial' else 1):return cached
+            if age is not None and 0<=age<cache_days(cached):return cached
         # The existing workflow serializes report jobs. Reserve before sending;
         # timeouts and invalid responses still count, and are not auto-retried.
         ledger_path=root/'gemini_findings/usage.json';ledger=store.read(ledger_path) or {}

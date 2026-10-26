@@ -19,7 +19,9 @@ repository. No live Gemini call was made while implementing the adapter.
 The fixed model is `gemini-3.8-flash`; no alternate model, paid fallback, Search,
 Maps, external tools, file storage, or automatic retry is used. HTTP 429 stops
 analysis, retains other report data, and suppresses another attempt for the same
-inputs for one day. Identical successful findings are cached for 30 days; a daily
+inputs for one day. A confirmed HTTP503 service failure instead has a15-minute
+cooldown, after which another explicit run is allowed; it never auto-retries.
+Identical successful findings are cached for 30 days; a daily
 local guard permits at most five attempts. This counter is **not** Google's quota
 or a provider-side spending cap. Free-tier availability and quotas may change.
 
