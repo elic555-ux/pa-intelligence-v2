@@ -54,6 +54,7 @@ class GeminiReportTests(unittest.TestCase):
         r,post=self.run_collect()
         self.assertEqual(r['status'],'partial');self.assertEqual(post.call_count,1)
         args,kw=post.call_args
+        self.assertEqual(g.MODEL,'gemini-3.5-flash-lite')
         self.assertEqual(args[0],g.API);self.assertNotIn('key=',args[0]);self.assertFalse(kw['allow_redirects'])
         self.assertEqual(kw['timeout'],(5,180));self.assertEqual(r['input_photo_count'],1)
         self.assertNotIn('tools',kw['json']);self.assertNotIn('unit-test-only-key',json.dumps(kw['json']))
@@ -105,6 +106,12 @@ class GeminiReportTests(unittest.TestCase):
         with patch.object(g,'normalize',side_effect=ValueError('unit-test-only-key')):
             r,post=self.run_collect()
         self.assertEqual(r['error_code'],'response_validation_failed')
+        self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
+    def test_provider_error_keeps_category_but_discards_message_and_key(self):
+        response=self.fake_response(status=403)
+        response.iter_content.return_value=[json.dumps({'error':{'status':'PERMISSION_DENIED','message':'API key not valid: unit-test-only-key'}}).encode()]
+        result,post=self.run_collect(response)
+        self.assertEqual(result['provider_status'],'PERMISSION_DENIED');self.assertEqual(result['provider_hint'],'api_key_invalid')
         self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
     def test_no_photos_no_api(self):
         with patch.object(g,'verified_inputs',return_value={'photos':[]}),patch.object(g.requests,'post',side_effect=AssertionError('API called')):

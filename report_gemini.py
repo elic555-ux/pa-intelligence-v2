@@ -18,10 +18,10 @@ from urllib.parse import urlsplit
 import requests
 import internal_report_store as store
 
-MODEL = 'gemini-3.8-flash'
+MODEL = 'gemini-3.5-flash-lite'
 VERSION = 'gemini-photo-findings-2'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
-SOURCE = 'https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash'
+SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_IMAGE_BYTES = 3_000_000
 MAX_TOTAL_IMAGE_BYTES = 12_000_000
 MAX_DAILY_CALLS = 5
@@ -108,6 +108,27 @@ def cache_days(result):
     if result.get('reason')=='provider_http_503' and result.get('http_status')==503:
         return 15/(24*60)
     return 1
+
+def provider_error(response):
+    """Retain public error categories only, never Google's free-form message."""
+    try:
+        raw=bytearray()
+        for chunk in response.iter_content(4096):
+            raw.extend(chunk)
+            if len(raw)>16384:return {}
+        error=json.loads(raw).get('error',{})
+        status=error.get('status')
+        allowed={'UNAVAILABLE','RESOURCE_EXHAUSTED','PERMISSION_DENIED','UNAUTHENTICATED',
+            'INVALID_ARGUMENT','NOT_FOUND','FAILED_PRECONDITION','INTERNAL','DEADLINE_EXCEEDED'}
+        result={'provider_status':status} if status in allowed else {}
+        message=str(error.get('message','')).lower()
+        hints=[('api key not valid','api_key_invalid'),('reported as leaked','api_key_blocked'),
+               ('overloaded','capacity_unavailable'),('capacity','capacity_unavailable'),
+               ('free tier is not available','free_tier_unavailable'),('billing','billing_or_eligibility')]
+        for needle,code in hints:
+            if needle in message:result['provider_hint']=code;break
+        return result
+    except (requests.RequestException,ValueError,TypeError,AttributeError):return {}
 
 def normalize(data,p,photos,facts):
     if not isinstance(data,dict) or set(data)!={'summary','limitations','items'}:raise ValueError('invalid_model_schema')
@@ -198,7 +219,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                 http_status=response.status_code
                 if response.status_code!=200:
                     status='quota_exhausted' if response.status_code==429 else 'source_unavailable'
-                    result=empty(p,status,'provider_http_'+str(response.status_code))|{'failure_stage':'provider_http'}
+                    result=empty(p,status,'provider_http_'+str(response.status_code))|{'failure_stage':'provider_http'}|provider_error(response)
                 else:
                     raw=bytearray()
                     for chunk in response.iter_content(65536):
