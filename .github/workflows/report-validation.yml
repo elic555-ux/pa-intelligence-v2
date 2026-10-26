@@ -3,6 +3,28 @@ on:
   pull_request:
     paths:
       - 'report.html'
+      - 'report-readonly.js'
+      - 'report-readonly-model.js'
+      - 'report-readonly.css'
+      - 'report-financials.js'
+      - 'report_enrichment.py'
+      - 'closed_sales.py'
+      - 'report_financing.py'
+      - 'report_gemini.py'
+      - 'report_photo_inputs.cjs'
+      - 'test_report_gemini.py'
+      - 'test_report_photo_inputs.cjs'
+      - 'test_report_readonly.cjs'
+      - 'test_report_readonly_collection.cjs'
+      - 'rehab_pricebook.py'
+      - 'rehab_pricebook.json'
+      - 'test_rehab_pricebook.py'
+      - 'test_report_enrichment.py'
+      - 'test_closed_sales.py'
+      - 'test_report_financing.py'
+      - 'expanded_report.py'
+      - 'test_expanded_report_enrichment.py'
+      - 'deals.html'
       - 'report-sections.js'
       - 'report-sections.css'
       - 'test_report_sections.cjs'
@@ -38,23 +60,23 @@ jobs:
           node-version: '22'
       - name: Check report module syntax
         run: |
-          node --check report-sections.js
-          node --check rehab-report.js
-          node --check rehab-estimate.js
-          node --check deal-analysis.js
-          node --check deal-analysis-adapter.js
+          node --check report-readonly.js
+          node --check report-readonly-model.js
+          node --check report-financials.js
+          node --check report_photo_inputs.cjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify shared provider quota offline
-        run: python -m unittest test_report_provider_budget.py
-      - name: Validate calculations, persistence and PDF lifecycle offline
+      - name: Install existing backend dependency
+        run: python -m pip install requests
+      - name: Verify sources, transfer filtering and shared provider quota offline
+        run: python -m unittest test_report_provider_budget.py test_closed_sales.py test_report_financing.py test_report_enrichment.py test_report_gemini.py test_rehab_pricebook.py test_report_source_audit.py test_report_provider_reservation.py test_expanded_report_enrichment.py
+      - name: Check report installation without provider calls
+        run: python expanded_report.py check
+      - name: Validate the read-only report and financial source boundaries
         run: |
-          node test_report_sections.cjs
-          node test_deal_analysis.cjs
-          node test_rehab_report.cjs
-          node test_rehab_estimate.cjs
-          node test_report_redesign.cjs
-          node test_report_loading.cjs
-          node test_report_collection.cjs
+          node test_report_readonly.cjs
+          node test_report_photo_inputs.cjs
+          node test_report_readonly_collection.cjs
+
 

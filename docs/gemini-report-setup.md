@@ -1,7 +1,8 @@
 # Gemini report setup
 
-The owner confirmed Free Tier on 2026-10-25. No credential is stored in this
-repository. No live Gemini call was made while implementing the adapter.
+The owner confirmed Free Tier on 2026-10-25 and approved testing an alternate
+free Gemini model on 2026-10-26. The live check succeeded that day. No credential
+is stored in this repository.
 
 1. In Google AI Studio verify that **the project of the chosen key** says Free
    Tier. Do not connect billing for this report. Keys belonging to a paid project
@@ -9,9 +10,10 @@ repository. No live Gemini call was made while implementing the adapter.
 2. Repository Settings → Secrets and variables → Actions → Secrets:
    create `GEMINI_API_KEY` with the Gemini key. Never add it to HTML, a GitHub
    variable, an issue, a workflow input, or chat.
-3. On the Variables tab create `GEMINI_REPORT_FREE_TIER_ENABLED` = `true`.
-   This is the owner's confirmation, not a Google billing API verification.
-   Remove it if the key/project/billing status changes.
+3. The report workflow now records the owner's existing confirmation and enables
+   this adapter by default. On the Variables tab set
+   `GEMINI_REPORT_FREE_TIER_ENABLED` = `false` to disable it, including if the
+   key/project/billing status changes. This is not a Google billing API check.
 4. After the new workflow is deployed, collect one report and inspect its source
    receipt and API usage dashboard. Do not claim the connection works before this
    live check succeeds. Installation-check mode never calls Gemini.
@@ -31,8 +33,9 @@ HTTP header to Google's fixed endpoint. The current gallery evidence collectors
 cap each source at three photos; the analyzer describes actual photo coverage.
 
 This phase returns photo findings, scope, evidence references and explanations.
-The AI cannot return dollar costs. A sourced renovation price book is still
-required before totals or a complete budget can be shown. Hidden systems are
+The AI cannot return dollar costs. The connected national unit-price catalog
+includes source dates and scope exclusions; it is not a Pittsburgh contractor
+quote. A priced scope still requires documented quantities. Hidden systems are
 not assessed as damaged merely because they are not photographed.
 
 ## First connection check from Chrome
@@ -76,3 +79,4 @@ Official references, checked 2026-10-25:
 - https://ai.google.dev/gemini-api/docs/billing
 - https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash
 - https://ai.google.dev/api/generate-content
+

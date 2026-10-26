@@ -47,7 +47,7 @@ def parse_terms(product,raw):
             maximum_loan=match(r'Maximum Loan Amount\s+(\$[\d,]+)'),
             fico_text=match(r'Minimum FICO\s+(\d+)'))
     else:
-        out.update(rate_text=match(r'Rates as low as\s+(\d+(?:\.\d+)?\s*%)'),
+        out.update(rate_text=match(r'Rates\s+(as low as\s+\d+(?:\.\d+)?\s*%)'),
             purchase_text=match(r'(Up to\s+\d+\s*%\s+of purchase price)'),
             larv_text=match(r'(Up to\s+\d+\s*%\s+of after-repair value)'),
             term_text=match(r'(12,\s*18\s*\+\s*24 month terms)'),
@@ -60,12 +60,13 @@ def collect(root=Path('COMPS_REPORTS'),refresh=False):
     now=datetime.now(timezone.utc);path=Path(root)/'financing/current.json'
     try:
         old=json.loads(path.read_text(encoding='utf-8'));age=(now-datetime.fromisoformat(old['observed_at'])).total_seconds()
-        if not refresh and 0<=age<7*86400:return old
+        if not refresh and old.get('version')=='published-lender-terms-v2' and 0<=age<7*86400:return old
     except (OSError,ValueError,KeyError,TypeError):pass
-    result={'version':'published-lender-terms-v1','observed_at':now.isoformat(timespec='seconds'),'products':[],'errors':[]}
+    result={'version':'published-lender-terms-v2','observed_at':now.isoformat(timespec='seconds'),'products':[],'errors':[]}
     for product in PRODUCTS:
         try:result['products'].append(parse_terms(product,get_html(product['url'])))
         except Exception as e:result['errors'].append({'product_id':product['id'],'reason':type(e).__name__})
     result['status']='available' if result['products'] else 'source_unavailable'
     path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
     return result
+
