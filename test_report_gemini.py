@@ -4,6 +4,14 @@ from unittest.mock import patch,MagicMock
 import requests
 import report_gemini as g
 
+def interior_rows(coverage):
+    return [{'scene':scene,'component':component,'condition':'not_assessable',
+        'finding':'הרכיב אינו ברור בתמונה','scope':'בדיקה לפני קביעת עבודה',
+        'rationale':'פרטי הרכיב אינם נראים בבירור בזווית המצולמת',
+        'photo_ids':[next(r['photo_id'] for r in coverage if r['scene']==scene)]}
+        for scene in g.COMPONENTS if any(r['scene']==scene for r in coverage)
+        for component in g.COMPONENTS[scene]]
+
 class GeminiReportTests(unittest.TestCase):
     def setUp(self):
         self.p={'id':'qa-1','address':'18 Main St','city':'Pittsburgh','state':'PA','zip':'15203'}
@@ -15,6 +23,7 @@ class GeminiReportTests(unittest.TestCase):
                    'items':[{'name':'רצפה','group':'interior','status':'observed',
                     'finding':'בלאי נראה לעין','scope':'בדיקת הרצפה לפני קביעת היקף העבודה',
                     'rationale':'פני הרצפה נראים בתמונה','photo_ids':['photo_1'],'fact_keys':[]}]}
+        self.data['interior_assessments']=interior_rows(self.data['photo_coverage'])
         self.root=Path('offline-gemini-test/COMPS_REPORTS');self.saved={}
         for guard in [patch.object(g.store,'read',side_effect=lambda path:copy.deepcopy(self.saved.get(str(path)))),
                       patch.object(g.store,'write',side_effect=lambda path,value:self.saved.__setitem__(str(path),copy.deepcopy(value)))]:
@@ -136,6 +145,7 @@ class GeminiReportTests(unittest.TestCase):
     def test_all_22_source_photos_including_later_interiors_are_analyzed_once(self):
         rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(22)]
         data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'exterior' if i<2 else 'kitchen'} for i in range(22)])
+        data['interior_assessments']=interior_rows(data['photo_coverage'])
         def image(row):
             i=int(row['url'].split('/')[-1].split('.')[0]);return 'image/jpeg',b'image',format(i,'064x')
         inputs={'property_id':'qa-1','identity':['18 MAIN ST','PITTSBURGH','PA','15203'],'photos':rows,'facts':{}}
@@ -153,6 +163,7 @@ class GeminiReportTests(unittest.TestCase):
         rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(65)]
         inputs={'property_id':'qa-1','identity':[],'photos':rows,'facts':{}}
         data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear'} for i in range(60)])
+        data['interior_assessments']=interior_rows(data['photo_coverage'])
         with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=lambda row:('image/jpeg',b'image',row['url'])) as fetched,patch.object(g.requests,'post',return_value=self.fake_response(data=data)):
             result=g.collect(self.p,self.root)
         self.assertEqual(result['photo_count'],60);self.assertEqual(fetched.call_count,60)
@@ -169,5 +180,31 @@ class GeminiReportTests(unittest.TestCase):
         with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',return_value=('image/jpeg',b'image','a'*64)) as fetched,patch.object(g.time,'monotonic',side_effect=[0,0,91,100,101]),patch.object(g.requests,'post',return_value=self.fake_response()):
             result=g.collect(self.p,self.root)
         self.assertEqual(fetched.call_count,1);self.assertEqual(result['photo_count'],1);self.assertEqual(result['photo_intake']['not_attempted'],19)
+
+    def test_interior_components_cannot_be_omitted_or_duplicated(self):
+        rows=self.data['interior_assessments']
+        for invalid in [[],rows[:-1],[rows[0]]*len(rows)]:
+            with self.subTest(rows=invalid),self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=invalid),self.p,[self.photo],{})
+    def test_interior_evidence_must_be_from_the_same_classified_area(self):
+        coverage=[{'photo_id':'photo_1','scene':'kitchen'},{'photo_id':'photo_2','scene':'bedroom'}]
+        data=dict(self.data,photo_coverage=coverage,interior_assessments=interior_rows(coverage))
+        data['interior_assessments'][0]['photo_ids']=['photo_2']
+        with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo,dict(self.photo,id='photo_2')],{})
+    def test_no_visible_damage_does_not_become_a_replacement_scope_or_zero_cost(self):
+        self.data['interior_assessments'][0].update(condition='no_obvious_damage_in_view',scope='replace everything')
+        result=g.normalize(self.data,self.p,[self.photo],{})
+        row=result['interior_assessments'][0]
+        self.assertNotIn('replace',row['scope']);self.assertIsNone(result['total_high']);self.assertFalse(result['complete'])
+    def test_unassessable_never_becomes_a_claim_of_damage_or_required_replacement(self):
+        self.data['interior_assessments'][0].update(finding='broken floor',scope='replacement required')
+        row=g.normalize(self.data,self.p,[self.photo],{})['interior_assessments'][0]
+        self.assertNotIn('broken',row['finding']);self.assertNotIn('replacement required',row['scope'])
+    def test_interior_prices_unknown_conditions_and_extra_rooms_are_rejected(self):
+        for change in [{'cost':1000},{'condition':'fully_inspected'},{'scene':'garage'},{'component':'whole_house'}]:
+            data=copy.deepcopy(self.data);data['interior_assessments'][0].update(change)
+            with self.subTest(change=change),self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
+    def test_no_interior_photos_means_no_fabricated_interior_assessment(self):
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'exterior'}],interior_assessments=[])
+        self.assertEqual(g.normalize(data,self.p,[self.photo],{})['interior_assessments'],[])
 
 if __name__=='__main__':unittest.main()

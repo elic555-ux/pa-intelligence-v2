@@ -34,6 +34,7 @@ def check(property_id,repo=Path('.'),persist=False,verify_sources=False):
         'provider_status':result.get('provider_status'),'provider_hint':result.get('provider_hint'),
         'read_timeout_seconds':result.get('read_timeout_seconds'),
         'findings_count':len(result.get('items') or []),
+        'interior_assessments_count':len(result.get('interior_assessments') or []),
         'renovation_budget_complete':False,'rentcast_calls':0}
     if success and verify_sources:
         import report_source_audit
