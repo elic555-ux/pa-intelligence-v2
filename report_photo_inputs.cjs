@@ -2,6 +2,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const S=require('./secondary_sources.js');
+const MAX_PHOTOS=60;
 function read(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch(_){return null;}}
 function collect(p,repo){
   const rows=read(path.join(repo,'properties.json'));
@@ -16,9 +17,9 @@ function collect(p,repo){
     const fact=S.bestFact(subject,additional,name);if(fact)facts[name]=fact;
   }
   return {status:'verified',property_id:String(p.id),identity:S.identity(subject),facts,
-    photos:photos.filter(r=>!seen.has(r.url)&&seen.add(r.url)).slice(0,12)};
+    photos:photos.filter(r=>!seen.has(r.url)&&seen.add(r.url)).slice(0,MAX_PHOTOS)};
 }
-module.exports={collect};
+module.exports={collect,MAX_PHOTOS};
 if(require.main===module){
   const p=JSON.parse(fs.readFileSync(0,'utf8'));
   process.stdout.write(JSON.stringify(collect(p,path.resolve(process.argv[2]||'.'))));

@@ -11,6 +11,7 @@ class GeminiReportTests(unittest.TestCase):
                     'source_url':'https://www.redfin.com/PA/Pittsburgh/18-Main-St-15203/home/123',
                     'sha256':'a'*64}
         self.data={'summary':'ממצא מתמונת פנים','limitations':['הגג אינו נראה'],
+                   'photo_coverage':[{'photo_id':'photo_1','scene':'living_dining'}],
                    'items':[{'name':'רצפה','group':'interior','status':'observed',
                     'finding':'בלאי נראה לעין','scope':'בדיקת הרצפה לפני קביעת היקף העבודה',
                     'rationale':'פני הרצפה נראים בתמונה','photo_ids':['photo_1'],'fact_keys':[]}]}
@@ -126,5 +127,47 @@ class GeminiReportTests(unittest.TestCase):
         for url in ['http://ssl.cdn-redfin.com/photo/a.jpg','https://localhost/image.jpg','https://ssl.cdn-redfin.com@evil.example/a.jpg','https://ssl.cdn-redfin.com/photo/a.jpg?token=abc']:
             with patch.object(g.requests,'get',side_effect=AssertionError('source called')):
                 with self.assertRaises(ValueError):g.fetch_image({'url':url})
+
+    def test_coverage_is_required_for_every_supplied_photo(self):
+        for coverage in [[],[{'photo_id':'photo_99','scene':'kitchen'}],[{'photo_id':'photo_1','scene':'invented'}]]:
+            with self.subTest(coverage=coverage),self.assertRaises(ValueError):g.normalize(dict(self.data,photo_coverage=coverage),self.p,[self.photo],{})
+        two=[self.photo,dict(self.photo,id='photo_2')]
+        with self.assertRaises(ValueError):g.normalize(dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'kitchen'}]*2),self.p,two,{})
+    def test_all_22_source_photos_including_later_interiors_are_analyzed_once(self):
+        rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(22)]
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'exterior' if i<2 else 'kitchen'} for i in range(22)])
+        def image(row):
+            i=int(row['url'].split('/')[-1].split('.')[0]);return 'image/jpeg',b'image',format(i,'064x')
+        inputs={'property_id':'qa-1','identity':['18 MAIN ST','PITTSBURGH','PA','15203'],'photos':rows,'facts':{}}
+        with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=image) as fetched,patch.object(g.requests,'post',return_value=self.fake_response(data=data)) as post:
+            result=g.collect(self.p,self.root)
+        self.assertEqual(result['photo_count'],22);self.assertEqual(len(result['photo_coverage']),22)
+        self.assertEqual(fetched.call_count,22);self.assertEqual(post.call_count,1)
+        self.assertEqual(result['photo_intake']['prepared_photos'],22)
+        self.assertTrue(result['photos'][-1]['url'].endswith('/21.jpg'))
+        self.assertEqual(post.call_args.kwargs['json']['generationConfig']['maxOutputTokens'],8192)
+        self.assertIsNone(result['total_high'])
+    def test_maximum60_and_spread_order_cover_tail_without_unbounded_requests(self):
+        for count in [0,1,2,22,60]:self.assertEqual(sorted(g.spread_order(count)),list(range(count)))
+        self.assertEqual(g.spread_order(60)[:2],[0,59])
+        rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(65)]
+        inputs={'property_id':'qa-1','identity':[],'photos':rows,'facts':{}}
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear'} for i in range(60)])
+        with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=lambda row:('image/jpeg',b'image',row['url'])) as fetched,patch.object(g.requests,'post',return_value=self.fake_response(data=data)):
+            result=g.collect(self.p,self.root)
+        self.assertEqual(result['photo_count'],60);self.assertEqual(fetched.call_count,60)
+        self.assertEqual(result['photo_intake']['available_links'],65)
+    def test_existing_byte_cap_keeps_partial_intake_explicit(self):
+        rows=[dict(self.photo,url=self.photo['url']+str(i)) for i in range(4)]
+        inputs={'property_id':'qa-1','identity':[],'photos':rows,'facts':{}}
+        with patch.object(g,'MAX_TOTAL_IMAGE_BYTES',5),patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=lambda row:('image/jpeg',b'abc',row['url'])),patch.object(g.requests,'post',return_value=self.fake_response()):
+            result=g.collect(self.p,self.root)
+        self.assertEqual(result['photo_count'],1);self.assertEqual(result['photo_intake']['excluded_by_byte_limit'],3)
+        self.assertEqual(g.MAX_TOTAL_IMAGE_BYTES,12_000_000);self.assertEqual(g.MAX_DAILY_CALLS,5)
+    def test_fetch_deadline_does_not_claim_unattempted_photos_were_analyzed(self):
+        inputs={'property_id':'qa-1','identity':[],'photos':[self.photo]*20,'facts':{}}
+        with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',return_value=('image/jpeg',b'image','a'*64)) as fetched,patch.object(g.time,'monotonic',side_effect=[0,0,91,100,101]),patch.object(g.requests,'post',return_value=self.fake_response()):
+            result=g.collect(self.p,self.root)
+        self.assertEqual(fetched.call_count,1);self.assertEqual(result['photo_count'],1);self.assertEqual(result['photo_intake']['not_attempted'],19)
 
 if __name__=='__main__':unittest.main()

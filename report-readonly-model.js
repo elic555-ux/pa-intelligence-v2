@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='9.0.4';
+  const VERSION='9.0.5';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -53,6 +53,17 @@
     try{const u=new URL(t.source_url);if(u.origin!=='https://realestate.alleghenycounty.us'||u.pathname!=='/Tax'||u.searchParams.get('ID')!==t.parcel_id||u.username||u.password)return null;}catch(_){return null;}
     return t;
   }
+  function photoCoverage(r){
+    const scenes=['kitchen','bathroom','bedroom','living_dining','hall_stairs','basement_utility','attic','garage','exterior','other','unclear'];
+    const photos=Array.isArray(r?.photos)?r.photos:[],rows=Array.isArray(r?.photo_coverage)?r.photo_coverage:[];
+    const ids=new Set(photos.map(x=>x.id));
+    if(!ids.size||ids.size!==number(r?.photo_count)||rows.length!==ids.size||new Set(rows.map(x=>x?.photo_id)).size!==ids.size||
+      rows.some(x=>!ids.has(x?.photo_id)||!scenes.includes(x?.scene)))return null;
+    const counts=Object.fromEntries(scenes.map(s=>[s,rows.filter(x=>x.scene===s).length]));
+    return {interior:scenes.slice(0,8).reduce((sum,key)=>sum+counts[key],0),exterior:counts.exterior,
+      unclear:counts.other+counts.unclear,scenes:scenes.slice(0,8).filter(s=>counts[s]>0),
+      missing:['kitchen','bathroom','bedroom','living_dining'].filter(s=>counts[s]===0)};
+  }
   function metrics(p,a,report,financials,now=Date.now()){
     const f=financials?.financialSnapshot(p,now)||{},rent=rentSource(report,p,now),rehab=rehabSource(a,p,now);
     const price=number(f.price),rentValue=rent?.value??number(f.rent);
@@ -68,5 +79,5 @@
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes};
+  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage};
 });
