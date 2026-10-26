@@ -207,4 +207,22 @@ class GeminiReportTests(unittest.TestCase):
         data=dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'exterior'}],interior_assessments=[])
         self.assertEqual(g.normalize(data,self.p,[self.photo],{})['interior_assessments'],[])
 
+    def test_wire_schema_requires_named_components_instead_of_a_possibly_empty_list(self):
+        wire=g.SCHEMA['properties']['interior_assessments']
+        self.assertEqual(wire['type'],'object');self.assertEqual(set(wire['required']),set(g.COMPONENTS))
+        for scene,codes in g.COMPONENTS.items():
+            branch=next(x for x in wire['properties'][scene]['anyOf'] if x['type']=='object')
+            self.assertEqual(set(branch['required']),set(codes))
+    def test_named_scene_objects_are_normalized_and_missing_components_rejected(self):
+        wire={scene:None for scene in g.COMPONENTS}
+        wire['living_dining']={row['component']:{k:v for k,v in row.items() if k not in {'scene','component'}} for row in self.data['interior_assessments']}
+        result=g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+        self.assertEqual(len(result['interior_assessments']),3)
+        del wire['living_dining']['flooring']
+        with self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+    def test_named_unphotographed_area_cannot_claim_an_assessment(self):
+        wire={scene:None for scene in g.COMPONENTS}
+        wire['kitchen']={}
+        with self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+
 if __name__=='__main__':unittest.main()

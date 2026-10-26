@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-4-interior-assessment'
+VERSION = 'gemini-photo-findings-5-fixed-interior-components'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -43,6 +43,9 @@ Only describe visible conditions or explicitly provided source facts. Do not inf
 roof, foundation, electrical, plumbing or HVAC defects from building age or absent photos.
 Review EVERY supplied image, including interior views late in the gallery. Provide exactly
 one photo_coverage entry per image, using unclear when the room cannot be identified.
+interior_assessments is an object keyed by scene, then component (not an array).
+Use null for a scene ONLY if no photo_coverage image shows that scene. For a photographed
+scene, fill EVERY required component key, even when a component cannot be assessed.
 Interior assessment is MANDATORY even when no damage is visible. For EVERY interior scene
 identified in photo_coverage, provide all required components in interior_assessments:
 flooring, walls_ceilings, doors_windows; add cabinets_counters and fixtures for kitchen,
@@ -66,19 +69,24 @@ evidence photo IDs, and a short rationale. Report unseen systems as not_visible,
 claim that replacement is required. No dollar costs, price guesses, invented measurements,
 room areas, contractor quotes, demographic inferences or financial recommendations.
 This is preliminary photo analysis, not an inspection or a complete renovation budget.'''
+def interior_schema():
+    component={'type':'object','properties':{
+        'condition':{'type':'string','enum':CONDITIONS},'finding':{'type':'string'},
+        'scope':{'type':'string'},'rationale':{'type':'string'},
+        'photo_ids':{'type':'array','items':{'type':'string'}}},
+        'required':['condition','finding','scope','rationale','photo_ids'],'additionalProperties':False}
+    return {'type':'object','properties':{scene:{'anyOf':[
+        {'type':'null'},
+        {'type':'object','properties':{code:component for code in codes},
+         'required':codes,'additionalProperties':False}]} for scene,codes in COMPONENTS.items()},
+        'required':list(COMPONENTS),'additionalProperties':False}
+
 SCHEMA = {'type':'object','properties':{
     'summary':{'type':'string'},'limitations':{'type':'array','items':{'type':'string'}},
     'photo_coverage':{'type':'array','items':{'type':'object','properties':{
         'photo_id':{'type':'string'},'scene':{'type':'string','enum':SCENES}},
         'required':['photo_id','scene'],'additionalProperties':False}},
-    'interior_assessments':{'type':'array','items':{'type':'object','properties':{
-        'scene':{'type':'string','enum':SCENES[:8]},
-        'component':{'type':'string','enum':COMPONENT_CODES},
-        'condition':{'type':'string','enum':CONDITIONS},
-        'finding':{'type':'string'},'scope':{'type':'string'},'rationale':{'type':'string'},
-        'photo_ids':{'type':'array','items':{'type':'string'}}},
-        'required':['scene','component','condition','finding','scope','rationale','photo_ids'],
-        'additionalProperties':False}},
+    'interior_assessments':interior_schema(),
     'items':{'type':'array','items':{'type':'object','properties':{
         'name':{'type':'string'},'group':{'type':'string','enum':GROUPS},
         'status':{'type':'string','enum':STATES},'finding':{'type':'string'},
@@ -189,6 +197,22 @@ def ground_listing_facts(result,facts):
 def normalize_interiors(rows,coverage):
     by_scene={scene:{r['photo_id'] for r in coverage if r['scene']==scene} for scene in COMPONENTS}
     required={(scene,component) for scene,ids in by_scene.items() if ids for component in COMPONENTS[scene]}
+    if isinstance(rows,dict):
+        if set(rows)!=set(COMPONENTS):raise ValueError('incomplete_interior_assessment')
+        flattened=[]
+        for scene,codes in COMPONENTS.items():
+            area=rows[scene]
+            if not by_scene[scene]:
+                if area is not None:raise ValueError('invalid_interior_assessment')
+                continue
+            if not isinstance(area,dict) or set(area)!=set(codes):raise ValueError('incomplete_interior_assessment')
+            for code in codes:
+                row=area[code]
+                if not isinstance(row,dict) or set(row)!={'condition','finding','scope','rationale','photo_ids'}:
+                    raise ValueError('invalid_interior_assessment')
+                flattened.append(dict(row,scene=scene,component=code))
+        rows=flattened
+
     if not isinstance(rows,list) or len(rows)!=len(required):raise ValueError('incomplete_interior_assessment')
     output=[];seen=set()
     for row in rows:
