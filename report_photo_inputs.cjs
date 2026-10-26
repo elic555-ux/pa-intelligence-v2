@@ -10,7 +10,7 @@ function collect(p,repo){
   const subject=matches[0],key=crypto.createHash('sha256').update(String(p.id)).digest('hex').slice(0,32),root=path.join(repo,'COMPS_REPORTS');
   const details=read(path.join(root,'listing_details',key+'.json'));
   const additional=['howardhanna','eriemoves','tarasa','clearchoice'].map(x=>read(path.join(root,'additional_sources',x,key+'.json'))).filter(Boolean);
-  const photos=[...S.originalPhotos(subject),...(details?S.originalPhotos({...subject,listing_source_details:details,listing_photos:details.photos}):[]),...S.fallbackPhotos(subject,read(path.join(root,'listing_photos',key+'.json'))),...S.combinedPhotos(subject,additional)];
+  const photos=S.reportPhotos(subject,{details,receipt:read(path.join(root,'listing_photos',key+'.json')),additional});
   const seen=new Set(),facts={};
   for(const name of ['roof_type','heating','cooling','construction','basement','stories','water','sewer','hvac_type']){
     const fact=S.bestFact(subject,additional,name);if(fact)facts[name]=fact;

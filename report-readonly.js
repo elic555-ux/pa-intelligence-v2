@@ -121,8 +121,7 @@
     resolveMedia({details:values[0].value,receipt:values[1].value,additional:values.slice(2).filter(x=>x.status==='fulfilled').map(x=>x.value).filter(Boolean)});
   }
   function resolveMedia(media){
-    if(!S)return;const p=state.property,original=media.details?S.originalPhotos({...p,listing_source_details:media.details,listing_photos:media.details.photos}):S.originalPhotos(p);
-    const seen=new Set();state.media=[...original,...S.fallbackPhotos(p,media.receipt),...S.combinedPhotos(p,media.additional||[])].filter(x=>M.url(x.url)&&!seen.has(x.url)&&seen.add(x.url));
+    if(!S)return;const p=state.property;state.media=S.reportPhotos(p,media).filter(x=>M.url(x.url));
   }
   async function refresh(k){const report=await repoJson('COMPS_REPORTS/expanded_reports/'+k+'.json');if(M.matches(report,state.property)&&(!state.report||Date.parse(report.generated_at)>=Date.parse(state.report.generated_at))){state.report=report;state.analysis=report.report_analysis||null;}}
   async function collect(){
@@ -139,7 +138,7 @@
     }
     const deadline=Date.now()+7*60000;
     async function poll(){
-      try{const receipt=await repoJson('COMPS_REPORTS/expanded_receipts/'+requestId+'.json');if(receipt&&M.matches(receipt,p)){clearPending(p,requestId);state.report=receipt;state.analysis=receipt.report_analysis||null;render();status(receipt.report_analysis?.status==='partial'?'איסוף המקורות הסתיים בחלקו. סעיפים חסרים מסומנים בדוח.':'האיסוף הסתיים. כל סעיף מציג את התוצאה והמקור שהתקבלו.');return;}}catch(_){/* A temporary read failure must not dispatch a second request. */}
+      try{const receipt=await repoJson('COMPS_REPORTS/expanded_receipts/'+requestId+'.json');if(receipt&&M.matches(receipt,p)){clearPending(p,requestId);state.report=receipt;state.analysis=receipt.report_analysis||null;await loadMedia(await key(p.id));render();status(receipt.report_analysis?.status==='partial'?'איסוף המקורות הסתיים בחלקו. סעיפים חסרים מסומנים בדוח.':'האיסוף הסתיים. כל סעיף מציג את התוצאה והמקור שהתקבלו.');return;}}catch(_){/* A temporary read failure must not dispatch a second request. */}
       if(Date.now()<deadline){status('האיסוף מתבצע בשרת. הדוח יציג את התוצאה כשהיא תתקבל…');root.setTimeout(poll,7000);}else status('האיסוף טרם החזיר תוצאה. פתח שוב את הדוח לאחר סיום בקשת השרת; לא נשלחה בקשה חוזרת.',true);
     }
     await poll();
@@ -168,4 +167,3 @@
   document.getElementById('tabs-bar').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const buttons=Array.from(document.querySelectorAll('[data-tab]')),at=buttons.indexOf(document.activeElement);if(at<0)return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?2:(at+(event.key==='ArrowLeft'?1:2))%3;buttons[next].focus();tab(buttons[next].dataset.tab);});
   root.addEventListener('hashchange',openHash);load();
 })(window);
-

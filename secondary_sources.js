@@ -79,13 +79,14 @@
             return Boolean(u.protocol === 'https:' && u.hostname === 'cdn.listingphotos.sierrastatic.com' && !u.username && !u.password &&
                 (!u.port || u.port === '443') && !u.search && !u.hash && m && m[1] === String(mls)); } catch (_) { return false; }
     }
-    function photos(p,r) {
+    const photoLimit=n=>Number.isInteger(n)&&n>0?Math.min(n,60):3;
+    function photos(p,r,limit=3) {
         if (!matches(p,r)) return [];
         const seen = new Set();
         return (Array.isArray(r.photos) ? r.photos : []).filter(e=>{
             if (e?.source !== PROVIDERS[r.provider].name || e.source_url !== r.source_url || e.listing_id !== listing(p) || !(r.provider==='eriemoves'?moxiPhoto(e.url):r.provider==='howardhanna'?hannaPhoto(e.url):photoUrl(e.url,listing(p)))) return false;
             const seq=['eriemoves','howardhanna'].includes(r.provider)?e.url:e.url.match(/_(\d{2,3})\.jpg$/)[1]; if(seen.has(seq)) return false; seen.add(seq); return true;
-        }).slice(0,3);
+        }).slice(0,photoLimit(limit));
     }
     async function key(propertyId, cryptoApi=root.crypto) {
         const bytes=new Uint8Array(await cryptoApi.subtle.digest('SHA-256',new TextEncoder().encode(String(propertyId))));
@@ -103,13 +104,13 @@
         for(const r of ordered(p,items)) { const f=fact(p,r,field); if(f) return f; }
         return null;
     }
-    function combinedPhotos(p,items) {
+    function combinedPhotos(p,items,limit=3) {
         const seen=new Set();
-        return ordered(p,items).flatMap(r=>photos(p,r)).filter(photo=>{
+        return ordered(p,items).flatMap(r=>photos(p,r,limit)).filter(photo=>{
             const sequence=photo.url.match(/_(\d{2,3})\.jpg$/)?.[1] || photo.url;
             if(seen.has(sequence)) return false;
             seen.add(sequence); return true;
-        }).slice(0,3);
+        }).slice(0,photoLimit(limit));
     }
     function collectionNotice(p,items) {
         const saved=ordered(p,items);
@@ -138,7 +139,7 @@
             return 'אין מפרט נוסף שמור לנכס זה. השלמה אוטומטית ממקור נוסף עדיין אינה זמינה למחוז Erie.';
         return 'טרם נאסף מפרט נוסף לנכס זה. ההשלמה תלויה בגישה למקור ובמידע שהוא מפרסם.';
     }
-    function fallbackPhotos(p,record) {
+    function fallbackPhotos(p,record,limit=3) {
         if (!record || record.schema!==1 || p._idAmbiguous || p.source_type!=='mls' ||
             record.property_id!==String(p.id) || record.listing_id!==listing(p) ||
             JSON.stringify(record.identity)!==JSON.stringify(identity(p)) ||
@@ -168,7 +169,7 @@
                 seen.add(image.href);result.push(photo);
             } catch(_) {}
         }
-        return result.slice(0,3);
+        return result.slice(0,photoLimit(limit));
     }
     function fallbackNotice(p,record) {
         if(!record || record.property_id!==String(p.id) ||
@@ -180,7 +181,7 @@
           return attempts.length ? 'מקורות תמונות שנבדקו: '+attempts.map(a=>({preferredrealty:'The Preferred Realty',saved_source:'המקור השמור',coldwellbanker:'Coldwell Banker',weichert:'Weichert'}[a.provider] || '')).filter(Boolean).join(', ')+
             '. '+(record.sources_exhausted?'לא נמצאו תמונות זמינות במקורות שנבדקו; הסריקה ממשיכה.':'טרם הושלמו תמונות זמינות; הסריקה ממשיכה.') : '';
     }
-    function originalPhotos(p) {
+    function originalPhotos(p,limit=3) {
         const record=p.listing_source_details, source=inventoryUrl(p.url);
         if(p._idAmbiguous || p.source_type!=='mls' || record?.status!=='published' ||
             record.source_url!==source || record.listing_id!==listing(p) ||
@@ -200,9 +201,21 @@
                     !url.pathname.startsWith('/photo/') || seen.has(url.href)) return false;
                 seen.add(url.href); return true;
             } catch(_) { return false; }
-        }).slice(0,3);
+        }).slice(0,photoLimit(limit));
     }
-    const api={originalPhotos,fallbackPhotos,fallbackNotice,identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
+    function photoIdentity(url) {
+        try { const u=new URL(url),m=u.pathname.match(/^\/(?:pics[123]x|large)\/v\d+\/(\d+)\/(\d+)_(\d+)_(\d{2,3})\.jpg$/);
+            return u.hostname==='cdn.listingphotos.sierrastatic.com'&&m?'sierra:'+m[1]+':'+m[3]+':'+m[4]:url;
+        } catch(_){return url;}
+    }
+    function reportPhotos(p,media={}) {
+        const subject=media.details?{...p,listing_source_details:media.details,listing_photos:media.details.photos}:p;
+        const seen=new Set();
+        return [...originalPhotos(subject,60),...fallbackPhotos(p,media.receipt,60),...combinedPhotos(p,media.additional||[],60)]
+            .sort((a,b)=>(Date.parse(b.retrieved_at||b.checked_at)||0)-(Date.parse(a.retrieved_at||a.checked_at)||0))
+            .filter(photo=>{const id=photoIdentity(photo.url);if(seen.has(id))return false;seen.add(id);return true;}).slice(0,60);
+    }
+    const api={reportPhotos,photoIdentity,originalPhotos,fallbackPhotos,fallbackNotice,identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
     if (typeof module !== 'undefined' && module.exports) { module.exports=api; return; }
     root.SecondarySourceEvidence=api;
     if (typeof document === 'undefined' || typeof openPropertyModal !== 'function') return;

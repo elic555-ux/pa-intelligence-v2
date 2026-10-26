@@ -14,7 +14,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false}=
    history:{replaceState(_,__,value){location.href=new URL(value,location).href;}},
    document:{getElementById:element,querySelectorAll(){return[];}},
    PAReadonlyReport:model,PAReportFinancials:financials,
-   SecondarySourceEvidence:{originalPhotos(){return[];},fallbackPhotos(){return[];},combinedPhotos(){return[];}},
+   SecondarySourceEvidence:{reportPhotos(){return[];}},
    supabase:{createClient(){return {from(){return {select(){return {eq:async()=>({data:[{deal_data:property}],error:null})};}};}};}},
    setTimeout:fn=>timers.push(fn),addEventListener(){},
    fetch:async(url,options={})=>{
@@ -43,4 +43,3 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false}=
  result=await simulate(shared,{ready:true});assert.equal(result.posts.length,0);assert.equal(shared.size,0);console.log('PASS Matching receipt clears only the completed pending request');
  result=await simulate(new Map(),{collect:true,storageFailure:true});assert.equal(result.posts.length,0);console.log('PASS Failed local reservation prevents a workflow dispatch');
 })().catch(error=>{console.error(error);process.exitCode=1;});
-

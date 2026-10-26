@@ -62,6 +62,17 @@ class TarasaTests(unittest.TestCase):
         self.assertEqual(len(r['photos']), 1)
         self.assertEqual(self.protected, {n: (self.repo/n).read_bytes() for n in self.protected})
 
+    def test_normal_refresh_preserves_the_existing_wide_report_gallery(self):
+        old = self.record(8)
+        old['report_gallery_version'] = 'report-gallery-1'
+        self.put(old)
+        images = ''.join('<img src="https://cdn.listingphotos.sierrastatic.com/pics1x/v123/56/56_1001_' + str(n).zfill(2) + '.jpg">' for n in range(1, 41))
+        html = tarasa_page().replace('</body>', images + '</body>')
+        source.run(self.repo, 'fetch', ROW['id'], reader=FakeReader(html=html), now=self.now)
+        saved = registry.read_json(self.repo/source.ROOT/(source.cache_key(ROW['id'])+'.json'))
+        self.assertEqual(len(saved['photos']), 40)
+        self.assertEqual(saved['report_gallery_version'], 'report-gallery-1')
+
     def test_check_is_network_and_write_free(self):
         self.put(self.record())
         before = {p.relative_to(self.repo):p.read_bytes() for p in self.repo.rglob('*') if p.is_file()}
