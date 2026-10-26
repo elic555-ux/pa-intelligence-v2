@@ -24,6 +24,10 @@ class SourceAuditTests(unittest.TestCase):
         result,saved,_=self.run_audit({**self.prior,'property':{**self.p,'address':'22 Other St'}})
         self.assertFalse(result['existing_rent_receipt_preserved'])
         self.assertTrue(all('expanded_reports' not in k for k in saved))
+    def test_interior_assessments_are_photo_analysis_even_without_repair_findings(self):
+        self.analysis['rehab'].update(items=[],interior_assessments=[{'scene':'kitchen','condition':'no_obvious_damage_in_view'}])
+        result,_,_=self.run_audit(self.prior)
+        self.assertTrue(result['checks']['photo_analysis'])
     def test_verified_connections_do_not_claim_complete_budget(self):
         result,_,_=self.run_audit(self.prior)
         self.assertIn('renovation_scope_and_quantities',result['remaining_data'])

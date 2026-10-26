@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='9.0.5';
+  const VERSION='9.0.6';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -64,6 +64,22 @@
       unclear:counts.other+counts.unclear,scenes:scenes.slice(0,8).filter(s=>counts[s]>0),
       missing:['kitchen','bathroom','bedroom','living_dining'].filter(s=>counts[s]===0)};
   }
+  function interiorAssessments(r){
+    const coverage=photoCoverage(r),rows=Array.isArray(r?.interior_assessments)?r.interior_assessments:[];
+    if(!coverage)return [];
+    const components=scene=>['flooring','walls_ceilings','doors_windows',...(scene==='kitchen'?['cabinets_counters','fixtures']:scene==='bathroom'?['fixtures']:[])];
+    const expected=new Set(coverage.scenes.flatMap(scene=>components(scene).map(component=>scene+':'+component)));
+    const seen=new Set();
+    if(rows.length!==expected.size)return [];
+    for(const row of rows){
+      const key=row?.scene+':'+row?.component;
+      if(!expected.has(key)||seen.has(key)||!['visible_wear','no_obvious_damage_in_view','not_assessable'].includes(row?.condition)||
+        !['finding','scope','rationale'].every(k=>typeof row[k]==='string'&&row[k].trim())||
+        !Array.isArray(row.photo_ids)||!row.photo_ids.length||row.photo_ids.some(id=>!r.photo_coverage.some(c=>c.photo_id===id&&c.scene===row.scene)))return [];
+      seen.add(key);
+    }
+    return rows;
+  }
   function metrics(p,a,report,financials,now=Date.now()){
     const f=financials?.financialSnapshot(p,now)||{},rent=rentSource(report,p,now),rehab=rehabSource(a,p,now);
     const price=number(f.price),rentValue=rent?.value??number(f.rent);
@@ -79,5 +95,5 @@
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage};
+  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,interiorAssessments};
 });
