@@ -83,6 +83,9 @@ class GeminiReportTests(unittest.TestCase):
         self.assertEqual(args[0],g.API);self.assertNotIn('key=',args[0]);self.assertFalse(kw['allow_redirects'])
         self.assertEqual(kw['timeout'],(5,180));self.assertEqual(r['input_photo_count'],1)
         self.assertNotIn('tools',kw['json']);self.assertNotIn('unit-test-only-key',json.dumps(kw['json']))
+        images=[part for part in kw['json']['contents'][0]['parts'] if 'inlineData' in part]
+        self.assertEqual(images[0]['mediaResolution'],{'level':'MEDIA_RESOLUTION_ULTRA_HIGH'})
+        self.assertEqual(r['media_resolution'],'MEDIA_RESOLUTION_ULTRA_HIGH')
         second,next_post=self.run_collect()
         self.assertEqual(next_post.call_count,0);self.assertEqual(second['signature'],r['signature'])
         self.assertNotIn('unit-test-only-key',json.dumps(self.saved))

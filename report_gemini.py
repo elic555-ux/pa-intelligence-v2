@@ -19,7 +19,8 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-11d-optional-no-work-scope'
+VERSION = 'gemini-photo-findings-11e-ultra-image-detail'
+MEDIA_RESOLUTION = 'MEDIA_RESOLUTION_ULTRA_HIGH'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -483,7 +484,7 @@ def normalize(data,p,photos,facts):
     return ground_listing_facts(empty(p,'partial','pricing_sources_not_connected')|{'summary':summary,
         'limitations':limitations,'items':items,'photo_count':len(photos),'photo_coverage':coverage,'interior_assessments':interiors,'exterior_assessments':exteriors,
         'photos':[{k:r[k] for k in ['id','url','source_url','sha256']} for r in photos],
-        'model':MODEL,'version':VERSION},facts)
+        'model':MODEL,'version':VERSION,'media_resolution':MEDIA_RESOLUTION},facts)
 
 def spread_order(count):
     if count<=0:return []
@@ -534,7 +535,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
         intake.update(prepared_photos=len(photos),not_attempted=len(candidates)-attempted)
         if not photos:return empty(p,'photos_unavailable','no_verified_image_bytes')|{'photo_intake':intake}
         facts=inputs.get('facts') or {}
-        signature=hashlib.sha256(json.dumps({'version':VERSION,'model':MODEL,
+        signature=hashlib.sha256(json.dumps({'version':VERSION,'model':MODEL,'media_resolution':MEDIA_RESOLUTION,
             'identity':[str(p['id']),*inputs['identity']], 'photos':[r['sha256'] for r in photos],
             'facts':facts},sort_keys=True).encode()).hexdigest()
         cache_path=root/'gemini_findings'/store.key(p['id'])/(signature+'.json')
@@ -565,7 +566,8 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
             'exterior_component_codes':EXTERIOR_COMPONENTS},ensure_ascii=False)}]
         for photo in photos:
             parts.extend([{'text':photo['id']},{'inlineData':{'mimeType':photo['mime'],
-                'data':base64.b64encode(photo['body']).decode('ascii')}}])
+                'data':base64.b64encode(photo['body']).decode('ascii')},
+                'mediaResolution':{'level':MEDIA_RESOLUTION}}])
         payload={'systemInstruction':{'parts':[{'text':SYSTEM}]},
             'contents':[{'role':'user','parts':parts}],
             'generationConfig':{'candidateCount':1,'maxOutputTokens':16384,
