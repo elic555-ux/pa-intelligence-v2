@@ -246,6 +246,14 @@ class GeminiReportTests(unittest.TestCase):
             with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
         data=copy.deepcopy(self.data);del data['items'][0]['condition']
         with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
+    def test_smaller_provider_grammar_keeps_strict_local_condition_validation(self):
+        self.assertEqual(g.SCHEMA['properties']['items']['items']['properties']['condition'],{'type':'string'})
+        for value in g.SCHEMA['properties']['interior_assessments']['properties'].values():
+            self.assertEqual(value['properties']['condition'],{'type':'string'})
+            self.assertIn('condition',value['required'])
+        for target in ['items','interior_assessments']:
+            data=copy.deepcopy(self.data);data[target][0]['condition']='unknown_open_wire_value'
+            with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
     def test_interior_prices_unknown_conditions_and_extra_rooms_are_rejected(self):
         for change in [{'cost':1000},{'condition':'fully_inspected'},{'scene':'garage'},{'component':'whole_house'}]:
             data=copy.deepcopy(self.data);data['interior_assessments'][0].update(change)

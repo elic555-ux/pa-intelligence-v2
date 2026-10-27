@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-8-repair-versus-cosmetic'
+VERSION = 'gemini-photo-findings-9-locally-validated-conditions'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -93,8 +93,10 @@ No dollar costs, price guesses, invented measurements,
 room areas, contractor quotes, demographic inferences or financial recommendations.
 This is preliminary photo analysis, not an inspection or a complete renovation budget.'''
 def interior_schema():
+    # Keep the repeated provider grammar small. The four allowed values are
+    # mandatory in the prompt and validated strictly before any result is saved.
     component={'type':'object','properties':{
-        'condition':{'type':'string','enum':CONDITIONS},'finding':{'type':'string'},
+        'condition':{'type':'string'},'finding':{'type':'string'},
         'scope':{'type':'string'},'rationale':{'type':'string'},
         'photo_ids':{'type':'array','items':{'type':'string'}}},
         'required':['condition','finding','scope','rationale','photo_ids'],'additionalProperties':False}
@@ -109,7 +111,7 @@ SCHEMA = {'type':'object','properties':{
     'interior_assessments':interior_schema(),
     'items':{'type':'array','items':{'type':'object','properties':{
         'name':{'type':'string'},'group':{'type':'string','enum':GROUPS},
-        'status':{'type':'string','enum':STATES},'condition':{'type':'string','enum':CONDITIONS},'finding':{'type':'string'},
+        'status':{'type':'string','enum':STATES},'condition':{'type':'string'},'finding':{'type':'string'},
         'scope':{'type':'string'},'rationale':{'type':'string'},
         'photo_ids':{'type':'array','items':{'type':'string'}},
         'fact_keys':{'type':'array','items':{'type':'string'}}},
@@ -194,6 +196,7 @@ def provider_error(response):
                ('overloaded','capacity_unavailable'),('capacity','capacity_unavailable'),
                ('free tier is not available','free_tier_unavailable'),('billing','billing_or_eligibility'),
                ('too many states','schema_complexity_limit'),('too much branching','schema_complexity_limit'),
+               ('constraint','response_constraint_rejected'),
                ('anyof','schema_union_rejected'),('response_json_schema','response_schema_rejected'),
                ('responsejsonschema','response_schema_rejected'),('schema','response_schema_rejected'),
                ('thinking','thinking_parameter_rejected'),('invalid json payload','request_payload_rejected')]
