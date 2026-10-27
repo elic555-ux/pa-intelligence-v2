@@ -206,6 +206,7 @@ class GeminiReportTests(unittest.TestCase):
         row=result['interior_assessments'][0]
         self.assertEqual(row['condition'],'cosmetic_optional')
         self.assertNotIn('replace',row['scope']);self.assertIn('לבחירה',row['scope'])
+        self.assertIn('תפקוד לא נבדקו',row['rationale'])
         self.assertIsNone(result['total_high'])
     def test_no_obvious_damage_does_not_certify_function_in_any_displayed_field(self):
         self.data['interior_assessments'][0].update(condition='no_obvious_damage_in_view',
@@ -254,6 +255,18 @@ class GeminiReportTests(unittest.TestCase):
         for target in ['items','interior_assessments']:
             data=copy.deepcopy(self.data);data[target][0]['condition']='unknown_open_wire_value'
             with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
+    def test_cached_cosmetic_claims_do_not_certify_structure_or_function(self):
+        result=g.normalize(self.data,self.p,[self.photo],{})
+        result['interior_assessments'][0].update(condition='cosmetic_optional',
+            finding='בלאי קל',scope='replace cabinets',rationale='no functional or structural defects')
+        result['observed_at']='2026-10-27T09:00:00+00:00'
+        before=copy.deepcopy(result)
+        safe=g.enforce_condition_policy(result)
+        row=safe['interior_assessments'][0]
+        self.assertNotIn('no functional',row['rationale']);self.assertNotIn('replace',row['scope'])
+        self.assertEqual(row['condition'],'cosmetic_optional');self.assertEqual(row['photo_ids'],before['interior_assessments'][0]['photo_ids'])
+        self.assertEqual(safe['observed_at'],before['observed_at']);self.assertEqual(result,before)
+        self.assertEqual(g.enforce_condition_policy(safe),safe)
     def test_interior_prices_unknown_conditions_and_extra_rooms_are_rejected(self):
         for change in [{'cost':1000},{'condition':'fully_inspected'},{'scene':'garage'},{'component':'whole_house'}]:
             data=copy.deepcopy(self.data);data['interior_assessments'][0].update(change)

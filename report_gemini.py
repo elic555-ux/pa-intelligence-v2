@@ -297,7 +297,25 @@ def normalize_item_condition(cleaned,condition):
             rationale='הסיווג מוגבל לתצפית המצולמת ואינו בדיקת תקינות או שלילת ליקוי נסתר.')
     elif condition=='cosmetic_optional':
         cleaned['scope']='שיפור קוסמטי לבחירה בלבד; לא נקבע תיקון נדרש לפי המראה המצולם.'
+        cleaned['rationale']='הסיווג מתייחס למראה בלבד; מצב מבני ותפקוד לא נבדקו.'
     return cleaned
+
+
+def enforce_condition_policy(result):
+    """Apply display safeguards to a cached classification, without new inference.
+
+    Classifications, evidence references and original observation dates are not
+    changed. Listing facts are retained separately from photo condition claims.
+    """
+    value=json.loads(json.dumps(result))
+    if value.get('version')!=VERSION or value.get('status')!='partial':return value
+    for row in value.get('interior_assessments',[]):
+        if row.get('condition') in CONDITIONS:normalize_item_condition(row,row['condition'])
+    for row in value.get('items',[]):
+        if row.get('status')=='observed' and row.get('condition') in CONDITIONS:
+            normalize_item_condition(row,row['condition'])
+    value['condition_policy_version']='photo-condition-policy-2'
+    return value
 
 def normalize(data,p,photos,facts):
     if not isinstance(data,dict) or set(data)!={'summary','limitations','items','photo_coverage','interior_assessments'}:raise ValueError('invalid_model_schema')
@@ -388,7 +406,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
         cached=store.read(cache_path)
         if isinstance(cached,dict) and cached.get('signature')==signature:
             age=store.age_days(cached.get('observed_at'))
-            if age is not None and 0<=age<cache_days(cached):return ground_listing_facts(dict(cached,photo_intake=intake),facts)
+            if age is not None and 0<=age<cache_days(cached):return enforce_condition_policy(ground_listing_facts(dict(cached,photo_intake=intake),facts))
         # The existing workflow serializes report jobs. Reserve before sending;
         # timeouts and invalid responses still count, and are not auto-retried.
         ledger_path=root/'gemini_findings/usage.json';ledger=store.read(ledger_path) or {}
