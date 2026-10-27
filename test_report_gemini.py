@@ -229,6 +229,20 @@ class GeminiReportTests(unittest.TestCase):
         for change in [{'condition':'visible_damage'},{'finding':None}]:
             bad=copy.deepcopy(data);bad['exterior_assessments']['roof_surface'].update(change)
             with self.assertRaises(ValueError):g.normalize(bad,self.p,[self.photo],{})
+    def test_no_repair_scope_can_be_empty_without_rejecting_visual_description(self):
+        for condition in ['no_obvious_damage_in_view','cosmetic_optional','not_assessable']:
+            row={'finding':'משטח חלון לבן נראה בחזית','scope':'','rationale':''}
+            cleaned=g.normalize_assessment_text(row,condition)
+            self.assertTrue(cleaned['scope']);self.assertTrue(cleaned['rationale'])
+        with self.assertRaises(ValueError):
+            g.normalize_assessment_text({'finding':'חור בחיפוי','scope':'','rationale':'נראה בתמונה'},'visible_damage')
+    def test_listing_only_empty_work_scope_is_safe_and_stays_grounded(self):
+        data=copy.deepcopy(self.data)
+        data['items'][0].update(status='listing_reported',photo_ids=[],fact_keys=['heating'],finding='',scope='',rationale='')
+        result=g.normalize(data,self.p,[self.photo],{'heating':{'value':'Gas'}})
+        self.assertEqual(result['items'][0]['finding'],'חימום: Gas')
+        self.assertNotIn('visual_observation',result['items'][0])
+        self.assertIsNone(result['items'][0]['cost_high'])
     def test_last_photo_damage_cannot_be_lost_in_room_classification(self):
         photos=[dict(self.photo,id='photo_'+str(i+1)) for i in range(22)]
         coverage=[{'photo_id':p['id'],'scene':'exterior','condition':'not_assessable',

@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-11c-unseen-exterior'
+VERSION = 'gemini-photo-findings-11d-optional-no-work-scope'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -203,6 +203,12 @@ def text_diagnostics(data):
     def check(path,value,limit):
         problem='not_string' if not isinstance(value,str) else 'empty' if not value.strip() else 'too_long' if len(value)>limit else None
         if problem:output.append({'path':path,'problem':problem,'length':len(value) if isinstance(value,str) else None})
+    def assessment(path,row,condition,limit):
+        for key in ['finding','scope','rationale']:
+            value=row.get(key)
+            optional=condition!='visible_damage' and (key!='finding' or condition=='not_assessable')
+            if optional and isinstance(value,str) and not value.strip():continue
+            check(path+'.'+key,value,limit)
     check('summary',data.get('summary'),2400)
     for i,value in enumerate(rows(data.get('limitations'))[:20]):check('limitations.'+str(i),value,1600)
     coverage=rows(data.get('photo_coverage'))
@@ -213,18 +219,16 @@ def text_diagnostics(data):
     if isinstance(interior,dict):
         for slot,(scene,_) in INTERIOR_SLOTS.items():
             if scene in scenes and isinstance(interior.get(slot),dict):
-                for key in ['finding','scope','rationale']:check('interior_assessments.'+slot+'.'+key,interior[slot].get(key),360)
+                assessment('interior_assessments.'+slot,interior[slot],interior[slot].get('condition'),360)
     exterior=data.get('exterior_assessments',{})
     if 'exterior' in scenes and isinstance(exterior,dict):
         for component in EXTERIOR_COMPONENTS:
             if isinstance(exterior.get(component),dict):
-                for key in ['finding','scope','rationale']:
-                    value=exterior[component].get(key)
-                    if exterior[component].get('condition')=='not_assessable' and isinstance(value,str) and not value.strip():continue
-                    check('exterior_assessments.'+component+'.'+key,value,360)
+                assessment('exterior_assessments.'+component,exterior[component],exterior[component].get('condition'),360)
     for i,row in enumerate(rows(data.get('items'))[:30]):
         if isinstance(row,dict):
-            for key in ['name','finding','scope','rationale']:check('items.'+str(i)+'.'+key,row.get(key),1600)
+            check('items.'+str(i)+'.name',row.get('name'),1600)
+            assessment('items.'+str(i),row,row.get('condition') if row.get('status')=='observed' else 'not_assessable',1600)
     return output
 
 def cache_days(result):
@@ -336,8 +340,7 @@ def normalize_interiors(rows,coverage):
             not isinstance(refs,list) or not refs or any(not isinstance(ref,str) or ref not in by_scene[row['scene']] for ref in refs)):
             raise ValueError('invalid_interior_assessment')
         seen.add(pair)
-        cleaned={key:text(row[key],360) for key in ['finding','scope','rationale']}
-        cleaned=normalize_visual_condition(cleaned,row['condition'])
+        cleaned=normalize_assessment_text(row,row['condition'])
         output.append(dict(cleaned,scene=row['scene'],component=row['component'],condition=row['condition'],photo_ids=refs))
     return output
 
@@ -382,10 +385,19 @@ def normalize_exteriors(rows,coverage):
             (not refs and row['condition']!='not_assessable') or
             any(not isinstance(ref,str) or ref not in ids for ref in refs)):
             raise ValueError('invalid_exterior_assessment')
-        cleaned={key:row[key].strip() for key in ['finding','scope','rationale']} if row['condition']=='not_assessable' else {key:text(row[key],360) for key in ['finding','scope','rationale']}
-        cleaned=normalize_visual_condition(cleaned,row['condition'])
+        cleaned=normalize_assessment_text(row,row['condition'])
         output.append(dict(cleaned,component=component,condition=row['condition'],photo_ids=refs))
     return output
+
+
+def normalize_assessment_text(row,condition,limit=360):
+    cleaned={}
+    for key in ['finding','scope','rationale']:
+        value=row[key]
+        if not isinstance(value,str) or len(value)>limit:raise ValueError('invalid_model_text')
+        optional=condition!='visible_damage' and (key!='finding' or condition=='not_assessable')
+        cleaned[key]=value.strip() if optional else text(value,limit)
+    return normalize_visual_condition(cleaned,condition)
 
 
 def normalize_visual_condition(cleaned,condition):
@@ -462,9 +474,9 @@ def normalize(data,p,photos,facts):
             raise ValueError('invalid_evidence_reference')
         if row['status']=='observed' and not refs:raise ValueError('observed_without_photo')
         if row['status']=='listing_reported' and not fr:raise ValueError('listing_without_fact')
-        cleaned={k:text(row[k]) for k in ['name','finding','scope','rationale']}
         condition=row['condition'] if row['status']=='observed' else 'not_assessable'
-        cleaned=normalize_item_condition(cleaned,condition)
+        cleaned={'name':text(row['name'])}|normalize_assessment_text(row,condition,1600)
+        if row['status']!='observed':cleaned.pop('visual_observation',None)
         items.append(cleaned|
             {k:row[k] for k in ['group','status','photo_ids','fact_keys']}|
             {'condition':condition,'cost_low':None,'cost_high':None,'price_source':None})
