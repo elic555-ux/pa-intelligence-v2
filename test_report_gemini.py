@@ -20,7 +20,7 @@ class GeminiReportTests(unittest.TestCase):
                     'sha256':'a'*64}
         self.data={'summary':'ממצא מתמונת פנים','limitations':['הגג אינו נראה'],
                    'photo_coverage':[{'photo_id':'photo_1','scene':'living_dining'}],
-                   'items':[{'name':'רצפה','group':'interior','status':'observed',
+                   'items':[{'name':'רצפה','group':'interior','status':'observed','condition':'visible_damage',
                     'finding':'בלאי נראה לעין','scope':'בדיקת הרצפה לפני קביעת היקף העבודה',
                     'rationale':'פני הרצפה נראים בתמונה','photo_ids':['photo_1'],'fact_keys':[]}]}
         self.data['interior_assessments']=interior_rows(self.data['photo_coverage'])
@@ -230,6 +230,22 @@ class GeminiReportTests(unittest.TestCase):
         row=g.normalize(self.data,self.p,[self.photo],{})['items'][0]
         self.assertNotIn('broken',row['finding']);self.assertNotIn('replacement required',row['scope'])
         self.assertNotIn('fully inspected',row['rationale']);self.assertIsNone(row['cost_high'])
+        self.assertEqual(row['condition'],'not_assessable')
+    def test_general_exterior_and_system_items_also_distinguish_optional_work(self):
+        for group in ['exterior','systems']:
+            self.data['items'][0].update(group=group,condition='cosmetic_optional',scope='replace everything')
+            row=g.normalize(self.data,self.p,[self.photo],{})['items'][0]
+            self.assertEqual(row['condition'],'cosmetic_optional');self.assertNotIn('replace',row['scope'])
+    def test_listing_equipment_cannot_become_a_repair_diagnosis(self):
+        self.data['items'][0].update(status='listing_reported',photo_ids=[],fact_keys=['heating'])
+        row=g.normalize(self.data,self.p,[self.photo],{'heating':{'value':'Gas'}})['items'][0]
+        self.assertEqual(row['condition'],'not_assessable');self.assertEqual(row['finding'],'חימום: Gas')
+    def test_general_item_unknown_or_missing_condition_is_rejected(self):
+        for invalid in ['visible_wear','fully_functional',None]:
+            data=copy.deepcopy(self.data);data['items'][0]['condition']=invalid
+            with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
+        data=copy.deepcopy(self.data);del data['items'][0]['condition']
+        with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
     def test_interior_prices_unknown_conditions_and_extra_rooms_are_rejected(self):
         for change in [{'cost':1000},{'condition':'fully_inspected'},{'scene':'garage'},{'component':'whole_house'}]:
             data=copy.deepcopy(self.data);data['interior_assessments'][0].update(change)

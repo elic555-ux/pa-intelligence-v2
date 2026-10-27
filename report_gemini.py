@@ -85,7 +85,11 @@ Do not reduce an entire interior to one generic item, or repeat the same finding
 multiple angles. Limit findings to 30 concise, evidence-grounded items.
 Identify overlapping views as the same room; do not count them twice. Include work scope,
 evidence photo IDs, and a short rationale. Report unseen systems as not_visible, with no
-claim that replacement is required. No dollar costs, price guesses, invented measurements,
+claim that replacement is required. Every general item also needs a condition from the
+same four categories, including exterior and systems. Listing-only or unseen equipment
+must be not_assessable. An observed appliance is not proof of either damage or operation.
+Use component names, not an unverified diagnosis, for item names.
+No dollar costs, price guesses, invented measurements,
 room areas, contractor quotes, demographic inferences or financial recommendations.
 This is preliminary photo analysis, not an inspection or a complete renovation budget.'''
 def interior_schema():
@@ -105,11 +109,11 @@ SCHEMA = {'type':'object','properties':{
     'interior_assessments':interior_schema(),
     'items':{'type':'array','items':{'type':'object','properties':{
         'name':{'type':'string'},'group':{'type':'string','enum':GROUPS},
-        'status':{'type':'string','enum':STATES},'finding':{'type':'string'},
+        'status':{'type':'string','enum':STATES},'condition':{'type':'string','enum':CONDITIONS},'finding':{'type':'string'},
         'scope':{'type':'string'},'rationale':{'type':'string'},
         'photo_ids':{'type':'array','items':{'type':'string'}},
         'fact_keys':{'type':'array','items':{'type':'string'}}},
-        'required':['name','group','status','finding','scope','rationale','photo_ids','fact_keys'],
+        'required':['name','group','status','condition','finding','scope','rationale','photo_ids','fact_keys'],
         'additionalProperties':False}}},
     'required':['summary','limitations','items','photo_coverage','interior_assessments'],'additionalProperties':False}
 
@@ -274,17 +278,23 @@ def normalize_interiors(rows,coverage):
             raise ValueError('invalid_interior_assessment')
         seen.add(pair)
         cleaned={key:text(row[key],360) for key in ['finding','scope','rationale']}
-        if row['condition']=='not_assessable':
-            cleaned['finding']='לא ניתן להעריך רכיב זה מהתמונות של האזור.'
-            cleaned['scope']='נדרשת בדיקה לפני קביעת עבודה; לא נקבע צורך בהחלפה.'
-        elif row['condition']=='no_obvious_damage_in_view':
-            cleaned['finding']='לא נראה נזק ברור ברכיב בתמונות שצוינו; תקינותו לא נבדקה.'
-            cleaned['scope']='לא נקבעה עבודת שיפוץ על סמך התמונות; מצב נסתר ותקינות לא אומתו.'
-            cleaned['rationale']='הסיווג מוגבל לתצפית המצולמת ואינו בדיקת תקינות או שלילת ליקוי נסתר.'
-        elif row['condition']=='cosmetic_optional':
-            cleaned['scope']='שיפור קוסמטי לבחירה בלבד; לא נקבע תיקון נדרש לפי המראה המצולם.'
+        cleaned=normalize_item_condition(cleaned,row['condition'])
         output.append(dict(cleaned,scene=row['scene'],component=row['component'],condition=row['condition'],photo_ids=refs))
     return output
+
+
+def normalize_item_condition(cleaned,condition):
+    if condition=='not_assessable':
+        cleaned.update(finding='לא ניתן להעריך את מצב הרכיב מהתמונות שסופקו.',
+            scope='נדרשת בדיקה לפני קביעת עבודה; לא נקבע צורך בהחלפה.',
+            rationale='אין תצפית מצולמת מספקת לקביעה בדבר מצב או תקינות.')
+    elif condition=='no_obvious_damage_in_view':
+        cleaned.update(finding='לא נראה נזק ברור ברכיב בתמונות שצוינו; תקינותו לא נבדקה.',
+            scope='לא נקבעה עבודת שיפוץ על סמך התמונות; מצב נסתר ותקינות לא אומתו.',
+            rationale='הסיווג מוגבל לתצפית המצולמת ואינו בדיקת תקינות או שלילת ליקוי נסתר.')
+    elif condition=='cosmetic_optional':
+        cleaned['scope']='שיפור קוסמטי לבחירה בלבד; לא נקבע תיקון נדרש לפי המראה המצולם.'
+    return cleaned
 
 def normalize(data,p,photos,facts):
     if not isinstance(data,dict) or set(data)!={'summary','limitations','items','photo_coverage','interior_assessments'}:raise ValueError('invalid_model_schema')
@@ -300,10 +310,10 @@ def normalize(data,p,photos,facts):
             not isinstance(row['photo_id'],str) or row['photo_id'] not in ids or row['scene'] not in SCENES for row in coverage) or
         {row['photo_id'] for row in coverage}!=ids):raise ValueError('invalid_photo_coverage')
     interiors=normalize_interiors(data['interior_assessments'],coverage)
-    keys={'name','group','status','finding','scope','rationale','photo_ids','fact_keys'}
+    keys={'name','group','status','condition','finding','scope','rationale','photo_ids','fact_keys'}
     for row in rows:
         if not isinstance(row,dict) or set(row)!=keys:raise ValueError('invalid_item_schema')
-        if row['group'] not in GROUPS or row['status'] not in STATES:raise ValueError('invalid_item_status')
+        if row['group'] not in GROUPS or row['status'] not in STATES or row['condition'] not in CONDITIONS:raise ValueError('invalid_item_status')
         refs=row['photo_ids'];fr=row['fact_keys']
         if (not isinstance(refs,list) or not isinstance(fr,list) or
             any(not isinstance(v,str) or v not in ids for v in refs) or
@@ -312,13 +322,11 @@ def normalize(data,p,photos,facts):
         if row['status']=='observed' and not refs:raise ValueError('observed_without_photo')
         if row['status']=='listing_reported' and not fr:raise ValueError('listing_without_fact')
         cleaned={k:text(row[k]) for k in ['name','finding','scope','rationale']}
-        if row['status']=='not_visible':
-            cleaned.update(finding='לא ניתן להעריך את מצב הרכיב מהתמונות שסופקו.',
-                scope='נדרשת בדיקה לפני קביעת עבודה; לא נקבע צורך בהחלפה.',
-                rationale='אין תצפית מצולמת מספקת לקביעה בדבר מצב או תקינות.')
+        condition=row['condition'] if row['status']=='observed' else 'not_assessable'
+        cleaned=normalize_item_condition(cleaned,condition)
         items.append(cleaned|
             {k:row[k] for k in ['group','status','photo_ids','fact_keys']}|
-            {'cost_low':None,'cost_high':None,'price_source':None})
+            {'condition':condition,'cost_low':None,'cost_high':None,'price_source':None})
     return ground_listing_facts(empty(p,'partial','pricing_sources_not_connected')|{'summary':summary,
         'limitations':limitations,'items':items,'photo_count':len(photos),'photo_coverage':coverage,'interior_assessments':interiors,
         'photos':[{k:r[k] for k in ['id','url','source_url','sha256']} for r in photos],
