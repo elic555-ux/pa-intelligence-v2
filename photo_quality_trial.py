@@ -18,7 +18,7 @@ from report_provider_reservation import persist_gemini_reservation
 PROPERTY_ID='PA-MLS-1779799'
 IMAGE_SHA='b9602aa3dc1454106fe18534cfaba474da0ab47dcc48edcc6ed5c4a5107a83e9'
 IMAGE_URL='https://api.cotality.com/trestle/Media/Property/PHOTO-Jpeg/1193396285/1/NTEyNy8zOTYyLzIw/MjAvMTAwMzYvMTc5MjQxMzk3Nw/Z3QsojgQVqBf6CizHidgCApv5qh6j1sZ8PqEewKz6t4'
-FREE_TRIAL_MODELS={'gemini-3.5-flash-lite','gemini-3.8-flash'}
+FREE_TRIAL_MODELS={'gemini-3.5-flash-lite','gemini-3.6-flash','gemini-3.8-flash'}
 
 
 def evaluate(result):
