@@ -287,16 +287,16 @@ class GeminiReportTests(unittest.TestCase):
         self.assertTrue(result['photos'][-1]['url'].endswith('/21.jpg'))
         self.assertEqual(post.call_args.kwargs['json']['generationConfig']['maxOutputTokens'],16384)
         self.assertIsNone(result['total_high'])
-    def test_maximum60_and_spread_order_cover_tail_without_unbounded_requests(self):
-        for count in [0,1,2,22,60]:self.assertEqual(sorted(g.spread_order(count)),list(range(count)))
-        self.assertEqual(g.spread_order(60)[:2],[0,59])
+    def test_maximum30_and_spread_order_cover_tail_without_unbounded_requests(self):
+        for count in [0,1,2,22,30]:self.assertEqual(sorted(g.spread_order(count)),list(range(count)))
+        self.assertEqual(g.spread_order(30)[:2],[0,29])
         rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(65)]
         inputs={'property_id':'qa-1','identity':[],'photos':rows,'facts':{}}
-        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'} for i in range(60)])
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'} for i in range(30)])
         data['interior_assessments']=interior_rows(data['photo_coverage'])
         with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=lambda row:('image/jpeg',b'image',row['url'])) as fetched,patch.object(g.requests,'post',return_value=self.fake_response(data=data)):
             result=g.collect(self.p,self.root)
-        self.assertEqual(result['photo_count'],60);self.assertEqual(fetched.call_count,60)
+        self.assertEqual(result['photo_count'],30);self.assertEqual(fetched.call_count,30)
         self.assertEqual(result['photo_intake']['available_links'],65)
     def test_existing_byte_cap_keeps_partial_intake_explicit(self):
         rows=[dict(self.photo,url=self.photo['url']+str(i)) for i in range(4)]
