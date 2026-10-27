@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
 const model=require('./report-readonly-model.js'),financials=require('./report-financials.js');
 const controller=fs.readFileSync(__dirname+'/report-readonly.js','utf8');
-async function simulate(shared,{collect=false,ready=false,storageFailure=false}={}){
+async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null}={}){
  const property={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203',county:'Allegheny',property_type:'Single Family',price:135000,url:'https://example.com/listing',last_source_check:new Date().toISOString()};
  const elements=new Map(),posts=[],timers=[];
  function element(id){if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:'',hidden:false,dataset:{},classList:{toggle(){}},addEventListener(){},querySelectorAll(){return[];},scrollIntoView(){},insertAdjacentHTML(){}});return elements.get(id);}
@@ -21,6 +21,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false}=
      if(options.method==='POST'){posts.push({url,body:JSON.parse(options.body)});return new Response(null,{status:204});}
      if(ready&&url.includes('/expanded_receipts/')){
        const receipt={property_id:property.id,property,generated_at:new Date().toISOString(),sources:{}};
+       if(rehab)receipt.report_analysis={property_id:property.id,property,generated_at:new Date().toISOString(),rehab:{...rehab,property_id:property.id,observed_at:new Date(Date.now()-1000).toISOString(),status:'partial'}};
        return new Response(JSON.stringify({encoding:'base64',content:Buffer.from(JSON.stringify(receipt)).toString('base64')}),{status:200});
      }
      return new Response('{}',{status:404});
@@ -30,7 +31,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false}=
  for(let i=0;i<150;i++){
    await new Promise(resolve=>setTimeout(resolve,1));
    const text=element('report-status').textContent;
-   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה'))return{posts,timers,shared,status:text};
+   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה'))return{posts,timers,shared,status:text,rehabHtml:element('rehab-view').innerHTML};
  }
  throw Error('Controller did not reach a settled collection state: '+element('report-status').textContent);
 }
@@ -42,4 +43,10 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false}=
  result=await simulate(shared);assert.equal(result.posts.length,0);assert.equal(result.timers.length,1);console.log('PASS Reload resumes polling without another workflow dispatch');
  result=await simulate(shared,{ready:true});assert.equal(result.posts.length,0);assert.equal(shared.size,0);console.log('PASS Matching receipt clears only the completed pending request');
  result=await simulate(new Map(),{collect:true,storageFailure:true});assert.equal(result.posts.length,0);console.log('PASS Failed local reservation prevents a workflow dispatch');
+ const pending=new Map();await simulate(pending,{collect:true});
+ const rehab={photo_count:1,photos:[{id:'photo_1',url:'https://ssl.cdn-redfin.com/photo/a.jpg'}],photo_coverage:[{photo_id:'photo_1',scene:'exterior',condition:'visible_damage',finding:'<script>alert(1)</script>'}],items:[],photo_intake:{available_links:22,candidate_links:22,prepared_photos:1,unavailable:21,duplicate_bytes:0,excluded_by_byte_limit:0,not_attempted:0}};
+ result=await simulate(pending,{ready:true,rehab});
+ assert.ok(result.rehabHtml.includes('נשלחו לניתוח: 1'));assert.ok(result.rehabHtml.includes('זמינים: 22'));
+ assert.ok(result.rehabHtml.includes('כיסוי ניתוח התמונות חלקי'));assert.ok(result.rehabHtml.includes('&lt;script&gt;'));assert.ok(!result.rehabHtml.includes('<script>'));
+ console.log('PASS Report renders source/sent/reviewed counts, incomplete coverage, photo evidence and escaped findings');
 })().catch(error=>{console.error(error);process.exitCode=1;});

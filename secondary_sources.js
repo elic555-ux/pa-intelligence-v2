@@ -79,7 +79,8 @@
             return Boolean(u.protocol === 'https:' && u.hostname === 'cdn.listingphotos.sierrastatic.com' && !u.username && !u.password &&
                 (!u.port || u.port === '443') && !u.search && !u.hash && m && m[1] === String(mls)); } catch (_) { return false; }
     }
-    const photoLimit=n=>Number.isInteger(n)&&n>0?Math.min(n,60):3;
+    // Infinity is used only to count verified stored links before the AI cap.
+    const photoLimit=n=>n===Infinity?Infinity:Number.isInteger(n)&&n>0?Math.min(n,60):3;
     function photos(p,r,limit=3) {
         if (!matches(p,r)) return [];
         const seen = new Set();
@@ -208,12 +209,12 @@
             return u.hostname==='cdn.listingphotos.sierrastatic.com'&&m?'sierra:'+m[1]+':'+m[3]+':'+m[4]:url;
         } catch(_){return url;}
     }
-    function reportPhotos(p,media={}) {
+    function reportPhotos(p,media={},limit=60) {
         const subject=media.details?{...p,listing_source_details:media.details,listing_photos:media.details.photos}:p;
         const seen=new Set();
-        return [...originalPhotos(subject,60),...fallbackPhotos(p,media.receipt,60),...combinedPhotos(p,media.additional||[],60)]
+        return [...originalPhotos(subject,limit),...fallbackPhotos(p,media.receipt,limit),...combinedPhotos(p,media.additional||[],limit)]
             .sort((a,b)=>(Date.parse(b.retrieved_at||b.checked_at)||0)-(Date.parse(a.retrieved_at||a.checked_at)||0))
-            .filter(photo=>{const id=photoIdentity(photo.url);if(seen.has(id))return false;seen.add(id);return true;}).slice(0,60);
+            .filter(photo=>{const id=photoIdentity(photo.url);if(seen.has(id))return false;seen.add(id);return true;}).slice(0,photoLimit(limit));
     }
     const api={reportPhotos,photoIdentity,originalPhotos,fallbackPhotos,fallbackNotice,identity,listing,sourceUrl,matches,fact,photos,photoUrl,key,comparable,ordered,bestFact,combinedPhotos,collectionNotice};
     if (typeof module !== 'undefined' && module.exports) { module.exports=api; return; }

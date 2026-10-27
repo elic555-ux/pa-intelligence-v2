@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='9.0.9';
+  const VERSION='9.0.10';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -64,6 +64,23 @@
       unclear:counts.other+counts.unclear,scenes:scenes.slice(0,8).filter(s=>counts[s]>0),
       missing:['kitchen','bathroom','bedroom','living_dining'].filter(s=>counts[s]===0)};
   }
+  function photoReview(r){
+    const coverage=photoCoverage(r),photos=Array.isArray(r?.photos)?r.photos:[];
+    const rows=Array.isArray(r?.photo_coverage)?r.photo_coverage:[];
+    const conditions=['visible_damage','cosmetic_optional','no_obvious_damage_in_view','not_assessable'];
+    const valid=coverage?rows.filter(x=>conditions.includes(x.condition)&&typeof x.finding==='string'&&x.finding.trim()):[];
+    const intake=r?.photo_intake;
+    const keys=['available_links','candidate_links','prepared_photos','unavailable','duplicate_bytes','excluded_by_byte_limit','not_attempted'];
+    const accounted=!!intake&&keys.every(k=>Number.isInteger(intake[k])&&intake[k]>=0)&&
+      intake.prepared_photos===photos.length&&intake.candidate_links<=intake.available_links&&
+      intake.prepared_photos+intake.unavailable+intake.duplicate_bytes+intake.excluded_by_byte_limit+intake.not_attempted===intake.candidate_links;
+    const available=accounted?intake.available_links:null;
+    const omitted=accounted?intake.unavailable+intake.excluded_by_byte_limit+intake.not_attempted+intake.available_links-intake.candidate_links:null;
+    return {available,sent:photos.length,reviewed:valid.length,unassessable:valid.filter(x=>x.condition==='not_assessable'||['other','unclear'].includes(x.scene)).length,
+      omitted,duplicates:accounted?intake.duplicate_bytes:null,intake:accounted?intake:null,
+      complete:!!coverage&&accounted&&omitted===0&&valid.length===photos.length&&valid.every(x=>x.condition!=='not_assessable'&&!['other','unclear'].includes(x.scene)),
+      rows:valid.map(x=>({...x,photo:photos.find(p=>p.id===x.photo_id)}))};
+  }
   function interiorAssessments(r){
     const coverage=photoCoverage(r),rows=Array.isArray(r?.interior_assessments)?r.interior_assessments:[];
     if(!coverage)return [];
@@ -95,5 +112,5 @@
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,interiorAssessments};
+  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
 });
