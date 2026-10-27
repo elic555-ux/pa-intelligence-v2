@@ -18,6 +18,7 @@ from report_provider_reservation import persist_gemini_reservation
 PROPERTY_ID='PA-MLS-1779799'
 IMAGE_SHA='b9602aa3dc1454106fe18534cfaba474da0ab47dcc48edcc6ed5c4a5107a83e9'
 IMAGE_URL='https://api.cotality.com/trestle/Media/Property/PHOTO-Jpeg/1193396285/1/NTEyNy8zOTYyLzIw/MjAvMTAwMzYvMTc5MjQxMzk3Nw/Z3QsojgQVqBf6CizHidgCApv5qh6j1sZ8PqEewKz6t4'
+FREE_TRIAL_MODELS={'gemini-3.5-flash-lite','gemini-3.8-flash'}
 
 
 def evaluate(result):
@@ -48,6 +49,8 @@ def run(repo,trigger,persist=False,image=None):
         raise ValueError('trial_not_authorized_or_source_changed')
     if os.environ.get('GEMINI_REPORT_FREE_TIER_ENABLED')!='true':
         raise ValueError('free_tier_not_confirmed')
+    model=trigger.get('model',gemini.MODEL)
+    if not isinstance(model,str) or model not in FREE_TRIAL_MODELS:raise ValueError('trial_model_not_allowed')
     properties=store.read(repo/'properties.json')
     matches=[p for p in properties if str(p.get('id'))==PROPERTY_ID]
     if len(matches)!=1:raise ValueError('property_identity_not_unique')
@@ -61,10 +64,13 @@ def run(repo,trigger,persist=False,image=None):
     prepared=saved_image(image) if image is not None else gemini.fetch_image(source)
     inputs=dict(verified,photos=[source],available_photo_count=1)
     before_send=(lambda:persist_gemini_reservation(repo)) if persist else None
-    with patch.object(gemini,'verified_inputs',return_value=inputs),patch.object(gemini,'fetch_image',return_value=prepared):
+    with patch.object(gemini,'verified_inputs',return_value=inputs),patch.object(gemini,'fetch_image',return_value=prepared),\
+         patch.object(gemini,'MODEL',model),\
+         patch.object(gemini,'API','https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent'),\
+         patch.object(gemini,'SOURCE','https://ai.google.dev/gemini-api/docs/models/'+model):
         result=gemini.collect(subject,repo/'COMPS_REPORTS',before_send=before_send)
     outcome=evaluate(result)
-    summary={'property_id':PROPERTY_ID,'checked_at':store.stamp(),'model':gemini.MODEL,
+    summary={'property_id':PROPERTY_ID,'checked_at':store.stamp(),'model':model,
         'version':gemini.VERSION,'image_sha256':IMAGE_SHA,'trial_id':trigger['trial_id'],
         'status':result.get('status'),'http_status':result.get('http_status'),
         'error_code':result.get('error_code'),'reason':result.get('reason'),

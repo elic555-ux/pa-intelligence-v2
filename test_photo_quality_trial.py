@@ -71,5 +71,22 @@ class TrialTests(unittest.TestCase):
         with patch.object(Path,'read_bytes',return_value=b'changed-image'):
             with self.assertRaises(ValueError):trial.saved_image(sample)
 
+    def test_only_explicit_free_trial_models_are_allowed_and_production_model_is_restored(self):
+        with patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'true'}),patch.object(trial.store,'read',side_effect=AssertionError('source read')):
+            with self.assertRaisesRegex(ValueError,'trial_model_not_allowed'):
+                trial.run(Path('offline'),dict(self.trigger,model='gemini-4-argon'))
+        original_model=trial.gemini.MODEL;original_api=trial.gemini.API
+        def collect(*args,**kwargs):
+            self.assertEqual(trial.gemini.MODEL,'gemini-3.8-flash')
+            self.assertIn('/gemini-3.8-flash:generateContent',trial.gemini.API)
+            return self.result
+        with patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'true'}),\
+             patch.object(trial.store,'read',return_value=[{'id':trial.PROPERTY_ID}]),\
+             patch.object(trial.gemini,'verified_inputs',return_value={'photos':[{'url':trial.IMAGE_URL}]}),\
+             patch.object(trial.gemini,'collect',side_effect=collect),patch.object(trial.store,'write'):
+            summary=trial.run(Path('offline'),dict(self.trigger,model='gemini-3.8-flash'),image=Path(__file__).parent/'test_fixtures/fox_way_front_review.jpg')
+        self.assertEqual(summary['model'],'gemini-3.8-flash')
+        self.assertEqual(trial.gemini.MODEL,original_model);self.assertEqual(trial.gemini.API,original_api)
+
 
 if __name__=='__main__':unittest.main()
