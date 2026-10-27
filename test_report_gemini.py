@@ -86,6 +86,8 @@ class GeminiReportTests(unittest.TestCase):
         images=[part for part in kw['json']['contents'][0]['parts'] if 'inlineData' in part]
         self.assertEqual(images[0]['mediaResolution'],{'level':'MEDIA_RESOLUTION_ULTRA_HIGH'})
         self.assertEqual(r['media_resolution'],'MEDIA_RESOLUTION_ULTRA_HIGH')
+        self.assertEqual(kw['json']['generationConfig']['thinkingConfig'],{'thinkingLevel':'HIGH'})
+        self.assertEqual(r['thinking_level'],'HIGH')
         second,next_post=self.run_collect()
         self.assertEqual(next_post.call_count,0);self.assertEqual(second['signature'],r['signature'])
         self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
