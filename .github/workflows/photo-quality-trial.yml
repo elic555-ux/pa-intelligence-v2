@@ -1,0 +1,40 @@
+name: Explicit facade photo quality trial
+run-name: Facade quality trial on verified source image
+on:
+  push:
+    branches: [fix/exterior-photo-quality-20261027]
+    paths: [diagnostics/photo-quality-trial.json]
+permissions:
+  contents: read
+concurrency:
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+jobs:
+  photo-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_REPORT_FREE_TIER_ENABLED: 'true'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: code
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: data
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install requests==2.34.2
+      - name: Evaluate one real source image without publishing a report
+        run: python code/photo_quality_trial.py --repo data --trigger code/diagnostics/photo-quality-trial.json

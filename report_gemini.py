@@ -166,10 +166,10 @@ def allowed_image(url):
                 re.fullmatch(r'i\d+\.moxi\.onl',u.hostname or '')))
     except (ValueError,TypeError):return False
 
-def fetch_image(photo):
+def fetch_image(photo,read_timeout=15):
     if not allowed_image(photo.get('url')):raise ValueError('image_host_rejected')
     # No cross-host redirects, cookies, auth headers, URL guessing or browser bypass.
-    with requests.get(photo['url'],timeout=(5,15),allow_redirects=False,stream=True,
+    with requests.get(photo['url'],timeout=(5,read_timeout),allow_redirects=False,stream=True,
             headers={'User-Agent':'PA-Report-Photo-Analysis/1.0','Accept':'image/*'}) as response:
         if response.status_code!=200:raise ValueError('image_unavailable')
         mime=response.headers.get('Content-Type','').split(';')[0].lower().strip()
