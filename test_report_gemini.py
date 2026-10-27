@@ -174,6 +174,16 @@ class GeminiReportTests(unittest.TestCase):
         for row in [result['photo_coverage'][0],result['interior_assessments'][0]]:
             self.assertEqual(row['visual_observation'],description)
             self.assertIn('לא נבדקה',row['finding'])
+    def test_rejected_text_diagnostics_name_only_known_paths_and_lengths(self):
+        data=copy.deepcopy(self.data)
+        data['photo_coverage'][0]['finding']=''
+        data['items'][0]['scope']='unit-test-only-key'*200
+        diagnostics=g.text_diagnostics(data)
+        self.assertIn({'path':'photo_coverage.0.finding','problem':'empty','length':0},diagnostics)
+        self.assertNotIn('unit-test-only-key',json.dumps(diagnostics))
+        result,_=self.run_collect(self.fake_response(data=data))
+        self.assertEqual(result['error_code'],'invalid_model_text')
+        self.assertEqual(result['text_validation_diagnostics'],diagnostics)
     def test_operational_claims_are_not_retained_as_visual_description(self):
         for claim in ['fully operational and safe','המערכת תקינה ובטוחה לשימוש','leak-free']:
             data=copy.deepcopy(self.data)

@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-11-exterior-components'
+VERSION = 'gemini-photo-findings-11b-text-diagnostics'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -191,6 +191,36 @@ def fetch_image(photo):
 def text(value,limit=1600):
     if not isinstance(value,str) or not value.strip() or len(value)>limit:raise ValueError('invalid_model_text')
     return value.strip()
+
+
+def text_diagnostics(data):
+    """Known field paths and lengths only; never retain rejected model prose."""
+    if not isinstance(data,dict):return []
+    output=[]
+    def rows(value):return value if isinstance(value,list) else []
+    def check(path,value,limit):
+        problem='not_string' if not isinstance(value,str) else 'empty' if not value.strip() else 'too_long' if len(value)>limit else None
+        if problem:output.append({'path':path,'problem':problem,'length':len(value) if isinstance(value,str) else None})
+    check('summary',data.get('summary'),2400)
+    for i,value in enumerate(rows(data.get('limitations'))[:20]):check('limitations.'+str(i),value,1600)
+    coverage=rows(data.get('photo_coverage'))
+    for i,row in enumerate(coverage[:MAX_PHOTOS]):
+        if isinstance(row,dict):check('photo_coverage.'+str(i)+'.finding',row.get('finding'),360)
+    scenes={r.get('scene') for r in coverage if isinstance(r,dict) and isinstance(r.get('scene'),str)}
+    interior=data.get('interior_assessments',{})
+    if isinstance(interior,dict):
+        for slot,(scene,_) in INTERIOR_SLOTS.items():
+            if scene in scenes and isinstance(interior.get(slot),dict):
+                for key in ['finding','scope','rationale']:check('interior_assessments.'+slot+'.'+key,interior[slot].get(key),360)
+    exterior=data.get('exterior_assessments',{})
+    if 'exterior' in scenes and isinstance(exterior,dict):
+        for component in EXTERIOR_COMPONENTS:
+            if isinstance(exterior.get(component),dict):
+                for key in ['finding','scope','rationale']:check('exterior_assessments.'+component+'.'+key,exterior[component].get(key),360)
+    for i,row in enumerate(rows(data.get('items'))[:30]):
+        if isinstance(row,dict):
+            for key in ['name','finding','scope','rationale']:check('items.'+str(i)+'.'+key,row.get(key),1600)
+    return output
 
 def cache_days(result):
     if result.get('status')=='partial':return 30
@@ -502,7 +532,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                 'thinkingConfig':{'thinkingLevel':'LOW'},'responseMimeType':'application/json',
                 'responseJsonSchema':SCHEMA}}
         started=time.monotonic()
-        http_status=None;validation_diagnostics={}
+        http_status=None;validation_diagnostics={};text_validation_diagnostics=[]
         try:
             with requests.post(API,json=payload,headers={'x-goog-api-key':key},timeout=(5,READ_TIMEOUT_SECONDS),allow_redirects=False,stream=True) as response:
                 http_status=response.status_code
@@ -521,6 +551,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                     output=''.join(part.get('text','') for part in candidates[0].get('content',{}).get('parts',[]) if not part.get('thought'))
                     parsed=json.loads(output)
                     validation_diagnostics=interior_diagnostics(parsed)
+                    text_validation_diagnostics=text_diagnostics(parsed)
                     result=normalize(parsed,p,photos,facts)
         except requests.Timeout:
             result=empty(p,'source_unavailable','provider_timeout')|{'failure_stage':'transport','error_code':'timeout'}
@@ -538,6 +569,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
             result=empty(p,'source_unavailable','provider_response_rejected')|{'failure_stage':'response_validation','error_code':code}
             if code in {'invalid_interior_assessment','incomplete_interior_assessment'}:
                 result['interior_validation_diagnostics']=validation_diagnostics
+            if code=='invalid_model_text':result['text_validation_diagnostics']=text_validation_diagnostics
         result.update(input_photo_count=len(photos),photo_intake=intake,http_status=http_status,
             response_seconds=round(time.monotonic()-started,2),read_timeout_seconds=READ_TIMEOUT_SECONDS)
         result['signature']=signature;store.write(cache_path,result)
