@@ -55,5 +55,6 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  assert.ok(result.rehabHtml.includes('פירוט מצב החוץ · 6 רכיבים'));assert.ok(result.rehabHtml.includes('מרזבים וצינורות ניקוז'));
  assert.ok(result.rehabHtml.includes('&lt;img'));assert.ok(!result.rehabHtml.includes('<img src=x'));
  assert.ok(!result.rehabHtml.includes('לא התקבל פירוט מצב מלא'));
+ assert.ok(result.rehabHtml.includes('תמונות ראיה: '));
  console.log('PASS Complete exterior checklist renders with escaped visual descriptions and no false missing-detail message');
 })().catch(error=>{console.error(error);process.exitCode=1;});

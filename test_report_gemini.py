@@ -190,7 +190,7 @@ class GeminiReportTests(unittest.TestCase):
         self.assertEqual(result['error_code'],'invalid_model_text')
         self.assertEqual(result['text_validation_diagnostics'],diagnostics)
     def test_operational_claims_are_not_retained_as_visual_description(self):
-        for claim in ['fully operational and safe','המערכת תקינה ובטוחה לשימוש','leak-free']:
+        for claim in ['fully operational and safe','המערכת תקינה ובטוחה לשימוש','leak-free','מדרגות ללא נזק מבני בולט']:
             data=copy.deepcopy(self.data)
             data['photo_coverage'][0].update(condition='no_obvious_damage_in_view',finding=claim)
             row=g.normalize(data,self.p,[self.photo],{})['photo_coverage'][0]

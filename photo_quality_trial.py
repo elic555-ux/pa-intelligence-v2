@@ -2,7 +2,7 @@
 
 The provider is real. Only the collector's image intake is supplied with bytes
 already fetched and verified by the normal image validator. No expected answer
-or human-review wording is sent to the provider.
+or independent-review wording is sent to the provider.
 """
 import argparse
 import hashlib

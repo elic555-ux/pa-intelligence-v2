@@ -406,7 +406,7 @@ def normalize_visual_condition(cleaned,condition):
     # Keep a visual description separate from the conservative condition label.
     # This is a text safeguard, not a semantic or visual accuracy guarantee.
     observation=cleaned['finding']
-    operational=re.search(r'\b(?:fully\s+(?:working|operational|functional)|functional|operational|structurally\s+sound|safe|compliant|leak[- ]free)\b|תקינ|מתפקד|בטיחותי|בטוח לשימוש|ללא נזילות|אין נזילות',observation,re.I)
+    operational=re.search(r'\b(?:fully\s+(?:working|operational|functional)|functional|operational|structural|structurally|safe|compliant|leak[- ]free)\b|תקינ|מתפקד|בטיחותי|בטוח לשימוש|ללא נזילות|אין נזילות|נזק מבני|נזקי שלד',observation,re.I)
     limitation=re.search(r'מוסתר|מחוץ לפריים|לא מוצג|אינו נראה|לא נרא|לא ניתן|זווית|חלקי|רזולוצ|חסימ|\b(?:not visible|out of frame|obscured|viewing angle|resolution)\b',observation,re.I)
     if not operational and (condition!='not_assessable' or limitation):
         cleaned['visual_observation']=observation
