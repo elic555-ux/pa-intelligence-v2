@@ -102,8 +102,13 @@ class GeminiReportTests(unittest.TestCase):
         again,next_post=self.run_collect();self.assertEqual(next_post.call_count,0)
         self.assertEqual(g.store.read(self.root/'gemini_findings/usage.json')['reserved_calls'],1)
     def test_local_daily_cap_blocks_api(self):
-        g.store.write(self.root/'gemini_findings/usage.json',{'date':g.store.stamp()[:10],'reserved_calls':5})
+        g.store.write(self.root/'gemini_findings/usage.json',{'date':g.store.stamp()[:10],'reserved_calls':20})
         r,post=self.run_collect();self.assertEqual(r['status'],'quota_exhausted');self.assertEqual(post.call_count,0)
+    def test_owner_approved_twenty_call_cap_allows_a_sixth_attempt(self):
+        g.store.write(self.root/'gemini_findings/usage.json',{'date':g.store.stamp()[:10],'reserved_calls':5})
+        r,post=self.run_collect()
+        self.assertEqual(post.call_count,1);self.assertEqual(r['status'],'partial')
+        self.assertEqual(g.store.read(self.root/'gemini_findings/usage.json')['reserved_calls'],6)
     def test_failed_reservation_persistence_prevents_model_request(self):
         def fail():raise OSError('repository write failed')
         r,post=self.run_collect(before_send=fail)
@@ -206,7 +211,7 @@ class GeminiReportTests(unittest.TestCase):
         with patch.object(g,'MAX_TOTAL_IMAGE_BYTES',5),patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=lambda row:('image/jpeg',b'abc',row['url'])),patch.object(g.requests,'post',return_value=self.fake_response()):
             result=g.collect(self.p,self.root)
         self.assertEqual(result['photo_count'],1);self.assertEqual(result['photo_intake']['excluded_by_byte_limit'],3)
-        self.assertEqual(g.MAX_TOTAL_IMAGE_BYTES,12_000_000);self.assertEqual(g.MAX_DAILY_CALLS,5)
+        self.assertEqual(g.MAX_TOTAL_IMAGE_BYTES,12_000_000);self.assertEqual(g.MAX_DAILY_CALLS,20)
     def test_fetch_deadline_does_not_claim_unattempted_photos_were_analyzed(self):
         inputs={'property_id':'qa-1','identity':[],'photos':[self.photo]*20,'facts':{}}
         with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',return_value=('image/jpeg',b'image','a'*64)) as fetched,patch.object(g.time,'monotonic',side_effect=[0,0,91,100,101]),patch.object(g.requests,'post',return_value=self.fake_response()):
