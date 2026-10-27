@@ -236,12 +236,30 @@ class GeminiReportTests(unittest.TestCase):
         self.assertEqual({r['component'] for r in result['interior_assessments']},set(g.COMPONENTS['living_dining']))
         kitchen=next(slot for slot,pair in g.INTERIOR_SLOTS.items() if pair[0]=='kitchen')
         wire[kitchen]['condition']='visible_wear'
-        with self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+        result=g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+        self.assertEqual({r['scene'] for r in result['interior_assessments']},{'living_dining'})
     def test_provider_schema_error_is_categorized_without_retaining_message(self):
         response=self.fake_response(status=400)
         response.iter_content.return_value=[json.dumps({'error':{'status':'INVALID_ARGUMENT','message':'Schema has too many states; unit-test-only-key'}}).encode()]
         result,_=self.run_collect(response)
         self.assertEqual(result['provider_hint'],'schema_complexity_limit')
         self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
+
+    def test_diagnostics_keep_only_known_structure_and_evidence_counts(self):
+        wire={slot:{'condition':'visible_wear','finding':'unit-test-only-key','scope':'private text',
+            'rationale':'untrusted text','photo_ids':['photo_99','unit-test-only-key']} for slot in g.INTERIOR_SLOTS}
+        result=g.interior_diagnostics(dict(self.data,interior_assessments=wire))
+        self.assertEqual(result['expected_components'],3)
+        self.assertTrue(all(row['matching_scene_references']==0 for row in result['components']))
+        self.assertNotIn('unit-test-only-key',json.dumps(result));self.assertNotIn('private text',json.dumps(result))
+    def test_ignored_unphotographed_placeholders_do_not_weaken_visible_area_evidence(self):
+        wire={slot:None for slot in g.INTERIOR_SLOTS}
+        for row in self.data['interior_assessments']:
+            slot=next(slot for slot,pair in g.INTERIOR_SLOTS.items() if pair==(row['scene'],row['component']))
+            wire[slot]={key:value for key,value in row.items() if key not in {'scene','component'}}
+        self.assertEqual(len(g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})['interior_assessments']),3)
+        visible=next(slot for slot,pair in g.INTERIOR_SLOTS.items() if pair==('living_dining','flooring'))
+        wire[visible]['photo_ids']=['photo_99']
+        with self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
 
 if __name__=='__main__':unittest.main()

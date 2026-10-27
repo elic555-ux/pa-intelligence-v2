@@ -31,6 +31,7 @@ def check(property_id,repo=Path('.'),persist=False,verify_sources=False):
         'input_photo_count':result.get('input_photo_count',result.get('photo_count',0)),
         'http_status':result.get('http_status'),'failure_stage':result.get('failure_stage'),
         'error_code':result.get('error_code'),'response_seconds':result.get('response_seconds'),
+        'interior_validation_diagnostics':result.get('interior_validation_diagnostics'),
         'provider_status':result.get('provider_status'),'provider_hint':result.get('provider_hint'),
         'read_timeout_seconds':result.get('read_timeout_seconds'),
         'findings_count':len(result.get('items') or []),

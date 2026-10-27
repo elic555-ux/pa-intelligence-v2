@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-6-flat-interior-slots'
+VERSION = 'gemini-photo-findings-7-scene-bound-interiors'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -200,19 +200,36 @@ def ground_listing_facts(result,facts):
     result['summary']='פוענחו '+str(count)+' תמונות מקור. הממצאים להלן מובחנים ממידע שפורסם במודעה; מערכות שאינן נראות בתמונות לא נבדקו.'
     return result
 
+def interior_diagnostics(data):
+    """Bounded structure/evidence counters only; never retain model text or unknown IDs."""
+    if not isinstance(data,dict):return {}
+    wire=data.get('interior_assessments');coverage=data.get('photo_coverage')
+    if not isinstance(wire,dict) or not isinstance(coverage,list):return {'shape':'not_flat_slots'}
+    by_scene={scene:{r.get('photo_id') for r in coverage if isinstance(r,dict) and
+        r.get('scene')==scene and isinstance(r.get('photo_id'),str) and re.fullmatch(r'photo_\d{1,2}',r['photo_id'])} for scene in COMPONENTS}
+    output=[]
+    for slot,(scene,component) in INTERIOR_SLOTS.items():
+        if not by_scene[scene]:continue
+        row=wire.get(slot);row=row if isinstance(row,dict) else {}
+        refs=row.get('photo_ids');refs=refs if isinstance(refs,list) else []
+        condition=row.get('condition')
+        output.append({'scene':scene,'component':component,'present':bool(row),
+            'condition':condition if condition in CONDITIONS else 'invalid',
+            'reference_count':len(refs),'matching_scene_references':sum(isinstance(v,str) and v in by_scene[scene] for v in refs),
+            'missing_text_fields':[k for k in ['finding','scope','rationale'] if not isinstance(row.get(k),str) or not row[k].strip()]})
+    return {'shape':'flat_slots','expected_components':len(output),'components':output}
+
 def normalize_interiors(rows,coverage):
     by_scene={scene:{r['photo_id'] for r in coverage if r['scene']==scene} for scene in COMPONENTS}
     required={(scene,component) for scene,ids in by_scene.items() if ids for component in COMPONENTS[scene]}
     if isinstance(rows,dict) and set(rows)==set(INTERIOR_SLOTS):
         flattened=[]
         for slot,(scene,component) in INTERIOR_SLOTS.items():
+            # Unphotographed slots are placeholders, never evidence or reported rooms.
+            if not by_scene[scene]:continue
             row=rows[slot]
             if not isinstance(row,dict) or set(row)!={'condition','finding','scope','rationale','photo_ids'}:
                 raise ValueError('invalid_interior_assessment')
-            if not by_scene[scene]:
-                if row['condition']!='not_assessable' or row['photo_ids']!=[]:
-                    raise ValueError('invalid_interior_assessment')
-                continue
             flattened.append(dict(row,scene=scene,component=component))
         rows=flattened
     if isinstance(rows,dict):
@@ -367,7 +384,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                 'thinkingConfig':{'thinkingLevel':'LOW'},'responseMimeType':'application/json',
                 'responseJsonSchema':SCHEMA}}
         started=time.monotonic()
-        http_status=None
+        http_status=None;validation_diagnostics={}
         try:
             with requests.post(API,json=payload,headers={'x-goog-api-key':key},timeout=(5,READ_TIMEOUT_SECONDS),allow_redirects=False,stream=True) as response:
                 http_status=response.status_code
@@ -384,7 +401,9 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                     candidates=body.get('candidates',[])
                     if len(candidates)!=1 or candidates[0].get('finishReason')!='STOP':raise ValueError('model_response_incomplete')
                     output=''.join(part.get('text','') for part in candidates[0].get('content',{}).get('parts',[]) if not part.get('thought'))
-                    result=normalize(json.loads(output),p,photos,facts)
+                    parsed=json.loads(output)
+                    validation_diagnostics=interior_diagnostics(parsed)
+                    result=normalize(parsed,p,photos,facts)
         except requests.Timeout:
             result=empty(p,'source_unavailable','provider_timeout')|{'failure_stage':'transport','error_code':'timeout'}
         except requests.RequestException:
@@ -398,6 +417,8 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                 'observed_without_photo','listing_without_fact','invalid_photo_coverage','incomplete_interior_assessment','invalid_interior_assessment'}
             code=str(exc) if str(exc) in allowed else 'response_validation_failed'
             result=empty(p,'source_unavailable','provider_response_rejected')|{'failure_stage':'response_validation','error_code':code}
+            if code in {'invalid_interior_assessment','incomplete_interior_assessment'}:
+                result['interior_validation_diagnostics']=validation_diagnostics
         result.update(input_photo_count=len(photos),photo_intake=intake,http_status=http_status,
             response_seconds=round(time.monotonic()-started,2),read_timeout_seconds=READ_TIMEOUT_SECONDS)
         result['signature']=signature;store.write(cache_path,result)
