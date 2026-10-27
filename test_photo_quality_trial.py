@@ -43,7 +43,7 @@ class TrialTests(unittest.TestCase):
             summary=trial.run(Path('offline'),self.trigger)
         self.assertTrue(summary['evaluation']['passed']);self.assertFalse(summary['live_report_updated'])
         self.assertEqual(collect.call_count,1)
-        self.assertEqual(fetched.call_args.kwargs,{'read_timeout':60})
+        self.assertEqual(fetched.call_args.kwargs,{})
         self.assertNotIn('facade_damage_identified',str(collect.call_args))
         self.assertNotIn('expanded_reports',str(write.call_args))
 
@@ -55,6 +55,21 @@ class TrialTests(unittest.TestCase):
                  patch.object(trial.gemini,'fetch_image',side_effect=ValueError('image_changed_since_verification')),\
                  patch.object(trial.gemini,'collect',side_effect=AssertionError('provider called')):
                 with self.assertRaises(ValueError):trial.run(Path('offline'),self.trigger)
+
+    def test_saved_verified_sample_needs_no_image_host_request(self):
+        sample=Path(__file__).parent/'test_fixtures/fox_way_front_review.jpg'
+        prepared=trial.saved_image(sample)
+        self.assertEqual(prepared[0],'image/jpeg');self.assertEqual(prepared[2],trial.IMAGE_SHA)
+        with patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'true'}),\
+             patch.object(trial.store,'read',return_value=[{'id':trial.PROPERTY_ID}]),\
+             patch.object(trial.gemini,'verified_inputs',return_value={'photos':[{'url':trial.IMAGE_URL}]}),\
+             patch.object(trial.gemini,'fetch_image',side_effect=AssertionError('image host requested')),\
+             patch.object(trial.gemini,'collect',return_value=self.result),patch.object(trial.store,'write'):
+            summary=trial.run(Path('offline'),self.trigger,image=sample)
+        self.assertTrue(summary['evaluation']['passed'])
+        self.assertEqual(summary['image_intake'],'saved_verified_bytes')
+        with patch.object(Path,'read_bytes',return_value=b'changed-image'):
+            with self.assertRaises(ValueError):trial.saved_image(sample)
 
 
 if __name__=='__main__':unittest.main()

@@ -5,6 +5,7 @@ already fetched and verified by the normal image validator. No expected answer
 or human-review wording is sent to the provider.
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -34,7 +35,14 @@ def evaluate(result):
     return {'passed':all(checks.values()),'checks':checks}
 
 
-def run(repo,trigger,persist=False):
+def saved_image(path):
+    body=Path(path).read_bytes()
+    if len(body)>gemini.MAX_IMAGE_BYTES or not body.startswith(b'\xff\xd8\xff') or hashlib.sha256(body).hexdigest()!=IMAGE_SHA:
+        raise ValueError('saved_image_changed_since_verification')
+    return 'image/jpeg',body,IMAGE_SHA
+
+
+def run(repo,trigger,persist=False,image=None):
     repo=Path(repo)
     if trigger.get('free_tier_confirmed') is not True or trigger.get('property_id')!=PROPERTY_ID or trigger.get('image_sha256')!=IMAGE_SHA:
         raise ValueError('trial_not_authorized_or_source_changed')
@@ -48,9 +56,9 @@ def run(repo,trigger,persist=False):
     candidates=[p for p in verified['photos'] if p.get('url')==IMAGE_URL]
     if len(candidates)!=1:raise ValueError('trial_image_not_in_verified_sources')
     source=dict(candidates[0],verification={'sha256':IMAGE_SHA})
-    # The CDN blocked in the review browser is never contacted by this trial.
-    # Only the independently accessible, verified original Cotality URL is read.
-    prepared=gemini.fetch_image(source,read_timeout=60)
+    # A saved, independently reviewed copy can be supplied explicitly. Reusing
+    # verified existing bytes makes no request to either blocked image host.
+    prepared=saved_image(image) if image is not None else gemini.fetch_image(source)
     inputs=dict(verified,photos=[source],available_photo_count=1)
     before_send=(lambda:persist_gemini_reservation(repo)) if persist else None
     with patch.object(gemini,'verified_inputs',return_value=inputs),patch.object(gemini,'fetch_image',return_value=prepared):
@@ -61,6 +69,7 @@ def run(repo,trigger,persist=False):
         'status':result.get('status'),'http_status':result.get('http_status'),
         'error_code':result.get('error_code'),'reason':result.get('reason'),
         'provider_hint':result.get('provider_hint'),'response_seconds':result.get('response_seconds'),
+        'image_intake':'saved_verified_bytes' if image is not None else 'verified_source_fetch',
         'evaluation':outcome,'live_report_updated':False,'rentcast_calls':0}
     target=repo/'COMPS_REPORTS/gemini_findings/quality_trials'/trigger['trial_id']
     store.write(target.with_suffix('.json'),{'summary':summary,'result':result})
@@ -72,12 +81,13 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo',type=Path,required=True)
     parser.add_argument('--trigger',type=Path,required=True)
+    parser.add_argument('--image',type=Path)
     args=parser.parse_args()
     trigger=json.loads(args.trigger.read_text(encoding='utf-8'))
     # Never permit a trigger to select an output path outside the trial folder.
     import re
     if not re.fullmatch(r'[a-z0-9-]{1,80}',trigger.get('trial_id','')):raise ValueError('invalid_trial_id')
-    summary=run(args.repo,trigger,persist=os.environ.get('GITHUB_ACTIONS')=='true')
+    summary=run(args.repo,trigger,persist=os.environ.get('GITHUB_ACTIONS')=='true',image=args.image)
     print(json.dumps(summary,ensure_ascii=True))
     return 0 if summary['evaluation']['passed'] else 1
 
