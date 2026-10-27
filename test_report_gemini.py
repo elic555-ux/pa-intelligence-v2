@@ -209,10 +209,11 @@ class GeminiReportTests(unittest.TestCase):
 
     def test_wire_schema_requires_named_components_instead_of_a_possibly_empty_list(self):
         wire=g.SCHEMA['properties']['interior_assessments']
-        self.assertEqual(wire['type'],'object');self.assertEqual(set(wire['required']),set(g.COMPONENTS))
-        for scene,codes in g.COMPONENTS.items():
-            branch=next(x for x in wire['properties'][scene]['anyOf'] if x['type']=='object')
-            self.assertEqual(set(branch['required']),set(codes))
+        self.assertEqual(wire['type'],'object');self.assertEqual(set(wire['required']),set(g.INTERIOR_SLOTS))
+        self.assertEqual(set(g.INTERIOR_SLOTS.values()),{(s,c) for s,codes in g.COMPONENTS.items() for c in codes})
+        self.assertNotIn('anyOf',json.dumps(wire));self.assertNotIn('null',json.dumps(wire))
+        for value in wire['properties'].values():
+            self.assertEqual(set(value['required']),{'condition','finding','scope','rationale','photo_ids'})
     def test_named_scene_objects_are_normalized_and_missing_components_rejected(self):
         wire={scene:None for scene in g.COMPONENTS}
         wire['living_dining']={row['component']:{k:v for k,v in row.items() if k not in {'scene','component'}} for row in self.data['interior_assessments']}
@@ -224,5 +225,23 @@ class GeminiReportTests(unittest.TestCase):
         wire={scene:None for scene in g.COMPONENTS}
         wire['kitchen']={}
         with self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+
+    def test_flat_provider_slots_normalize_to_same_complete_public_assessments(self):
+        wire={slot:{'condition':'not_assessable','finding':'','scope':'','rationale':'','photo_ids':[]} for slot in g.INTERIOR_SLOTS}
+        for row in self.data['interior_assessments']:
+            slot=next(slot for slot,pair in g.INTERIOR_SLOTS.items() if pair==(row['scene'],row['component']))
+            wire[slot]={key:value for key,value in row.items() if key not in {'scene','component'}}
+        result=g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+        self.assertEqual(len(result['interior_assessments']),3)
+        self.assertEqual({r['component'] for r in result['interior_assessments']},set(g.COMPONENTS['living_dining']))
+        kitchen=next(slot for slot,pair in g.INTERIOR_SLOTS.items() if pair[0]=='kitchen')
+        wire[kitchen]['condition']='visible_wear'
+        with self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=wire),self.p,[self.photo],{})
+    def test_provider_schema_error_is_categorized_without_retaining_message(self):
+        response=self.fake_response(status=400)
+        response.iter_content.return_value=[json.dumps({'error':{'status':'INVALID_ARGUMENT','message':'Schema has too many states; unit-test-only-key'}}).encode()]
+        result,_=self.run_collect(response)
+        self.assertEqual(result['provider_hint'],'schema_complexity_limit')
+        self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
 
 if __name__=='__main__':unittest.main()
