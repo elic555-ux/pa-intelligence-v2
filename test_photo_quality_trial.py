@@ -25,6 +25,14 @@ class TrialTests(unittest.TestCase):
     def test_wrong_bytes_invented_rooms_and_budget_cannot_pass(self):
         for change in [{'photos':[{'sha256':'wrong'}]},{'interior_assessments':[{}]},{'total_high':0}]:
             self.assertFalse(trial.evaluate(dict(self.result,**change))['passed'])
+    def test_provider_outage_is_not_misreported_as_a_visual_detection_failure(self):
+        result=trial.evaluate({'status':'source_unavailable','http_status':503,'reason':'provider_http_503'})
+        self.assertEqual(result['status'],'not_evaluated');self.assertEqual(result['checks'],{})
+        self.assertFalse(result['passed'])
+        self.assertEqual(trial.evaluate(self.result)['status'],'passed')
+        bad=copy.deepcopy(self.result)
+        next(r for r in bad['exterior_assessments'] if r['component']=='exterior_walls')['condition']='cosmetic_optional'
+        self.assertEqual(trial.evaluate(bad)['status'],'failed')
 
     def test_unapproved_trigger_stops_before_any_source_access(self):
         with patch.object(trial.store,'read',side_effect=AssertionError('source access')):

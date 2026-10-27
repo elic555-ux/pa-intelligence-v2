@@ -22,6 +22,9 @@ FREE_TRIAL_MODELS={'gemini-3.5-flash-lite','gemini-3.8-flash'}
 
 
 def evaluate(result):
+    if result.get('status')!='partial':
+        return {'status':'not_evaluated','passed':False,'checks':{},
+            'reason':result.get('error_code') or result.get('reason') or 'no_validated_response'}
     rows=result.get('exterior_assessments') or []
     by_component={r['component']:r for r in rows}
     checks={
@@ -33,7 +36,9 @@ def evaluate(result):
         'no_invented_interior':result.get('interior_assessments')==[],
         'no_invented_budget':result.get('complete') is False and result.get('total_low') is None and result.get('total_high') is None,
     }
-    return {'passed':all(checks.values()),'checks':checks}
+    passed=all(checks.values())
+    return {'status':'passed' if passed else 'failed','passed':passed,'checks':checks,
+        'reference':'separate_assistant_visual_review'}
 
 
 def saved_image(path):
