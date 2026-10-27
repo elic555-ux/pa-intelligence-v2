@@ -106,7 +106,7 @@
       if(!codes.includes(row?.component)||seen.has(row.component)||
         !['visible_damage','cosmetic_optional','no_obvious_damage_in_view','not_assessable'].includes(row.condition)||
         !['finding','scope','rationale'].every(k=>typeof row[k]==='string'&&row[k].trim())||
-        !Array.isArray(row.photo_ids)||!row.photo_ids.length||
+        !Array.isArray(row.photo_ids)||(!row.photo_ids.length&&row.condition!=='not_assessable')||
         row.photo_ids.some(id=>!r.photo_coverage.some(c=>c.photo_id===id&&c.scene==='exterior')))return [];
       seen.add(row.component);
     }

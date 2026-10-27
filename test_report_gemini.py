@@ -217,6 +217,18 @@ class GeminiReportTests(unittest.TestCase):
         bad=copy.deepcopy(self.data)
         bad['exterior_assessments']['roof_surface'].update(condition='visible_damage',finding='broken roof')
         with self.assertRaises(ValueError):g.normalize(bad,self.p,[self.photo],{})
+    def test_unseen_exterior_component_needs_no_invented_photo_or_work(self):
+        data=copy.deepcopy(self.data)
+        data['photo_coverage'][0]['scene']='exterior';data['interior_assessments']=[]
+        data['exterior_assessments']=exterior_rows(data['photo_coverage'])
+        data['exterior_assessments']['roof_surface'].update(finding='',scope='',rationale='',photo_ids=[])
+        roof=g.normalize(data,self.p,[self.photo],{})['exterior_assessments'][0]
+        self.assertEqual(roof['condition'],'not_assessable');self.assertEqual(roof['photo_ids'],[])
+        self.assertIn('לא ניתן להעריך',roof['finding']);self.assertNotIn('visual_observation',roof)
+        self.assertEqual(g.text_diagnostics(data),[])
+        for change in [{'condition':'visible_damage'},{'finding':None}]:
+            bad=copy.deepcopy(data);bad['exterior_assessments']['roof_surface'].update(change)
+            with self.assertRaises(ValueError):g.normalize(bad,self.p,[self.photo],{})
     def test_last_photo_damage_cannot_be_lost_in_room_classification(self):
         photos=[dict(self.photo,id='photo_'+str(i+1)) for i in range(22)]
         coverage=[{'photo_id':p['id'],'scene':'exterior','condition':'not_assessable',

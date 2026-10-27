@@ -70,6 +70,7 @@ def run(repo,trigger,persist=False,image=None):
         'error_code':result.get('error_code'),'reason':result.get('reason'),
         'provider_hint':result.get('provider_hint'),'response_seconds':result.get('response_seconds'),
         'text_validation_diagnostics':result.get('text_validation_diagnostics'),
+        'exterior_validation_diagnostics':result.get('exterior_validation_diagnostics'),
         'image_intake':'saved_verified_bytes' if image is not None else 'verified_source_fetch',
         'evaluation':outcome,'live_report_updated':False,'rentcast_calls':0}
     target=repo/'COMPS_REPORTS/gemini_findings/quality_trials'/trigger['trial_id']

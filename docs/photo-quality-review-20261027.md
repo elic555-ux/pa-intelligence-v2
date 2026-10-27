@@ -22,3 +22,11 @@ This image was not among the 19 bytes accepted in the v10 request. Its observati
 - A visual observation is retained separately from conservative condition wording. A narrow text safeguard suppresses explicit operational assurances; it is not a complete semantic or visual validator.
 - Old reports remain missing exterior detail; no v11 findings are fabricated for the saved v10 report.
 - The proposed UI is 9.0.11. These changes require a live provider-schema check and independent image evaluation before being described as validated photo diagnosis.
+
+## Explicit provider trials
+
+The owner authorized continued quality work and background progress. An isolated trial uses branch code, a separate main checkout for durable reservations/results, and no live-report publication. The expected human-review categories are evaluated after inference and are never included in the model input.
+
+Trial01 stopped before provider inference because the ordinary source-image request was unavailable. The independently acquired, checksum-bound bytes are now a review fixture at test_fixtures/fox_way_front_review.jpg. Subsequent trials use that existing file and make no request to either image host. The source remains bound to a matching inventory property and verified listing-photo record.
+
+Trial02 returned HTTP200 but was rejected as invalid_model_text. Trial03 returned HTTP200 but was rejected as invalid_exterior_assessment. Rejected prose was not retained, so the exact offending fields cannot be reconstructed. Safe diagnostics now record known field paths, types/lengths and evidence-reference counts only. Unassessable exterior components may have empty photo references and empty provider text; the application supplies conservative unknown-condition wording. Assessable claims still require nonempty text and exterior photo evidence. This prevents a hidden roof from requiring invented evidence. Trial04 will validate this contract against the same independently reviewed image.

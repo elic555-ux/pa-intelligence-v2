@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-11b-text-diagnostics'
+VERSION = 'gemini-photo-findings-11c-unseen-exterior'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -104,7 +104,9 @@ exterior_assessments is a FLAT object with ALL six keys from exterior_component_
 If any photo is classified exterior, assess every exterior component separately with
 condition, finding, scope, rationale and photo_ids. Cite ONLY exterior photos. A component
 not shown clearly, including a roof hidden by the camera angle, is not_assessable;
-explain the viewing limitation and cite the exterior view that lacks sufficient detail.
+explain the viewing limitation. If the component is outside the view, leave its
+photo_ids empty rather than invent evidence; use not_assessable. If an exterior
+view shows the component but not enough detail, cite that view.
 If no exterior photos exist, use not_assessable, empty text and empty photo_ids in
 all six placeholder slots. Do not claim the component exists merely because it is a slot.
 Do not omit exterior assessments when there are no visible defects, and do not duplicate
@@ -216,7 +218,10 @@ def text_diagnostics(data):
     if 'exterior' in scenes and isinstance(exterior,dict):
         for component in EXTERIOR_COMPONENTS:
             if isinstance(exterior.get(component),dict):
-                for key in ['finding','scope','rationale']:check('exterior_assessments.'+component+'.'+key,exterior[component].get(key),360)
+                for key in ['finding','scope','rationale']:
+                    value=exterior[component].get(key)
+                    if exterior[component].get('condition')=='not_assessable' and isinstance(value,str) and not value.strip():continue
+                    check('exterior_assessments.'+component+'.'+key,value,360)
     for i,row in enumerate(rows(data.get('items'))[:30]):
         if isinstance(row,dict):
             for key in ['name','finding','scope','rationale']:check('items.'+str(i)+'.'+key,row.get(key),1600)
@@ -337,6 +342,25 @@ def normalize_interiors(rows,coverage):
     return output
 
 
+def exterior_diagnostics(data):
+    if not isinstance(data,dict):return {}
+    coverage=data.get('photo_coverage')
+    coverage=coverage if isinstance(coverage,list) else []
+    ids={r.get('photo_id') for r in coverage if isinstance(r,dict) and r.get('scene')=='exterior' and isinstance(r.get('photo_id'),str)}
+    rows=data.get('exterior_assessments')
+    if not isinstance(rows,dict):return {'shape':'not_object','exterior_photo_count':len(ids)}
+    output=[]
+    for component in EXTERIOR_COMPONENTS:
+        row=rows.get(component)
+        if not isinstance(row,dict):output.append({'component':component,'present':False});continue
+        refs=row.get('photo_ids');refs=refs if isinstance(refs,list) else []
+        output.append({'component':component,'present':True,
+            'condition':row.get('condition') if row.get('condition') in CONDITIONS else 'invalid',
+            'reference_count':len(refs),'matching_exterior_references':sum(isinstance(v,str) and v in ids for v in refs),
+            'missing_text_fields':[k for k in ['finding','scope','rationale'] if not isinstance(row.get(k),str) or not row[k].strip()]})
+    return {'shape':'object','exterior_photo_count':len(ids),'components':output}
+
+
 def normalize_exteriors(rows,coverage):
     if not isinstance(rows,dict) or set(rows)!=set(EXTERIOR_COMPONENTS):
         raise ValueError('incomplete_exterior_assessment')
@@ -346,15 +370,19 @@ def normalize_exteriors(rows,coverage):
         row=rows[component]
         if not isinstance(row,dict) or set(row)!={'condition','finding','scope','rationale','photo_ids'}:
             raise ValueError('invalid_exterior_assessment')
+        if (row['condition'] not in CONDITIONS or not isinstance(row['photo_ids'],list) or
+            any(not isinstance(row[k],str) or len(row[k])>360 for k in ['finding','scope','rationale'])):
+            raise ValueError('invalid_exterior_assessment')
         if not ids:
             if row['condition']!='not_assessable' or row['photo_ids'] or any(row[k] for k in ['finding','scope','rationale']):
                 raise ValueError('invalid_exterior_assessment')
             continue
         refs=row['photo_ids']
-        if (row['condition'] not in CONDITIONS or not isinstance(refs,list) or not refs or
+        if (row['condition'] not in CONDITIONS or not isinstance(refs,list) or
+            (not refs and row['condition']!='not_assessable') or
             any(not isinstance(ref,str) or ref not in ids for ref in refs)):
             raise ValueError('invalid_exterior_assessment')
-        cleaned={key:text(row[key],360) for key in ['finding','scope','rationale']}
+        cleaned={key:row[key].strip() for key in ['finding','scope','rationale']} if row['condition']=='not_assessable' else {key:text(row[key],360) for key in ['finding','scope','rationale']}
         cleaned=normalize_visual_condition(cleaned,row['condition'])
         output.append(dict(cleaned,component=component,condition=row['condition'],photo_ids=refs))
     return output
@@ -532,7 +560,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                 'thinkingConfig':{'thinkingLevel':'LOW'},'responseMimeType':'application/json',
                 'responseJsonSchema':SCHEMA}}
         started=time.monotonic()
-        http_status=None;validation_diagnostics={};text_validation_diagnostics=[]
+        http_status=None;validation_diagnostics={};text_validation_diagnostics=[];exterior_validation_diagnostics={}
         try:
             with requests.post(API,json=payload,headers={'x-goog-api-key':key},timeout=(5,READ_TIMEOUT_SECONDS),allow_redirects=False,stream=True) as response:
                 http_status=response.status_code
@@ -552,6 +580,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                     parsed=json.loads(output)
                     validation_diagnostics=interior_diagnostics(parsed)
                     text_validation_diagnostics=text_diagnostics(parsed)
+                    exterior_validation_diagnostics=exterior_diagnostics(parsed)
                     result=normalize(parsed,p,photos,facts)
         except requests.Timeout:
             result=empty(p,'source_unavailable','provider_timeout')|{'failure_stage':'transport','error_code':'timeout'}
@@ -570,6 +599,9 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
             if code in {'invalid_interior_assessment','incomplete_interior_assessment'}:
                 result['interior_validation_diagnostics']=validation_diagnostics
             if code=='invalid_model_text':result['text_validation_diagnostics']=text_validation_diagnostics
+            if code in {'invalid_exterior_assessment','incomplete_exterior_assessment'}:
+                result['exterior_validation_diagnostics']=exterior_validation_diagnostics
+                result['text_validation_diagnostics']=text_validation_diagnostics
         result.update(input_photo_count=len(photos),photo_intake=intake,http_status=http_status,
             response_seconds=round(time.monotonic()-started,2),read_timeout_seconds=READ_TIMEOUT_SECONDS)
         result['signature']=signature;store.write(cache_path,result)

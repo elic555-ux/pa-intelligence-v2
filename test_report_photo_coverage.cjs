@@ -37,6 +37,8 @@ console.log('PASS Per-photo review distinguishes sent, assessed, unassessable, o
 
 const outside={...r,exterior_assessments:['roof_surface','exterior_walls','doors_windows','gutters_downspouts','steps_railings','yard_paving'].map(component=>({component,condition:'not_assessable',finding:'לא ניתן להעריך',scope:'בדיקה לפני החלטה',rationale:'זווית הצילום אינה מספקת',photo_ids:['photo_1']}))};
 assert.equal(m.exteriorAssessments(outside).length,6);
+assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.map((x,i)=>i?x:{...x,photo_ids:[]})}).length,6);
+assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.map((x,i)=>i?x:{...x,photo_ids:[],condition:'visible_damage'})}).length,0);
 assert.equal(m.exteriorAssessments(r).length,0);
 assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.slice(1)}).length,0);
 assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.map((x,i)=>i?x:{...x,photo_ids:['photo_2']})}).length,0);
