@@ -19,7 +19,7 @@ class GeminiReportTests(unittest.TestCase):
                     'source_url':'https://www.redfin.com/PA/Pittsburgh/18-Main-St-15203/home/123',
                     'sha256':'a'*64}
         self.data={'summary':'ממצא מתמונת פנים','limitations':['הגג אינו נראה'],
-                   'photo_coverage':[{'photo_id':'photo_1','scene':'living_dining'}],
+                   'photo_coverage':[{'photo_id':'photo_1','scene':'living_dining','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'}],
                    'items':[{'name':'רצפה','group':'interior','status':'observed','condition':'visible_damage',
                     'finding':'בלאי נראה לעין','scope':'בדיקת הרצפה לפני קביעת היקף העבודה',
                     'rationale':'פני הרצפה נראים בתמונה','photo_ids':['photo_1'],'fact_keys':[]}]}
@@ -138,13 +138,45 @@ class GeminiReportTests(unittest.TestCase):
                 with self.assertRaises(ValueError):g.fetch_image({'url':url})
 
     def test_coverage_is_required_for_every_supplied_photo(self):
-        for coverage in [[],[{'photo_id':'photo_99','scene':'kitchen'}],[{'photo_id':'photo_1','scene':'invented'}]]:
+        for coverage in [[],[{'photo_id':'photo_99','scene':'kitchen','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'}],[{'photo_id':'photo_1','scene':'invented','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'}]]:
             with self.subTest(coverage=coverage),self.assertRaises(ValueError):g.normalize(dict(self.data,photo_coverage=coverage),self.p,[self.photo],{})
         two=[self.photo,dict(self.photo,id='photo_2')]
-        with self.assertRaises(ValueError):g.normalize(dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'kitchen'}]*2),self.p,two,{})
+        with self.assertRaises(ValueError):g.normalize(dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'kitchen','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'}]*2),self.p,two,{})
+    def test_every_photo_needs_a_condition_and_nonempty_finding(self):
+        for change in [{'condition':'fully_working'},{'finding':''},{'finding':'   '},{'cost':100}]:
+            data=copy.deepcopy(self.data);data['photo_coverage'][0].update(change)
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                g.normalize(data,self.p,[self.photo],{})
+        for key in ['condition','finding']:
+            data=copy.deepcopy(self.data);del data['photo_coverage'][0][key]
+            with self.subTest(missing=key),self.assertRaises(ValueError):
+                g.normalize(data,self.p,[self.photo],{})
+    def test_last_photo_damage_cannot_be_lost_in_room_classification(self):
+        photos=[dict(self.photo,id='photo_'+str(i+1)) for i in range(22)]
+        coverage=[{'photo_id':p['id'],'scene':'exterior','condition':'not_assessable',
+            'finding':'הפרטים אינם ברורים'} for p in photos]
+        coverage[-1].update(condition='visible_damage',finding='שבר נראה במדרגה החיצונית')
+        result=g.normalize(dict(self.data,photo_coverage=coverage,interior_assessments=[]),self.p,photos,{})
+        self.assertEqual(result['photo_coverage'][-1]['finding'],'שבר נראה במדרגה החיצונית')
+        self.assertEqual(result['photo_coverage'][-1]['condition'],'visible_damage')
+        with self.assertRaises(ValueError):
+            g.normalize(dict(self.data,photo_coverage=coverage[:-1],interior_assessments=[]),self.p,photos,{})
+    def test_unclear_photo_cannot_certify_no_damage(self):
+        data=copy.deepcopy(self.data)
+        data['photo_coverage'][0].update(scene='unclear',condition='no_obvious_damage_in_view',finding='everything works')
+        data['interior_assessments']=[]
+        row=g.normalize(data,self.p,[self.photo],{})['photo_coverage'][0]
+        self.assertEqual(row['condition'],'not_assessable');self.assertNotIn('works',row['finding'])
+    def test_collector_preserves_links_above_its_photo_cap_in_intake(self):
+        inputs={'property_id':'qa-1','identity':[],'photos':[self.photo],'available_photo_count':70,'facts':{}}
+        with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',return_value=('image/jpeg',b'image','a'*64)),patch.object(g.requests,'post',return_value=self.fake_response()):
+            result=g.collect(self.p,self.root)
+        self.assertEqual(result['photo_intake']['available_links'],70)
+        self.assertEqual(result['photo_intake']['excluded_by_photo_limit'],69)
+        self.assertEqual(result['photo_intake']['prepared_photos'],1)
     def test_all_22_source_photos_including_later_interiors_are_analyzed_once(self):
         rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(22)]
-        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'exterior' if i<2 else 'kitchen'} for i in range(22)])
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'exterior' if i<2 else 'kitchen','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'} for i in range(22)])
         data['interior_assessments']=interior_rows(data['photo_coverage'])
         def image(row):
             i=int(row['url'].split('/')[-1].split('.')[0]);return 'image/jpeg',b'image',format(i,'064x')
@@ -155,14 +187,14 @@ class GeminiReportTests(unittest.TestCase):
         self.assertEqual(fetched.call_count,22);self.assertEqual(post.call_count,1)
         self.assertEqual(result['photo_intake']['prepared_photos'],22)
         self.assertTrue(result['photos'][-1]['url'].endswith('/21.jpg'))
-        self.assertEqual(post.call_args.kwargs['json']['generationConfig']['maxOutputTokens'],8192)
+        self.assertEqual(post.call_args.kwargs['json']['generationConfig']['maxOutputTokens'],16384)
         self.assertIsNone(result['total_high'])
     def test_maximum60_and_spread_order_cover_tail_without_unbounded_requests(self):
         for count in [0,1,2,22,60]:self.assertEqual(sorted(g.spread_order(count)),list(range(count)))
         self.assertEqual(g.spread_order(60)[:2],[0,59])
         rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(65)]
         inputs={'property_id':'qa-1','identity':[],'photos':rows,'facts':{}}
-        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear'} for i in range(60)])
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'} for i in range(60)])
         data['interior_assessments']=interior_rows(data['photo_coverage'])
         with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=lambda row:('image/jpeg',b'image',row['url'])) as fetched,patch.object(g.requests,'post',return_value=self.fake_response(data=data)):
             result=g.collect(self.p,self.root)
@@ -186,7 +218,7 @@ class GeminiReportTests(unittest.TestCase):
         for invalid in [[],rows[:-1],[rows[0]]*len(rows)]:
             with self.subTest(rows=invalid),self.assertRaises(ValueError):g.normalize(dict(self.data,interior_assessments=invalid),self.p,[self.photo],{})
     def test_interior_evidence_must_be_from_the_same_classified_area(self):
-        coverage=[{'photo_id':'photo_1','scene':'kitchen'},{'photo_id':'photo_2','scene':'bedroom'}]
+        coverage=[{'photo_id':'photo_1','scene':'kitchen','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'},{'photo_id':'photo_2','scene':'bedroom','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'}]
         data=dict(self.data,photo_coverage=coverage,interior_assessments=interior_rows(coverage))
         data['interior_assessments'][0]['photo_ids']=['photo_2']
         with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo,dict(self.photo,id='photo_2')],{})
@@ -272,7 +304,7 @@ class GeminiReportTests(unittest.TestCase):
             data=copy.deepcopy(self.data);data['interior_assessments'][0].update(change)
             with self.subTest(change=change),self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
     def test_no_interior_photos_means_no_fabricated_interior_assessment(self):
-        data=dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'exterior'}],interior_assessments=[])
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'exterior','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'}],interior_assessments=[])
         self.assertEqual(g.normalize(data,self.p,[self.photo],{})['interior_assessments'],[])
 
     def test_wire_schema_requires_named_components_instead_of_a_possibly_empty_list(self):

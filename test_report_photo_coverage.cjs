@@ -21,3 +21,16 @@ for(const condition of ['visible_damage','cosmetic_optional','no_obvious_damage_
  assert.equal(normalized.length,5);assert.ok(normalized.every(x=>x.condition===condition));
 }
 console.log('PASS Every photographed interior area needs all component assessments grounded in its own photos');
+
+const reviewed={...r,photo_coverage:r.photo_coverage.map(x=>({...x,condition:x.scene==='unclear'?'not_assessable':'no_obvious_damage_in_view',finding:'ממצא מהתמונה'})),photo_intake:{available_links:7,candidate_links:6,prepared_photos:4,unavailable:1,duplicate_bytes:1,excluded_by_byte_limit:0,not_attempted:0}};
+let review=m.photoReview(reviewed);
+assert.equal(review.available,7);assert.equal(review.sent,4);assert.equal(review.reviewed,4);
+assert.equal(review.unassessable,1);assert.equal(review.omitted,2);assert.equal(review.duplicates,1);assert.equal(review.complete,false);
+assert.equal(m.photoReview(r).reviewed,0);assert.equal(m.photoReview(r).complete,false);
+const full={photo_count:22,photos:Array.from({length:22},(_,i)=>({id:'photo_'+(i+1)})),photo_coverage:Array.from({length:22},(_,i)=>({photo_id:'photo_'+(i+1),scene:'exterior',condition:'visible_damage',finding:'שבר נראה'})),photo_intake:{available_links:22,candidate_links:22,prepared_photos:22,unavailable:0,duplicate_bytes:0,excluded_by_byte_limit:0,not_attempted:0}};
+assert.equal(m.photoReview(full).complete,true);assert.equal(m.photoReview(full).rows.length,22);
+assert.equal(m.photoReview({...full,photo_coverage:full.photo_coverage.slice(0,21)}).complete,false);
+assert.equal(m.photoReview({...full,photo_coverage:full.photo_coverage.map((x,i)=>i===21?{...x,finding:''}:x)}).reviewed,21);
+assert.equal(m.photoReview({...full,photo_intake:{...full.photo_intake,available_links:70}}).omitted,48);
+assert.equal(m.photoReview({...full,photo_intake:{...full.photo_intake,unavailable:9}}).available,null);
+console.log('PASS Per-photo review distinguishes sent, assessed, unassessable, omitted and duplicate images; legacy room labels do not count as condition reviews');
