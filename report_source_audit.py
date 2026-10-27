@@ -14,7 +14,7 @@ def collect(p,rehab_result,repo=Path('.')):
         'area':bool(closed.get('subject_location')),
         'closed_sales':closed.get('status') in {'available','no_matching_sales'},
         'financing':len(analysis.get('financing',{}).get('products',[]))>0,
-        'photo_analysis':rehab.get('status')=='partial' and bool(rehab.get('items') or rehab.get('interior_assessments')),
+        'photo_analysis':rehab.get('status')=='partial' and bool(rehab.get('items') or rehab.get('interior_assessments') or rehab.get('exterior_assessments')),
         'pricebook':rehab.get('pricebook',{}).get('status')=='current'}
     audit={'property_id':str(p['id']),'checked_at':store.stamp(),'sources_verified':all(checks.values()),
         'checks':checks,'analysis':analysis,'rentcast_calls':0,

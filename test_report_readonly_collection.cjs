@@ -49,4 +49,11 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  assert.ok(result.rehabHtml.includes('נשלחו לניתוח: 1'));assert.ok(result.rehabHtml.includes('זמינים: 22'));
  assert.ok(result.rehabHtml.includes('כיסוי ניתוח התמונות חלקי'));assert.ok(result.rehabHtml.includes('&lt;script&gt;'));assert.ok(!result.rehabHtml.includes('<script>'));
  console.log('PASS Report renders source/sent/reviewed counts, incomplete coverage, photo evidence and escaped findings');
+ const nextPending=new Map();await simulate(nextPending,{collect:true});
+ const exterior_assessments=['roof_surface','exterior_walls','doors_windows','gutters_downspouts','steps_railings','yard_paving'].map(component=>({component,condition:'not_assessable',finding:'לא ניתן להעריך',visual_observation:'<img src=x onerror=alert(1)>',scope:'בדיקה לפני החלטה',rationale:'אין מספיק פרטים',photo_ids:['photo_1']}));
+ result=await simulate(nextPending,{ready:true,rehab:{...rehab,exterior_assessments}});
+ assert.ok(result.rehabHtml.includes('פירוט מצב החוץ · 6 רכיבים'));assert.ok(result.rehabHtml.includes('מרזבים וצינורות ניקוז'));
+ assert.ok(result.rehabHtml.includes('&lt;img'));assert.ok(!result.rehabHtml.includes('<img src=x'));
+ assert.ok(!result.rehabHtml.includes('לא התקבל פירוט מצב מלא'));
+ console.log('PASS Complete exterior checklist renders with escaped visual descriptions and no false missing-detail message');
 })().catch(error=>{console.error(error);process.exitCode=1;});

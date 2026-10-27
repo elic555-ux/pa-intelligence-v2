@@ -34,3 +34,12 @@ assert.equal(m.photoReview({...full,photo_coverage:full.photo_coverage.map((x,i)
 assert.equal(m.photoReview({...full,photo_intake:{...full.photo_intake,available_links:70}}).omitted,48);
 assert.equal(m.photoReview({...full,photo_intake:{...full.photo_intake,unavailable:9}}).available,null);
 console.log('PASS Per-photo review distinguishes sent, assessed, unassessable, omitted and duplicate images; legacy room labels do not count as condition reviews');
+
+const outside={...r,exterior_assessments:['roof_surface','exterior_walls','doors_windows','gutters_downspouts','steps_railings','yard_paving'].map(component=>({component,condition:'not_assessable',finding:'לא ניתן להעריך',scope:'בדיקה לפני החלטה',rationale:'זווית הצילום אינה מספקת',photo_ids:['photo_1']}))};
+assert.equal(m.exteriorAssessments(outside).length,6);
+assert.equal(m.exteriorAssessments(r).length,0);
+assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.slice(1)}).length,0);
+assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.map((x,i)=>i?x:{...x,photo_ids:['photo_2']})}).length,0);
+assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.map((x,i)=>i?x:{...x,component:'yard_paving'})}).length,0);
+assert.equal(m.exteriorAssessments({...outside,exterior_assessments:outside.exterior_assessments.map((x,i)=>i?x:{...x,condition:'fully_working'})}).length,0);
+console.log('PASS Exterior detail requires all six components grounded in exterior views; legacy and incomplete records do not pass');
