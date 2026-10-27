@@ -2,7 +2,8 @@ import copy
 import os
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch,MagicMock
+import json
 import photo_quality_trial as trial
 
 
@@ -95,6 +96,29 @@ class TrialTests(unittest.TestCase):
             summary=trial.run(Path('offline'),dict(self.trigger,model='gemini-3.8-flash'),image=Path(__file__).parent/'test_fixtures/fox_way_front_review.jpg')
         self.assertEqual(summary['model'],'gemini-3.8-flash')
         self.assertEqual(trial.gemini.MODEL,original_model);self.assertEqual(trial.gemini.API,original_api)
+
+    def test_metadata_check_is_read_only_and_never_generates_or_retains_messages(self):
+        response=MagicMock();response.__enter__.return_value=response;response.status_code=200
+        response.iter_content.return_value=[json.dumps({'supportedGenerationMethods':['generateContent'],
+            'inputTokenLimit':1048576,'description':'unit-test-only-key','error':{'message':'unit-test-only-key'}}).encode()]
+        with patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'true','GEMINI_API_KEY':'unit-test-only-key'}),\
+             patch.object(trial.gemini.requests,'get',return_value=response) as get,\
+             patch.object(trial.gemini.requests,'post',side_effect=AssertionError('generation called')),\
+             patch.object(trial.store,'write') as write:
+            result=trial.run(Path('offline'),dict(self.trigger,mode='model_metadata'))
+        self.assertEqual(get.call_count,3);self.assertEqual(result['generation_calls'],0)
+        self.assertNotIn('unit-test-only-key',json.dumps(result));self.assertFalse(result['generation_availability_proven'])
+        self.assertNotIn('usage.json',str(write.call_args))
+        for call in get.call_args_list:
+            self.assertNotIn('key=',call.args[0]);self.assertFalse(call.kwargs['allow_redirects'])
+
+    def test_metadata_rate_limit_stops_further_requests(self):
+        response=MagicMock();response.__enter__.return_value=response;response.status_code=429
+        response.iter_content.return_value=[b'{"error":{"status":"RESOURCE_EXHAUSTED","message":"private-key"}}']
+        with patch.dict(os.environ,{'GEMINI_API_KEY':'unit-test-only-key'}),\
+             patch.object(trial.gemini.requests,'get',return_value=response) as get,patch.object(trial.store,'write'):
+            result=trial.model_metadata(Path('offline'),self.trigger)
+        self.assertEqual(get.call_count,1);self.assertNotIn('private-key',json.dumps(result))
 
 
 if __name__=='__main__':unittest.main()

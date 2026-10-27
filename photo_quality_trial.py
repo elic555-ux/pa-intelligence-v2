@@ -21,6 +21,44 @@ IMAGE_URL='https://api.cotality.com/trestle/Media/Property/PHOTO-Jpeg/1193396285
 FREE_TRIAL_MODELS={'gemini-3.5-flash-lite','gemini-3.6-flash','gemini-3.8-flash'}
 
 
+def model_metadata(repo,trigger,persist=False):
+    """Read fixed model descriptors only; no generation or billing mutation."""
+    key=os.environ.get('GEMINI_API_KEY','').strip()
+    if not key:raise ValueError('gemini_key_not_configured')
+    rows=[]
+    for model in sorted(FREE_TRIAL_MODELS):
+        row={'model':model,'http_status':None,'supports_generate_content':None}
+        try:
+            url='https://generativelanguage.googleapis.com/v1beta/models/'+model
+            with gemini.requests.get(url,headers={'x-goog-api-key':key},timeout=(5,20),allow_redirects=False,stream=True) as response:
+                row['http_status']=response.status_code
+                raw=bytearray()
+                for chunk in response.iter_content(65536):
+                    raw.extend(chunk)
+                    if len(raw)>65536:raise ValueError('metadata_too_large')
+                body=json.loads(raw)
+                if not isinstance(body,dict):raise ValueError('metadata_not_object')
+                if response.status_code==200:
+                    methods=body.get('supportedGenerationMethods')
+                    row['supports_generate_content']='generateContent' in methods if isinstance(methods,list) else None
+                    for field in ['inputTokenLimit','outputTokenLimit']:
+                        if type(body.get(field)) is int:row[field]=body[field]
+                elif isinstance(body.get('error'),dict):
+                    status=body['error'].get('status')
+                    if status in {'UNAVAILABLE','NOT_FOUND','PERMISSION_DENIED','UNAUTHENTICATED','RESOURCE_EXHAUSTED','INVALID_ARGUMENT'}:
+                        row['provider_status']=status
+        except gemini.requests.RequestException:row['error_code']='metadata_transport_error'
+        except (ValueError,TypeError):row['error_code']='metadata_response_invalid'
+        rows.append(row)
+        if row['http_status']==429:break
+    summary={'checked_at':store.stamp(),'trial_id':trigger['trial_id'],'mode':'model_metadata',
+        'models':rows,'generation_calls':0,'live_report_updated':False,
+        'billing_status_verified':False,'generation_availability_proven':False}
+    store.write(Path(repo)/'COMPS_REPORTS/gemini_findings/model_diagnostics'/(trigger['trial_id']+'.json'),summary)
+    if persist:persist_gemini_reservation(repo,'Record read-only Gemini model descriptors')
+    return summary
+
+
 def evaluate(result):
     if result.get('status')!='partial':
         return {'status':'not_evaluated','passed':False,'checks':{},
@@ -56,6 +94,7 @@ def run(repo,trigger,persist=False,image=None):
         raise ValueError('free_tier_not_confirmed')
     model=trigger.get('model',gemini.MODEL)
     if not isinstance(model,str) or model not in FREE_TRIAL_MODELS:raise ValueError('trial_model_not_allowed')
+    if trigger.get('mode')=='model_metadata':return model_metadata(repo,trigger,persist)
     properties=store.read(repo/'properties.json')
     matches=[p for p in properties if str(p.get('id'))==PROPERTY_ID]
     if len(matches)!=1:raise ValueError('property_identity_not_unique')
@@ -102,7 +141,7 @@ def main():
     if not re.fullmatch(r'[a-z0-9-]{1,80}',trigger.get('trial_id','')):raise ValueError('invalid_trial_id')
     summary=run(args.repo,trigger,persist=os.environ.get('GITHUB_ACTIONS')=='true',image=args.image)
     print(json.dumps(summary,ensure_ascii=True))
-    return 0 if summary['evaluation']['passed'] else 1
+    return 0 if summary.get('mode')=='model_metadata' or summary['evaluation']['passed'] else 1
 
 
 if __name__=='__main__':raise SystemExit(main())
