@@ -117,9 +117,9 @@
     if(!rows.length)return missing('זוהו תמונות פנים, אך סקירת מצב הרכיבים טרם הושלמה. היעדר ממצא אינו מוכיח שאין צורך בעבודה.');
     const scenes={kitchen:'מטבח',bathroom:'רחצה',bedroom:'חדרי שינה',living_dining:'סלון / פינת אוכל',hall_stairs:'מסדרון / מדרגות',basement_utility:'מרתף / אזור מערכות',attic:'עליית גג',garage:'מוסך'};
     const components={flooring:'רצפה',walls_ceilings:'קירות ותקרה',doors_windows:'דלתות וחלונות',cabinets_counters:'ארונות ומשטח עבודה',fixtures:'כיורים וכלים סניטריים'};
-    const conditions={visible_wear:'בלאי שנראה בתמונות',no_obvious_damage_in_view:'לא נראה נזק ברור בתמונות',not_assessable:'לא ניתן להעריך מהתמונות'};
+    const conditions={visible_damage:'ליקוי נראה — תיקון מוצע',cosmetic_optional:'שיפור קוסמטי לבחירה',visible_wear:'בלאי נראה — הצורך בתיקון טרם סווג',no_obvious_damage_in_view:'לא נראה נזק ברור בתמונות',not_assessable:'לא ניתן להעריך מהתמונות'};
     const areas=Object.keys(scenes).filter(scene=>rows.some(row=>row.scene===scene));
-    return '<div class="rehab-items"><h3>סקירת מצב פנים הבית</h3><p class="source-note">'+e(rows.length)+' רכיבים בסוגי האזורים המצולמים. אלה הערכות מתמונות; היעדר נזק ברור אינו אימות לתקינות. לא נקבעו כמויות או תקציב כולל.</p>'+
+    return '<div class="rehab-items"><h3>סקירת מצב פנים הבית</h3><p class="source-note">'+e(rows.length)+' רכיבים בסוגי האזורים המצולמים. ליקוי נראה מובחן משיפור קוסמטי לבחירה. היעדר נזק ברור אינו אימות לתקינות; רכיב שאינו ברור נשאר לבדיקה. לא נקבעו כמויות או מחירים.</p>'+
       areas.map(scene=>{const parts=rows.filter(row=>row.scene===scene);return '<details class="pricebook"><summary>'+e(scenes[scene])+' · '+e(parts.length)+' רכיבים</summary><div class="table-scroll"><table><thead><tr><th>רכיב ומצב בתמונות</th><th>מה נראה</th><th>עבודה לבדיקה ובסיס ההערכה</th></tr></thead><tbody>'+parts.map(row=>'<tr><td>'+e(components[row.component])+'<br><small>'+e(conditions[row.condition])+'</small></td><td>'+e(row.finding)+'</td><td>'+e(row.scope)+'<br><small>בסיס ההערכה: '+e(row.rationale)+'</small></td></tr>').join('')+'</tbody></table></div></details>';}).join('')+'</div>';
   }
   function renderRehabFindings(){

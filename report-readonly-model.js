@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='9.0.7';
+  const VERSION='9.0.8';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -73,7 +73,7 @@
     if(rows.length!==expected.size)return [];
     for(const row of rows){
       const key=row?.scene+':'+row?.component;
-      if(!expected.has(key)||seen.has(key)||!['visible_wear','no_obvious_damage_in_view','not_assessable'].includes(row?.condition)||
+      if(!expected.has(key)||seen.has(key)||!['visible_damage','cosmetic_optional','visible_wear','no_obvious_damage_in_view','not_assessable'].includes(row?.condition)||
         !['finding','scope','rationale'].every(k=>typeof row[k]==='string'&&row[k].trim())||
         !Array.isArray(row.photo_ids)||!row.photo_ids.length||row.photo_ids.some(id=>!r.photo_coverage.some(c=>c.photo_id===id&&c.scene===row.scene)))return [];
       seen.add(key);

@@ -199,6 +199,37 @@ class GeminiReportTests(unittest.TestCase):
         self.data['interior_assessments'][0].update(finding='broken floor',scope='replacement required')
         row=g.normalize(self.data,self.p,[self.photo],{})['interior_assessments'][0]
         self.assertNotIn('broken',row['finding']);self.assertNotIn('replacement required',row['scope'])
+    def test_optional_cosmetics_cannot_prescribe_required_replacement(self):
+        self.data['interior_assessments'][0].update(condition='cosmetic_optional',
+            finding='גמר מיושן ללא שבר נראה',scope='replace everything immediately')
+        result=g.normalize(self.data,self.p,[self.photo],{})
+        row=result['interior_assessments'][0]
+        self.assertEqual(row['condition'],'cosmetic_optional')
+        self.assertNotIn('replace',row['scope']);self.assertIn('לבחירה',row['scope'])
+        self.assertIsNone(result['total_high'])
+    def test_no_obvious_damage_does_not_certify_function_in_any_displayed_field(self):
+        self.data['interior_assessments'][0].update(condition='no_obvious_damage_in_view',
+            finding='fully operational and safe',scope='no maintenance ever needed',rationale='passed functional inspection')
+        row=g.normalize(self.data,self.p,[self.photo],{})['interior_assessments'][0]
+        self.assertNotIn('operational',row['finding']);self.assertNotIn('inspection',row['rationale'])
+        self.assertNotIn('ever',row['scope']);self.assertIn('לא נבדקה',row['finding'])
+    def test_specific_visible_damage_keeps_its_observation_and_photo_without_prices(self):
+        finding='חור נראה בחלק התחתון של הקיר בתמונה'
+        self.data['interior_assessments'][0].update(condition='visible_damage',
+            finding=finding,scope='תיקון נקודתי של החור',rationale='נראה חוסר בחיפוי הקיר')
+        result=g.normalize(self.data,self.p,[self.photo],{})
+        row=result['interior_assessments'][0]
+        self.assertEqual(row['finding'],finding);self.assertEqual(row['photo_ids'],['photo_1'])
+        self.assertIsNone(result['total_high']);self.assertFalse(result['complete'])
+    def test_legacy_unspecified_wear_is_not_a_new_repair_diagnosis(self):
+        self.data['interior_assessments'][0]['condition']='visible_wear'
+        with self.assertRaises(ValueError):g.normalize(self.data,self.p,[self.photo],{})
+    def test_unseen_systems_cannot_claim_defects_or_required_replacement(self):
+        self.data['items'][0].update(status='not_visible',photo_ids=[],finding='hidden system broken',
+            scope='replacement required',rationale='fully inspected')
+        row=g.normalize(self.data,self.p,[self.photo],{})['items'][0]
+        self.assertNotIn('broken',row['finding']);self.assertNotIn('replacement required',row['scope'])
+        self.assertNotIn('fully inspected',row['rationale']);self.assertIsNone(row['cost_high'])
     def test_interior_prices_unknown_conditions_and_extra_rooms_are_rejected(self):
         for change in [{'cost':1000},{'condition':'fully_inspected'},{'scene':'garage'},{'component':'whole_house'}]:
             data=copy.deepcopy(self.data);data['interior_assessments'][0].update(change)

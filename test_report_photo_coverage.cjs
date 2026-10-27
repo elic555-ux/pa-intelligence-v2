@@ -15,4 +15,9 @@ assert.equal(m.interiorAssessments({...assessed,interior_assessments:assessed.in
 assert.equal(m.interiorAssessments({...assessed,interior_assessments:assessed.interior_assessments.map((x,i)=>i?x:{...x,photo_ids:['photo_1']})}).length,0);
 assert.equal(m.interiorAssessments({...assessed,interior_assessments:assessed.interior_assessments.map((x,i)=>i?x:{...x,condition:'fully_working'})}).length,0);
 assert.equal(m.interiorAssessments(r).length,0);
+for(const condition of ['visible_damage','cosmetic_optional','no_obvious_damage_in_view','not_assessable','visible_wear']){
+ const rows=assessed.interior_assessments.map(x=>({...x,condition}));
+ const normalized=m.interiorAssessments({...assessed,interior_assessments:rows});
+ assert.equal(normalized.length,5);assert.ok(normalized.every(x=>x.condition===condition));
+}
 console.log('PASS Every photographed interior area needs all component assessments grounded in its own photos');

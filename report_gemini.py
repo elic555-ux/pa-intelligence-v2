@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-7-scene-bound-interiors'
+VERSION = 'gemini-photo-findings-8-repair-versus-cosmetic'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
 SOURCE = 'https://ai.google.dev/gemini-api/docs/models/'+MODEL
 MAX_PHOTOS = 60
@@ -32,7 +32,7 @@ GROUPS = ['interior', 'systems', 'exterior']
 STATES = ['observed', 'listing_reported', 'not_visible']
 SCENES = ['kitchen','bathroom','bedroom','living_dining','hall_stairs','basement_utility',
           'attic','garage','exterior','other','unclear']
-CONDITIONS = ['visible_wear','no_obvious_damage_in_view','not_assessable']
+CONDITIONS = ['visible_damage','cosmetic_optional','no_obvious_damage_in_view','not_assessable']
 COMPONENTS = {scene:['flooring','walls_ceilings','doors_windows'] for scene in SCENES[:8]}
 COMPONENTS['kitchen'] += ['cabinets_counters','fixtures']
 COMPONENTS['bathroom'] += ['fixtures']
@@ -57,9 +57,23 @@ flooring, walls_ceilings, doors_windows; add cabinets_counters and fixtures for 
 and fixtures for bathroom. Group overlapping room views by scene; do not invent a room
 count. Each assessment needs photos of THAT scene, a concise visible finding, scope and
 rationale (one short Hebrew sentence each, at most90characters per text field).
-Use visible_wear only for visible evidence. no_obvious_damage_in_view means only that no
+Your primary task is CONDITION IDENTIFICATION, not estimating a renovation budget.
+Use visible_damage only for a specific observable defect suggesting a repair, such as
+a broken part, hole, lifted surface or peeling finish. Describe exactly WHAT and WHERE
+is visible in the cited photo; do not invent a location or infer a hidden cause.
+Use cosmetic_optional for style, color, dated finishes, light wear or optional appearance
+improvements without an identifiable repair defect. Age, taste, dirt and listing language
+alone do not prove a component needs repair or replacement. Do not label preference as
+necessary work. If the image cannot distinguish wear from a defect, use not_assessable.
+no_obvious_damage_in_view means only that no
 obvious damage is visible in the supplied view, NOT inspected, fully functional or free
 of hidden defects. not_assessable means the component cannot be assessed in those views.
+Never call a system working, safe, compliant or leak-free from a still photograph.
+Describe appearance rather than operational condition, including in finding and rationale.
+When views of an area differ, limit a defect to its cited view instead of declaring the
+whole area damaged. A generic statement such as 'old' or 'worn' is not a repair diagnosis.
+For visible_damage suggest a targeted repair to the visible defect; do not assume wholesale
+replacement. For cosmetic_optional state that the improvement is optional, not required.
 Never omit a component merely because no defect is seen. Never prescribe replacement
 or a budget for no_obvious_damage_in_view or not_assessable. No prices or quantities.
 Keep assessments brief. General items must not duplicate these interior assessments.
@@ -264,7 +278,11 @@ def normalize_interiors(rows,coverage):
             cleaned['finding']='לא ניתן להעריך רכיב זה מהתמונות של האזור.'
             cleaned['scope']='נדרשת בדיקה לפני קביעת עבודה; לא נקבע צורך בהחלפה.'
         elif row['condition']=='no_obvious_damage_in_view':
+            cleaned['finding']='לא נראה נזק ברור ברכיב בתמונות שצוינו; תקינותו לא נבדקה.'
             cleaned['scope']='לא נקבעה עבודת שיפוץ על סמך התמונות; מצב נסתר ותקינות לא אומתו.'
+            cleaned['rationale']='הסיווג מוגבל לתצפית המצולמת ואינו בדיקת תקינות או שלילת ליקוי נסתר.'
+        elif row['condition']=='cosmetic_optional':
+            cleaned['scope']='שיפור קוסמטי לבחירה בלבד; לא נקבע תיקון נדרש לפי המראה המצולם.'
         output.append(dict(cleaned,scene=row['scene'],component=row['component'],condition=row['condition'],photo_ids=refs))
     return output
 
@@ -293,7 +311,12 @@ def normalize(data,p,photos,facts):
             raise ValueError('invalid_evidence_reference')
         if row['status']=='observed' and not refs:raise ValueError('observed_without_photo')
         if row['status']=='listing_reported' and not fr:raise ValueError('listing_without_fact')
-        items.append({k:text(row[k]) for k in ['name','finding','scope','rationale']}|
+        cleaned={k:text(row[k]) for k in ['name','finding','scope','rationale']}
+        if row['status']=='not_visible':
+            cleaned.update(finding='לא ניתן להעריך את מצב הרכיב מהתמונות שסופקו.',
+                scope='נדרשת בדיקה לפני קביעת עבודה; לא נקבע צורך בהחלפה.',
+                rationale='אין תצפית מצולמת מספקת לקביעה בדבר מצב או תקינות.')
+        items.append(cleaned|
             {k:row[k] for k in ['group','status','photo_ids','fact_keys']}|
             {'cost_low':None,'cost_high':None,'price_source':None})
     return ground_listing_facts(empty(p,'partial','pricing_sources_not_connected')|{'summary':summary,
