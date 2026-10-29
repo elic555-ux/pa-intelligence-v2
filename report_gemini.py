@@ -513,7 +513,12 @@ def spread_order(count):
         intervals.extend([(low,mid-1),(mid+1,high)])
     return order
 
-def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
+def collect(p,root=Path('COMPS_REPORTS'),before_send=None,analysis_adapter=None):
+    if analysis_adapter not in (None,'surface_observer'):raise ValueError('unsupported_analysis_adapter')
+    adapter=None
+    if analysis_adapter=='surface_observer':
+        import report_surface_observer as adapter
+    effective_version=adapter.VERSION if adapter else VERSION
     if os.environ.get('GEMINI_REPORT_FREE_TIER_ENABLED','false').lower()!='true':
         return empty(p,'provider_not_configured','free_tier_not_confirmed_or_disabled')
     key=os.environ.get('GEMINI_API_KEY','').strip()
@@ -551,7 +556,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
         intake.update(prepared_photos=len(photos),not_attempted=len(candidates)-attempted)
         if not photos:return empty(p,'photos_unavailable','no_verified_image_bytes')|{'photo_intake':intake}
         facts=inputs.get('facts') or {}
-        signature=hashlib.sha256(json.dumps({'version':VERSION,'model':MODEL,'media_resolution':MEDIA_RESOLUTION,'thinking_level':THINKING_LEVEL,
+        signature=hashlib.sha256(json.dumps({'version':effective_version,'model':MODEL,'media_resolution':MEDIA_RESOLUTION,'thinking_level':THINKING_LEVEL,
             'identity':[str(p['id']),*inputs['identity']], 'photos':[r['sha256'] for r in photos],
             'facts':facts},sort_keys=True).encode()).hexdigest()
         cache_path=root/'gemini_findings'/store.key(p['id'])/(signature+'.json')
@@ -577,18 +582,20 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
             try:before_send()
             except (OSError,ValueError,subprocess.SubprocessError):
                 return empty(p,'source_unavailable','attempt_reservation_not_persisted')|{'input_photo_count':len(photos)}
-        parts=[{'text':json.dumps({'identity':inputs['identity'],'verified_listing_facts':facts,
-            'interior_assessment_slots':{slot:{'scene':pair[0],'component':pair[1]} for slot,pair in INTERIOR_SLOTS.items()},
-            'exterior_component_codes':EXTERIOR_COMPONENTS},ensure_ascii=False)}]
+        context={'identity':inputs['identity'],'verified_listing_facts':facts}
+        if not adapter:
+            context.update(interior_assessment_slots={slot:{'scene':pair[0],'component':pair[1]} for slot,pair in INTERIOR_SLOTS.items()},
+                           exterior_component_codes=EXTERIOR_COMPONENTS)
+        parts=[{'text':json.dumps(context,ensure_ascii=False)}]
         for photo in photos:
             parts.extend([{'text':photo['id']},{'inlineData':{'mimeType':photo['mime'],
                 'data':base64.b64encode(photo['body']).decode('ascii')},
                 'mediaResolution':{'level':MEDIA_RESOLUTION}}])
-        payload={'systemInstruction':{'parts':[{'text':SYSTEM}]},
+        payload={'systemInstruction':{'parts':[{'text':adapter.SYSTEM if adapter else SYSTEM}]},
             'contents':[{'role':'user','parts':parts}],
             'generationConfig':{'candidateCount':1,'maxOutputTokens':16384,
                 'thinkingConfig':{'thinkingLevel':THINKING_LEVEL},'responseMimeType':'application/json',
-                'responseJsonSchema':SCHEMA}}
+                'responseJsonSchema':adapter.SCHEMA if adapter else SCHEMA}}
         started=time.monotonic()
         http_status=None;validation_diagnostics={};text_validation_diagnostics=[];exterior_validation_diagnostics={}
         try:
@@ -608,10 +615,13 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None):
                     if len(candidates)!=1 or candidates[0].get('finishReason')!='STOP':raise ValueError('model_response_incomplete')
                     output=''.join(part.get('text','') for part in candidates[0].get('content',{}).get('parts',[]) if not part.get('thought'))
                     parsed=json.loads(output)
-                    validation_diagnostics=interior_diagnostics(parsed)
-                    text_validation_diagnostics=text_diagnostics(parsed)
-                    exterior_validation_diagnostics=exterior_diagnostics(parsed)
-                    result=normalize(parsed,p,photos,facts)
+                    if adapter:
+                        result=adapter.normalize(parsed,p,photos,facts)
+                    else:
+                        validation_diagnostics=interior_diagnostics(parsed)
+                        text_validation_diagnostics=text_diagnostics(parsed)
+                        exterior_validation_diagnostics=exterior_diagnostics(parsed)
+                        result=normalize(parsed,p,photos,facts)
         except requests.Timeout:
             result=empty(p,'source_unavailable','provider_timeout')|{'failure_stage':'transport','error_code':'timeout'}
         except requests.RequestException:

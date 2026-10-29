@@ -20,3 +20,16 @@ A valid response remains `pending_independent_review`: contract success is not
 evidence of correct diagnosis, correct grouping or general accuracy. Provider
 failure is `not_evaluated`, not a failed visual judgment. Review the actual findings
 and scope against the stored images and owner's separate observations.
+
+## Observation-only diagnostic adapter
+
+The first seven-photo request returned a valid response but did not flag wood
+weathering or the visible steel corrosion for follow-up. That is retained as an
+actual quality shortfall, not converted into a pass by changing expected labels.
+
+An explicit `analysis_adapter: surface_observer` selects a separate observation-only
+grammar before making any work decision. It describes material, location and surface
+appearance per view, without repair scopes, quantities or costs. It shares the actual
+provider, ledger, durable reservation and error handling with the ordinary collector,
+but uses a separate version/cache signature. Default report collection is unchanged.
+This adapter is diagnostic only and is not used by the live report pipeline.

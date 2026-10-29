@@ -53,6 +53,7 @@ def run(repo,trigger,persist=False):
     repo=Path(repo)
     if (trigger.get('free_tier_confirmed') is not True or trigger.get('case_id')!=CASE_ID
         or trigger.get('manifest_sha256')!=MANIFEST_SHA or trigger.get('model')!='gemini-3.5-flash-lite'
+        or trigger.get('analysis_adapter') not in (None,'surface_observer')
         or not re.fullmatch(r'[a-z0-9-]{1,80}',trigger.get('trial_id',''))):
         raise ValueError('trial_not_authorized')
     if os.environ.get('GEMINI_REPORT_FREE_TIER_ENABLED')!='true':raise ValueError('free_tier_not_confirmed')
@@ -78,9 +79,12 @@ def run(repo,trigger,persist=False):
     # real provider request and retains its ordinary cache, quota and validation.
     # Owner labels and expected work scopes are never sent with the images.
     with patch.object(gemini,'verified_inputs',return_value=inputs),patch.object(gemini,'fetch_image',side_effect=image):
-        result=gemini.collect(subject,repo/'COMPS_REPORTS',before_send=before)
+        options={'before_send':before}
+        if trigger.get('analysis_adapter'):options['analysis_adapter']=trigger['analysis_adapter']
+        result=gemini.collect(subject,repo/'COMPS_REPORTS',**options)
     evaluation=evaluate(result,fixture)
-    summary={'trial_id':trigger['trial_id'],'property_id':PROPERTY_ID,'model':gemini.MODEL,'version':gemini.VERSION,
+    summary={'trial_id':trigger['trial_id'],'property_id':PROPERTY_ID,'model':gemini.MODEL,'version':result.get('version',gemini.VERSION),
+             'analysis_adapter':trigger.get('analysis_adapter') or 'full_report',
              'checked_at':store.stamp(),'status':result.get('status'),'http_status':result.get('http_status'),
              'reason':result.get('reason'),'error_code':result.get('error_code'),'provider_hint':result.get('provider_hint'),
              'input_photo_count':result.get('input_photo_count'),'response_seconds':result.get('response_seconds'),
