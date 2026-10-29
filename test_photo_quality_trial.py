@@ -12,13 +12,19 @@ class TrialTests(unittest.TestCase):
         self.result={'status':'partial','complete':False,'total_low':None,'total_high':None,
             'photo_count':1,'photos':[{'sha256':trial.IMAGE_SHA}],
             'photo_coverage':[{'photo_id':'photo_1'}],'interior_assessments':[],
-            'exterior_assessments':[{'component':c,'condition':'visible_damage' if c=='exterior_walls' else 'not_assessable'} for c in trial.gemini.EXTERIOR_COMPONENTS]}
+            'exterior_assessments':[{'component':c,'condition':'cosmetic_optional' if c=='exterior_walls' else 'not_assessable'} for c in trial.gemini.EXTERIOR_COMPONENTS]}
         self.trigger={'trial_id':'fox-way-front-test','property_id':trial.PROPERTY_ID,
             'image_sha256':trial.IMAGE_SHA,'free_tier_confirmed':True}
 
-    def test_golden_categories_and_unknown_roof_are_required(self):
+    def test_owner_corrected_reference_does_not_require_invented_facade_damage(self):
         self.assertTrue(trial.evaluate(self.result)['passed'])
-        for component,condition in [('exterior_walls','cosmetic_optional'),('roof_surface','no_obvious_damage_in_view')]:
+        no_damage=copy.deepcopy(self.result)
+        next(r for r in no_damage['exterior_assessments'] if r['component']=='exterior_walls')['condition']='no_obvious_damage_in_view'
+        self.assertTrue(trial.evaluate(no_damage)['passed'])
+        evaluation=trial.evaluate(self.result)
+        self.assertEqual(evaluation['reference_revision'],2)
+        self.assertFalse(evaluation['general_accuracy_measured'])
+        for component,condition in [('exterior_walls','visible_damage'),('exterior_walls','not_assessable'),('roof_surface','no_obvious_damage_in_view')]:
             result=copy.deepcopy(self.result)
             next(r for r in result['exterior_assessments'] if r['component']==component)['condition']=condition
             self.assertFalse(trial.evaluate(result)['passed'])
@@ -32,7 +38,7 @@ class TrialTests(unittest.TestCase):
         self.assertFalse(result['passed'])
         self.assertEqual(trial.evaluate(self.result)['status'],'passed')
         bad=copy.deepcopy(self.result)
-        next(r for r in bad['exterior_assessments'] if r['component']=='exterior_walls')['condition']='cosmetic_optional'
+        next(r for r in bad['exterior_assessments'] if r['component']=='exterior_walls')['condition']='visible_damage'
         self.assertEqual(trial.evaluate(bad)['status'],'failed')
 
     def test_unapproved_trigger_stops_before_any_source_access(self):
@@ -53,7 +59,7 @@ class TrialTests(unittest.TestCase):
         self.assertTrue(summary['evaluation']['passed']);self.assertFalse(summary['live_report_updated'])
         self.assertEqual(collect.call_count,1)
         self.assertEqual(fetched.call_args.kwargs,{})
-        self.assertNotIn('facade_damage_identified',str(collect.call_args))
+        self.assertNotIn('facade_no_unverified_damage',str(collect.call_args))
         self.assertNotIn('expanded_reports',str(write.call_args))
 
     def test_unverified_source_and_failed_image_never_call_provider(self):

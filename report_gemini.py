@@ -19,7 +19,7 @@ import requests
 import internal_report_store as store
 
 MODEL = 'gemini-3.5-flash-lite'
-VERSION = 'gemini-photo-findings-11f-high-reasoning'
+VERSION = 'gemini-photo-findings-11g-owner-scope-policy'
 MEDIA_RESOLUTION = 'MEDIA_RESOLUTION_ULTRA_HIGH'
 THINKING_LEVEL = 'HIGH'
 API = 'https://generativelanguage.googleapis.com/v1beta/models/'+MODEL+':generateContent'
@@ -85,6 +85,21 @@ When views of an area differ, limit a defect to its cited view instead of declar
 whole area damaged. A generic statement such as 'old' or 'worn' is not a repair diagnosis.
 For visible_damage suggest a targeted repair to the visible defect; do not assume wholesale
 replacement. For cosmetic_optional state that the improvement is optional, not required.
+Separate the observed condition from the extent of work. Thorough repair means substantial
+repair/refurbishment and MAY include localized replacement of individual damaged parts;
+it does not mean wholesale replacement. Do not require replacement of any part unless
+the visible evidence supports it. Whole-component replacement needs its own evidence
+and rationale; a damaged board does not establish replacement of an entire deck.
+Reconcile all supplied views of a component together. A suspected defect in one view
+must not disappear by majority vote over views where it is hidden; retain uncertainty
+when perspective prevents confirmation. Do not certify a room grouping or room count
+merely because different rooms share a scene label. Repeated views are not extra work
+quantities. Walls, ceilings and paint may describe overlapping finishing work, not three
+independent jobs. If severe stripping/destruction or visible corrosion prevents a sound
+visual work-scope decision, state the need for a targeted professional assessment;
+do not diagnose structural failure or infer a full repair scope from that appearance.
+Do not label polished or renovated-looking photos AI-generated without explicit evidence.
+Listing disclosures of virtual staging are source claims, not proof of physical renovation.
 Never omit a component merely because no defect is seen. Never prescribe replacement
 or a budget for no_obvious_damage_in_view or not_assessable. No prices or quantities.
 Keep assessments brief. General items must not duplicate these interior assessments.

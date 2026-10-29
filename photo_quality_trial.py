@@ -69,14 +69,19 @@ def evaluate(result):
         'one_real_image':result.get('photo_count')==1 and len(result.get('photos') or [])==1 and result['photos'][0].get('sha256')==IMAGE_SHA,
         'photo_assessed':len(result.get('photo_coverage') or [])==1,
         'six_exterior_components':len(rows)==6 and set(by_component)==set(gemini.EXTERIOR_COMPONENTS),
-        'facade_damage_identified':by_component.get('exterior_walls',{}).get('condition')=='visible_damage',
+        # The owner corrected the original assistant reference: old cladding,
+        # no visible damage established, treatment needed but scope unresolved.
+        # This is a revised single-case reference, not a model improvement claim.
+        'facade_no_unverified_damage':by_component.get('exterior_walls',{}).get('condition') in {
+            'cosmetic_optional','no_obvious_damage_in_view'},
         'roof_not_certified':by_component.get('roof_surface',{}).get('condition')=='not_assessable',
         'no_invented_interior':result.get('interior_assessments')==[],
         'no_invented_budget':result.get('complete') is False and result.get('total_low') is None and result.get('total_high') is None,
     }
     passed=all(checks.values())
     return {'status':'passed' if passed else 'failed','passed':passed,'checks':checks,
-        'reference':'separate_assistant_visual_review'}
+        'reference':'owner_visual_review_20261028_old_cladding_no_visible_damage',
+        'reference_revision':2,'general_accuracy_measured':False}
 
 
 def saved_image(path):
