@@ -45,5 +45,15 @@ class BundleTrialTests(unittest.TestCase):
     def test_branch_code_checkout_cannot_push_to_main(self):
         with patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'true'}):
             with self.assertRaisesRegex(ValueError,'separate_data_checkout_required'):trial.run(Path(trial.__file__).parent,self.trigger,persist=True)
+    def test_explicit_free_comparison_restores_production_model(self):
+        model=trial.gemini.MODEL;api=trial.gemini.API
+        def collect(*args,**kwargs):
+            self.assertEqual(trial.gemini.MODEL,'gemini-3.8-flash')
+            self.assertIn('gemini-3.8-flash:generateContent',trial.gemini.API)
+            return self.result
+        with patch.dict(os.environ,{'GEMINI_REPORT_FREE_TIER_ENABLED':'true'}),patch.object(trial.store,'read',return_value=[self.subject]),patch.object(trial.gemini,'collect',side_effect=collect),patch.object(trial.store,'write'):
+            result=trial.run(Path('offline'),dict(self.trigger,model='gemini-3.8-flash'))
+        self.assertEqual(result['model'],'gemini-3.8-flash')
+        self.assertEqual(trial.gemini.MODEL,model);self.assertEqual(trial.gemini.API,api)
 
 if __name__=='__main__':unittest.main()

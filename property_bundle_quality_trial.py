@@ -12,6 +12,7 @@ MANIFEST_SHA='858ec7b958afecd0d29d123e3e78f1b5e0cfd931cf0f7d2c02b2d5eec2d551b3'
 SOURCE='https://www.compass.com/homedetails/2414-School-St-Pittsburgh-PA-15235/17CA7K_pid/'
 IDENTITY=['2414 School St','Pittsburgh','PA','15235']
 FIXTURE=Path(__file__).parent/'test_fixtures/school_bundle'
+FREE_TRIAL_MODELS={'gemini-3.5-flash-lite','gemini-3.8-flash'}
 
 def norm(value):return re.sub(r'[^A-Z0-9]','',str(value).upper())
 
@@ -52,12 +53,12 @@ def evaluate(result,fixture):
 def run(repo,trigger,persist=False):
     repo=Path(repo)
     if (trigger.get('free_tier_confirmed') is not True or trigger.get('case_id')!=CASE_ID
-        or trigger.get('manifest_sha256')!=MANIFEST_SHA or trigger.get('model')!='gemini-3.5-flash-lite'
+        or trigger.get('manifest_sha256')!=MANIFEST_SHA or trigger.get('model') not in FREE_TRIAL_MODELS
         or trigger.get('analysis_adapter') not in (None,'surface_observer')
         or not re.fullmatch(r'[a-z0-9-]{1,80}',trigger.get('trial_id',''))):
         raise ValueError('trial_not_authorized')
     if os.environ.get('GEMINI_REPORT_FREE_TIER_ENABLED')!='true':raise ValueError('free_tier_not_confirmed')
-    if gemini.MODEL!=trigger['model']:raise ValueError('unexpected_production_model')
+    if gemini.MODEL!='gemini-3.5-flash-lite':raise ValueError('unexpected_production_model')
     if persist:
         if repo.resolve()==Path(__file__).parent.resolve():raise ValueError('separate_data_checkout_required')
         branch=subprocess.run(['git','branch','--show-current'],cwd=repo,check=True,capture_output=True,text=True).stdout.strip()
@@ -78,12 +79,16 @@ def run(repo,trigger,persist=False):
     # Only intake uses pinned, previously acquired real bytes. collect sends a
     # real provider request and retains its ordinary cache, quota and validation.
     # Owner labels and expected work scopes are never sent with the images.
-    with patch.object(gemini,'verified_inputs',return_value=inputs),patch.object(gemini,'fetch_image',side_effect=image):
+    model=trigger['model']
+    with patch.object(gemini,'verified_inputs',return_value=inputs),patch.object(gemini,'fetch_image',side_effect=image),\
+         patch.object(gemini,'MODEL',model),\
+         patch.object(gemini,'API','https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent'),\
+         patch.object(gemini,'SOURCE','https://ai.google.dev/gemini-api/docs/models/'+model):
         options={'before_send':before}
         if trigger.get('analysis_adapter'):options['analysis_adapter']=trigger['analysis_adapter']
         result=gemini.collect(subject,repo/'COMPS_REPORTS',**options)
     evaluation=evaluate(result,fixture)
-    summary={'trial_id':trigger['trial_id'],'property_id':PROPERTY_ID,'model':gemini.MODEL,'version':result.get('version',gemini.VERSION),
+    summary={'trial_id':trigger['trial_id'],'property_id':PROPERTY_ID,'model':model,'version':result.get('version',gemini.VERSION),
              'analysis_adapter':trigger.get('analysis_adapter') or 'full_report',
              'checked_at':store.stamp(),'status':result.get('status'),'http_status':result.get('http_status'),
              'reason':result.get('reason'),'error_code':result.get('error_code'),'provider_hint':result.get('provider_hint'),

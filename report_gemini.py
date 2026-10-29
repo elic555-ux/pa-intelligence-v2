@@ -617,6 +617,7 @@ def collect(p,root=Path('COMPS_REPORTS'),before_send=None,analysis_adapter=None)
                     parsed=json.loads(output)
                     if adapter:
                         result=adapter.normalize(parsed,p,photos,facts)
+                        result.update(source_name='Google Gemini / '+MODEL,source_url=SOURCE,model=MODEL)
                     else:
                         validation_diagnostics=interior_diagnostics(parsed)
                         text_validation_diagnostics=text_diagnostics(parsed)

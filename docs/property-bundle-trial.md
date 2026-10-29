@@ -33,3 +33,10 @@ appearance per view, without repair scopes, quantities or costs. It shares the a
 provider, ledger, durable reservation and error handling with the ordinary collector,
 but uses a separate version/cache signature. Default report collection is unchanged.
 This adapter is diagnostic only and is not used by the live report pipeline.
+
+The isolated trial also permits an explicit Gemini 3.8 Flash comparison. Standard
+input/output free-tier availability was checked against Google's pricing page on
+2026-10-29: https://ai.google.dev/gemini-api/docs/pricing . This does not establish
+the project's exact current quotas or billing status; it retains the owner's
+free-tier confirmation, shared local reservation cap and provider error handling.
+It is never an automatic fallback and restores the production model after the trial.
