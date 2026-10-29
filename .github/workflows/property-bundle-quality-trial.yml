@@ -1,0 +1,43 @@
+name: Explicit property bundle quality trial
+run-name: Seven verified real photos in one free-tier request
+on:
+  push:
+    branches: [fix/exterior-photo-quality-20261027]
+    paths: [diagnostics/property-bundle-trial.json]
+permissions:
+  contents: read
+concurrency:
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+jobs:
+  bundle-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_REPORT_FREE_TIER_ENABLED: 'true'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: code
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: data
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install requests==2.34.2
+      - name: Verify source identity and offline safeguards
+        working-directory: code
+        run: python -m unittest test_property_bundle_quality_trial.py test_photo_quality_trial.py test_report_gemini.py
+      - name: Submit one real seven-photo request and persist its result
+        run: python code/property_bundle_quality_trial.py --repo data --trigger code/diagnostics/property-bundle-trial.json
