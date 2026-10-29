@@ -12,6 +12,14 @@ def interior_rows(coverage):
         for scene in g.COMPONENTS if any(r['scene']==scene for r in coverage)
         for component in g.COMPONENTS[scene]]
 
+def exterior_rows(coverage):
+    refs=[r['photo_id'] for r in coverage if r['scene']=='exterior']
+    return {component:{'condition':'not_assessable',
+        'finding':'הרכיב אינו ברור בצילום החוץ' if refs else '',
+        'scope':'בדיקה לפני קביעת עבודה' if refs else '',
+        'rationale':'אין די פרטים בזווית הצילום' if refs else '',
+        'photo_ids':refs[:1]} for component in g.EXTERIOR_COMPONENTS}
+
 class GeminiReportTests(unittest.TestCase):
     def setUp(self):
         self.p={'id':'qa-1','address':'18 Main St','city':'Pittsburgh','state':'PA','zip':'15203'}
@@ -24,6 +32,7 @@ class GeminiReportTests(unittest.TestCase):
                     'finding':'בלאי נראה לעין','scope':'בדיקת הרצפה לפני קביעת היקף העבודה',
                     'rationale':'פני הרצפה נראים בתמונה','photo_ids':['photo_1'],'fact_keys':[]}]}
         self.data['interior_assessments']=interior_rows(self.data['photo_coverage'])
+        self.data['exterior_assessments']=exterior_rows(self.data['photo_coverage'])
         self.root=Path('offline-gemini-test/COMPS_REPORTS');self.saved={}
         for guard in [patch.object(g.store,'read',side_effect=lambda path:copy.deepcopy(self.saved.get(str(path)))),
                       patch.object(g.store,'write',side_effect=lambda path,value:self.saved.__setitem__(str(path),copy.deepcopy(value)))]:
@@ -74,6 +83,11 @@ class GeminiReportTests(unittest.TestCase):
         self.assertEqual(args[0],g.API);self.assertNotIn('key=',args[0]);self.assertFalse(kw['allow_redirects'])
         self.assertEqual(kw['timeout'],(5,180));self.assertEqual(r['input_photo_count'],1)
         self.assertNotIn('tools',kw['json']);self.assertNotIn('unit-test-only-key',json.dumps(kw['json']))
+        images=[part for part in kw['json']['contents'][0]['parts'] if 'inlineData' in part]
+        self.assertEqual(images[0]['mediaResolution'],{'level':'MEDIA_RESOLUTION_ULTRA_HIGH'})
+        self.assertEqual(r['media_resolution'],'MEDIA_RESOLUTION_ULTRA_HIGH')
+        self.assertEqual(kw['json']['generationConfig']['thinkingConfig'],{'thinkingLevel':'HIGH'})
+        self.assertEqual(r['thinking_level'],'HIGH')
         second,next_post=self.run_collect()
         self.assertEqual(next_post.call_count,0);self.assertEqual(second['signature'],r['signature'])
         self.assertNotIn('unit-test-only-key',json.dumps(self.saved))
@@ -156,12 +170,90 @@ class GeminiReportTests(unittest.TestCase):
             data=copy.deepcopy(self.data);del data['photo_coverage'][0][key]
             with self.subTest(missing=key),self.assertRaises(ValueError):
                 g.normalize(data,self.p,[self.photo],{})
+    def test_visual_description_survives_conservative_condition_wording(self):
+        data=copy.deepcopy(self.data)
+        description='רצפת עץ וקירות צבועים נראים באזור החלון'
+        data['photo_coverage'][0].update(condition='no_obvious_damage_in_view',finding=description)
+        data['interior_assessments'][0].update(condition='no_obvious_damage_in_view',finding=description)
+        result=g.normalize(data,self.p,[self.photo],{})
+        for row in [result['photo_coverage'][0],result['interior_assessments'][0]]:
+            self.assertEqual(row['visual_observation'],description)
+            self.assertIn('לא נבדקה',row['finding'])
+    def test_rejected_text_diagnostics_name_only_known_paths_and_lengths(self):
+        data=copy.deepcopy(self.data)
+        data['photo_coverage'][0]['finding']=''
+        data['items'][0]['scope']='unit-test-only-key'*200
+        diagnostics=g.text_diagnostics(data)
+        self.assertIn({'path':'photo_coverage.0.finding','problem':'empty','length':0},diagnostics)
+        self.assertNotIn('unit-test-only-key',json.dumps(diagnostics))
+        result,_=self.run_collect(self.fake_response(data=data))
+        self.assertEqual(result['error_code'],'invalid_model_text')
+        self.assertEqual(result['text_validation_diagnostics'],diagnostics)
+    def test_operational_claims_are_not_retained_as_visual_description(self):
+        for claim in ['fully operational and safe','המערכת תקינה ובטוחה לשימוש','leak-free','מדרגות ללא נזק מבני בולט']:
+            data=copy.deepcopy(self.data)
+            data['photo_coverage'][0].update(condition='no_obvious_damage_in_view',finding=claim)
+            row=g.normalize(data,self.p,[self.photo],{})['photo_coverage'][0]
+            self.assertNotIn('visual_observation',row)
+            self.assertNotIn(claim,row['finding'])
+    def test_exterior_requires_all_six_components_with_exterior_evidence(self):
+        data=copy.deepcopy(self.data)
+        data['photo_coverage'][0]['scene']='exterior';data['interior_assessments']=[]
+        data['exterior_assessments']=exterior_rows(data['photo_coverage'])
+        result=g.normalize(data,self.p,[self.photo],{})
+        self.assertEqual({r['component'] for r in result['exterior_assessments']},set(g.EXTERIOR_COMPONENTS))
+        roof=result['exterior_assessments'][0]
+        self.assertEqual(roof['condition'],'not_assessable');self.assertIsNone(result['total_high'])
+        for mutation in ['missing','foreign','unknown','price']:
+            bad=copy.deepcopy(data)
+            if mutation=='missing':del bad['exterior_assessments']['roof_surface']
+            elif mutation=='foreign':bad['exterior_assessments']['roof_surface']['photo_ids']=['photo_99']
+            elif mutation=='unknown':bad['exterior_assessments']['roof_surface']['condition']='working'
+            else:bad['exterior_assessments']['roof_surface']['cost']=100
+            with self.subTest(mutation=mutation),self.assertRaises(ValueError):
+                g.normalize(bad,self.p,[self.photo],{})
+    def test_exterior_cannot_use_interior_evidence_or_invent_an_unseen_component(self):
+        data=copy.deepcopy(self.data)
+        data['photo_coverage'].append({'photo_id':'photo_2','scene':'exterior','condition':'not_assessable','finding':'זווית מרוחקת'})
+        data['exterior_assessments']=exterior_rows(data['photo_coverage'])
+        data['exterior_assessments']['roof_surface']['photo_ids']=['photo_1']
+        with self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo,dict(self.photo,id='photo_2')],{})
+        self.assertEqual(g.normalize(self.data,self.p,[self.photo],{})['exterior_assessments'],[])
+        bad=copy.deepcopy(self.data)
+        bad['exterior_assessments']['roof_surface'].update(condition='visible_damage',finding='broken roof')
+        with self.assertRaises(ValueError):g.normalize(bad,self.p,[self.photo],{})
+    def test_unseen_exterior_component_needs_no_invented_photo_or_work(self):
+        data=copy.deepcopy(self.data)
+        data['photo_coverage'][0]['scene']='exterior';data['interior_assessments']=[]
+        data['exterior_assessments']=exterior_rows(data['photo_coverage'])
+        data['exterior_assessments']['roof_surface'].update(finding='',scope='',rationale='',photo_ids=[])
+        roof=g.normalize(data,self.p,[self.photo],{})['exterior_assessments'][0]
+        self.assertEqual(roof['condition'],'not_assessable');self.assertEqual(roof['photo_ids'],[])
+        self.assertIn('לא ניתן להעריך',roof['finding']);self.assertNotIn('visual_observation',roof)
+        self.assertEqual(g.text_diagnostics(data),[])
+        for change in [{'condition':'visible_damage'},{'finding':None}]:
+            bad=copy.deepcopy(data);bad['exterior_assessments']['roof_surface'].update(change)
+            with self.assertRaises(ValueError):g.normalize(bad,self.p,[self.photo],{})
+    def test_no_repair_scope_can_be_empty_without_rejecting_visual_description(self):
+        for condition in ['no_obvious_damage_in_view','cosmetic_optional','not_assessable']:
+            row={'finding':'משטח חלון לבן נראה בחזית','scope':'','rationale':''}
+            cleaned=g.normalize_assessment_text(row,condition)
+            self.assertTrue(cleaned['scope']);self.assertTrue(cleaned['rationale'])
+        with self.assertRaises(ValueError):
+            g.normalize_assessment_text({'finding':'חור בחיפוי','scope':'','rationale':'נראה בתמונה'},'visible_damage')
+    def test_listing_only_empty_work_scope_is_safe_and_stays_grounded(self):
+        data=copy.deepcopy(self.data)
+        data['items'][0].update(status='listing_reported',photo_ids=[],fact_keys=['heating'],finding='',scope='',rationale='')
+        result=g.normalize(data,self.p,[self.photo],{'heating':{'value':'Gas'}})
+        self.assertEqual(result['items'][0]['finding'],'חימום: Gas')
+        self.assertNotIn('visual_observation',result['items'][0])
+        self.assertIsNone(result['items'][0]['cost_high'])
     def test_last_photo_damage_cannot_be_lost_in_room_classification(self):
         photos=[dict(self.photo,id='photo_'+str(i+1)) for i in range(22)]
         coverage=[{'photo_id':p['id'],'scene':'exterior','condition':'not_assessable',
             'finding':'הפרטים אינם ברורים'} for p in photos]
         coverage[-1].update(condition='visible_damage',finding='שבר נראה במדרגה החיצונית')
-        result=g.normalize(dict(self.data,photo_coverage=coverage,interior_assessments=[]),self.p,photos,{})
+        result=g.normalize(dict(self.data,photo_coverage=coverage,interior_assessments=[],exterior_assessments=exterior_rows(coverage)),self.p,photos,{})
         self.assertEqual(result['photo_coverage'][-1]['finding'],'שבר נראה במדרגה החיצונית')
         self.assertEqual(result['photo_coverage'][-1]['condition'],'visible_damage')
         with self.assertRaises(ValueError):
@@ -183,6 +275,7 @@ class GeminiReportTests(unittest.TestCase):
         rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(22)]
         data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'exterior' if i<2 else 'kitchen','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'} for i in range(22)])
         data['interior_assessments']=interior_rows(data['photo_coverage'])
+        data['exterior_assessments']=exterior_rows(data['photo_coverage'])
         def image(row):
             i=int(row['url'].split('/')[-1].split('.')[0]);return 'image/jpeg',b'image',format(i,'064x')
         inputs={'property_id':'qa-1','identity':['18 MAIN ST','PITTSBURGH','PA','15203'],'photos':rows,'facts':{}}
@@ -194,16 +287,16 @@ class GeminiReportTests(unittest.TestCase):
         self.assertTrue(result['photos'][-1]['url'].endswith('/21.jpg'))
         self.assertEqual(post.call_args.kwargs['json']['generationConfig']['maxOutputTokens'],16384)
         self.assertIsNone(result['total_high'])
-    def test_maximum60_and_spread_order_cover_tail_without_unbounded_requests(self):
-        for count in [0,1,2,22,60]:self.assertEqual(sorted(g.spread_order(count)),list(range(count)))
-        self.assertEqual(g.spread_order(60)[:2],[0,59])
+    def test_maximum30_and_spread_order_cover_tail_without_unbounded_requests(self):
+        for count in [0,1,2,22,30]:self.assertEqual(sorted(g.spread_order(count)),list(range(count)))
+        self.assertEqual(g.spread_order(30)[:2],[0,29])
         rows=[dict(self.photo,url='https://ssl.cdn-redfin.com/photo/'+str(i)+'.jpg') for i in range(65)]
         inputs={'property_id':'qa-1','identity':[],'photos':rows,'facts':{}}
-        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'} for i in range(60)])
+        data=dict(self.data,photo_coverage=[{'photo_id':'photo_'+str(i+1),'scene':'unclear','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'} for i in range(30)])
         data['interior_assessments']=interior_rows(data['photo_coverage'])
         with patch.object(g,'verified_inputs',return_value=inputs),patch.object(g,'fetch_image',side_effect=lambda row:('image/jpeg',b'image',row['url'])) as fetched,patch.object(g.requests,'post',return_value=self.fake_response(data=data)):
             result=g.collect(self.p,self.root)
-        self.assertEqual(result['photo_count'],60);self.assertEqual(fetched.call_count,60)
+        self.assertEqual(result['photo_count'],30);self.assertEqual(fetched.call_count,30)
         self.assertEqual(result['photo_intake']['available_links'],65)
     def test_existing_byte_cap_keeps_partial_intake_explicit(self):
         rows=[dict(self.photo,url=self.photo['url']+str(i)) for i in range(4)]
@@ -310,6 +403,7 @@ class GeminiReportTests(unittest.TestCase):
             with self.subTest(change=change),self.assertRaises(ValueError):g.normalize(data,self.p,[self.photo],{})
     def test_no_interior_photos_means_no_fabricated_interior_assessment(self):
         data=dict(self.data,photo_coverage=[{'photo_id':'photo_1','scene':'exterior','condition':'not_assessable','finding':'פרטי המצב אינם נראים בבירור'}],interior_assessments=[])
+        data['exterior_assessments']=exterior_rows(data['photo_coverage'])
         self.assertEqual(g.normalize(data,self.p,[self.photo],{})['interior_assessments'],[])
 
     def test_wire_schema_requires_named_components_instead_of_a_possibly_empty_list(self):

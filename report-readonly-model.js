@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='9.0.10';
+  const VERSION='9.0.11';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -97,6 +97,21 @@
     }
     return rows;
   }
+  function exteriorAssessments(r){
+    if(!photoCoverage(r)?.exterior)return [];
+    const codes=['roof_surface','exterior_walls','doors_windows','gutters_downspouts','steps_railings','yard_paving'];
+    const rows=Array.isArray(r?.exterior_assessments)?r.exterior_assessments:[],seen=new Set();
+    if(rows.length!==codes.length)return [];
+    for(const row of rows){
+      if(!codes.includes(row?.component)||seen.has(row.component)||
+        !['visible_damage','cosmetic_optional','no_obvious_damage_in_view','not_assessable'].includes(row.condition)||
+        !['finding','scope','rationale'].every(k=>typeof row[k]==='string'&&row[k].trim())||
+        !Array.isArray(row.photo_ids)||(!row.photo_ids.length&&row.condition!=='not_assessable')||
+        row.photo_ids.some(id=>!r.photo_coverage.some(c=>c.photo_id===id&&c.scene==='exterior')))return [];
+      seen.add(row.component);
+    }
+    return rows;
+  }
   function metrics(p,a,report,financials,now=Date.now()){
     const f=financials?.financialSnapshot(p,now)||{},rent=rentSource(report,p,now),rehab=rehabSource(a,p,now);
     const price=number(f.price),rentValue=rent?.value??number(f.rent);
@@ -112,5 +127,5 @@
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
+  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments,exteriorAssessments};
 });

@@ -32,5 +32,9 @@ class SourceAuditTests(unittest.TestCase):
         result,_,_=self.run_audit(self.prior)
         self.assertIn('renovation_scope_and_quantities',result['remaining_data'])
         self.assertIn('after_repair_valuation',result['remaining_data'])
+    def test_exterior_only_assessment_is_not_mistaken_for_missing_analysis(self):
+        self.analysis['rehab'].update(items=[],interior_assessments=[],exterior_assessments=[{'component':'roof_surface','condition':'not_assessable'}])
+        result,_,_=self.run_audit(self.prior)
+        self.assertTrue(result['checks']['photo_analysis'])
 
 if __name__=='__main__':unittest.main()
