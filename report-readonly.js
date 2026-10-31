@@ -99,6 +99,7 @@
   }
   function renderSummary(){
     const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference),items=[];
+    items.push(...M.propertyConflicts(p,state.county));
     if(m.price===null)items.push('מחיר מבוקש עדכני לא אומת');
     if(m.rent===null)items.push('אומדן שכירות חסר');
     if(!state.county)items.push('רישום חלקה תואם חסר');
@@ -128,7 +129,7 @@
     const rows=M.financing(state.analysis,state.property,state.reference);
     $('financing-view').innerHTML=rows.length?'<p class="notice">אלה תנאי מוצר שפורסמו באתרי המלווים, ולא הצעות אישיות לנכס או אישור זכאות. תושבות, ניסיון, שווי ומצב הנכס עשויים לשנות את התנאים. ריבית אינה העלות הכוללת של ההלוואה.</p><div class="table-scroll"><table><thead><tr><th>מלווה ומסלול</th><th>ריבית מפורסמת</th><th>תקרות מימון מפורסמות</th><th>עמלת פתיחה</th><th>תקופה ומגבלות</th><th>מקור ותאריך</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+e(r.lender)+'<br>'+e(r.product)+'</td><td>'+e(r.rate_text)+'</td><td>'+[r.purchase_text&&'רכישה: '+r.purchase_text,r.ltv_text&&'LTV: '+r.ltv_text,r.ltc_text&&'LTC: '+r.ltc_text,r.larv_text&&'ARV: '+r.larv_text].filter(Boolean).map(e).join('<br>')+'</td><td>'+e(r.origination_text||'לא פורסם שיעור בעמוד; נדרשת הצעה')+'</td><td>'+e(r.term_text||'נדרשת הצעה')+'<br><small>מינימום הלוואה: '+e(r.minimum_loan||'לא פורסם')+(r.fico_text?' · FICO '+e(r.fico_text):'')+'</small></td><td><a href="'+e(M.url(r.source_url))+'" target="_blank" rel="noopener noreferrer">'+e(r.source_name)+'</a><br>'+e(date(r.observed_at))+'</td></tr>').join('')+'</tbody></table></div><p class="source-note">LTV — יחס לשווי הנכס; LTC — יחס לעלות הפרויקט; ARV — יחס לשווי לאחר שיפוץ. תנאי מינימום ועמלות נוספות דורשים בדיקת מלווה. נתונים אלה אינם מוכנסים אוטומטית כתנאי הלוואה מאושרים לתחשיב בסעיף 05.</p>':missing('לא התקבלו תנאי מימון עדכניים ממקורות המלווים.');
   }
-  function render(){state.county=county();renderProperty();renderPhotos();renderCounty();renderArea();renderAnalysis();renderComparisons();renderHistory();renderFinancing();renderSummary();$('report-date').textContent='גרסה '+M.VERSION+' · ריכוז מקורות: '+date(state.analysis?.generated_at||state.report?.generated_at);$('report-content').hidden=false;}
+  function render(){state.county=county();renderProperty();renderPhotos();renderCounty();renderArea();renderAnalysis();renderComparisons();renderHistory();renderFinancing();renderSummary();$('report-date').textContent='גרסה '+M.VERSION+' · ריכוז מקורות: '+date(state.analysis?.generated_at||state.report?.generated_at||state.analysis?.public_context?.generated_at);$('report-content').hidden=false;}
   function token(){try{return localStorage.getItem('pa_github_token')||'';}catch(_){return '';}}
   const pendingKey=p=>'pa_report_pending:'+JSON.stringify(M.identity(p));
   function readPending(p){try{return M.pendingRequest(localStorage.getItem(pendingKey(p)),p);}catch(_){return null;}}
