@@ -27,7 +27,7 @@ ROOT = Path("COMPS_REPORTS")
 ENDPOINTS = {"value": "/avm/value", "rent": "/avm/rent/long-term"}
 DOCS = {"value": "https://developers.rentcast.io/reference/value-estimate",
         "rent": "https://developers.rentcast.io/reference/rent-estimate-long-term"}
-VERSION = "expanded-report-9.0.2-readonly-sources-20261026"
+VERSION = "expanded-report-10.0-concise-20261031"
 MULTI = {"Multi-Family", "Apartment"}
 
 
@@ -439,8 +439,7 @@ def execute(run_id: str):
                 result["errors"][kind] = "invalid_response"
         result["status"] = "partial" if result["errors"] else "completed"
     result["report_analysis"] = report_enrichment.collect(p, result["internal_data"], ROOT,
-        allow_public=os.environ.get("FREE_COUNTY_LOOKUPS_ENABLED", "true").lower() == "true",
-        before_gemini_send=(lambda:report_provider_reservation.persist_gemini_reservation(ROOT.parent)) if os.environ.get('GITHUB_ACTIONS')=='true' else None)
+        allow_public=os.environ.get("FREE_COUNTY_LOOKUPS_ENABLED", "true").lower() == "true")
     if result["report_analysis"].get("status") != "available":
         result["status"] = "partial"
     result["generated_at"] = stamp()
@@ -455,7 +454,7 @@ def check_installation():
     """Read local files only; never mutate the ledger or contact a provider."""
     base = ROOT.parent
     checks = {}
-    required = ("expanded_report.py", "rentcast_budget.py", "internal_report_store.py", "report_enrichment.py", "closed_sales.py", "report_financing.py", "report_gemini.py", "rehab_pricebook.py", "rehab_pricebook.json", "report_provider_reservation.py", "report_gallery.py", "report_photo_inputs.cjs", "report-readonly-model.js", "report-readonly.js", "report-financials.js", "report-readonly.css",
+    required = ("expanded_report.py", "rentcast_budget.py", "internal_report_store.py", "report_enrichment.py", "closed_sales.py", "report_financing.py", "report_area.py", "report_provider_reservation.py", "report_gallery.py", "report_photo_inputs.cjs", "report-readonly-model.js", "report-readonly.js", "report-financials.js", "report-readonly.css",
                 ".github/workflows/expanded-report.yml", "report.html", "deals.html", "comps_engine.py")
     for relative in required:
         checks[relative] = "ok" if (base / relative).is_file() else "missing"

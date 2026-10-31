@@ -14,7 +14,7 @@
   function metric(label,value,note='',format=money){return '<div class="metric"><span>'+e(label)+'</span><strong'+(value==null?' class="missing"':'')+'>'+e(value==null?'חסר נתון':format(value))+'</strong>'+(note?'<small>'+e(note)+'</small>':'')+'</div>';}
   function status(message,error=false){$('report-status').textContent=message;$('report-status').classList.toggle('error',error);}
   function tab(name){
-    for(const id of ['overview','financials','rehab']){$('tab-'+id).hidden=id!==name;$('btn-'+id).setAttribute('aria-selected',String(id===name));}
+    for(const id of ['overview','financials']){$('tab-'+id).hidden=id!==name;$('btn-'+id).setAttribute('aria-selected',String(id===name));}
   }
   function county(){
     const record=state.report?.internal_data?.county_record;
@@ -26,9 +26,9 @@
     $('report-address').textContent=p.address;$('report-location').textContent=[p.city,p.state||'PA',p.zip].filter(Boolean).join(' · ');
     document.title=p.address+' — דוח נכס מורחב';
     const fields=c?.fields||{};
-    $('property-view').innerHTML='<div class="metric-grid">'+metric('מחיר מבוקש',m.price,'מחיר הפרסום שנשמר')+metric('שווי לאחר שיפוץ',m.arv,'דורש מקור למצב לאחר שיפוץ')+metric('אומדן שכירות חודשי',m.rent,'אומדן או נתון שמור עם מקור')+metric('אומדן שיפוץ',m.rehab,'ניתוח אוטומטי · פירוט בסעיף 09')+'</div>'+
+    $('property-view').innerHTML='<div class="metric-grid">'+metric('מחיר מבוקש',m.price,'מחיר הפרסום שנשמר')+metric('מחיר ל־SqFt',m.price!==null&&n(fields.sqft??p.sqft)>0?m.price/n(fields.sqft??p.sqft):null,'לפי המחיר והשטח הרשומים',M.unitMoney)+metric('אומדן שכירות חודשי',m.rent,'אומדן או נתון שמור עם מקור')+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות ומימון',M.percent)+'</div>'+
       '<p class="summary">'+e([p.address+', '+p.city,m.price!==null?'מחיר מבוקש '+money(m.price):'מחיר פרסום עדכני לא אומת',m.rent!==null?'שכירות לפי המקור '+money(m.rent)+' לחודש':'מקור שכירות עדיין חסר',m.grossYield!==null?'תשואה ברוטו '+M.percent(m.grossYield):null].filter(Boolean).join(' · '))+'.</p>'+
-      '<div class="property-facts">'+[['חדרים',fields.beds??p.beds],['רחצה',fields.baths??p.baths],['שטח SqFt',fields.sqft??p.sqft],['שנת בנייה',fields.year_built??p.year_built],['סוג הנכס',p.property_type||p.type],['ימי שוק בפרסום',p.days_on_market]].map(([k,v])=>'<div><span>'+e(k)+'</span><b>'+e(v??'לא פורסם')+'</b></div>').join('')+'</div>'+
+      '<div class="property-facts">'+[['חדרים',fields.beds??p.beds],['רחצה',fields.baths??p.baths],['שטח SqFt',fields.sqft??p.sqft],['שנת בנייה',fields.year_built??p.year_built],['סוג הנכס',p.property_type||p.type],['סטטוס בפרסום',p.listing_status||p.status]].map(([k,v])=>'<div><span>'+e(k)+'</span><b>'+e(v??'לא פורסם')+'</b></div>').join('')+'</div>'+
       '<div class="source-links">'+(M.url(p.url||p.source_url)?'<a href="'+e(M.url(p.url||p.source_url))+'" target="_blank" rel="noopener noreferrer">מודעת המקור</a>':'')+'<span>נבדק בפרסום: '+e(date(p.last_source_check))+'</span></div>';
   }
   function renderPhotos(){
@@ -60,12 +60,17 @@
     $('county-view').innerHTML='<div class="facts">'+[['מזהה חלקה',c.parcel_id],['מחוז',c.county],['רשות מקומית',f.municipality],['שימוש רשום',f.county_use],['מבנה רשום',f.style],['שטח מגרש SqFt',f.lot_size],['שטח מגורים SqFt',f.sqft],['שנת בנייה',f.year_built],['חדרים / רחצה',[f.beds,f.baths].map(x=>x??'—').join(' / ')]].map(([k,v])=>fact(k,v)).join('')+'</div>'+source(c.source_name,c.retrieved_at,c.source_url)+'<p class="muted">תאריך נתוני המחוז: '+e(c.source_as_of||'לא פורסם')+'. רישום המחוז מתאר מאפייני נכס; הוא אינו בדיקת מצב עדכנית.</p>';
   }
   function renderArea(){
-    const a=state.analysis,point=M.matches(a,state.property)?a.closed_sales?.subject_location:null;
-    const area=M.matches(a,state.property)?a.area:null;
-    $('area-view').innerHTML='<div class="facts">'+fact('עיר',state.property.city)+fact('שכונה לפי המיפוי',point?.neighborhood)+fact('רשות מקומית',state.county?.fields?.municipality||point?.municipality)+fact('אזור סטטיסטי Census',point?.tract)+fact('דירוג שכונה A–D',area?.class_verified===true?area.class:'אין דירוג מאומת')+'</div>'+
-      (point?source('WPRDC · מיפוי חלקות',point.source_as_of,point.source_url):missing('מיפוי השכונה לחלקה עדיין לא נאסף.'))+
-      '<p class="muted">התאמה לשם שכונה ולמרחק אינה מוכיחה התאמה לדירוג A–D. לא הוקצה דירוג על סמך מחיר הנכס.</p>';
-    if(area?.metrics&&M.fresh(area.observed_at,100,state.reference))$('area-view').insertAdjacentHTML('beforeend','<div class="facts">'+Object.entries(area.metrics).map(([k,v])=>fact(k,v)).join('')+'</div>'+source(area.source_name,area.observed_at,area.source_url));
+    const a=M.matches(state.analysis,state.property)?state.analysis:null,point=a?.closed_sales?.subject_location;
+    const area=M.officialArea(a,state.property,state.reference);
+    let out='<div class="facts">'+fact('עיר',state.property.city)+fact('שכונה לפי המיפוי',point?.neighborhood)+fact('רשות מקומית',state.county?.fields?.municipality||point?.municipality)+fact('אזור סטטיסטי Census',point?.tract)+'</div>';
+    if(area){
+      const rows=list(area.metrics).filter(x=>n(x.value)!==null&&n(x.value)>=0);
+      out+='<p class="source-note">'+e(area.geography_name)+' · תקופת הנתונים: '+e(area.source_period)+'</p>';
+      if(area.status==='cached_stale')out+=missing('עדכון המקור לא הושלם; מוצגת הגרסה הקודמת.');
+      out+='<div class="table-scroll"><table><thead><tr><th>מדד רשמי</th><th>אומדן שפורסם</th><th>טעות דגימה ±</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+e(x.label)+'</td><td>'+e(x.unit?.startsWith('USD')?money(x.value):Number(x.value).toLocaleString('en-US'))+'</td><td>'+e(n(x.margin_of_error)===null?'לא זמין':x.margin_of_error)+'</td></tr>').join('')+'</tbody></table></div>'+source(area.source_name,area.observed_at,area.source_url);
+    }else out+=missing('נתוני האזור הרשמיים טרם נאספו או שלא אומתה התאמה לאזור הנכס.');
+    out+='<p class="source-note">נתוני Census מתייחסים לאזור סטטיסטי, לא לרחוב. אין בדוח ציון שכונה מחושב.</p><div class="source-links"><a href="https://www.futurereadypa.org/Home/DataFiles" target="_blank" rel="noopener noreferrer">בתי ספר — נתוני מדינת פנסילבניה</a><a href="https://www.ucr.pa.gov/PAUCRSPUBLIC" target="_blank" rel="noopener noreferrer">פשיעה — נתוני משטרת פנסילבניה</a></div><p class="source-note">קישורים לבדיקה: טרם בוצעה התאמה לבית ספר או לרשות משטרתית עבור הכתובת.</p>';
+    $('area-view').innerHTML=out;
   }
   function renderPropertyTaxes(){
     const t=M.propertyTaxes(state.analysis,state.property,state.county,state.reference);
@@ -80,15 +85,34 @@
       source(t.source_name,t.observed_at,t.source_url)+'</details>';
   }
   function renderAnalysis(){
-    const m=M.metrics(state.property,state.analysis,state.report,F,state.reference);
-    $('analysis-view').innerHTML='<div class="metric-grid">'+metric('מחיר מבוקש',m.price)+metric('שכירות שנתית ברוטו',m.annualRent)+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות, שיפוץ ומימון',M.percent)+metric('רכישה ושיפוץ בלבד',m.purchaseAndRehab,'לא כולל עלויות עסקה, החזקה ומימון')+'</div>'+
-      '<div class="strategy-grid"><article class="strategy"><h3>השכרה</h3><div class="metric-grid">'+metric('NOI שנתי',m.noi)+metric('תשואה תפעולית',m.capRate,'לפני מימון',M.percent)+metric('תקרת רכישה לפי יעד מתועד',m.maoRental)+'</div>'+(m.noi===null?missing('לחישוב נטו דרושות הוצאות תפעול ואי־תפוסה עם בסיס מתועד.'): '')+'</article><article class="strategy"><h3>פליפ</h3><div class="metric-grid">'+metric('שווי לאחר שיפוץ',m.arv)+metric('רווח לפני מס',m.flipProfit)+metric('תקרת רכישה לפי יעד מתועד',m.maoFlip)+'</div>'+(m.flipProfit===null?missing('לתחשיב מלא דרושים שווי למצב לאחר שיפוץ, תקציב שיפוץ ועלויות העסקה, ההחזקה והמימון.'): '')+'</article></div>'+
-      '<p class="source-note">התחשיבים מוצגים לפי מקורות הנכס. אומדן שוק המבוסס על מכירות אינו מוכיח שווי לאחר שיפוץ. סכומים חסרים אינם מוחלפים באפס או באחוז קבוע.</p>'+renderPropertyTaxes();
+    const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference);
+    let out='<div class="metric-grid">'+metric('שכירות שנתית ברוטו',m.annualRent)+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות ומימון',M.percent)+metric('NOI שנתי',m.noi,'דורש הוצאות מלאות ומתועדות')+metric('Cap Rate',m.capRate,'לפני מימון',M.percent)+'</div>'+renderPropertyTaxes();
+    const D=root.PADealAnalysis,s=p.investment_scenario;
+    if(D&&D.matches(s,p)){
+      const manual=JSON.parse(JSON.stringify(s));
+      for(const key of Object.keys(manual.rehab_links||{}))delete manual.inputs[key];
+      manual.rehab_links={};
+      const f=F.financialSnapshot(p,state.reference),result=D.calculate(p,manual,{...f,rent:m.rent,arv:null,flipRehab:null,rentalRehab:null});
+      out+='<h3>תרחיש שמור — הנחות משתמש</h3><p class="source-note">'+e(date(s.updated_at))+' · מחיר מכירה ותקציב שיפוץ מתקבלים מהזנה ידנית בלבד.</p><div class="metric-grid">'+metric('החזר הלוואה חודשי',result.monthlyDebt)+metric('תזרים חודשי',result.monthlyCashFlow)+metric('Cash-on-Cash',result.cashOnCash,'לפי הנחות התרחיש',M.percent)+metric('תקרת רכישה להשכרה',result.rentalMao)+metric('מחיר מכירה בתרחיש',result.inputs.arv,'הזנה ידנית')+metric('רווח פליפ לפני מס',result.flipProfit)+metric('תקרת רכישה לפליפ',result.flipMao)+metric('הון נדרש',result.cashRequired)+'</div><details><summary>נתונים והנחות ששימשו לחישוב</summary>'+'<div class="table-scroll"><table><thead><tr><th>נתון</th><th>ערך</th><th>בסיס</th></tr></thead><tbody>'+Object.entries(result.inputs).map(([key,value])=>'<tr><td>'+e(D.FIELDS[key]?.[0]||key)+'</td><td>'+e(value??'לא זמין')+'</td><td>'+e(({source:'מקור מתועד',assumption:'הזנה ידנית',setting:'הגדרת מודל',missing:'חסר',invalid:'לא תקין',overridden:'הוחלף בהנחה אחרת'})[result.origins[key]]||'חסר')+'</td></tr>').join('')+'</tbody></table></div>'+'</details>';
+    }else out+=missing('אין תרחיש ידני שמור. תחשיבי מימון ופליפ יופיעו לאחר הזנת ההנחות בחדר העסקאות.');
+    $('analysis-view').innerHTML=out;
+  }
+  function renderSummary(){
+    const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference),items=[];
+    if(m.price===null)items.push('מחיר מבוקש עדכני לא אומת');
+    if(m.rent===null)items.push('אומדן שכירות חסר');
+    if(!state.county)items.push('רישום חלקה תואם חסר');
+    if(!M.recordedSales(state.analysis,p,state.reference).length)items.push('השוואות מכירה מתאימות חסרות');
+    if(m.noi===null)items.push('הוצאות מלאות חסרות — לא ניתן לחשב נטו');
+    if(!M.officialArea(state.analysis,p,state.reference))items.push('נתוני אזור רשמיים חסרים');
+    $('summary-view').innerHTML=(items.length?'<ul>'+items.map(x=>'<li>'+e(x)+'</li>').join('')+'</ul>':'<p>נתוני הבסיס זמינים; יש לבדוק את ההנחות ומועד המקורות.</p>')+'<p class="source-note">בעלות, שעבודים והיתרים: נדרשת בדיקה משלימה. הדוח אינו אישור לזכויות או לתקינות הנכס.</p>';
   }
   function renderComparisons(){
     const a=state.analysis,p=state.property,rows=M.recordedSales(a,p,state.reference),rent=M.rentSource(state.report,p,state.reference);
-    let out='<article class="comparison-part"><h3>עסקאות מכירה שנרשמו במחוז</h3>';
-    if(rows.length){out+='<p class="muted">טווח חיפוש: '+e(a.closed_sales.policy.lookback_days)+' ימים · עד '+e(a.closed_sales.policy.radius_miles)+' מייל · שטח בטווח של 25% וסטייה של עד חדר שינה אחד. מוצגים מחירים ששולמו לפי הרישום.</p><div class="table-scroll"><table><thead><tr><th>כתובת</th><th>מחיר מכירה</th><th>תאריך מכירה / רישום</th><th>שטח SqFt</th><th>חדרים / רחצה</th><th>מרחק במייל</th><th>שכונה ובדיקת המחוז</th></tr></thead><tbody>'+rows.map(r=>'<tr><td class="address">'+e(r.address)+'</td><td>'+e(money(r.amount))+'</td><td>'+e(r.sale_date)+'<br><small>'+e(r.recorded_date)+'</small></td><td>'+e(r.sqft)+'</td><td>'+e(r.beds??'—')+' / '+e(r.baths??'—')+'</td><td>'+e(r.distance_miles)+'</td><td>'+e(r.neighborhood||'לא זוהתה')+'<br><span class="tag">'+(r.validation==='county_validated'?'המחוז סיווג כעסקת שוק':'טרם בדיקת תקפות במחוז')+'</span></td></tr>').join('')+'</tbody></table></div>'+source(a.closed_sales.source_name,a.closed_sales.observed_at,a.closed_sales.source_url)+'<p class="muted">דירוג A–D של נכסי ההשוואה לא אומת. עסקה שטרם נבדקה במחוז אינה נחשבת עסקת שוק מאומתת לצורך אומדן.</p>';
+    const value=M.currentValue(a,state.report,p,state.reference);
+    let out='<article class="comparison-part"><h3>שווי נוכחי והשוואות מכירה</h3>';
+    out+=value?'<div class="metric-grid">'+metric('שווי נוכחי משוער',value.value)+metric('קצה תחתון שפורסם',value.low)+metric('קצה עליון שפורסם',value.high)+'</div>'+source(value.source,value.date,value.url):missing('לא התקבל אומדן שווי נוכחי מבוסס.');
+    if(rows.length){out+='<p class="muted">טווח חיפוש: '+e(a.closed_sales.policy.lookback_days)+' ימים · עד '+e(a.closed_sales.policy.radius_miles)+' מייל · שטח בטווח של 25% וסטייה של עד חדר שינה אחד. מוצגים מחירים ששולמו לפי הרישום.</p><div class="table-scroll"><table><thead><tr><th>כתובת</th><th>מחיר מכירה</th><th>תאריך מכירה / רישום</th><th>שטח SqFt</th><th>חדרים / רחצה</th><th>מרחק במייל</th><th>שכונה ובדיקת המחוז</th></tr></thead><tbody>'+rows.map(r=>'<tr><td class="address">'+e(r.address)+'</td><td>'+e(money(r.amount))+'</td><td>'+e(r.sale_date)+'<br><small>'+e(r.recorded_date)+'</small></td><td>'+e(r.sqft)+'</td><td>'+e(r.beds??'—')+' / '+e(r.baths??'—')+'</td><td>'+e(r.distance_miles)+'</td><td>'+e(r.neighborhood||'לא זוהתה')+'<br><span class="tag">'+(r.validation==='county_validated'?'המחוז סיווג כעסקת שוק':'טרם בדיקת תקפות במחוז')+'</span></td></tr>').join('')+'</tbody></table></div>'+source(a.closed_sales.source_name,a.closed_sales.observed_at,a.closed_sales.source_url)+'<p class="muted">עסקה שטרם נבדקה במחוז אינה נחשבת עסקת שוק מאומתת לצורך אומדן.</p>';
       if(a.closed_sales.query_limit_reached)out+=missing('החיפוש הגיע למגבלת הרשומות. ייתכן שקיימות עסקאות מתאימות נוספות.');
     }else out+=missing('לא נמצאו עסקאות מכירה רשומות ומתאימות בתוצאה השמורה. מחירי מודעות אינם מוצגים במקומן.');
     out+='</article><article class="comparison-part"><h3>אומדן שכירות והשוואות להשכרה</h3>';
@@ -97,68 +121,14 @@
     $('comparisons-view').innerHTML=out+'</article>';
   }
   function renderHistory(){
-    const rows=list(state.property.price_history).filter(r=>n(r.price)>0&&Number.isFinite(Date.parse(r.date))&&Date.parse(r.date)<=state.reference).sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
-    $('history-view').innerHTML=rows.length?'<div class="table-scroll"><table><thead><tr><th>מועד תצפית</th><th>מחיר בפרסום</th><th>מקור</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+e(date(r.date))+'</td><td>'+e(money(r.price))+'</td><td>'+e(r.source||'לא נשמר')+'</td></tr>').join('')+'</tbody></table></div><p class="source-note">היסטוריית מחירי הפרסום כפי שנצפו בסריקות. עסקאות מכירה סגורות מוצגות בסעיף 06.</p>':missing('לא נשמרה היסטוריית מחירי פרסום לנכס.');
+    const rows=M.priceHistory(state.property,state.reference);
+    $('history-view').innerHTML=rows.length?'<div class="table-scroll"><table><thead><tr><th>מועד תצפית</th><th>מחיר בפרסום</th><th>מקור</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+e(date(r.date))+'</td><td>'+e(money(r.price))+'</td><td>'+e(r.source||'לא נשמר')+'</td></tr>').join('')+'</tbody></table></div><p class="source-note">מחירים שנצפו ונשמרו בסריקות; פערים אינם מוכיחים שהמחיר נשאר קבוע. עסקאות מכירה בסעיף 06.</p>':missing('טרם הצטברה היסטוריית מחירים. התיעוד מתחיל בתצפית הראשונה שנשמרה.');
   }
   function renderFinancing(){
     const rows=M.financing(state.analysis,state.property,state.reference);
     $('financing-view').innerHTML=rows.length?'<p class="notice">אלה תנאי מוצר שפורסמו באתרי המלווים, ולא הצעות אישיות לנכס או אישור זכאות. תושבות, ניסיון, שווי ומצב הנכס עשויים לשנות את התנאים. ריבית אינה העלות הכוללת של ההלוואה.</p><div class="table-scroll"><table><thead><tr><th>מלווה ומסלול</th><th>ריבית מפורסמת</th><th>תקרות מימון מפורסמות</th><th>עמלת פתיחה</th><th>תקופה ומגבלות</th><th>מקור ותאריך</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+e(r.lender)+'<br>'+e(r.product)+'</td><td>'+e(r.rate_text)+'</td><td>'+[r.purchase_text&&'רכישה: '+r.purchase_text,r.ltv_text&&'LTV: '+r.ltv_text,r.ltc_text&&'LTC: '+r.ltc_text,r.larv_text&&'ARV: '+r.larv_text].filter(Boolean).map(e).join('<br>')+'</td><td>'+e(r.origination_text||'לא פורסם שיעור בעמוד; נדרשת הצעה')+'</td><td>'+e(r.term_text||'נדרשת הצעה')+'<br><small>מינימום הלוואה: '+e(r.minimum_loan||'לא פורסם')+(r.fico_text?' · FICO '+e(r.fico_text):'')+'</small></td><td><a href="'+e(M.url(r.source_url))+'" target="_blank" rel="noopener noreferrer">'+e(r.source_name)+'</a><br>'+e(date(r.observed_at))+'</td></tr>').join('')+'</tbody></table></div><p class="source-note">LTV — יחס לשווי הנכס; LTC — יחס לעלות הפרויקט; ARV — יחס לשווי לאחר שיפוץ. תנאי מינימום ועמלות נוספות דורשים בדיקת מלווה. נתונים אלה אינם מוכנסים אוטומטית כתנאי הלוואה מאושרים לתחשיב בסעיף 05.</p>':missing('לא התקבלו תנאי מימון עדכניים ממקורות המלווים.');
   }
-  function renderPhotoCoverage(r){
-    const c=M.photoCoverage(r);if(!c)return '';
-    const names={kitchen:'מטבח',bathroom:'חדר רחצה',bedroom:'חדר שינה',living_dining:'סלון / פינת אוכל',hall_stairs:'מסדרון / מדרגות',basement_utility:'מרתף / אזור מערכות',attic:'עליית גג',garage:'מוסך'};
-    return '<p class="source-note">כיסוי תמונות לפי סיווג AI: '+e(c.interior)+' תמונות פנים · '+e(c.exterior)+' תמונות חוץ'+(c.unclear?' · '+e(c.unclear)+' ללא סיווג ברור':'')+'. '+
-      (c.scenes.length?'נראו בתמונות: '+c.scenes.map(x=>e(names[x])).join(', ')+'. ':'')+
-      (c.missing.length?'לא זוהה כיסוי צילום של: '+c.missing.map(x=>e(names[x])).join(', ')+'. ':'')+'הספירה היא של תמונות, ולא של מספר החדרים בנכס.</p>';
-  }
-  function renderPhotoReview(r){
-    const c=M.photoReview(r),i=c.intake;
-    const labels={visible_damage:'ליקוי נראה',cosmetic_optional:'שיפור קוסמטי לבחירה',no_obvious_damage_in_view:'לא נראה נזק ברור',not_assessable:'לא ניתן להעריך'};
-    return '<p class="source-note">קישורי תמונות זמינים: '+e(c.available??'לא נשמרה ספירה')+' · נשלחו לניתוח: '+e(c.sent)+' · התקבלה הערכת מצב לכל תמונה: '+e(c.reviewed)+
-      ' · לא ניתן להעריך: '+e(c.unassessable)+'.</p>'+
-      (i?'<p class="source-note">לא זמינות: '+e(i.unavailable)+' · לא נשלחו בגלל מגבלת כמות: '+e(i.available_links-i.candidate_links)+' · לא נשלחו בגלל מגבלת נפח: '+e(i.excluded_by_byte_limit)+' · לא הושלמה טעינתן: '+e(i.not_attempted)+' · כפילויות זהות שאוחדו: '+e(i.duplicate_bytes)+'.</p>':'')+
-      (!c.complete?missing('כיסוי ניתוח התמונות חלקי. תמונה ללא הערכת מצב או אזור שלא ניתן להעריך אינם ראיה שאין צורך בשיפוץ.'): '')+
-      (c.rows.length?'<details class="pricebook"><summary>הערכת מצב לפי תמונה · '+e(c.rows.length)+' תמונות</summary><div class="table-scroll"><table><thead><tr><th>תמונת המקור</th><th>מצב בתמונה</th><th>מה נראה</th></tr></thead><tbody>'+c.rows.map(x=>'<tr><td>'+(M.url(x.photo?.url)?'<a href="'+e(M.url(x.photo.url))+'" target="_blank" rel="noopener noreferrer">'+e('תמונה '+(list(r.photos).findIndex(p=>p.id===x.photo_id)+1))+'</a>':e(x.photo_id))+'</td><td>'+e(labels[x.condition])+'</td><td>'+e(x.finding)+'</td></tr>').join('')+'</tbody></table></div></details>':missing('הדוח השמור כולל סיווג אזורים בלבד; טרם התקבלה הערכת מצב נפרדת לכל תמונה.'));
-  }
-  function renderInteriorAssessments(r){
-    const coverage=M.photoCoverage(r),rows=M.interiorAssessments(r);
-    if(!coverage?.interior)return '';
-    if(!rows.length)return missing('זוהו תמונות פנים, אך סקירת מצב הרכיבים טרם הושלמה. היעדר ממצא אינו מוכיח שאין צורך בעבודה.');
-    const scenes={kitchen:'מטבח',bathroom:'רחצה',bedroom:'חדרי שינה',living_dining:'סלון / פינת אוכל',hall_stairs:'מסדרון / מדרגות',basement_utility:'מרתף / אזור מערכות',attic:'עליית גג',garage:'מוסך'};
-    const components={flooring:'רצפה',walls_ceilings:'קירות ותקרה',doors_windows:'דלתות וחלונות',cabinets_counters:'ארונות ומשטח עבודה',fixtures:'כיורים וכלים סניטריים'};
-    const conditions={visible_damage:'ליקוי נראה — תיקון מוצע',cosmetic_optional:'שיפור קוסמטי לבחירה',visible_wear:'בלאי נראה — הצורך בתיקון טרם סווג',no_obvious_damage_in_view:'לא נראה נזק ברור בתמונות',not_assessable:'לא ניתן להעריך מהתמונות'};
-    const areas=Object.keys(scenes).filter(scene=>rows.some(row=>row.scene===scene));
-    return '<div class="rehab-items"><h3>סקירת מצב פנים הבית</h3><p class="source-note">'+e(rows.length)+' רכיבים בסוגי האזורים המצולמים. ליקוי נראה מובחן משיפור קוסמטי לבחירה. היעדר נזק ברור אינו אימות לתקינות; רכיב שאינו ברור נשאר לבדיקה. לא נקבעו כמויות או מחירים.</p>'+
-      areas.map(scene=>{const parts=rows.filter(row=>row.scene===scene);return '<details class="pricebook"><summary>'+e(scenes[scene])+' · '+e(parts.length)+' רכיבים</summary><div class="table-scroll"><table><thead><tr><th>רכיב ומצב בתמונות</th><th>מה נראה</th><th>עבודה לבדיקה ובסיס ההערכה</th></tr></thead><tbody>'+parts.map(row=>'<tr><td>'+e(components[row.component])+'<br><small>'+e(conditions[row.condition])+'</small></td><td>'+e(row.finding)+'</td><td>'+e(row.scope)+'<br><small>בסיס ההערכה: '+e(row.rationale)+'</small></td></tr>').join('')+'</tbody></table></div></details>';}).join('')+'</div>';
-  }
-  function exteriorGap(r){return M.photoCoverage(r)?.exterior&&!list(r.items).some(x=>x.group==='exterior')?missing('לא התקבל פירוט מצב של רכיבי החוץ בתוצאה הזו, אף שיש תמונות חוץ. אין להסיק מכך שאין צורך בתיקונים בחוץ.'):'';}
-  function itemCondition(x){const labels={visible_damage:'ליקוי נראה — תיקון מוצע',cosmetic_optional:'שיפור קוסמטי לבחירה',no_obvious_damage_in_view:'לא נראה נזק ברור בתמונות',not_assessable:'לא ניתן להעריך מהתמונות'};return '<p class="source-note">סיווג מצב: '+e(labels[x.condition]||'הצורך בתיקון טרם סווג')+'</p>';}
-  function renderRehabFindings(){
-    const r=M.rehabSource(state.analysis,state.property,state.reference);
-    if(!r||!['available','partial'].includes(r.status)){
-      const messages={provider_not_configured:'פענוח התמונות עדיין ממתין לחיבור ספק AI בשרת. לא הופקה הערכת שיפוץ.',photos_unavailable:'לא התקבלו תמונות מקור מתאימות לפענוח. לא הופקה הערכת שיפוץ.',source_unavailable:'ניתוח השיפוץ לא הושלם אצל הספק. לא מוצג סכום משוער במקומו.',quota_exhausted:'ניתוח התמונות נעצר בגלל מגבלת שימוש. שאר נתוני הדוח נשארים זמינים; לא הופעל דגם חלופי.'};
-      $('rehab-view').innerHTML=missing(messages[r?.status]||'טרם התקבל ניתוח אוטומטי של תמונות ומודעת הנכס.')+'<p class="muted">הסעיף מיועד להערכת מצב, עבודה ועלות לכל רכיב, עם הסבר מילולי לבסיס ההערכה. אין בו שדות הזנה ידניים.</p>';return;
-    }
-    const groups=[['systems','מערכות מרכזיות'],['interior','גימורי פנים'],['exterior','חוץ ומבנה']];
-    if(r.status==='partial'&&n(r.total_low)===null&&n(r.total_high)===null){
-      $('rehab-view').innerHTML='<p>'+e(r.summary||'התקבל ניתוח ראשוני של התמונות')+'</p>'+missing('ניתוח התמונות טרם תומחר. אין עדיין אומדן שיפוץ כולל.')+
-        '<p class="source-note">נותחו '+e(r.photo_count)+' תמונות. ממצאים מתמונות אינם בדיקת מערכות נסתרות.</p>'+renderPhotoReview(r)+renderPhotoCoverage(r)+renderInteriorAssessments(r)+exteriorGap(r)+
-        groups.map(([key,title])=>{const rows=list(r.items).filter(x=>x.group===key);return rows.length?'<div class="rehab-items"><h3>'+e(title)+'</h3>'+rows.map(x=>'<article class="rehab-item"><h4>'+e(x.name)+' <span class="tag">'+e(x.status==='observed'?'ממצא שנצפה':x.status==='listing_reported'?'מידע מהמודעה':'לא ניתן להעריך מהתמונות')+'</span></h4>'+itemCondition(x)+'<p>'+e(x.finding)+'</p><p>העבודה לבדיקה: '+e(x.scope)+'</p><p class="muted">בסיס ההערכה: '+e(x.rationale)+'</p><p class="item-price">טרם תומחר</p></article>').join('')+'</div>':'';}).join('')+
-        (list(r.limitations).length?'<p class="muted">מגבלות הניתוח: '+list(r.limitations).map(e).join(' · ')+'</p>':'')+source(r.source_name,r.observed_at,r.source_url);
-      return;
-    }
-    $('rehab-view').innerHTML='<div class="rehab-total"><span>אומדן עבודות שיפוץ · USD</span><strong>'+e(money(r.total_low))+' – '+e(money(r.total_high))+'</strong><p>'+e(r.complete?'סך העבודות שתומחרו לפי הניתוח':'אומדן חלקי — לא כל היקף העבודה תומחר')+'</p></div><p class="source-note">הערכה אוטומטית לפי '+e(r.photo_count)+' תמונות והמידע במודעה. מערכות נסתרות ומצב שלא נצפה נשארים בלתי מאומתים.</p>'+renderPhotoReview(r)+renderPhotoCoverage(r)+renderInteriorAssessments(r)+exteriorGap(r)+'<div class="rehab-groups">'+groups.map(([key,title])=>{const items=list(r.items).filter(x=>x.group===key),priced=items.filter(x=>n(x.cost_low)!==null&&n(x.cost_high)!==null);return '<article class="rehab-group-summary"><h3>'+e(title)+'</h3><strong>'+e(priced.length?money(priced.reduce((s,x)=>s+x.cost_low,0))+' – '+money(priced.reduce((s,x)=>s+x.cost_high,0)):'לא תומחר')+'</strong><p class="muted">'+priced.length+' סעיפים תומחרו</p></article>';}).join('')+'</div>'+groups.map(([key,title])=>'<div class="rehab-items"><h3>'+e(title)+'</h3>'+list(r.items).filter(x=>x.group===key).map(x=>'<article class="rehab-item"><h4>'+e(x.name)+' <span class="tag">'+e(x.status==='observed'?'ממצא שנצפה':x.status==='listing_reported'?'מידע מהמודעה':'דורש בדיקה')+'</span></h4>'+itemCondition(x)+'<p>'+e(x.finding||'לא התקבל ממצא')+'</p><p>העבודה המוערכת: '+e(x.scope||'לא נקבעה')+'</p><p class="item-price">'+e(n(x.cost_low)!==null?money(x.cost_low)+' – '+money(x.cost_high):'לא תומחר')+'</p><p class="muted">בסיס ההערכה: '+e(x.rationale||'לא נשמר הסבר')+'</p>'+(x.price_source?source(x.price_source,x.price_observed_at,x.price_source_url):'')+'</article>').join('')+'</div>').join('')+source(r.source_name,r.observed_at,r.source_url);
-  }
-  function renderRehab(){
-    renderRehabFindings();
-    const r=M.rehabSource(state.analysis,state.property,state.reference),book=r?.pricebook;
-    if(!book||book.geography!=='US_national'||book.local_adjustment_applied!==false)return;
-    const units={floor_sqft:'SqFt של רצפה',surface_sqft:'SqFt של משטח',roof_sqft:'SqFt של גג',item:'יחידה',system:'מערכת'};
-    const rows=list(book.entries).filter(x=>M.url(x.source_url)&&n(x.low)>0&&n(x.high)>=n(x.low)&&Object.hasOwn(units,x.unit));
-    if(!rows.length)return;
-    $('rehab-view').insertAdjacentHTML('beforeend','<details class="pricebook"><summary>מחירי יחידה ומקורות מהמאגר · '+rows.length+' סוגי עבודה</summary><p class="muted">'+e(book.notice)+'</p><p class="source-note">עדכון המאגר: '+e(date(book.updated_at||book.observed_at))+' · בדיקה הבאה עד '+e(date(book.review_due_at))+(book.status!=='current'?' · המחירון ממתין לעדכון ואינו משמש לתמחור':'')+'</p><div class="table-scroll"><table><thead><tr><th>עבודה</th><th>טווח בסיס שפורסם</th><th>יחידה</th><th>היקף ומגבלות</th><th>מקור</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+e(x.name)+'</td><td>'+e(M.unitMoney(x.low))+' – '+e(M.unitMoney(x.high))+'</td><td>'+e(units[x.unit])+'</td><td>'+e(x.scope)+'<br><small>'+e(x.exclusions)+'</small></td><td><a href="'+e(M.url(x.source_url))+'" target="_blank" rel="noopener noreferrer">'+e(x.source_name)+'</a><br><small>'+e(x.source_as_of||'מועד פרסום לא צוין')+'<br>נבדק: '+e(date(x.observed_at||book.observed_at))+'</small></td></tr>').join('')+'</tbody></table></div></details>');
-  }
-  function render(){state.county=county();renderProperty();renderPhotos();renderCounty();renderArea();renderAnalysis();renderComparisons();renderHistory();renderFinancing();renderRehab();$('report-date').textContent='גרסה '+M.VERSION+' · ריכוז מקורות: '+date(state.analysis?.generated_at||state.report?.generated_at);$('report-content').hidden=false;}
+  function render(){state.county=county();renderProperty();renderPhotos();renderCounty();renderArea();renderAnalysis();renderComparisons();renderHistory();renderFinancing();renderSummary();$('report-date').textContent='גרסה '+M.VERSION+' · ריכוז מקורות: '+date(state.analysis?.generated_at||state.report?.generated_at);$('report-content').hidden=false;}
   function token(){try{return localStorage.getItem('pa_github_token')||'';}catch(_){return '';}}
   const pendingKey=p=>'pa_report_pending:'+JSON.stringify(M.identity(p));
   function readPending(p){try{return M.pendingRequest(localStorage.getItem(pendingKey(p)),p);}catch(_){return null;}}
@@ -181,6 +151,16 @@
   function resolveMedia(media){
     if(!S)return;const p=state.property;state.media=S.reportPhotos(p,media).filter(x=>M.url(x.url));
   }
+  async function loadOfficialArea(){
+    if(state.historical||!M.matches(state.analysis,state.property))return;
+    const point=state.analysis.closed_sales?.subject_location;
+    const geoid=String(point?.geoid||'').slice(0,11)||(point?.parcel_id&&/^\d{6}$/.test(String(point.tract))?'42003'+point.tract:'');
+    if(!/^42003\d{6}$/.test(geoid))return;
+    try{const area=await repoJson('COMPS_REPORTS/official_area/'+geoid+'.json');
+      const candidate={...state.analysis,area};
+      if(M.officialArea(candidate,state.property,state.reference)&&(!state.analysis.area?.observed_at||Date.parse(area.observed_at)>=Date.parse(state.analysis.area.observed_at)))state.analysis=candidate;
+    }catch(_){/* Keep the original observation and its date on lookup failure. */}
+  }
   async function refresh(k){const report=await repoJson('COMPS_REPORTS/expanded_reports/'+k+'.json');if(M.matches(report,state.property)&&(!state.report||Date.parse(report.generated_at)>=Date.parse(state.report.generated_at))){state.report=report;state.analysis=report.report_analysis||null;}}
   async function collect(){
     const t=token();if(!t){status('לא נמצא חיבור האיסוף של GitHub במחשב הזה. יש להגדירו בהגדרות המערכת בחדר העסקאות.',true);return;}
@@ -196,7 +176,7 @@
     }
     const deadline=Date.now()+7*60000;
     async function poll(){
-      try{const receipt=await repoJson('COMPS_REPORTS/expanded_receipts/'+requestId+'.json');if(receipt&&M.matches(receipt,p)){clearPending(p,requestId);state.report=receipt;state.analysis=receipt.report_analysis||null;await loadMedia(await key(p.id));render();status(receipt.report_analysis?.status==='partial'?'איסוף המקורות הסתיים בחלקו. סעיפים חסרים מסומנים בדוח.':'האיסוף הסתיים. כל סעיף מציג את התוצאה והמקור שהתקבלו.');return;}}catch(_){/* A temporary read failure must not dispatch a second request. */}
+      try{const receipt=await repoJson('COMPS_REPORTS/expanded_receipts/'+requestId+'.json');if(receipt&&M.matches(receipt,p)){clearPending(p,requestId);state.report=receipt;state.analysis=receipt.report_analysis||null;await loadMedia(await key(p.id));await loadOfficialArea();render();status(receipt.report_analysis?.status==='partial'?'איסוף המקורות הסתיים בחלקו. סעיפים חסרים מסומנים בדוח.':'האיסוף הסתיים. כל סעיף מציג את התוצאה והמקור שהתקבלו.');return;}}catch(_){/* A temporary read failure must not dispatch a second request. */}
       if(Date.now()<deadline){status('האיסוף מתבצע בשרת. הדוח יציג את התוצאה כשהיא תתקבל…');root.setTimeout(poll,7000);}else status('האיסוף טרם החזיר תוצאה. פתח שוב את הדוח לאחר סיום בקשת השרת; לא נשלחה בקשה חוזרת.',true);
     }
     await poll();
@@ -215,13 +195,17 @@
       state.property=property;state.report=M.matches(property.expanded_source_report,property)?property.expanded_source_report:null;state.analysis=state.report?.report_analysis||null;
       render();const k=await key(property.id);
       if(!state.historical){try{await refresh(k);}catch(_){status('נתוני הנכס נטענו; עדכון המקור מהשרת לא הושלם.',true);}}
-      await loadMedia(k);render();status(state.historical?'עותק דוח שמור · מוצגים הנתונים כפי שנשמרו במועד הדוח.':'דוח מידע לצפייה · הנתונים מוצגים עם מקור ומועד בכל סעיף.');
+      await loadMedia(k);await loadOfficialArea();render();status(state.historical?'עותק דוח שמור · מוצגים הנתונים כפי שנשמרו במועד הדוח.':'דוח מידע לצפייה · הנתונים מוצגים עם מקור ומועד בכל סעיף.');
       openHash();
       if(!state.historical){const requested=params.get('collect')==='1';if(requested){params.delete('collect');history.replaceState(null,'',location.pathname+'?'+params.toString()+location.hash);}if(readPending(property)||(requested&&(!M.matches(state.analysis,property)||!M.fresh(state.analysis.generated_at,1))))await collect();}
     }catch(error){status(error.message,true);if(!state.property)$('report-content').hidden=true;}
   }
   function openHash(){const id=location.hash.slice(1).replace(/^section-/,'');const section=M.SECTIONS.find(x=>x.id===id);if(section){tab(section.tab);$('section-'+id).scrollIntoView({block:'start'});}}
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
-  document.getElementById('tabs-bar').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const buttons=Array.from(document.querySelectorAll('[data-tab]')),at=buttons.indexOf(document.activeElement);if(at<0)return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?2:(at+(event.key==='ArrowLeft'?1:2))%3;buttons[next].focus();tab(buttons[next].dataset.tab);});
+  document.getElementById('tabs-bar').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const buttons=Array.from(document.querySelectorAll('[data-tab]')),at=buttons.indexOf(document.activeElement);if(at<0)return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(at+(event.key==='ArrowLeft'?1:buttons.length-1))%buttons.length;buttons[next].focus();tab(buttons[next].dataset.tab);});
+  let printedDetails=[];
+  root.addEventListener('beforeprint',()=>{printedDetails=Array.from(document.querySelectorAll('details')).filter(x=>!x.open);printedDetails.forEach(x=>x.open=true);});
+  root.addEventListener('afterprint',()=>{printedDetails.forEach(x=>x.open=false);printedDetails=[];});
+  $('print-report').addEventListener('click',()=>root.print());
   root.addEventListener('hashchange',openHash);load();
 })(window);

@@ -1,12 +1,12 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='9.0.10';
+  const VERSION='10.0.0';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
     ['analysis',5,'תחשיבי העסקה','financials'],['comparisons',6,'השוואות מכירה ושכירות','financials'],
     ['history',7,'היסטוריית מחירי הנכס','financials'],['financing',8,'מקורות ועלויות מימון','financials'],
-    ['rehab',9,'ניתוח הנכס ואומדן השיפוץ','rehab']
+    ['summary',9,'סיכום ומידע להשלמה','overview']
   ].map(([id,number,title,tab])=>Object.freeze({id,number,title,tab})));
   const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const object=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
@@ -98,19 +98,42 @@
     return rows;
   }
   function metrics(p,a,report,financials,now=Date.now()){
-    const f=financials?.financialSnapshot(p,now)||{},rent=rentSource(report,p,now),rehab=rehabSource(a,p,now);
+    const f=financials?.financialSnapshot(p,now)||{},rent=rentSource(report,p,now);
     const price=number(f.price),rentValue=rent?.value??number(f.rent);
-    const budget=rehab?.status==='available'&&rehab.complete===true&&number(rehab.total_high)>=0?Number(rehab.total_high):null;
     return {price,rent:rentValue,annualRent:rentValue===null?null:rentValue*12,
       grossYield:rentValue!==null&&price>0?rentValue*1200/price:null,
-      rehab:budget,rehabLow:budget!==null?number(rehab.total_low):null,
-      purchaseAndRehab:price!==null&&budget!==null?price+budget:null,
-      arv:number(f.arv),noi:number(f.noi),flipProfit:number(f.flipProfit),capRate:number(f.capRate),
-      maoFlip:number(f.maoFlip),maoRental:number(f.maoRental),rentalRehab:number(f.rentalRehab),flipRehab:number(f.flipRehab)};
+      noi:number(f.noi),capRate:number(f.capRate),
+      arv:null,rehab:null,rehabLow:null,purchaseAndRehab:null,flipProfit:null,maoFlip:null,maoRental:null};
+  }
+  function priceHistory(p,now=Date.now()){
+    return (Array.isArray(p.price_history)?p.price_history:[])
+      .filter(r=>number(r.price)>0&&Number.isFinite(Date.parse(r.date))&&Date.parse(r.date)<=now)
+      .sort((a,b)=>Date.parse(b.date)-Date.parse(a.date));
+  }
+  function currentValue(a,report,p,now=Date.now()){
+    const s=matches(report,p)?report.sources?.value:null;
+    if(s?.status==='accepted'&&s.estimate?.basis==='current_market_value'&&number(s.estimate.value)>0&&fresh(s.observed_at,60,now))
+      return {value:Number(s.estimate.value),low:number(s.estimate.range_low),high:number(s.estimate.range_high),source:s.source_name,date:s.observed_at,url:url(s.source_url)};
+    const sales=matches(a,p)?a.closed_sales:null,estimate=sales?.market_estimate;
+    if(estimate?.is_arv===false&&estimate.count>=3&&number(estimate.value)>0&&recordedSales(a,p,now).filter(x=>x.validation==='county_validated').length>=3)
+      return {value:Number(estimate.value),low:null,high:null,source:sales.source_name,date:sales.observed_at,url:url(sales.source_url)};
+    return null;
+  }
+  function officialArea(a,p,now=Date.now()){
+    const area=matches(a,p)?a.area:null;
+    if(area?.version!=='official-area-1'||!/^42003\d{6}$/.test(area.geoid||'')||
+      !url(area.source_url)||new URL(area.source_url).hostname!=='data.census.gov'||
+      !fresh(area.observed_at,550,now))return null;
+    const point=a.closed_sales?.subject_location;
+    const geoid=String(point?.geoid||'').slice(0,11)||
+      (point?.parcel_id&&/^\d{6}$/.test(String(point.tract))?'42003'+point.tract:'');
+    if(geoid!==area.geoid)return null;
+    const t=new Date(now),quarter=t.getUTCFullYear()+'-Q'+(Math.floor(t.getUTCMonth()/3)+1);
+    return {...area,status:area.checked_quarter===quarter?area.status:'cached_stale'};
   }
   function financing(a,p,now=Date.now()){
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
+  return {VERSION,SECTIONS,currentValue,priceHistory,officialArea,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
 });

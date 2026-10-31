@@ -10,11 +10,10 @@ from datetime import datetime,timezone
 import closed_sales
 import report_financing
 import report_property_taxes
-import report_gemini
-import rehab_pricebook
+import report_area
 import internal_report_store as store
 
-VERSION='readonly-report-sources-v1'
+VERSION='concise-report-sources-v2'
 def stamp():return datetime.now(timezone.utc).isoformat(timespec='seconds')
 def base_property(p,profile):
     value=dict(p)
@@ -50,29 +49,17 @@ def collect(p,profile,root=Path('COMPS_REPORTS'),allow_public=True,previous=None
         result['property_taxes']={'status':'source_unavailable','property_id':property_id,'complete':False,'total_property_tax':None}
         result['errors']['property_taxes']=type(exc).__name__
     point=result['closed_sales'].get('subject_location') or {}
-    result['area']={'status':'available' if point else 'not_collected','class':None,'class_verified':False,
-        'neighborhood':point.get('neighborhood'),'tract':point.get('tract'),
-        'source_name':'WPRDC parcel geography','source_url':closed_sales.GEO_SOURCE,
-        'observed_at':now,'source_as_of':point.get('source_as_of')}
-    if allow_public and rehab_result is None:
+    try:result['area']=report_area.collect(point,Path(root),allow_public=allow_public)
+    except Exception as exc:
+        result['area']={'status':'source_unavailable','metrics':[],'class':None,'class_verified':False}
+        result['errors']['area']=type(exc).__name__
+    if allow_public:
         try:
             import report_gallery
             result['gallery']=report_gallery.collect(p,Path(root).parent)
         except Exception as exc:
             result['gallery']={'status':'source_unavailable','property_id':property_id}
             result['errors']['gallery']=type(exc).__name__
-    # Gemini returns observed findings only. Costs remain missing until a sourced
-    # price book is connected; a model response cannot supply dollar estimates.
-    try:
-        if rehab_result is not None:
-            if rehab_result.get('property_id')!=property_id:raise ValueError('rehab_subject_mismatch')
-            result['rehab']=dict(rehab_result)
-        else:result['rehab']=report_gemini.collect(p,Path(root),before_send=before_gemini_send) if allow_public else report_gemini.empty(
-            p,'provider_not_configured','collection_disabled')
-    except Exception as exc:
-        result['rehab']=report_gemini.empty(p,'source_unavailable','analysis_failed')
-        result['errors']['rehab']=type(exc).__name__
-    try:result['rehab']=rehab_pricebook.attach(result['rehab'],p)
-    except (ValueError,OSError,KeyError):result['errors']['rehab_pricebook']='catalog_unavailable'
-    result['status']='partial' if result['errors'] or result['rehab']['status']!='available' else 'available'
+    # Renovation inference and pricing are excluded from the expanded report.
+    result['status']='partial' if result['errors'] or any(result.get(k,{}).get('status') not in {'available','partial'} for k in ('closed_sales','area','property_taxes','financing')) else 'available'
     return result

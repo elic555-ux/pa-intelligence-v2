@@ -1,31 +1,57 @@
 <!doctype html>
+
 <html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>דוח נכס מורחב — PA Intelligence</title>
-<link rel="stylesheet" href="report-readonly.css?v=9.0.10">
+
+<link rel="stylesheet" href="report-readonly.css?v=10.0.0">
+
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script defer src="secondary_sources.js?v=1.9.2"></script>
-<script defer src="report-financials.js?v=9.0.10"></script>
-<script defer src="report-readonly-model.js?v=9.0.10"></script>
-<script defer src="report-readonly.js?v=9.0.10"></script>
+
+<script defer src="report-financials.js?v=10.0.0"></script>
+
+<script defer src="deal-analysis.js?v=10.0.0"></script>
+<script defer src="report-readonly-model.js?v=10.0.0"></script>
+
+<script defer src="report-readonly.js?v=10.0.0"></script>
+
 </head><body>
-<header class="report-top"><div><p class="eyebrow">PA INTELLIGENCE · דוח נכס מורחב</p><h1 id="report-address">טוען דוח נכס</h1><p id="report-location"></p></div><a class="back-link" href="deals.html">חדר העסקאות ←</a></header>
+
+<header class="report-top"><div><p class="eyebrow">PA INTELLIGENCE · דוח נכס מורחב</p><h1 id="report-address">טוען דוח נכס</h1><p id="report-location"></p></div><a class="back-link" href="deals.html">חדר העסקאות ←</a><button type="button" id="print-report" class="no-print">הדפסה / שמירה כ־PDF</button></header>
+
 <p id="report-status" role="status" aria-live="polite">טוען את נתוני הנכס והמקורות השמורים…</p>
+
 <main id="report-content" hidden>
-<div id="tabs-bar" role="tablist" aria-label="לשוניות הדוח"><button type="button" id="btn-overview" role="tab" aria-controls="tab-overview" aria-selected="true" data-tab="overview">סקירה כללית</button><button type="button" id="btn-financials" role="tab" aria-controls="tab-financials" aria-selected="false" data-tab="financials">תחשיבים והשוואות</button><button type="button" id="btn-rehab" role="tab" aria-controls="tab-rehab" aria-selected="false" data-tab="rehab">מפרט ותקציב שיפוץ</button></div>
+
+<div id="tabs-bar" role="tablist" aria-label="לשוניות הדוח"><button type="button" id="btn-overview" role="tab" aria-controls="tab-overview" aria-selected="true" data-tab="overview">סקירה כללית</button><button type="button" id="btn-financials" role="tab" aria-controls="tab-financials" aria-selected="false" data-tab="financials">תחשיבים והשוואות</button></div>
+
 <div id="tab-overview" role="tabpanel" aria-labelledby="btn-overview">
+
 <section id="section-property"><h2><span class="section-number">01</span>פרטי הנכס והמחיר המבוקש</h2><div id="property-view"></div></section>
+
 <section id="section-photos"><h2><span class="section-number">02</span>תמונות הנכס</h2><div id="photos-view"></div></section>
+
 <section id="section-county"><h2><span class="section-number">03</span>רישום המחוז ופרטי החלקה</h2><div id="county-view"></div></section>
+
 <section id="section-area"><h2><span class="section-number">04</span>שכונה ואזור</h2><div id="area-view"></div></section>
+
 </div>
+
 <div id="tab-financials" role="tabpanel" aria-labelledby="btn-financials" hidden>
+
 <section id="section-analysis"><h2><span class="section-number">05</span>תחשיבי העסקה</h2><div id="analysis-view"></div></section>
+
 <section id="section-comparisons"><h2><span class="section-number">06</span>השוואות מכירה ושכירות</h2><div id="comparisons-view"></div></section>
+
 <section id="section-history"><h2><span class="section-number">07</span>היסטוריית מחירי הנכס</h2><div id="history-view"></div></section>
+
 <section id="section-financing"><h2><span class="section-number">08</span>מקורות ועלויות מימון</h2><div id="financing-view"></div></section>
+
 </div>
-<div id="tab-rehab" role="tabpanel" aria-labelledby="btn-rehab" hidden>
-<section id="section-rehab"><h2><span class="section-number">09</span>ניתוח הנכס ואומדן השיפוץ</h2><div id="rehab-view"></div></section>
-</div>
+
+<section id="section-summary"><h2><span class="section-number">09</span>סיכום ומידע להשלמה</h2><div id="summary-view"></div></section>
 </main><footer class="report-footer"><p>דוח מידע וניתוח · ניהול הרכישה והשיפוץ בחדר העסקאות</p><p id="report-date"></p></footer>
+
 </body></html>

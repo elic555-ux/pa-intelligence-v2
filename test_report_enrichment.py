@@ -5,6 +5,7 @@ import report_enrichment as enrich
 
 class ReportEnrichmentTest(unittest.TestCase):
     def setUp(self):
+        patch.object(enrich.report_area,'collect',return_value={'status':'not_collected','class':None,'class_verified':False,'neighborhood':'South Side Flats'}).start()
         patch.object(enrich.report_property_taxes,'collect',return_value={'status':'lookup_disabled'}).start()
         self.addCleanup(patch.stopall)
         self.p={'id':'qa-1','address':'18 Main St','city':'Pittsburgh','state':'PA','zip':'15203','sqft':1400,'beds':3}
@@ -16,7 +17,7 @@ class ReportEnrichmentTest(unittest.TestCase):
     def test_disabled_collection_makes_no_network_or_paid_calls(self):
         with patch.object(enrich.closed_sales,'collect',side_effect=AssertionError('network')),patch.object(enrich.report_financing,'collect',side_effect=AssertionError('network')):
             r=enrich.collect(self.p,self.profile,allow_public=False)
-        self.assertEqual(r['rehab']['status'],'provider_not_configured');self.assertIsNone(r['rehab']['total_high'])
+        self.assertNotIn('rehab',r)
     def test_ambiguous_subject_never_contacts_providers(self):
         self.profile['inventory']['status']='ambiguous_identity'
         with patch.object(enrich.closed_sales,'collect',side_effect=AssertionError('network')):
