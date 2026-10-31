@@ -5,6 +5,7 @@ import report_enrichment as enrich
 
 class ReportEnrichmentTest(unittest.TestCase):
     def setUp(self):
+        patch.object(enrich.report_public_context,'collect',return_value={'status':'partial'}).start()
         patch.object(enrich.report_area,'collect',return_value={'status':'not_collected','class':None,'class_verified':False,'neighborhood':'South Side Flats'}).start()
         patch.object(enrich.report_property_taxes,'collect',return_value={'status':'lookup_disabled'}).start()
         self.addCleanup(patch.stopall)

@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='10.0.0';
+  const VERSION='10.1.0';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -100,9 +100,11 @@
   function metrics(p,a,report,financials,now=Date.now()){
     const f=financials?.financialSnapshot(p,now)||{},rent=rentSource(report,p,now);
     const price=number(f.price),rentValue=rent?.value??number(f.rent);
-    return {price,rent:rentValue,annualRent:rentValue===null?null:rentValue*12,
+    const annualRent=rentValue===null?null:rentValue*12,expenses=number(f.operatingExpenses),vacancy=number(f.vacancyLoss);
+    const noi=[annualRent,expenses,vacancy].every(x=>x!==null)?annualRent-expenses-vacancy:null;
+    return {price,rent:rentValue,annualRent,
       grossYield:rentValue!==null&&price>0?rentValue*1200/price:null,
-      noi:number(f.noi),capRate:number(f.capRate),
+      noi,capRate:noi!==null&&price>0?noi*100/price:null,
       arv:null,rehab:null,rehabLow:null,purchaseAndRehab:null,flipProfit:null,maoFlip:null,maoRental:null};
   }
   function priceHistory(p,now=Date.now()){
@@ -123,8 +125,9 @@
     const area=matches(a,p)?a.area:null;
     if(area?.version!=='official-area-1'||!/^42003\d{6}$/.test(area.geoid||'')||
       !url(area.source_url)||new URL(area.source_url).hostname!=='data.census.gov'||
-      !fresh(area.observed_at,550,now))return null;
-    const point=a.closed_sales?.subject_location;
+      !fresh(area.observed_at,550,now)||!Array.isArray(area.metrics)||
+      !area.metrics.some(r=>number(r?.value)!==null&&number(r.value)>=0))return null;
+    const point=a.closed_sales?.subject_location||a.public_context?.parcel_location;
     const geoid=String(point?.geoid||'').slice(0,11)||
       (point?.parcel_id&&/^\d{6}$/.test(String(point.tract))?'42003'+point.tract:'');
     if(geoid!==area.geoid)return null;

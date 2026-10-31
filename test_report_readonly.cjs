@@ -14,7 +14,7 @@ const report={property:p,property_id:p.id,generated_at:'2026-10-25T10:00:00Z',so
 
 test('Nine unique sections are numbered in two tabs',()=>{assert.deepEqual(m.SECTIONS.map(s=>s.number),[1,2,3,4,5,6,7,8,9]);assert.equal(new Set(m.SECTIONS.map(s=>s.id)).size,9);assert.equal(m.SECTIONS.filter(s=>s.tab==='overview').length,5);assert.equal(m.SECTIONS.filter(s=>s.tab==='financials').length,4);});
 
-test('Report HTML has two tabs and print control and no editing or collection form',()=>{const html=fs.readFileSync(__dirname+'/report.html','utf8');assert.equal((html.match(/<button\b/g)||[]).length,3);assert.ok(!/<(?:input|select|textarea|form)\b/.test(html));assert.ok(!/report-sections-nav|mחשבון|btn-download-pdf|data-da-field/.test(html));for(const s of m.SECTIONS)assert.equal((html.match(new RegExp('id="section-'+s.id+'"','g'))||[]).length,1);});
+test('Report HTML has two tabs, print and official refresh controls and no editing or collection form',()=>{const html=fs.readFileSync(__dirname+'/report.html','utf8');assert.equal((html.match(/<button\b/g)||[]).length,4);assert.ok(!/<(?:input|select|textarea|form)\b/.test(html));assert.ok(!/report-sections-nav|mחשבון|btn-download-pdf|data-da-field/.test(html));for(const s of m.SECTIONS)assert.equal((html.match(new RegExp('id="section-'+s.id+'"','g'))||[]).length,1);});
 
 test('Missing values and numeric zero stay distinct',()=>{assert.equal(m.number(null),null);assert.equal(m.number(false),null);assert.equal(m.number(''),null);assert.equal(m.number('0'),0);assert.equal(m.money(null),'חסר נתון');});
 
@@ -53,3 +53,11 @@ test('Pending collection survives reload only for the same property and bounded 
 console.log(passed+' read-only report checks passed');
 
 
+
+ test('Net metrics use the displayed source rent and explicit expenses consistently',()=>{
+   const fake={financialSnapshot:()=>({price:100000,rent:1000,operatingExpenses:1800,vacancyLoss:200,noi:10000,capRate:10})};
+   const r=m.metrics(p,null,{...report,sources:{rent:{...report.sources.rent,estimate:{status:'provider_estimate',value:1500}}}},fake,now);
+   assert.equal(r.annualRent,18000);assert.equal(r.noi,16000);assert.equal(r.capRate,16);
+   assert.equal(m.metrics(p,null,report,{financialSnapshot:()=>({price:100000,operatingExpenses:0,vacancyLoss:null})},now).noi,null);
+   assert.equal(m.metrics(p,null,report,{financialSnapshot:()=>({price:100000,operatingExpenses:0,vacancyLoss:0})},now).noi,12000);
+ });

@@ -3,6 +3,15 @@ on:
   schedule:
     - cron: '17 8 1 1,4,7,10 *'
   workflow_dispatch:
+    inputs:
+      property_id:
+        description: 'Optional exact property ID; empty refreshes previously collected properties'
+        required: false
+        default: ''
+        type: string
+  push:
+    branches: [main]
+    paths: ['diagnostics/public-context-refresh.json']
 permissions:
   contents: read
 concurrency:
@@ -24,14 +33,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Refresh known official Census areas only
-        run: python report_area.py
+      - name: Install county lookup dependency
+        run: python -m pip install requests beautifulsoup4==4.15.0
+      - name: Refresh official sources only
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PROPERTY_ID: ${{ inputs.property_id }}
+        run: |
+          if [ "$EVENT_NAME" = 'push' ]; then
+            python report_public_refresh.py --request-file diagnostics/public-context-refresh.json
+          elif [ -n "$PROPERTY_ID" ]; then
+            python report_public_refresh.py --property-id "$PROPERTY_ID"
+          else
+            python report_public_refresh.py
+          fi
       - name: Save official area snapshots
         run: |
-          if [ ! -d COMPS_REPORTS/official_area ]; then exit 0; fi
+          if [ ! -d COMPS_REPORTS ]; then exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add COMPS_REPORTS/official_area
+          git add COMPS_REPORTS
           if ! git diff --cached --quiet; then
             git commit -m 'Refresh quarterly official area facts'
             git pull --rebase origin main

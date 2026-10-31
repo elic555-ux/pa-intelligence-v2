@@ -3,22 +3,23 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
 const model=require('./report-readonly-model.js'),financials=require('./report-financials.js');
 const controller=fs.readFileSync(__dirname+'/report-readonly.js','utf8');
-async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null}={}){
+async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null,inventoryOnly=false}={}){
  const property={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203',county:'Allegheny',property_type:'Single Family',price:135000,url:'https://example.com/listing',last_source_check:new Date().toISOString()};
  if(scenario)property.investment_scenario=scenario;
  const elements=new Map(),posts=[],timers=[];
- function element(id){if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:'',hidden:false,dataset:{},classList:{toggle(){}},addEventListener(){},querySelectorAll(){return[];},scrollIntoView(){},insertAdjacentHTML(){}});return elements.get(id);}
+ function element(id){if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:'',hidden:false,dataset:{},classList:{toggle(){}},addEventListener(){},querySelector(sel){return element(id+' '+sel);},querySelectorAll(){return[];},scrollIntoView(){},insertAdjacentHTML(){}});return elements.get(id);}
  const location=new URL('http://localhost/report.html?id=qa-1'+(collect?'&collect=1':''));
  const storage={getItem:key=>key==='pa_github_token'?'test-pat-not-real':shared.get(key)||null,setItem(key,value){if(storageFailure)throw Error('quota');shared.set(key,value);},removeItem:key=>shared.delete(key)};
  const context={URL,URLSearchParams,Uint8Array,TextDecoder,TextEncoder,Date,crypto:crypto.webcrypto,
    atob:text=>Buffer.from(text,'base64').toString('binary'),localStorage:storage,location,
    history:{replaceState(_,__,value){location.href=new URL(value,location).href;}},
    document:{getElementById:element,querySelectorAll(){return[];}},
-   PAReadonlyReport:model,PAReportFinancials:financials,PADealAnalysis:require('./deal-analysis.js'),
+   PAReadonlyReport:model,PAReportFinancials:financials,PADealAnalysis:require('./deal-analysis.js'),PAReportScenarios:require('./report-scenarios.js'),PAReportPublicContext:require('./report-public-context.js'),
    SecondarySourceEvidence:{reportPhotos(){return[];}},
-   supabase:{createClient(){return {from(){return {select(){return {eq:async()=>({data:[{deal_data:property}],error:null})};}};}};}},
+   supabase:{createClient(){return {from(){return {select(){return {eq:async()=>({data:inventoryOnly?[]:[{deal_data:property}],error:null})};}};}};}},
    setTimeout:fn=>timers.push(fn),addEventListener(){},
    fetch:async(url,options={})=>{
+     if(url==='properties.json')return new Response(JSON.stringify([property]),{status:200});
      if(options.method==='POST'){posts.push({url,body:JSON.parse(options.body)});return new Response(null,{status:204});}
      if(ready&&url.includes('/expanded_receipts/')){
        const receipt={property_id:property.id,property,generated_at:new Date().toISOString(),sources:{}};
@@ -32,7 +33,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  for(let i=0;i<150;i++){
    await new Promise(resolve=>setTimeout(resolve,1));
    const text=element('report-status').textContent;
-   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה'))return{posts,timers,shared,status:text,rehabHtml:element('rehab-view').innerHTML,analysisHtml:element('analysis-view').innerHTML};
+   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה'))return{posts,timers,shared,status:text,rehabHtml:element('rehab-view').innerHTML,analysisHtml:element('analysis-view').innerHTML,scenarioHtml:element('scenario-view [data-rs-results]').innerHTML};
  }
  throw Error('Controller did not reach a settled collection state: '+element('report-status').textContent);
 }
@@ -52,6 +53,9 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  const subject={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203'};
  const scenario=D.normalize(null,subject);Object.assign(scenario.inputs,{purchase:100000,arv:160000,flipRehab:10000,acquisition:5000,selling:5000,holding:2000,financing:1000,targetProfit:10000});
  result=await simulate(new Map(),{collect:true,ready:true,scenario});
- assert.ok(result.analysisHtml.includes('$37,000'));assert.ok(result.analysisHtml.includes('הזנה ידנית'));
+ assert.ok(result.scenarioHtml.includes('$37,000'));assert.ok(result.scenarioHtml.includes('הנחה ידנית'));
  console.log('PASS Explicit saved manual inputs supply a labeled scenario, without automatic renovation estimates');
+ result=await simulate(new Map(),{collect:true,ready:true,inventoryOnly:true});
+ assert.equal(result.posts.length,1);assert.ok(result.status.includes('האיסוף הסתיים'));
+ console.log('PASS A unique public inventory property loads when not saved in the deal pipeline');
 })().catch(error=>{console.error(error);process.exitCode=1;});
