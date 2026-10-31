@@ -1,0 +1,39 @@
+name: Official Area Quarterly Refresh
+on:
+  schedule:
+    - cron: '17 8 1 1,4,7,10 *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pa-repo-write-queue
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Refresh known official Census areas only
+        run: python report_area.py
+      - name: Save official area snapshots
+        run: |
+          if [ ! -d COMPS_REPORTS/official_area ]; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add COMPS_REPORTS/official_area
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh quarterly official area facts'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi

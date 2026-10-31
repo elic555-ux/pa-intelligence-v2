@@ -30,12 +30,9 @@ class ExecutionIntegrationTest(unittest.TestCase):
         self.assertEqual(self.data[str(self.root/'expanded_receipts/test-request.json')],result)
         self.assertEqual(self.data[str(self.root/'expanded_reports'/(report.property_key('qa-1')+'.json'))],result)
         self.assertEqual(self.data[str(self.root/'expanded_requests/123.json')]['status'],'completed')
-    def test_actions_passes_durable_reservation_callback_to_ai_collector(self):
-        with patch.object(report.report_provider_reservation,'persist_gemini_reservation') as persist:
-            report.execute('123')
-            callback=self.started[4].call_args.kwargs['before_gemini_send']
-            self.assertTrue(callable(callback));persist.assert_not_called()
-            callback();persist.assert_called_once_with(self.root.parent)
+    def test_execution_does_not_pass_ai_callback(self):
+        report.execute('123')
+        self.assertNotIn('before_gemini_send',self.started[4].call_args.kwargs)
     def test_completed_request_replay_cannot_repeat_enrichment_or_api(self):
         report.execute('123');self.started[4].reset_mock()
         result=report.execute('123')

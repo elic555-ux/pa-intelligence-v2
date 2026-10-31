@@ -3,8 +3,9 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
 const model=require('./report-readonly-model.js'),financials=require('./report-financials.js');
 const controller=fs.readFileSync(__dirname+'/report-readonly.js','utf8');
-async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null}={}){
+async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null}={}){
  const property={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203',county:'Allegheny',property_type:'Single Family',price:135000,url:'https://example.com/listing',last_source_check:new Date().toISOString()};
+ if(scenario)property.investment_scenario=scenario;
  const elements=new Map(),posts=[],timers=[];
  function element(id){if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:'',hidden:false,dataset:{},classList:{toggle(){}},addEventListener(){},querySelectorAll(){return[];},scrollIntoView(){},insertAdjacentHTML(){}});return elements.get(id);}
  const location=new URL('http://localhost/report.html?id=qa-1'+(collect?'&collect=1':''));
@@ -13,7 +14,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
    atob:text=>Buffer.from(text,'base64').toString('binary'),localStorage:storage,location,
    history:{replaceState(_,__,value){location.href=new URL(value,location).href;}},
    document:{getElementById:element,querySelectorAll(){return[];}},
-   PAReadonlyReport:model,PAReportFinancials:financials,
+   PAReadonlyReport:model,PAReportFinancials:financials,PADealAnalysis:require('./deal-analysis.js'),
    SecondarySourceEvidence:{reportPhotos(){return[];}},
    supabase:{createClient(){return {from(){return {select(){return {eq:async()=>({data:[{deal_data:property}],error:null})};}};}};}},
    setTimeout:fn=>timers.push(fn),addEventListener(){},
@@ -31,7 +32,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  for(let i=0;i<150;i++){
    await new Promise(resolve=>setTimeout(resolve,1));
    const text=element('report-status').textContent;
-   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה'))return{posts,timers,shared,status:text,rehabHtml:element('rehab-view').innerHTML};
+   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה'))return{posts,timers,shared,status:text,rehabHtml:element('rehab-view').innerHTML,analysisHtml:element('analysis-view').innerHTML};
  }
  throw Error('Controller did not reach a settled collection state: '+element('report-status').textContent);
 }
@@ -46,7 +47,11 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  const pending=new Map();await simulate(pending,{collect:true});
  const rehab={photo_count:1,photos:[{id:'photo_1',url:'https://ssl.cdn-redfin.com/photo/a.jpg'}],photo_coverage:[{photo_id:'photo_1',scene:'exterior',condition:'visible_damage',finding:'<script>alert(1)</script>'}],items:[],photo_intake:{available_links:22,candidate_links:22,prepared_photos:1,unavailable:21,duplicate_bytes:0,excluded_by_byte_limit:0,not_attempted:0}};
  result=await simulate(pending,{ready:true,rehab});
- assert.ok(result.rehabHtml.includes('נשלחו לניתוח: 1'));assert.ok(result.rehabHtml.includes('זמינים: 22'));
- assert.ok(result.rehabHtml.includes('כיסוי ניתוח התמונות חלקי'));assert.ok(result.rehabHtml.includes('&lt;script&gt;'));assert.ok(!result.rehabHtml.includes('<script>'));
- console.log('PASS Report renders source/sent/reviewed counts, incomplete coverage, photo evidence and escaped findings');
+ assert.equal(result.rehabHtml,'');console.log('PASS Legacy photo analysis is never rendered');
+ const D=require('./deal-analysis.js');
+ const subject={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203'};
+ const scenario=D.normalize(null,subject);Object.assign(scenario.inputs,{purchase:100000,arv:160000,flipRehab:10000,acquisition:5000,selling:5000,holding:2000,financing:1000,targetProfit:10000});
+ result=await simulate(new Map(),{collect:true,ready:true,scenario});
+ assert.ok(result.analysisHtml.includes('$37,000'));assert.ok(result.analysisHtml.includes('הזנה ידנית'));
+ console.log('PASS Explicit saved manual inputs supply a labeled scenario, without automatic renovation estimates');
 })().catch(error=>{console.error(error);process.exitCode=1;});
