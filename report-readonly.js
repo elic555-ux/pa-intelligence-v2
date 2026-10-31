@@ -17,7 +17,9 @@
     for(const id of ['overview','financials']){$('tab-'+id).hidden=id!==name;$('btn-'+id).setAttribute('aria-selected',String(id===name));}
   }
   function county(){
-    const record=state.report?.internal_data?.county_record;
+    const context=state.analysis?.public_context;
+    const record=state.report?.internal_data?.county_record||
+      (root.PAReportPublicContext?.valid(context,state.property,null,state.reference)?context.county_record:null);
     return record?.status==='matched'&&sameAddress(record.subject,state.property)?record:null;
   }
   function sameAddress(a,b){return !!a&&!!b&&JSON.stringify(M.identity({...a,id:b.id}))===JSON.stringify(M.identity(b));}

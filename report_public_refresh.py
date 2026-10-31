@@ -40,6 +40,7 @@ def refresh(root=Path('COMPS_REPORTS'), property_ids=None):
         except (OSError, ValueError, TypeError): point={}
         area=report_area.collect(point,root)
         context=report_public_context.collect(p,county,point,root,allow_public=True)
+        context['county_record']=county
         target=root/'public_context'/(key(property_id)+'.json');target.parent.mkdir(parents=True,exist_ok=True)
         target.write_text(json.dumps(context,ensure_ascii=False,indent=2),encoding='utf-8')
         # Area snapshots are written by report_area. Never rewrite historical reports.

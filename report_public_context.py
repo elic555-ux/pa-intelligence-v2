@@ -15,7 +15,7 @@ from xml.etree import ElementTree as ET
 import internal_report_store as store
 
 VERSION='official-public-context-1'
-EDUCATION_VERSION='pde-performance-1'
+EDUCATION_VERSION='pde-performance-2'
 PDE_INDEX='https://www.futurereadypa.org/Home/DataFiles'
 PDE_HOSTS={'www.futurereadypa.org','futurereadypa.org'}
 ASSESSMENT='65855e14-549e-4992-b5be-d629afc676fa'
@@ -81,10 +81,11 @@ def parse_district_map(data):
         if sheet not in headers:continue
         ai,ni=headers[sheet]
         if max(ai,ni)>=len(row):continue
-        aun=str(row[ai]).strip();key=district_key(row[ni])
-        if not re.fullmatch(r'\d{9}',aun) or key not in TARGET_DISTRICTS:continue
-        if aun in result and result[aun]!=key:raise ValueError('Conflicting official district AUN')
-        result[aun]=key
+        aun=str(row[ai]).strip();name=str(row[ni]).strip();key=district_key(name)
+        if not re.fullmatch(r'\d{9}',aun) or not key or len(name)>180:continue
+        record={'district_key':key,'district':name}
+        if aun in result and result[aun]!=record:raise ValueError('Conflicting official district AUN')
+        result[aun]=record
     return result,diagnostics
 
 EXPLICIT_MEASURES={
@@ -160,6 +161,13 @@ def percent(value):
 
 def parse_workbook(data,period,url,now,district_map=None):
     districts={k:{'district':v,'schools':[]} for k,v in TARGET_DISTRICTS.items()}
+    for aun,record in (district_map or {}).items():
+        if not isinstance(record,dict):continue
+        key=record.get('district_key');name=record.get('district')
+        if not isinstance(key,str) or not key or not isinstance(name,str) or district_key(name)!=key:continue
+        entry=districts.setdefault(key,{'district':name,'schools':[]})
+        entry['district']=name
+        if aun not in entry.setdefault('district_auns',[]):entry['district_auns'].append(aun)
     headers={};diagnostics={};recognized={};school_map={}
     for sheet,rownum,row in xlsx_rows(data):
         normalized=[norm(x) for x in row]
@@ -176,7 +184,8 @@ def parse_workbook(data,period,url,now,district_map=None):
         head,di,si=headers[sheet]
         if di=='aun_schema':
             if len(row)<3:continue
-            dk=(district_map or {}).get(str(row[0]).strip())
+            district_record=(district_map or {}).get(str(row[0]).strip())
+            dk=district_record.get('district_key') if isinstance(district_record,dict) else None
             if dk not in districts:continue
             recognized[dk]=recognized.get(dk,0)+1
             name=str(row[2] or '').strip()
@@ -191,8 +200,9 @@ def parse_workbook(data,period,url,now,district_map=None):
                     'source_row':rownum,'student_group':'All Students'})
             continue
         if max(di,si)>=len(row):continue
-        dk=district_key(row[di])
-        if dk not in districts:continue
+        name_in_source=str(row[di]).strip();dk=district_key(name_in_source)
+        if not dk or len(name_in_source)>180:continue
+        districts.setdefault(dk,{'district':name_in_source,'schools':[]})
         recognized[dk]=recognized.get(dk,0)+1
         cols={norm(name):row[i] if i<len(row) else '' for i,name in enumerate(head)}
         group=next((cols[k] for k in ('student group','student group name','student subgroup','subgroup',
@@ -249,15 +259,15 @@ def parcel_school_district(county,root,allow_public,now):
     parcel=county.get('parcel_id')
     if not re.fullmatch(r'[A-Z0-9]{16}',str(parcel or '')):return None
     path=Path(root)/'official_education'/'parcels'/(parcel+'.json');cached=read(path)
-    if cached and cached.get('parcel_id')==parcel and current(cached,now):return cached
+    if cached and cached.get('version')==EDUCATION_VERSION and cached.get('parcel_id')==parcel and current(cached,now):return cached
     if not allow_public:return None
     url='https://data.wprdc.org/api/3/action/datastore_search?'+urlencode({
         'resource_id':ASSESSMENT,'filters':json.dumps({'PARID':parcel}),'fields':'PARID,SCHOOLDESC','limit':2})
     payload=json.loads(store.public_get(url));rows=(payload.get('result') or {}).get('records') or []
     if payload.get('success') is not True or len(rows)!=1 or rows[0].get('PARID')!=parcel:return None
-    key=district_key(rows[0].get('SCHOOLDESC'))
-    if key not in TARGET_DISTRICTS:return None
-    result={'district':TARGET_DISTRICTS[key],'district_key':key,'parcel_id':parcel,
+    district_name=str(rows[0].get('SCHOOLDESC') or '').strip();key=district_key(district_name)
+    if not key or len(district_name)>180:return None
+    result={'version':EDUCATION_VERSION,'district':district_name,'district_key':key,'parcel_id':parcel,
         'source_url':ASSESSMENT_URL,'source_name':'Allegheny County property assessments — SCHOOLDESC',
         'observed_at':now.isoformat(timespec='seconds'),'checked_quarter':quarter(now)}
     write(path,result);return result
@@ -288,7 +298,8 @@ def collect(p,county,point,root=Path('COMPS_REPORTS'),allow_public=True):
     usable=any(m.get('value') is not None for s in schools for m in s.get('metrics',[]))
     status='available' if usable and data.get('status')=='available' else data.get('status') or 'source_unavailable'
     if status=='available' and not usable:status='district_data_unavailable'
-    result['education'].update(status=status,district=district['district'],
+    if len(matched.get('district_auns') or [])>1:status='district_identity_ambiguous';schools=[]
+    result['education'].update(status=status,district=matched.get('district') or district['district'],
         district_match_basis='county_parcel_school_district',district_source_url=district['source_url'],
         district_observed_at=district['observed_at'],source_url=data.get('source_url') or PDE_INDEX,
         source_period=data.get('source_period'),observed_at=data.get('observed_at'),schools=schools)
