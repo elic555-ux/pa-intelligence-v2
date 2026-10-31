@@ -61,3 +61,10 @@ console.log(passed+' read-only report checks passed');
    assert.equal(m.metrics(p,null,report,{financialSnapshot:()=>({price:100000,operatingExpenses:0,vacancyLoss:null})},now).noi,null);
    assert.equal(m.metrics(p,null,report,{financialSnapshot:()=>({price:100000,operatingExpenses:0,vacancyLoss:0})},now).noi,12000);
  });
+
+test('Actual listing/county disagreements are flagged without changing source records',()=>{
+ const p2={...p,beds:3},c={status:'matched',subject:p2,fields:{beds:2}};
+ assert.ok(m.propertyConflicts(p2,c)[0].includes('במודעה 3, במחוז 2'));
+ assert.equal(p2.beds,3);assert.equal(c.fields.beds,2);
+ assert.deepEqual(m.propertyConflicts(p2,{...c,subject:{...p2,address:'Other'}}),[]);
+});

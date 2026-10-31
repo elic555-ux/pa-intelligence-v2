@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='10.1.1';
+  const VERSION='10.1.2';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -107,6 +107,13 @@
       noi,capRate:noi!==null&&price>0?noi*100/price:null,
       arv:null,rehab:null,rehabLow:null,purchaseAndRehab:null,flipProfit:null,maoFlip:null,maoRental:null};
   }
+  function propertyConflicts(p,county){
+    if(county?.status!=='matched'||!matches({property:county.subject,property_id:String(p.id)},p))return [];
+    return [['beds','מספר חדרים'],['baths','חדרי רחצה'],['sqft','שטח SqFt'],['year_built','שנת בנייה']].flatMap(([key,label])=>{
+      const listing=number(p[key]),recorded=number(county.fields?.[key]);
+      return listing!==null&&recorded!==null&&listing!==recorded?[label+': במודעה '+listing+', במחוז '+recorded+' — דורש אימות']:[];
+    });
+  }
   function priceHistory(p,now=Date.now()){
     return (Array.isArray(p.price_history)?p.price_history:[])
       .filter(r=>number(r.price)>0&&Number.isFinite(Date.parse(r.date))&&Date.parse(r.date)<=now)
@@ -138,5 +145,5 @@
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,currentValue,priceHistory,officialArea,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
+  return {VERSION,SECTIONS,propertyConflicts,currentValue,priceHistory,officialArea,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
 });
