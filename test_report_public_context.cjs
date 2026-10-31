@@ -10,3 +10,5 @@ const html=m.render(c,p,county,now);assert.ok(html.includes('Penn Hills SD'));as
 assert.ok(!m.render({...c,education:{...c.education,district_match_basis:'postal_city'}},p,county,now).includes('Penn Hills SD'));
 assert.ok(!m.render({...c,education:{...c.education,source_url:'https://untrusted.example/'}},p,county,now).includes('0.0%'));
 console.log('PASS Official context rejects foreign parcels, postal school inference and untrusted performance URLs; zero and escaped labels preserved');
+
+assert.equal(m.district(c,p,county,now),'Penn Hills SD');assert.equal(m.district({...c,education:{...c.education,district_match_basis:'postal_city'}},p,county,now),null);

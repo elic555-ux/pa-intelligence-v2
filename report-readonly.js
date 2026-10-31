@@ -62,18 +62,22 @@
     $('county-view').innerHTML='<div class="facts">'+[['מזהה חלקה',c.parcel_id],['מחוז',c.county],['רשות מקומית',f.municipality],['שימוש רשום',f.county_use],['מבנה רשום',f.style],['שטח מגרש SqFt',f.lot_size],['שטח מגורים SqFt',f.sqft],['שנת בנייה',f.year_built],['חדרים / רחצה',[f.beds,f.baths].map(x=>x??'—').join(' / ')]].map(([k,v])=>fact(k,v)).join('')+'</div>'+source(c.source_name,c.retrieved_at,c.source_url)+'<p class="muted">תאריך נתוני המחוז: '+e(c.source_as_of||'לא פורסם')+'. רישום המחוז מתאר מאפייני נכס; הוא אינו בדיקת מצב עדכנית.</p>';
   }
   function renderArea(){
-    const a=M.matches(state.analysis,state.property)?state.analysis:null,point=a?.closed_sales?.subject_location||a?.public_context?.parcel_location;
-    const area=M.officialArea(a,state.property,state.reference);
-    let out='<div class="facts">'+fact('עיר',state.property.city)+fact('שכונה לפי המיפוי',point?.neighborhood)+fact('רשות מקומית',state.county?.fields?.municipality||point?.municipality)+fact('אזור סטטיסטי Census',point?.tract)+'</div>';
+    const p=state.property,a=M.matches(state.analysis,p)?state.analysis:null;
+    const point=a?.closed_sales?.subject_location||a?.public_context?.parcel_location;
+    const area=M.officialArea(a,p,state.reference),rows=list(area?.metrics).filter(x=>n(x.value)!==null&&n(x.value)>=0);
+    const value=code=>rows.find(r=>r.code===code),income=value('B19013_001'),rent=value('B25064_001');
+    const district=root.PAReportPublicContext?.district(a?.public_context,p,state.county,state.reference);
+    const estimate=(label,row)=>fact(label,row?money(row.value):'לא זמין')+(row?'<small class="source-note">טעות דגימה: ±'+e(n(row.margin_of_error)===null?'לא פורסמה':money(row.margin_of_error))+'</small>':'');
+    let out='<p class="area-location">'+e([point?.neighborhood,state.county?.fields?.municipality||point?.municipality||p.city].filter(Boolean).join(' · '))+'</p>';
+    out+='<div class="facts area-key-facts"><div>'+estimate('הכנסה חציונית למשק בית · לשנה',income)+'</div><div>'+estimate('שכירות אזורית חציונית · לחודש',rent)+'</div>'+fact('מחוז חינוך לפי רישום החלקה',district||'לא אומת')+'</div>';
+    out+='<p class="source-note">'+(area?'Census · <bdi>'+e(area.source_period)+'</bdi> · ':'')+'נתוני אזור סטטיסטי; אינם אומדן לנכס או לרחוב.</p>';
+    if(area?.status==='cached_stale')out+=missing('מוצגת גרסה קודמת; עדכון המקור לא הושלם.');
+    out+='<p class="source-note">פשיעה: אין נתון עדכני מאומת.</p><details class="area-details"><summary>פירוט נתוני האזור והמקורות</summary>';
     if(area){
-      const rows=list(area.metrics).filter(x=>n(x.value)!==null&&n(x.value)>=0);
-      out+='<p class="source-note">'+e(area.geography_name)+' · תקופת הנתונים: '+e(area.source_period)+'</p>';
-      if(area.status==='cached_stale')out+=missing('עדכון המקור לא הושלם; מוצגת הגרסה הקודמת.');
-      out+='<div class="table-scroll"><table><thead><tr><th>מדד רשמי</th><th>אומדן שפורסם</th><th>טעות דגימה ±</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+e(x.label)+'</td><td>'+e(x.unit?.startsWith('USD')?money(x.value):Number(x.value).toLocaleString('en-US'))+'</td><td>'+e(n(x.margin_of_error)===null?'לא זמין':x.margin_of_error)+'</td></tr>').join('')+'</tbody></table></div>'+source(area.source_name,area.observed_at,area.source_url);
-    }else out+=missing('נתוני האזור הרשמיים טרם נאספו או שלא אומתה התאמה לאזור הנכס.');
-    out+='<p class="source-note">נתוני Census מתייחסים לאזור סטטיסטי, לא לרחוב. אין בדוח ציון שכונה מחושב.</p>';
-    if(root.PAReportPublicContext)out+=root.PAReportPublicContext.render(a?.public_context,state.property,state.county,state.reference);
-    $('area-view').innerHTML=out;
+      out+='<p class="source-note">'+e(area.geography_name)+'</p><div class="table-scroll"><table><thead><tr><th>מדד רשמי</th><th>אומדן שפורסם</th><th>טעות דגימה ±</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+e(x.label)+'</td><td>'+e(x.unit?.startsWith('USD')?money(x.value):Number(x.value).toLocaleString('en-US'))+'</td><td>'+e(n(x.margin_of_error)===null?'לא זמין':x.margin_of_error)+'</td></tr>').join('')+'</tbody></table></div>'+source(area.source_name,area.observed_at,area.source_url);
+    }else out+=missing('נתוני Census תואמים עדיין אינם זמינים.');
+    if(root.PAReportPublicContext)out+=root.PAReportPublicContext.render(a?.public_context,p,state.county,state.reference);
+    $('area-view').innerHTML=out+'</details>';
   }
   function renderPropertyTaxes(){
     const t=M.propertyTaxes(state.analysis,state.property,state.county,state.reference);
@@ -91,11 +95,6 @@
     const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference);
     let out='<div class="metric-grid">'+metric('שכירות שנתית ברוטו',m.annualRent)+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות ומימון',M.percent)+metric('NOI שנתי',m.noi,'דורש הוצאות מלאות ומתועדות')+metric('Cap Rate',m.capRate,'לפני מימון',M.percent)+'</div>'+renderPropertyTaxes();
     $('analysis-view').innerHTML=out;
-    const inputs={...F.financialSnapshot(p,state.reference),rent:m.rent};
-    if(root.PAReportScenarios){
-      if(state.scenarios)state.scenarios.updateSource(inputs);
-      else state.scenarios=root.PAReportScenarios.mount($('scenario-view'),{property:p,scenario:p.investment_scenario,source:inputs,readOnly:state.historical});
-    }
   }
   function renderSummary(){
     const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference),items=[];
@@ -228,7 +227,7 @@
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
   document.getElementById('tabs-bar').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const buttons=Array.from(document.querySelectorAll('[data-tab]')),at=buttons.indexOf(document.activeElement);if(at<0)return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(at+(event.key==='ArrowLeft'?1:buttons.length-1))%buttons.length;buttons[next].focus();tab(buttons[next].dataset.tab);});
   let printedDetails=[];
-  root.addEventListener('beforeprint',()=>{printedDetails=Array.from(document.querySelectorAll('details')).filter(x=>!x.open);printedDetails.forEach(x=>x.open=true);});
+  root.addEventListener('beforeprint',()=>{printedDetails=Array.from(document.querySelectorAll('details')).filter(x=>!x.open&&!x.closest('.area-details'));printedDetails.forEach(x=>x.open=true);});
   root.addEventListener('afterprint',()=>{printedDetails.forEach(x=>x.open=false);printedDetails=[];});
   $('refresh-official').addEventListener('click',refreshOfficial);
   $('print-report').addEventListener('click',()=>root.print());

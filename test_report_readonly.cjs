@@ -68,3 +68,11 @@ test('Actual listing/county disagreements are flagged without changing source re
  assert.equal(p2.beds,3);assert.equal(c.fields.beds,2);
  assert.deepEqual(m.propertyConflicts(p2,{...c,subject:{...p2,address:'Other'}}),[]);
 });
+
+test('Expanded report has no manual calculators and retains compact expandable area detail',()=>{
+ const html=fs.readFileSync(__dirname+'/report.html','utf8'),controller=fs.readFileSync(__dirname+'/report-readonly.js','utf8');
+ assert.ok(!/report-scenarios|deal-analysis|scenario-view/.test(html));
+ assert.ok(!/PAReportScenarios|investment_scenario|\.mount\(/.test(controller));
+ assert.ok(controller.includes('<details class="area-details"><summary>פירוט נתוני האזור והמקורות</summary>'));
+ assert.ok(!controller.includes('<details class="area-details" open'));
+});
