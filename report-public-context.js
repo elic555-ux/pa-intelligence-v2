@@ -9,6 +9,12 @@
       /^[A-Z0-9]{16}$/.test(c.parcel_id||'')&&(!county?.parcel_id||county.parcel_id===c.parcel_id)&&
       Number.isFinite(time)&&time<=now&&now-time<=100*86400000;
   }
+  function district(c,p,county,now=Date.now()){
+    if(!valid(c,p,county,now))return null;
+    const edu=c.education||{};
+    return edu.district_match_basis==='county_parcel_school_district'&&edu.parcel_id===c.parcel_id&&
+      link(edu.district_source_url,['data.wprdc.org'])?edu.district:null;
+  }
   const source=(name,when,url)=>'<p class="source-note">'+esc(name)+' · '+esc(when?String(when).slice(0,10):'מועד נתונים לא זמין')+(url?' · <a target="_blank" rel="noopener noreferrer" href="'+esc(url)+'">מקור רשמי</a>':'')+'</p>';
   function render(c,p,county,now=Date.now()){
     if(!valid(c,p,county,now))return '<p class="missing">בתי ספר ופשיעה: טרם התקבל מידע רשמי התואם לנכס.</p>';
@@ -35,5 +41,5 @@
       (crimeUrl?'<p class="source-note">'+esc(c.municipality||'הרשות המקומית טרם אומתה')+' · <a target="_blank" rel="noopener noreferrer" href="'+esc(crimeUrl)+'">בדיקה במערכת משטרת פנסילבניה</a></p>':'');
     return out;
   }
-  return {valid,render};
+  return {valid,district,render};
 });

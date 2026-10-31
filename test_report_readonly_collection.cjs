@@ -53,8 +53,8 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  const subject={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203'};
  const scenario=D.normalize(null,subject);Object.assign(scenario.inputs,{purchase:100000,arv:160000,flipRehab:10000,acquisition:5000,selling:5000,holding:2000,financing:1000,targetProfit:10000});
  result=await simulate(new Map(),{collect:true,ready:true,scenario});
- assert.ok(result.scenarioHtml.includes('$37,000'));assert.ok(result.scenarioHtml.includes('הנחה ידנית'));
- console.log('PASS Explicit saved manual inputs supply a labeled scenario, without automatic renovation estimates');
+ assert.equal(result.scenarioHtml,'');assert.ok(!result.analysisHtml.includes('$37,000'));
+ console.log('PASS Report does not mount calculators or render manual assumptions even when saved');
  result=await simulate(new Map(),{collect:true,ready:true,inventoryOnly:true});
  assert.equal(result.posts.length,1);assert.ok(result.status.includes('האיסוף הסתיים'));
  console.log('PASS A unique public inventory property loads when not saved in the deal pipeline');

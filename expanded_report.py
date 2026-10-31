@@ -454,7 +454,7 @@ def check_installation():
     """Read local files only; never mutate the ledger or contact a provider."""
     base = ROOT.parent
     checks = {}
-    required = ("expanded_report.py", "rentcast_budget.py", "internal_report_store.py", "report_enrichment.py", "closed_sales.py", "report_financing.py", "report_area.py", "report_public_context.py", "report-scenarios.js", "report-public-context.js", "report_provider_reservation.py", "report_gallery.py", "report_photo_inputs.cjs", "report-readonly-model.js", "report-readonly.js", "report-financials.js", "report-readonly.css",
+    required = ("expanded_report.py", "rentcast_budget.py", "internal_report_store.py", "report_enrichment.py", "closed_sales.py", "report_financing.py", "report_area.py", "report_public_context.py", "report-public-context.js", "report_provider_reservation.py", "report_gallery.py", "report_photo_inputs.cjs", "report-readonly-model.js", "report-readonly.js", "report-financials.js", "report-readonly.css",
                 ".github/workflows/expanded-report.yml", "report.html", "deals.html", "comps_engine.py")
     for relative in required:
         checks[relative] = "ok" if (base / relative).is_file() else "missing"
