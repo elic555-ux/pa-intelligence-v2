@@ -28,6 +28,17 @@ LINKS = [
 
 def clock(): return datetime.now(timezone.utc)
 def quarter(t): return f'{t.year}-Q{(t.month-1)//3+1}'
+def valid_snapshot(snapshot, geoid, now):
+    if not isinstance(snapshot, dict) or snapshot.get('version') != VERSION or snapshot.get('geoid') != geoid:
+        return False
+    try:
+        observed = datetime.fromisoformat(snapshot['observed_at'])
+        if observed.tzinfo is None or observed > now: return False
+    except (KeyError, ValueError, TypeError): return False
+    rows=snapshot.get('metrics')
+    if not isinstance(rows,list) or not rows: return False
+    return all(isinstance(r,dict) and r.get('code') in VARIABLES and
+        (r.get('value') is None or type(r.get('value')) is int and r['value']>=0) for r in rows)
 def get_json(url):
     if urlsplit(url).scheme != 'https' or urlsplit(url).hostname != 'api.census.gov':
         raise ValueError('Unexpected Census host')
@@ -58,15 +69,17 @@ def parse(payload, geoid, year, observed_at):
             n = int(row[key])
             return n if n >= 0 else None  # ACS suppression/special codes are negative.
         except (ValueError, TypeError, KeyError): return None
-    return {'version': VERSION, 'status': 'available', 'geoid': geoid,
+    metrics=[{'code':code,'label':label,'value':value(code+'E'),
+              'margin_of_error':value(code+'M'),'unit':unit} for code,(label,unit) in VARIABLES.items()]
+    usable=sum(row['value'] is not None for row in metrics)
+    if not usable: raise ValueError('No usable Census estimates')
+    return {'version': VERSION, 'status': 'available' if usable==len(metrics) else 'partial', 'geoid': geoid,
         'geography_level': 'census_tract', 'geography_name': row.get('NAME'),
         'source_name': 'U.S. Census Bureau — ACS 5-year',
         'source_url': f'https://data.census.gov/profile?g=140XX00US{geoid}',
         'source_period': f'{year-4}–{year}', 'dataset_year': year,
         'observed_at': observed_at, 'checked_quarter': quarter(datetime.fromisoformat(observed_at)),
-        'metrics': [{'code': code, 'label': label, 'value': value(code+'E'),
-                     'margin_of_error': value(code+'M'), 'unit': unit}
-                    for code,(label,unit) in VARIABLES.items()]}
+        'metrics': metrics}
 
 def collect(point, root=Path('COMPS_REPORTS'), allow_public=True, now=None):
     now = now or clock(); geoid = tract_id(point or {})
@@ -77,8 +90,8 @@ def collect(point, root=Path('COMPS_REPORTS'), allow_public=True, now=None):
     path = Path(root)/'official_area'/(geoid+'.json'); cached = None
     try: cached = json.loads(path.read_text(encoding='utf-8'))
     except (OSError, ValueError): pass
-    if not isinstance(cached, dict) or cached.get('version') != VERSION or cached.get('geoid') != geoid: cached = None
-    if cached and cached.get('checked_quarter') == quarter(now) and datetime.fromisoformat(cached['observed_at']) <= now:
+    if not valid_snapshot(cached, geoid, now): cached = None
+    if cached and cached.get('checked_quarter') == quarter(now):
         return {**base, **cached, 'reference_links': LINKS}
     if not allow_public:
         return {**base, **(cached or {}), 'status': 'cached_stale' if cached else 'lookup_disabled'}

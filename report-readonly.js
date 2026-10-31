@@ -60,7 +60,7 @@
     $('county-view').innerHTML='<div class="facts">'+[['מזהה חלקה',c.parcel_id],['מחוז',c.county],['רשות מקומית',f.municipality],['שימוש רשום',f.county_use],['מבנה רשום',f.style],['שטח מגרש SqFt',f.lot_size],['שטח מגורים SqFt',f.sqft],['שנת בנייה',f.year_built],['חדרים / רחצה',[f.beds,f.baths].map(x=>x??'—').join(' / ')]].map(([k,v])=>fact(k,v)).join('')+'</div>'+source(c.source_name,c.retrieved_at,c.source_url)+'<p class="muted">תאריך נתוני המחוז: '+e(c.source_as_of||'לא פורסם')+'. רישום המחוז מתאר מאפייני נכס; הוא אינו בדיקת מצב עדכנית.</p>';
   }
   function renderArea(){
-    const a=M.matches(state.analysis,state.property)?state.analysis:null,point=a?.closed_sales?.subject_location;
+    const a=M.matches(state.analysis,state.property)?state.analysis:null,point=a?.closed_sales?.subject_location||a?.public_context?.parcel_location;
     const area=M.officialArea(a,state.property,state.reference);
     let out='<div class="facts">'+fact('עיר',state.property.city)+fact('שכונה לפי המיפוי',point?.neighborhood)+fact('רשות מקומית',state.county?.fields?.municipality||point?.municipality)+fact('אזור סטטיסטי Census',point?.tract)+'</div>';
     if(area){
@@ -69,7 +69,8 @@
       if(area.status==='cached_stale')out+=missing('עדכון המקור לא הושלם; מוצגת הגרסה הקודמת.');
       out+='<div class="table-scroll"><table><thead><tr><th>מדד רשמי</th><th>אומדן שפורסם</th><th>טעות דגימה ±</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+e(x.label)+'</td><td>'+e(x.unit?.startsWith('USD')?money(x.value):Number(x.value).toLocaleString('en-US'))+'</td><td>'+e(n(x.margin_of_error)===null?'לא זמין':x.margin_of_error)+'</td></tr>').join('')+'</tbody></table></div>'+source(area.source_name,area.observed_at,area.source_url);
     }else out+=missing('נתוני האזור הרשמיים טרם נאספו או שלא אומתה התאמה לאזור הנכס.');
-    out+='<p class="source-note">נתוני Census מתייחסים לאזור סטטיסטי, לא לרחוב. אין בדוח ציון שכונה מחושב.</p><div class="source-links"><a href="https://www.futurereadypa.org/Home/DataFiles" target="_blank" rel="noopener noreferrer">בתי ספר — נתוני מדינת פנסילבניה</a><a href="https://www.ucr.pa.gov/PAUCRSPUBLIC" target="_blank" rel="noopener noreferrer">פשיעה — נתוני משטרת פנסילבניה</a></div><p class="source-note">קישורים לבדיקה: טרם בוצעה התאמה לבית ספר או לרשות משטרתית עבור הכתובת.</p>';
+    out+='<p class="source-note">נתוני Census מתייחסים לאזור סטטיסטי, לא לרחוב. אין בדוח ציון שכונה מחושב.</p>';
+    if(root.PAReportPublicContext)out+=root.PAReportPublicContext.render(a?.public_context,state.property,state.county,state.reference);
     $('area-view').innerHTML=out;
   }
   function renderPropertyTaxes(){
@@ -87,15 +88,12 @@
   function renderAnalysis(){
     const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference);
     let out='<div class="metric-grid">'+metric('שכירות שנתית ברוטו',m.annualRent)+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות ומימון',M.percent)+metric('NOI שנתי',m.noi,'דורש הוצאות מלאות ומתועדות')+metric('Cap Rate',m.capRate,'לפני מימון',M.percent)+'</div>'+renderPropertyTaxes();
-    const D=root.PADealAnalysis,s=p.investment_scenario;
-    if(D&&D.matches(s,p)){
-      const manual=JSON.parse(JSON.stringify(s));
-      for(const key of Object.keys(manual.rehab_links||{}))delete manual.inputs[key];
-      manual.rehab_links={};
-      const f=F.financialSnapshot(p,state.reference),result=D.calculate(p,manual,{...f,rent:m.rent,arv:null,flipRehab:null,rentalRehab:null});
-      out+='<h3>תרחיש שמור — הנחות משתמש</h3><p class="source-note">'+e(date(s.updated_at))+' · מחיר מכירה ותקציב שיפוץ מתקבלים מהזנה ידנית בלבד.</p><div class="metric-grid">'+metric('החזר הלוואה חודשי',result.monthlyDebt)+metric('תזרים חודשי',result.monthlyCashFlow)+metric('Cash-on-Cash',result.cashOnCash,'לפי הנחות התרחיש',M.percent)+metric('תקרת רכישה להשכרה',result.rentalMao)+metric('מחיר מכירה בתרחיש',result.inputs.arv,'הזנה ידנית')+metric('רווח פליפ לפני מס',result.flipProfit)+metric('תקרת רכישה לפליפ',result.flipMao)+metric('הון נדרש',result.cashRequired)+'</div><details><summary>נתונים והנחות ששימשו לחישוב</summary>'+'<div class="table-scroll"><table><thead><tr><th>נתון</th><th>ערך</th><th>בסיס</th></tr></thead><tbody>'+Object.entries(result.inputs).map(([key,value])=>'<tr><td>'+e(D.FIELDS[key]?.[0]||key)+'</td><td>'+e(value??'לא זמין')+'</td><td>'+e(({source:'מקור מתועד',assumption:'הזנה ידנית',setting:'הגדרת מודל',missing:'חסר',invalid:'לא תקין',overridden:'הוחלף בהנחה אחרת'})[result.origins[key]]||'חסר')+'</td></tr>').join('')+'</tbody></table></div>'+'</details>';
-    }else out+=missing('אין תרחיש ידני שמור. תחשיבי מימון ופליפ יופיעו לאחר הזנת ההנחות בחדר העסקאות.');
     $('analysis-view').innerHTML=out;
+    const inputs={...F.financialSnapshot(p,state.reference),rent:m.rent};
+    if(root.PAReportScenarios){
+      if(state.scenarios)state.scenarios.updateSource(inputs);
+      else state.scenarios=root.PAReportScenarios.mount($('scenario-view'),{property:p,scenario:p.investment_scenario,source:inputs,readOnly:state.historical});
+    }
   }
   function renderSummary(){
     const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference),items=[];
@@ -152,14 +150,37 @@
     if(!S)return;const p=state.property;state.media=S.reportPhotos(p,media).filter(x=>M.url(x.url));
   }
   async function loadOfficialArea(){
-    if(state.historical||!M.matches(state.analysis,state.property))return;
-    const point=state.analysis.closed_sales?.subject_location;
+    if(state.historical)return;
+    const p=state.property,base=M.matches(state.analysis,p)?state.analysis:{property_id:String(p.id),property:p};
+    try{const context=await repoJson('COMPS_REPORTS/public_context/'+await key(p.id)+'.json');
+      if(root.PAReportPublicContext?.valid(context,p,state.county,state.reference))state.analysis={...base,public_context:context};
+    }catch(_){/* Preserve the last matching context on a temporary source failure. */}
+    if(!M.matches(state.analysis,p))return;
+    const point=state.analysis.closed_sales?.subject_location||state.analysis.public_context?.parcel_location;
     const geoid=String(point?.geoid||'').slice(0,11)||(point?.parcel_id&&/^\d{6}$/.test(String(point.tract))?'42003'+point.tract:'');
     if(!/^42003\d{6}$/.test(geoid))return;
     try{const area=await repoJson('COMPS_REPORTS/official_area/'+geoid+'.json');
       const candidate={...state.analysis,area};
-      if(M.officialArea(candidate,state.property,state.reference)&&(!state.analysis.area?.observed_at||Date.parse(area.observed_at)>=Date.parse(state.analysis.area.observed_at)))state.analysis=candidate;
+      if(M.officialArea(candidate,p,state.reference)&&(!state.analysis.area?.observed_at||Date.parse(area.observed_at)>=Date.parse(state.analysis.area.observed_at)))state.analysis=candidate;
     }catch(_){/* Keep the original observation and its date on lookup failure. */}
+  }
+  async function refreshOfficial(){
+    if(state.historical)return;
+    const button=$('refresh-official'),view=$('official-status'),t=token();
+    if(!t){view.textContent='עדכון המקורות דורש את חיבור האיסוף שהוגדר בחדר העסקאות.';return;}
+    button.disabled=true;view.textContent='מעדכן נתונים רשמיים…';
+    const sent=Date.now();
+    try{
+      const response=await fetch(REPO+'/actions/workflows/official-area-quarterly.yml/dispatches',{method:'POST',headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({ref:'main',inputs:{property_id:String(state.property.id)}})});
+      if(!response.ok)throw Error('שליחת העדכון נכשלה ('+response.status+')');
+      async function pollOfficial(){
+        state.reference=Date.now();await loadOfficialArea();render();
+        if(Date.parse(state.analysis?.public_context?.generated_at)>=sent){view.textContent='המקורות הרשמיים עודכנו. מידע שלא התקבל מסומן כחסר.';button.disabled=false;return;}
+        if(Date.now()-sent>7*60000){view.textContent='העדכון טרם הסתיים; אפשר לפתוח שוב את הדוח בהמשך.';button.disabled=false;return;}
+        root.setTimeout(pollOfficial,7000);
+      }
+      await pollOfficial();
+    }catch(error){view.textContent=error.message;button.disabled=false;}
   }
   async function refresh(k){const report=await repoJson('COMPS_REPORTS/expanded_reports/'+k+'.json');if(M.matches(report,state.property)&&(!state.report||Date.parse(report.generated_at)>=Date.parse(state.report.generated_at))){state.report=report;state.analysis=report.report_analysis||null;}}
   async function collect(){
@@ -193,7 +214,7 @@
       }
       if(!property||!String(property.id||'')||!property.address||!property.city||(!saved&&String(property.id)!==String(id)))throw new Error('נתוני הנכס אינם מתאימים לבקשה');
       state.property=property;state.report=M.matches(property.expanded_source_report,property)?property.expanded_source_report:null;state.analysis=state.report?.report_analysis||null;
-      render();const k=await key(property.id);
+      render();$('refresh-official').hidden=state.historical;const k=await key(property.id);
       if(!state.historical){try{await refresh(k);}catch(_){status('נתוני הנכס נטענו; עדכון המקור מהשרת לא הושלם.',true);}}
       await loadMedia(k);await loadOfficialArea();render();status(state.historical?'עותק דוח שמור · מוצגים הנתונים כפי שנשמרו במועד הדוח.':'דוח מידע לצפייה · הנתונים מוצגים עם מקור ומועד בכל סעיף.');
       openHash();
@@ -206,6 +227,7 @@
   let printedDetails=[];
   root.addEventListener('beforeprint',()=>{printedDetails=Array.from(document.querySelectorAll('details')).filter(x=>!x.open);printedDetails.forEach(x=>x.open=true);});
   root.addEventListener('afterprint',()=>{printedDetails.forEach(x=>x.open=false);printedDetails=[];});
+  $('refresh-official').addEventListener('click',refreshOfficial);
   $('print-report').addEventListener('click',()=>root.print());
   root.addEventListener('hashchange',openHash);load();
 })(window);

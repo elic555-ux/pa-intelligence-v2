@@ -36,5 +36,17 @@ class AreaTest(unittest.TestCase):
         with self.assertRaises(ValueError):area.parse(self.payload('42003170300'),'42003170200',2024,self.now.isoformat())
         p=self.payload();p[1][1]='-666666666'
         self.assertIsNone(area.parse(p,'42003170200',2024,self.now.isoformat())['metrics'][0]['value'])
+    def test_missing_key_never_makes_request_or_exposes_secret(self):
+        with patch.dict(area.os.environ,{'CENSUS_API_KEY':''}),patch.object(area,'get_json',side_effect=AssertionError('network')):
+            self.assertEqual(area.collect(self.point,self.root,now=self.now)['status'],'provider_not_configured')
+        with patch.object(area,'get_json',return_value=self.payload()):
+            result=area.collect(self.point,self.root,now=self.now)
+        self.assertNotIn('offline-test-key',json.dumps(result))
+        self.assertNotIn('offline-test-key',(self.root/'official_area/42003170200.json').read_text(encoding='utf-8'))
+    def test_bad_cache_date_is_ignored_instead_of_crashing_report(self):
+        path=self.root/'official_area/42003170200.json';path.parent.mkdir()
+        path.write_text(json.dumps({'version':area.VERSION,'geoid':'42003170200','checked_quarter':'2026-Q4','observed_at':'broken'}))
+        with patch.object(area,'get_json',return_value=self.payload()):
+            self.assertEqual(area.collect(self.point,self.root,now=self.now)['status'],'available')
 
 if __name__=='__main__':unittest.main()

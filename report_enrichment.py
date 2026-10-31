@@ -11,9 +11,10 @@ import closed_sales
 import report_financing
 import report_property_taxes
 import report_area
+import report_public_context
 import internal_report_store as store
 
-VERSION='concise-report-sources-v2'
+VERSION='concise-report-sources-v3'
 def stamp():return datetime.now(timezone.utc).isoformat(timespec='seconds')
 def base_property(p,profile):
     value=dict(p)
@@ -53,6 +54,10 @@ def collect(p,profile,root=Path('COMPS_REPORTS'),allow_public=True,previous=None
     except Exception as exc:
         result['area']={'status':'source_unavailable','metrics':[],'class':None,'class_verified':False}
         result['errors']['area']=type(exc).__name__
+    try:result['public_context']=report_public_context.collect(p,county,point,Path(root),allow_public=allow_public)
+    except Exception as exc:
+        result['public_context']={'status':'source_unavailable','property_id':property_id}
+        result['errors']['public_context']=type(exc).__name__
     if allow_public:
         try:
             import report_gallery
