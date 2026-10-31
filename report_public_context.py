@@ -244,7 +244,12 @@ def collect(p,county,point,root=Path('COMPS_REPORTS'),allow_public=True):
 
 def live_check():
     now=clock();period,url=workbook_link(get_bytes(PDE_INDEX).decode('utf-8'))
-    result=parse_workbook(get_bytes(url),period,url,now)
+    data=get_bytes(url)
+    samples={}
+    for sheet,rownum,row in xlsx_rows(data):
+        if len(samples.setdefault(sheet,[]))<8:samples[sheet].append({'row':rownum,'cells':row[:70]})
+    print('PDE_SAMPLE '+json.dumps(samples,ensure_ascii=False))
+    result=parse_workbook(data,period,url,now)
     counts={k:len(v['schools']) for k,v in result['districts'].items()}
     numeric={k:sum(m['value'] is not None for s in v['schools'] for m in s['metrics']) for k,v in result['districts'].items()}
     print(json.dumps({'source_url':url,'source_period':period,'school_counts':counts,

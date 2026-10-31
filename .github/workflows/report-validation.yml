@@ -104,6 +104,7 @@ jobs:
       - name: Verify live official education schema
         run: python -X utf8 report_public_context.py --live-check
       - name: Verify Census connection without revealing the key
+        if: always()
         env:
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: |
