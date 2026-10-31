@@ -15,6 +15,7 @@ on:
       - 'report-public-context.js'
       - 'test_report_scenarios.cjs'
       - 'test_report_public_context.py'
+      - 'test_report_public_refresh.py'
       - 'test_report_public_context.cjs'
       - 'test_report_area.py'
       - 'report_gallery.py'
@@ -86,7 +87,7 @@ jobs:
       - name: Install existing backend dependency
         run: python -m pip install requests beautifulsoup4==4.15.0
       - name: Verify sources, transfer filtering and shared provider quota offline
-        run: python -m unittest test_report_provider_budget.py test_closed_sales.py test_report_financing.py test_report_enrichment.py test_report_area.py test_report_public_context.py test_report_gemini.py test_rehab_pricebook.py test_report_source_audit.py test_report_provider_reservation.py test_expanded_report_enrichment.py test_report_gallery.py test_report_property_taxes.py
+        run: python -m unittest test_report_provider_budget.py test_closed_sales.py test_report_financing.py test_report_enrichment.py test_report_area.py test_report_public_context.py test_report_public_refresh.py test_report_gemini.py test_rehab_pricebook.py test_report_source_audit.py test_report_provider_reservation.py test_expanded_report_enrichment.py test_report_gallery.py test_report_property_taxes.py
       - name: Check report installation without provider calls
         run: python expanded_report.py check
       - name: Validate the read-only report and financial source boundaries

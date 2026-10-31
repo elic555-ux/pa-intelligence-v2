@@ -44,6 +44,22 @@ class PublicContextTest(unittest.TestCase):
         self.assertEqual(school['school_name'],'School A')
         self.assertEqual([m['value'] for m in school['metrics']],[42.5,None,87])
         self.assertNotIn('grade',school)
+    def test_actual_pde_aun_schema_joins_official_district_map(self):
+        district=workbook([['AUN','Name'],['123456789','Penn Hills School District']])
+        mapping,_=context.parse_district_map(district)
+        data=workbook([
+            ['AUN','Schl','Name','PercentProficientorAdvancedonMathematicsAlgebra1_AllStudent','StatewideAveragePercentProficientorAdvancedonMathematicsAlgebra1_AllStudent','PercentProficientorAdvancedonMathematicsAlgebra1_White','PercentPersistentAttendance_AllStudent'],
+            ['123456789','42','School A','45','99','88','IS']])
+        r=context.parse_workbook(data,'2024-2025',context.PDE_INDEX,self.now,mapping)
+        school=r['districts']['penn hills']['schools'][0]
+        self.assertEqual([m['value'] for m in school['metrics']],[45,None])
+        self.assertEqual(school['district_aun'],'123456789')
+        self.assertTrue(all(m['student_group']=='All Students' for m in school['metrics']))
+        missing=context.parse_workbook(data,'2024-2025',context.PDE_INDEX,self.now)
+        self.assertEqual(missing['districts']['penn hills']['schools'],[])
+    def test_district_map_rejects_conflicting_aun(self):
+        with self.assertRaises(ValueError):
+            context.parse_district_map(workbook([['AUN','Name'],['123456789','Penn Hills SD'],['123456789','Riverview SD']]))
     def test_unsupported_workbook_fails_without_inventing_values(self):
         r=context.parse_workbook(workbook([['school','score'],['School A','100']]),'2024-2025',context.PDE_INDEX,self.now)
         self.assertTrue(all(not d['schools'] for d in r['districts'].values()))

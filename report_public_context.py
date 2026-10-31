@@ -55,17 +55,45 @@ def get_bytes(url,limit=32*1024*1024):
         if len(data)>limit:raise ValueError('Education response too large')
         return data
 
-def workbook_link(html):
+def workbook_link(html,kind='performance',period_required=None):
     links=[]
     for href,title in re.findall(r'<a\b[^>]*href=[\"\']([^\"\']+)[\"\'][^>]*>(.*?)</a>',html,re.I|re.S):
         title=re.sub('<[^>]*>',' ',title)
         period=re.search(r'20\d{2}\s*[-–]\s*20\d{2}',title)
-        if 'future ready performance data' not in title.lower() or not period:continue
+        label='future ready performance data' if kind=='performance' else 'district fast facts'
+        if label not in title.lower() or not period:continue
+        if period_required and period.group().replace(' ','').replace('–','-')!=period_required:continue
         url=urljoin(PDE_INDEX,href.replace('&amp;','&'))
         if urlsplit(url).hostname not in PDE_HOSTS:continue
         links.append((period.group().replace(' ','').replace('–','-'),url))
     if not links:raise ValueError('PDE performance workbook link unavailable')
     return sorted(links,reverse=True)[0]
+
+def parse_district_map(data):
+    """Resolve AUNs from the official District Fast Facts workbook."""
+    result={};headers={};diagnostics={}
+    for sheet,rownum,row in xlsx_rows(data):
+        normalized=[norm(x) for x in row]
+        ai=next((i for i,x in enumerate(normalized) if x in {'aun','lea aun','district aun'}),None)
+        ni=next((i for i,x in enumerate(normalized) if x in {'name','lea name','leaname','district name','districtname'}),None)
+        if ai is not None and ni is not None:
+            headers[sheet]=(ai,ni);diagnostics[sheet]=row[:30];continue
+        if sheet not in headers:continue
+        ai,ni=headers[sheet]
+        if max(ai,ni)>=len(row):continue
+        aun=str(row[ai]).strip();key=district_key(row[ni])
+        if not re.fullmatch(r'\d{9}',aun) or key not in TARGET_DISTRICTS:continue
+        if aun in result and result[aun]!=key:raise ValueError('Conflicting official district AUN')
+        result[aun]=key
+    return result,diagnostics
+
+EXPLICIT_MEASURES={
+    'PercentProficientorAdvancedonMathematicsAlgebra1_AllStudent':'עמידה במבחני מתמטיקה / אלגברה',
+    'PercentProficientorAdvancedonELALiterature_AllStudent':'עמידה במבחני שפה / ספרות',
+    'PercentProficientorAdvancedonScienceBiology_AllStudent':'עמידה במבחני מדעים / ביולוגיה',
+    'PercentPersistentAttendance_AllStudent':'נוכחות סדירה',
+    'PercentGraduation4YearCohort_AllStudent':'סיום לימודים — מסלול ארבע שנים',
+}
 
 def xlsx_rows(data):
     """Read cell values and percent styles without adding an Excel dependency."""
@@ -130,11 +158,13 @@ def percent(value):
     n=float(raw.rstrip('%').strip())
     return n if 0<=n<=100 else None
 
-def parse_workbook(data,period,url,now):
+def parse_workbook(data,period,url,now,district_map=None):
     districts={k:{'district':v,'schools':[]} for k,v in TARGET_DISTRICTS.items()}
     headers={};diagnostics={};recognized={};school_map={}
     for sheet,rownum,row in xlsx_rows(data):
         normalized=[norm(x) for x in row]
+        if normalized[:3]==['aun','schl','name']:
+            headers[sheet]=(row,'aun_schema',2);diagnostics[sheet]=row[:35];continue
         # A school/district identifier is mandatory; numeric sheets alone cannot be attributed.
         district_col=next((i for i,x in enumerate(normalized) if x in {'lea name','district name','school district','school district name','district'}),None)
         school_col=next((i for i,x in enumerate(normalized) if x in {'school name','building name','school'}),None)
@@ -144,6 +174,22 @@ def parse_workbook(data,period,url,now):
             continue
         if sheet not in headers:continue
         head,di,si=headers[sheet]
+        if di=='aun_schema':
+            if len(row)<3:continue
+            dk=(district_map or {}).get(str(row[0]).strip())
+            if dk not in districts:continue
+            recognized[dk]=recognized.get(dk,0)+1
+            name=str(row[2] or '').strip()
+            if not name:continue
+            key=(dk,name);record=school_map.setdefault(key,{'school_name':name,'school_id':str(row[1]),'district_aun':str(row[0]),'metrics':[]})
+            for i,code in enumerate(head):
+                if code not in EXPLICIT_MEASURES or i>=len(row):continue
+                label=EXPLICIT_MEASURES[code]
+                if any(m['label']==label for m in record['metrics']):continue
+                record['metrics'].append({'label':label,'value':percent(row[i]),'unit':'percent',
+                    'source_value':str(row[i]),'source_measure':code,'source_sheet':sheet,
+                    'source_row':rownum,'student_group':'All Students'})
+            continue
         if max(di,si)>=len(row):continue
         dk=district_key(row[di])
         if dk not in districts:continue
@@ -178,6 +224,7 @@ def parse_workbook(data,period,url,now):
     for (dk,name),school in school_map.items():districts[dk]['schools'].append(school)
     return {'version':EDUCATION_VERSION,'source_name':'Pennsylvania Department of Education — Future Ready PA',
         'source_url':url,'source_period':period,'observed_at':now.isoformat(timespec='seconds'),
+        'source_period_basis':'PDE_workbook_release_not_all_indicator_years',
         'checked_quarter':quarter(now),'districts':districts,
         'diagnostics':{'sheet_headers':diagnostics,'recognized_district_rows':recognized}}
 
@@ -186,8 +233,12 @@ def education_data(root,allow_public,now):
     if cached and cached.get('version')==EDUCATION_VERSION and current(cached,now):return cached
     if not allow_public:return {**(cached or {}),'status':'cached_stale' if cached else 'lookup_disabled'}
     try:
-        period,url=workbook_link(get_bytes(PDE_INDEX,2*1024*1024).decode('utf-8'))
-        result=parse_workbook(get_bytes(url),period,url,now)
+        index=get_bytes(PDE_INDEX,2*1024*1024).decode('utf-8');period,url=workbook_link(index)
+        _,district_url=workbook_link(index,'district',period)
+        district_map,map_headers=parse_district_map(get_bytes(district_url))
+        result=parse_workbook(get_bytes(url),period,url,now,district_map)
+        result['district_mapping_source_url']=district_url
+        result['diagnostics']['district_map_headers']=map_headers
         if not any(d['schools'] for d in result['districts'].values()):
             return {**result,'status':'source_schema_unavailable'}
         result['status']='available';write(path,result);return result
@@ -243,17 +294,20 @@ def collect(p,county,point,root=Path('COMPS_REPORTS'),allow_public=True):
     return result
 
 def live_check():
-    now=clock();period,url=workbook_link(get_bytes(PDE_INDEX).decode('utf-8'))
-    data=get_bytes(url)
-    samples={}
-    for sheet,rownum,row in xlsx_rows(data):
-        if len(samples.setdefault(sheet,[]))<8:samples[sheet].append({'row':rownum,'cells':row[:70]})
-    print('PDE_SAMPLE '+json.dumps(samples,ensure_ascii=False))
-    result=parse_workbook(data,period,url,now)
+    now=clock();index=get_bytes(PDE_INDEX).decode('utf-8');period,url=workbook_link(index)
+    _,district_url=workbook_link(index,'district',period)
+    district_bytes=get_bytes(district_url);district_map,map_headers=parse_district_map(district_bytes)
+    if not district_map:
+        samples={}
+        for sheet,rownum,row in xlsx_rows(district_bytes):
+            if len(samples.setdefault(sheet,[]))<5:samples[sheet].append({'row':rownum,'cells':row[:40]})
+        print('DISTRICT_MAP_SAMPLE '+json.dumps(samples,ensure_ascii=False))
+    result=parse_workbook(get_bytes(url),period,url,now,district_map)
     counts={k:len(v['schools']) for k,v in result['districts'].items()}
     numeric={k:sum(m['value'] is not None for s in v['schools'] for m in s['metrics']) for k,v in result['districts'].items()}
     print(json.dumps({'source_url':url,'source_period':period,'school_counts':counts,
-        'numeric_metric_counts':numeric,'diagnostics':result['diagnostics']},ensure_ascii=False))
+        'numeric_metric_counts':numeric,'district_map':district_map,'district_map_source_url':district_url,
+        'district_map_headers':map_headers,'diagnostics':result['diagnostics']},ensure_ascii=False))
     if not all(numeric[k]>0 for k in ('pittsburgh','penn hills','riverview')):raise SystemExit('Official PDE workbook needs parser review; no invented school values published')
 
 if __name__=='__main__':
