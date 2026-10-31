@@ -63,6 +63,10 @@ class PublicContextTest(unittest.TestCase):
     def test_unsupported_workbook_fails_without_inventing_values(self):
         r=context.parse_workbook(workbook([['school','score'],['School A','100']]),'2024-2025',context.PDE_INDEX,self.now)
         self.assertTrue(all(not d['schools'] for d in r['districts'].values()))
+    def test_zero_percent_is_a_published_value_not_missing(self):
+        self.assertEqual(context.percent(0),0)
+        self.assertEqual(context.percent('0.0'),0)
+        self.assertIsNone(context.percent(None))
     def test_count_columns_under_one_hundred_are_never_percentages(self):
         data=workbook([
             ['LEA Name','School Name','Student Group Name','Number of Students Proficient Mathematics','Percent Proficient Mathematics Denominator','Percent Proficient Mathematics'],

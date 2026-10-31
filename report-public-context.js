@@ -17,7 +17,7 @@
     const district=edu.district_match_basis==='county_parcel_school_district'&&edu.parcel_id===c.parcel_id&&
       link(edu.district_source_url,['data.wprdc.org'])?edu.district:null;
     if(district){
-      out+='<p>'+esc(district)+' · '+esc(edu.source_period||'תקופת ביצועים לא זמינה')+'</p>';
+      out+='<p>'+esc(district)+' · '+'מהדורת המקור: '+esc(edu.source_period||'לא זמינה')+'</p>';
       const schools=Array.isArray(edu.schools)?edu.schools:[];
       const rows=schools.flatMap(s=>(Array.isArray(s.metrics)?s.metrics:[]).filter(m=>m.unit==='percent').map(m=>({school:s.school_name,...m})));
       const observed=Date.parse(edu.observed_at),fresh=Number.isFinite(observed)&&observed<=now&&now-observed<=550*86400000;
@@ -28,7 +28,7 @@
           return '<tr><td>'+esc(m.school)+'</td><td>'+esc(m.label)+'</td><td>'+esc(value)+'</td></tr>';
         }).join('')+'</tbody></table></div></details>'+source(edu.source_name,edu.observed_at,url);
       }else out+='<p class="missing">נתוני הביצועים של מחוז החינוך עדיין אינם זמינים.</p>';
-      out+='<p class="source-note">ההתאמה היא למחוז חינוך לפי רישום החלקה; אינה אישור לשיבוץ בבית ספר מסוים.</p>';
+      out+='<p class="source-note">ההתאמה היא למחוז חינוך לפי רישום החלקה; אינה אישור לשיבוץ בבית ספר מסוים. שנת המדידה עשויה להשתנות בין מדדים.</p>';
     }else out+='<p class="missing">מחוז החינוך של החלקה טרם אומת.</p>';
     const crime=c.crime||{},crimeUrl=link(crime.source_url,['www.ucr.pa.gov','ucr.pa.gov']);
     out+='<h3>פשיעה — מקור רשמי</h3><p class="missing">לא התקבלו נתוני פשיעה עדכניים ומאומתים עבור סביבת הנכס.</p>'+

@@ -209,8 +209,8 @@
       else{
         if(!id)throw new Error('פתח את הדוח מתוך נכס בחדר העסקאות.');
         let cloud=false;
-        if(client){const result=await client.from('pipeline_deals').select('property_id,deal_data').eq('property_id',id);if(!result.error){cloud=true;if(result.data?.length!==1)throw new Error('לא נמצאה רשומת נכס יחידה בחדר העסקאות');property=result.data[0].deal_data;}}
-        if(!cloud){let rows=[];try{rows=JSON.parse(localStorage.getItem('pa_pipeline_deals')||'[]');}catch(_){}const matching=list(rows).filter(p=>String(p.id)===String(id));if(matching.length!==1)throw new Error('נתוני הנכס אינם זמינים. התחבר למערכת ופתח אותו מחדר העסקאות.');property=matching[0];}
+        if(client){const result=await client.from('pipeline_deals').select('property_id,deal_data').eq('property_id',id);if(!result.error){if(result.data?.length>1)throw new Error('נמצאו רשומות נכס כפולות בחדר העסקאות');if(result.data?.length===1){cloud=true;property=result.data[0].deal_data;}}}
+        if(!cloud){let rows=[];try{rows=JSON.parse(localStorage.getItem('pa_pipeline_deals')||'[]');}catch(_){}const matching=list(rows).filter(p=>String(p.id)===String(id));if(matching.length>1)throw new Error('נמצאו רשומות נכס כפולות במחשב');property=matching[0];if(!property){const response=await fetch('properties.json',{cache:'no-store'});if(!response.ok)throw new Error('מלאי הנכסים אינו זמין');const inventory=list(await response.json()).filter(p=>String(p.id)===String(id));if(inventory.length!==1)throw new Error('לא נמצאה רשומת נכס יחידה במלאי');property=inventory[0];}}
       }
       if(!property||!String(property.id||'')||!property.address||!property.city||(!saved&&String(property.id)!==String(id)))throw new Error('נתוני הנכס אינם מתאימים לבקשה');
       state.property=property;state.report=M.matches(property.expanded_source_report,property)?property.expanded_source_report:null;state.analysis=state.report?.report_analysis||null;

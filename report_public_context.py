@@ -153,7 +153,7 @@ def metric_label(text):
     return None
 
 def percent(value):
-    raw=str(value or '').strip()
+    raw=str(value if value is not None else '').strip()
     if not re.fullmatch(r'\d+(?:\.\d+)?\s*%?',raw):return None
     n=float(raw.rstrip('%').strip())
     return n if 0<=n<=100 else None
@@ -239,7 +239,7 @@ def education_data(root,allow_public,now):
         result=parse_workbook(get_bytes(url),period,url,now,district_map)
         result['district_mapping_source_url']=district_url
         result['diagnostics']['district_map_headers']=map_headers
-        if not any(d['schools'] for d in result['districts'].values()):
+        if not any(m['value'] is not None for d in result['districts'].values() for s in d['schools'] for m in s['metrics']):
             return {**result,'status':'source_schema_unavailable'}
         result['status']='available';write(path,result);return result
     except (OSError,ValueError,KeyError,ET.ParseError,zipfile.BadZipFile) as exc:
@@ -285,8 +285,9 @@ def collect(p,county,point,root=Path('COMPS_REPORTS'),allow_public=True):
     if not district:return result
     data=education_data(root,allow_public,now);matched=(data.get('districts') or {}).get(district['district_key']) or {}
     schools=matched.get('schools') or []
-    status='available' if schools and data.get('status')=='available' else data.get('status') or 'source_unavailable'
-    if status=='available' and not schools:status='district_data_unavailable'
+    usable=any(m.get('value') is not None for s in schools for m in s.get('metrics',[]))
+    status='available' if usable and data.get('status')=='available' else data.get('status') or 'source_unavailable'
+    if status=='available' and not usable:status='district_data_unavailable'
     result['education'].update(status=status,district=district['district'],
         district_match_basis='county_parcel_school_district',district_source_url=district['source_url'],
         district_observed_at=district['observed_at'],source_url=data.get('source_url') or PDE_INDEX,

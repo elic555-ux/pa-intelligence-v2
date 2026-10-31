@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
 const model=require('./report-readonly-model.js'),financials=require('./report-financials.js');
 const controller=fs.readFileSync(__dirname+'/report-readonly.js','utf8');
-async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null}={}){
+async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null,inventoryOnly=false}={}){
  const property={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203',county:'Allegheny',property_type:'Single Family',price:135000,url:'https://example.com/listing',last_source_check:new Date().toISOString()};
  if(scenario)property.investment_scenario=scenario;
  const elements=new Map(),posts=[],timers=[];
@@ -16,9 +16,10 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
    document:{getElementById:element,querySelectorAll(){return[];}},
    PAReadonlyReport:model,PAReportFinancials:financials,PADealAnalysis:require('./deal-analysis.js'),PAReportScenarios:require('./report-scenarios.js'),PAReportPublicContext:require('./report-public-context.js'),
    SecondarySourceEvidence:{reportPhotos(){return[];}},
-   supabase:{createClient(){return {from(){return {select(){return {eq:async()=>({data:[{deal_data:property}],error:null})};}};}};}},
+   supabase:{createClient(){return {from(){return {select(){return {eq:async()=>({data:inventoryOnly?[]:[{deal_data:property}],error:null})};}};}};}},
    setTimeout:fn=>timers.push(fn),addEventListener(){},
    fetch:async(url,options={})=>{
+     if(url==='properties.json')return new Response(JSON.stringify([property]),{status:200});
      if(options.method==='POST'){posts.push({url,body:JSON.parse(options.body)});return new Response(null,{status:204});}
      if(ready&&url.includes('/expanded_receipts/')){
        const receipt={property_id:property.id,property,generated_at:new Date().toISOString(),sources:{}};
@@ -54,4 +55,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  result=await simulate(new Map(),{collect:true,ready:true,scenario});
  assert.ok(result.scenarioHtml.includes('$37,000'));assert.ok(result.scenarioHtml.includes('הנחה ידנית'));
  console.log('PASS Explicit saved manual inputs supply a labeled scenario, without automatic renovation estimates');
+ result=await simulate(new Map(),{collect:true,ready:true,inventoryOnly:true});
+ assert.equal(result.posts.length,1);assert.ok(result.status.includes('האיסוף הסתיים'));
+ console.log('PASS A unique public inventory property loads when not saved in the deal pipeline');
 })().catch(error=>{console.error(error);process.exitCode=1;});
