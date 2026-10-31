@@ -17,6 +17,7 @@ class PublicRefreshTest(unittest.TestCase):
             result=refresh.refresh(self.root,['qa'])
         self.assertEqual(result['properties'][0]['education'],'available')
         self.assertEqual(json.loads((self.root/'public_context'/(refresh.key('qa')+'.json')).read_text())['property_id'],'qa')
+        self.assertEqual(json.loads((self.root/'public_context'/(refresh.key('qa')+'.json')).read_text())['county_record']['subject']['address'],self.p['address'])
         self.assertEqual(old.read_text(),'{"historical":true}')
     def test_duplicate_inventory_does_not_lookup_or_overwrite_context(self):
         (self.base/'properties.json').write_text(json.dumps([self.p,self.p]))

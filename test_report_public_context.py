@@ -60,6 +60,19 @@ class PublicContextTest(unittest.TestCase):
     def test_district_map_rejects_conflicting_aun(self):
         with self.assertRaises(ValueError):
             context.parse_district_map(workbook([['AUN','Name'],['123456789','Penn Hills SD'],['123456789','Riverview SD']]))
+    def test_other_official_districts_are_supported_without_postal_inference(self):
+        district=workbook([['AUN','Name'],['123456789','Carlynton SD']])
+        mapping,_=context.parse_district_map(district)
+        self.assertEqual(mapping['123456789']['district'],'Carlynton SD')
+        data=workbook([['AUN','Schl','Name','PercentPersistentAttendance_AllStudent'],['123456789','1','Official School','92']])
+        parsed=context.parse_workbook(data,'2024-2025',context.PDE_INDEX,self.now,mapping)
+        self.assertEqual(parsed['districts']['carlynton']['district'],'Carlynton SD')
+        self.assertEqual(parsed['districts']['carlynton']['schools'][0]['metrics'][0]['value'],92)
+        response={'success':True,'result':{'records':[{'PARID':self.county['parcel_id'],'SCHOOLDESC':'Carlynton'}]}}
+        with patch.object(context.store,'public_get',return_value=json.dumps(response)):
+            match=context.parcel_school_district(self.county,self.root,True,self.now)
+        self.assertEqual(match['district_key'],'carlynton')
+        self.assertEqual(match['version'],'pde-performance-2')
     def test_unsupported_workbook_fails_without_inventing_values(self):
         r=context.parse_workbook(workbook([['school','score'],['School A','100']]),'2024-2025',context.PDE_INDEX,self.now)
         self.assertTrue(all(not d['schools'] for d in r['districts'].values()))
