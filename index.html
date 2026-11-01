@@ -834,6 +834,7 @@
     </div>
 
     </div>
+    <script src="scan-progress.js?v=1.0.0"></script>
     <script src="street-view.js?v=1.1.0"></script>
     <script src="street-view-local-settings.js?v=1.0.0"></script>
     <script src="street-view-usage.js?v=1.0.0"></script>
@@ -965,7 +966,8 @@
         let viewedDeals = new Set();
         let archiveDeals = {}; 
         
-        let scanTimerInterval = null;
+        let activeScanMonitor = null;
+        let scanMonitorGeneration = 0;
         let scanStartTime = null;
         let lastKnownScanId = null;
 
@@ -1691,8 +1693,10 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         function getRawPrice(input) { return parseInt(String(input.value||'').replace(/\D/g, '') || 0, 10); }
 
         function closeScanToast() {
+            scanMonitorGeneration++;
             document.getElementById('scan-progress-toast').classList.add('hidden');
-            if (scanTimerInterval) clearInterval(scanTimerInterval);
+            activeScanMonitor?.cancel();
+            activeScanMonitor = null;
         }
 
         document.addEventListener('click', function(e) {
@@ -4041,46 +4045,59 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
         }
 
         function startBackgroundScanMonitor(requestId) {
+            const generation = ++scanMonitorGeneration;
+            activeScanMonitor?.cancel();
             document.getElementById('scan-progress-toast').classList.remove('hidden');
-            document.getElementById('scan-toast-subtitle').textContent = 'הסריקה שוגרה. ממתין לתוצאת הריצה בשרת.';
+            const subtitle = document.getElementById('scan-toast-subtitle');
+            subtitle.textContent = 'הסריקה שוגרה. ממתין לתוצאת הריצה בשרת.';
             const baselineScanId = scannerReport?.last_scan?.scan_id || lastKnownScanId;
             scanStartTime = Date.now();
-            const requestedAt = scanStartTime;
-            const tEl = document.getElementById('scan-timer');
-            if (scanTimerInterval) clearInterval(scanTimerInterval);
-            let checking = false;
-            scanTimerInterval = setInterval(async () => {
-                const diff = Math.floor((Date.now() - requestedAt) / 1000);
-                tEl.textContent = `${String(Math.floor(diff / 60)).padStart(2,'0')}:${String(diff % 60).padStart(2,'0')}`;
-                if (diff >= 600) {
-                    clearInterval(scanTimerInterval);
-                    document.getElementById('scan-toast-subtitle').textContent = 'טרם התקבלה תוצאה לאחר 10 דקות. בדוק את הריצה ב-GitHub Actions.';
-                    return;
-                }
-                if (diff % 20 !== 0 || checking) return;
-                checking = true;
+            const timer = document.getElementById('scan-timer');
+            let runId = null;
+            const loadRun = async () => {
+                const token = localStorage.getItem('pa_github_token');
+                if (!token) return null;
+                const base = 'https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/';
+                const path = runId ? 'runs/' + runId : 'workflows/cron-daily-mls.yml/runs?event=workflow_dispatch&per_page=20';
+                const controller = new AbortController();
+                const deadline = setTimeout(() => controller.abort(), 9000);
                 try {
-                    const report = await loadScannerStatus();
-                    const scan = report?.last_scan, event = report?.last_event;
-                    const ownEvent = event?.request_id === requestId ? event : scan?.request_id === requestId ? scan : null;
-                    // Older reports may omit request IDs. Compare with a captured baseline, not a header value updated by loadScannerStatus().
-                    const newLegacyScan = scan && !scan.request_id && scan.scan_id && scan.scan_id !== baselineScanId &&
-                        parseDate(scan.started_at || scan.finished_at) >= requestedAt - 120000;
-                    const completed = ownEvent || (newLegacyScan ? scan : null);
-                    if (!completed || !['success', 'partial', 'failed', 'skipped'].includes(completed.status)) return;
-                    clearInterval(scanTimerInterval);
-                    if (completed.status === 'skipped') {
-                        document.getElementById('scan-toast-subtitle').textContent = 'הסריקה לא בוצעה: ' + (completed.skip_reason || 'השרת דילג על הבקשה. פרטים במצב מקורות הסריקה.');
+                    const response = await fetch(base + path, {cache:'no-store', signal:controller.signal,
+                        headers:{Authorization:'Bearer ' + token, Accept:'application/vnd.github+json'}});
+                    if (!response.ok) throw new Error('Scan run status unavailable');
+                    const run = PAScanProgress.matchingRun(await response.json(), requestId);
+                    if (run && Number.isSafeInteger(run.id) && run.id > 0) runId = run.id;
+                    return run;
+                } finally { clearTimeout(deadline); }
+            };
+            activeScanMonitor = PAScanProgress.create({
+                requestId, baselineScanId, requestedAt:scanStartTime,
+                setInterval, clearInterval, setTimeout, clearTimeout,
+                loadReport:loadScannerStatus, loadRun,
+                onTick(seconds) {
+                    timer.textContent = String(Math.floor(seconds/60)).padStart(2,'0') + ':' + String(seconds%60).padStart(2,'0');
+                },
+                onTimeout() { subtitle.textContent = 'טרם התקבלה תוצאה לאחר 10 דקות. בדוק את הריצה ב-GitHub Actions.'; },
+                onError(error, finished) {
+                    if (generation !== scanMonitorGeneration) return;
+                    subtitle.textContent = finished ? 'הסריקה הסתיימה; עדכון הנתונים בלוח לא הושלם כרגע.'
+                        : 'בודק את מצב הסריקה; אחד ממקורות העדכון אינו זמין כרגע.';
+                },
+                async onFinish(completed) {
+                    if (generation !== scanMonitorGeneration) return;
+                    if (completed.status === 'skipped' || completed.status === 'cancelled') {
+                        subtitle.textContent = completed.status === 'cancelled' ? 'הריצה בוטלה בשרת.'
+                            : 'הסריקה לא בוצעה: ' + (completed.skip_reason || 'השרת דילג על הבקשה.');
                         return;
                     }
+                    subtitle.textContent = completed.status === 'failed' ? 'הסריקה נכשלה. פרטים במצב מקורות הסריקה.'
+                        : 'הסריקה הסתיימה. מעדכן את הנתונים בלוח…';
                     await loadProperties();
+                    if (generation !== scanMonitorGeneration) return;
                     await loadGeoCatalog();
-                    if (completed.status === 'failed') document.getElementById('scan-toast-subtitle').textContent = 'הסריקה נכשלה. הנתונים הקיימים נשארו בלוח; פרטי השגיאה במצב מקורות הסריקה.';
-                    else closeScanToast();
-                } catch (error) {
-                    document.getElementById('scan-toast-subtitle').textContent = 'דוח הסריקה לא נטען כרגע; ממשיך לבדוק את הבקשה.';
-                } finally { checking = false; }
-            }, 1000);
+                    if (generation === scanMonitorGeneration && completed.status !== 'failed') closeScanToast();
+                }
+            });
         }
 
 
@@ -4100,6 +4117,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
     <script src="secondary_sources.js?v=1.9.0-public-gallery-20261020"></script>
 </body>
 </html>
+
 
 
 
