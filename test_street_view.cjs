@@ -289,11 +289,11 @@ test('page mounts once, displays user input only as text and replaces this tab o
     assert.equal(env.nodes['street-view-fallback'].hidden, true);
 });
 
-test('page invalid/unsupported/no-match states never silently open Google Maps instead of Street View', () => {
+test('valid addresses open a Maps search after an unsupported lookup, no match or timeout; cancellation never redirects', () => {
     const invalid = environment('?address=Unknown&city=Pittsburgh&zip=15235');
     api.mount(invalid.window, invalid.document);
     assert.equal(invalid.scripts.length, 0);
-    assert.equal(invalid.nodes['street-view-fallback'].hidden, true);
+    assert.equal(invalid.navigations.length, 0);
     for (const mode of ['unsupported', 'no-match', 'timeout', 'cancel', 'pagehide']) {
         const env = environment('?' + new URLSearchParams({...INPUT, ...(mode === 'unsupported' ? {county: 'Westmoreland County'} : {})}));
         api.mount(env.window, env.document);
@@ -301,13 +301,28 @@ test('page invalid/unsupported/no-match states never silently open Google Maps i
         if (mode === 'timeout') env.allTimers[0].fn();
         if (mode === 'cancel') env.nodes['street-view-cancel'].handlers.click();
         if (mode === 'pagehide') env.events.get('pagehide')();
-        assert.equal(env.navigations.length, 0, mode);
-        assert.equal(env.nodes['street-view-fallback'].hidden, false, mode);
-        assert.equal(new URL(env.nodes['street-view-fallback'].href).searchParams.get('query'), request().query);
+        const cancelled = ['cancel','pagehide'].includes(mode);
+        assert.equal(env.navigations.length, cancelled ? 0 : 1, mode);
+        if (!cancelled) {
+            const url=new URL(env.navigations[0]);
+            assert.equal(url.hostname,'www.google.com');
+            assert.equal(url.pathname,'/maps/search/');
+            assert.equal(url.searchParams.get('query'),request().query);
+            assert.equal(url.searchParams.get('map_action'),null);
+        }
         assert.equal(env.timers.size, 0, mode);
         jsonpCallback(env)?.(fixture());
-        assert.equal(env.navigations.length, 0, 'no late redirect: ' + mode);
+        assert.equal(env.navigations.length, cancelled ? 0 : 1, 'no extra redirect: ' + mode);
     }
+});
+
+test('fractional address from the reported failure opens Maps immediately without dropping the fraction', () => {
+    const env=environment('?' + new URLSearchParams({address:'179 1/2 Saint Joseph St',city:'Pittsburgh',zip:'15210',county:'Allegheny'}));
+    api.mount(env.window,env.document);
+    assert.equal(env.scripts.length,0);
+    assert.equal(env.timers.size,0);
+    assert.equal(env.navigations.length,1);
+    assert.equal(new URL(env.navigations[0]).searchParams.get('query'),'179 1/2 Saint Joseph St, Pittsburgh, PA 15210, USA');
 });
 
 test('blocked final navigation exposes explicit fallback and keeps the address available', () => {
@@ -443,7 +458,7 @@ test('Erie cancellation while reading JSON cannot deliver a stale match', async 
     assert.equal(env.fetchRequests[0].options.signal.aborted, true);
 });
 
-test('Erie page uses the fetch result to replace this tab and exposes fallback after fetch failure', async () => {
+test('Erie page opens panorama on match and an address search after fetch failure', async () => {
     for (const success of [true, false]) {
         const env = environment('?' + new URLSearchParams({address: '1915 Liberty St', city: 'Erie', zip: '16502', county: 'Erie'}));
         api.mount(env.window, env.document);
@@ -451,8 +466,9 @@ test('Erie page uses the fetch result to replace this tab and exposes fallback a
         assert.equal(env.fetchRequests.length, 1);
         env.fetchRequests[0].resolve({ok: success, json: async () => erieFixture()});
         await tick();
-        assert.equal(env.navigations.length, success ? 1 : 0);
-        assert.equal(env.nodes['street-view-fallback'].hidden, success);
+        assert.equal(env.navigations.length, 1);
+        assert.equal(new URL(env.navigations[0]).pathname, success ? '/maps/@' : '/maps/search/');
+        assert.equal(env.nodes['street-view-fallback'].hidden, true);
         assert.equal(env.scripts.length, 0);
     }
 });
@@ -470,7 +486,7 @@ test('standalone CSP separates Allegheny JSONP from credential-free Erie CORS an
         'connect-src https://gis.eriecountypa.gov');
     assert.ok(csp.includes("base-uri 'none'"));
     assert.ok(!/unsafe-inline|unsafe-eval|geocoding\.geo\.census\.gov|\*/.test(csp));
-    assert.match(html, /<script src="street-view\.js" defer><\/script>/);
+    assert.match(html, /<script src="street-view\.js\?v=2\.1\.0" defer><\/script>/);
     assert.equal((html.match(/<script\b/g) || []).length, 1);
     assert.match(html, /id="street-view-fallback"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
     assert.match(html, /עשוי להציג בית סמוך/);
@@ -503,3 +519,4 @@ test('unique JSONP callback isolates a late A response from the current B lookup
     assert.equal(env.results.length, 2);
     assert.equal(env.results[1].status, 'matched');
 });
+

@@ -261,15 +261,16 @@
             setTimeout: win.setTimeout.bind(win), clearTimeout: win.clearTimeout.bind(win),
             onResult(result) {
                 cancel.hidden = true;
-                const url = result.status === 'matched' ? panoramaUrl(result.point) : null;
-                if (url) {
-                    status.textContent = 'נמצאה נקודת כתובת או חלקה תואמת. פותחים את צילום הרחוב הזמין בקרבתה…';
-                    try { win.location.replace(url); return; } catch (_) {}
+                const cancelled = result.status === 'cancelled';
+                const panorama = result.status === 'matched' ? panoramaUrl(result.point) : null;
+                if (!cancelled) {
+                    status.textContent = panorama ? 'פותחים את צילום הרחוב הזמין בקרבת הכתובת…'
+                        : 'פותחים מפה בחיפוש לפי הכתובת…';
+                    try { win.location.replace(panorama || request.searchUrl); return; } catch (_) {}
                 }
                 fallback.hidden = false;
-                status.textContent = result.status === 'cancelled' ? 'הבדיקה בוטלה. לא תתבצע פתיחה אוטומטית.'
-                    : result.status === 'timeout' ? 'בדיקת הכתובת לא הסתיימה בזמן. אפשר לפתוח מפה לפי הכתובת.'
-                    : 'לא נמצאה נקודת כתובת יחידה שניתן לאמת. אפשר לפתוח מפה לפי הכתובת.';
+                status.textContent = cancelled ? 'הבדיקה בוטלה. לא תתבצע פתיחה אוטומטית.'
+                    : 'הפתיחה האוטומטית לא הושלמה. אפשר לפתוח את המפה בקישור.';
             }});
         cancel.addEventListener('click', () => controller.cancel(), {once: true});
         fallback.addEventListener('click', () => controller.cancel(), {once: true});
@@ -279,3 +280,4 @@
     return {readRequest, streetIdentity, localityKey, countyProvider, supportsCounty, countyRequestUrl,
         validPoint, panoramaUrl, validateCountyResponse, resolveOnce, mount, TIMEOUT_MS};
 }));
+

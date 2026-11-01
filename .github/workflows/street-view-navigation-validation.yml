@@ -1,0 +1,21 @@
+name: Street View Navigation Validation
+on:
+  pull_request:
+    paths:
+      - 'street-view.js'
+      - 'street-view.html'
+      - 'test_street_view.cjs'
+      - '.github/workflows/street-view-navigation-validation.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check street-view.js
+      - run: node test_street_view.cjs
