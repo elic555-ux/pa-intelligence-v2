@@ -26,6 +26,7 @@ const server = {
 const original = clone(server);
 const calls = [], confirmed = [], errors = [], monitors = [], alerts = [];
 const button = {innerHTML: 'start scan'};
+const monitorNodes = new Map(['scan-progress-toast','scan-toast-subtitle','scan-timer'].map(id=>[id,{textContent:'',classList:{remove(){}}}]));
 let closed = false, manualBusy = false, scheduledBusy = false, verified = false;
 let releaseReadback;
 const readbackGate = new Promise(resolve => { releaseReadback = resolve; });
@@ -38,7 +39,8 @@ const context = vm.createContext({
     atob: value => Buffer.from(value, 'base64').toString('binary'),
     escape, unescape,
     manualScanSaveInProgress: false, scheduledScanSaveInProgress: false,
-    document: {getElementById: id => id === 'btn-trigger-scan' ? button : {value: 'offline-test-token'}},
+    activeScanMonitor:null,
+    document: {getElementById: id => id === 'btn-trigger-scan' ? button : monitorNodes.get(id)||{value: 'offline-test-token'}},
     localStorage: {
         getItem: key => { assert.equal(key, 'pa_github_token'); return 'offline-test-token'; },
         setItem: (key, value) => {
@@ -57,7 +59,7 @@ const context = vm.createContext({
     setManualScanSaving: busy => { manualBusy = busy; context.manualScanSaveInProgress = busy; },
     setScheduledScanSaving: busy => { scheduledBusy = busy; context.scheduledScanSaveInProgress = busy; },
     closeOnDemandScanModal: () => { closed = true; },
-    startBackgroundScanMonitor: requestId => monitors.push(requestId),
+    startBackgroundScanMonitor: requestId => {monitors.push(requestId);if(input.failure==='monitor-start')throw new TypeError('Illegal invocation');},
     alert: message => alerts.push(message),
     fetch: async (url, options = {}) => {
         const method = options.method || 'GET';
@@ -127,7 +129,7 @@ vm.runInContext(input.functions.join('\n'), context, {timeout: 1000});
     assert.equal(manualBusy || scheduledBusy, false, 'controls must unlock after completion');
     assert.equal(button.innerHTML, 'start scan');
     const dispatches = calls.filter(call => call.method === 'POST');
-    if (input.failure && !input.failure.startsWith('dispatch-')) {
+    if (input.failure && input.failure !== 'monitor-start' && !input.failure.startsWith('dispatch-')) {
         assert.equal(errors.length, 1);
         assert.equal(confirmed.length, 0);
         assert.equal(dispatches.length, 0);
@@ -144,10 +146,14 @@ vm.runInContext(input.functions.join('\n'), context, {timeout: 1000});
         assert.deepEqual(calls.slice(0, 3).map(call => call.method), ['GET', 'PUT', 'GET']);
         assert.ok(calls.slice(0, 3).every(call => call.url.includes('/contents/' + target)));
         assert.equal(dispatches.length, saveOnly ? 0 : 1);
-        const dispatched = !saveOnly && !input.failure;
+        const dispatched = !saveOnly && (!input.failure || input.failure === 'monitor-start');
         assert.equal(closed, dispatched);
         assert.deepEqual(monitors, dispatched ? ['guard-request-id'] : []);
-        if (input.failure) assert.equal(alerts.length, 1);
+        if (input.failure === 'monitor-start') {
+            assert.equal(alerts.length,0);
+            assert.ok(monitorNodes.get('scan-toast-subtitle').textContent.includes('הסריקה הופעלה בשרת'));
+            assert.equal(monitorNodes.get('scan-timer').textContent,'—');
+        } else if (input.failure) assert.equal(alerts.length, 1);
     }
 })().catch(error => { console.error = require('node:console').error; console.error(error); process.exitCode = 1; });
 """
@@ -275,6 +281,9 @@ class ScanControlsTests(unittest.TestCase):
         for failure in ("write-http", "readback-http", "content-mismatch", "sha-mismatch"):
             with self.subTest(failure=failure):
                 self.run_ui_case("scheduled-save", failure)
+
+    def test_monitor_failure_after_dispatch_does_not_claim_launch_failure(self):
+        self.run_ui_case("manual-dispatch", "monitor-start")
 
     def test_dispatch_failure_keeps_form_open(self):
         for failure in ("dispatch-http", "dispatch-network"):

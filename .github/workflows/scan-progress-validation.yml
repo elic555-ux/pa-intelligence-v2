@@ -5,6 +5,8 @@ on:
       - 'index.html'
       - 'scan-progress.js'
       - 'test_scan_progress.cjs'
+      - 'test_scan_controls.py'
+      - 'diagnostics/scan-progress-smoke.*'
       - '.github/workflows/scan-progress-validation.yml'
 permissions:
   contents: read
@@ -19,3 +21,7 @@ jobs:
           node-version: '22'
       - run: node --check scan-progress.js
       - run: node test_scan_progress.cjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest test_scan_controls.ScanControlsTests.test_monitor_failure_after_dispatch_does_not_claim_launch_failure
