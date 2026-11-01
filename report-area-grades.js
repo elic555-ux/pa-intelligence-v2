@@ -213,6 +213,20 @@
     "parent": "Pittsburgh",
     "checked_at": "2026-11-01",
     "edition": 2026
+  },
+  {
+    "county": "Allegheny",
+    "name": "Crafton",
+    "aliases": [
+      "Crafton",
+      "Crafton Borough"
+    ],
+    "overall": "A-",
+    "safety": "B",
+    "url": "https://www.niche.com/places-to-live/crafton-allegheny-pa/",
+    "level": "municipality",
+    "checked_at": "2026-11-01",
+    "edition": 2026
   }
 ];
   const norm=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,' ');

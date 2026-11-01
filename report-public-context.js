@@ -6,7 +6,7 @@
   function valid(c,p,county,now=Date.now()){
     const time=Date.parse(c?.generated_at);
     return c?.version==='official-public-context-1'&&c.property_id===String(p.id)&&JSON.stringify(identity(c.property))===JSON.stringify(identity(p))&&
-      /^[A-Z0-9]{16}$/.test(c.parcel_id||'')&&(!county?.parcel_id||county.parcel_id===c.parcel_id)&&
+      (c.county_record?.county==='Erie'?/^\d{10,20}$/:/^[A-Z0-9]{16}$/).test(c.parcel_id||'')&&(!county?.parcel_id||county.parcel_id===c.parcel_id)&&
       Number.isFinite(time)&&time<=now&&now-time<=100*86400000;
   }
   function district(c,p,county,now=Date.now()){

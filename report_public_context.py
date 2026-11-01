@@ -31,6 +31,8 @@ def quarter(t): return f'{t.year}-Q{(t.month-1)//3+1}'
 def norm(s): return re.sub(r'[^a-z0-9]+',' ',str(s or '').lower()).strip()
 def district_key(s):
     text=norm(s)
+    # County SCHOOLDESC uses the historical township name for this district.
+    if text=='penn hills twp':return 'penn hills'
     return re.sub(r'\s+(?:school district|sd)$','',text)
 def read(path):
     try:
@@ -276,7 +278,7 @@ def collect(p,county,point,root=Path('COMPS_REPORTS'),allow_public=True):
     now=clock();pid=str(p.get('id') or '')
     result={'version':VERSION,'property_id':pid,'property':{k:p.get(k) for k in ('id','address','city','state','zip')},
         'parcel_id':county.get('parcel_id'),'generated_at':now.isoformat(timespec='seconds'),'status':'partial'}
-    county_match=county.get('status')=='matched' and county.get('county')=='Allegheny' and store.same_address(p,county.get('subject') or {})
+    county_match=county.get('status')=='matched' and county.get('county') in {'Allegheny','Erie'} and store.same_address(p,county.get('subject') or {})
     municipality=(county.get('fields') or {}).get('municipality') if county_match else None
     if not municipality and county_match and point.get('parcel_id')==county.get('parcel_id'):municipality=point.get('municipality')
     result['municipality']=municipality
@@ -289,7 +291,7 @@ def collect(p,county,point,root=Path('COMPS_REPORTS'),allow_public=True):
         'reason':'no_verified_automated_current_feed','metrics':[],
         'historical_source_url':'https://data.wprdc.org/dataset/police-incident-blotter',
         'historical_source_stopped_at':'2023-11-14'}
-    if not county_match:return result
+    if not county_match or county.get('county')!='Allegheny':return result
     try:district=parcel_school_district(county,root,allow_public,now)
     except (OSError,ValueError,KeyError,TypeError):district=None
     if not district:return result
