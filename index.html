@@ -834,7 +834,7 @@
     </div>
 
     </div>
-    <script src="scan-progress.js?v=1.0.0"></script>
+    <script src="scan-progress.js?v=1.0.1"></script>
     <script src="street-view.js?v=1.1.0"></script>
     <script src="street-view-local-settings.js?v=1.0.0"></script>
     <script src="street-view-usage.js?v=1.0.0"></script>
@@ -3906,6 +3906,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 return;
             }
 
+            let dispatchAccepted = false;
             try {
                 const res = await fetch(`https://api.github.com/repos/elic555-ux/pa-intelligence-v2/actions/workflows/cron-daily-mls.yml/dispatches`, {
                     method: "POST", 
@@ -3915,6 +3916,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                 });
                 
                 if (res.ok || res.status===204) {
+                    dispatchAccepted = true;
                     closeOnDemandScanModal(); 
                     startBackgroundScanMonitor(config.requestId);
                 } else {
@@ -3923,7 +3925,15 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
                     alert(`הפרמטרים נשמרו, אך הסריקה לא הופעלה.\nקוד שגיאה: ${res.status}\nפרטים: ${errorText}`);
                 }
             } catch(e) {
-                alert(`הפרמטרים נשמרו, אך לא התקבל אישור להפעלת הסריקה: ${e.message}`);
+                if (dispatchAccepted) {
+                    activeScanMonitor?.cancel();
+                    activeScanMonitor = null;
+                    document.getElementById('scan-progress-toast')?.classList.remove('hidden');
+                    const subtitle = document.getElementById('scan-toast-subtitle');
+                    const timer = document.getElementById('scan-timer');
+                    if (subtitle) subtitle.textContent = 'הסריקה הופעלה בשרת, אך המעקב בדף לא נטען. אין צורך להפעיל סריקה נוספת.';
+                    if (timer) timer.textContent = '—';
+                } else alert(`הפרמטרים נשמרו, אך לא התקבל אישור להפעלת הסריקה: ${e.message}`);
             }
             
             btn.innerHTML = originalHtml; 
@@ -4072,7 +4082,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
             };
             activeScanMonitor = PAScanProgress.create({
                 requestId, baselineScanId, requestedAt:scanStartTime,
-                setInterval, clearInterval, setTimeout, clearTimeout,
+                ...PAScanProgress.browserTimers(window),
                 loadReport:loadScannerStatus, loadRun,
                 onTick(seconds) {
                     timer.textContent = String(Math.floor(seconds/60)).padStart(2,'0') + ':' + String(seconds%60).padStart(2,'0');
@@ -4117,6 +4127,7 @@ function currentFinancialMoney(p,field){const f=financialSnapshot(p);return fina
     <script src="secondary_sources.js?v=1.9.0-public-gallery-20261020"></script>
 </body>
 </html>
+
 
 
 

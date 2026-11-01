@@ -2,6 +2,9 @@
 (function(root,factory){'use strict';if(typeof module==='object'&&module.exports)module.exports=factory();else root.PAScanProgress=factory();})(typeof globalThis==='undefined'?this:globalThis,function(){
     'use strict';
     const terminal=new Set(['success','partial','failed','skipped','cancelled']);
+    function browserTimers(win){
+        return Object.fromEntries(['setInterval','clearInterval','setTimeout','clearTimeout'].map(name=>[name,win[name].bind(win)]));
+    }
     function reportResult(report,requestId,baselineScanId,requestedAt){
         const scan=report?.last_scan,event=report?.last_event;
         const own=[event,scan].find(x=>x?.request_id===requestId&&terminal.has(x.status));
@@ -62,5 +65,5 @@
         timer=options.setInterval(tick,1000);tick();
         return {cancel};
     }
-    return {create,reportResult,matchingRun,runResult};
+    return {create,reportResult,matchingRun,runResult,browserTimers};
 });

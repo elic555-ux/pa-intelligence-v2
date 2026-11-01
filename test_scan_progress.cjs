@@ -43,10 +43,13 @@ function fixture(overrides={}){
  function extract(name){const start=html.indexOf('function '+name+'('),end=html.indexOf('\n        }',start);assert.ok(start>=0&&end>start);return html.slice(start,end+10);}
  const opts=[],elements=new Map(),gate=deferred();let reloads=0;
  const el=id=>{if(!elements.has(id))elements.set(id,{textContent:'',classList:{add(){},remove(){}}});return elements.get(id);};
- const ctx=vm.createContext({Date,document:{getElementById:el},PAScanProgress:{create:o=>{opts.push(o);return {cancel(){}};}},activeScanMonitor:null,scanMonitorGeneration:0,scannerReport:null,lastKnownScanId:null,scanStartTime:null,setInterval(){},clearInterval(){},setTimeout,clearTimeout,loadScannerStatus:async()=>null,loadProperties:async()=>{reloads++;await gate.promise;},loadGeoCatalog:async()=>{},localStorage:{getItem:()=>null}});
+ const browser={};let nativeCalls=0;
+ for(const name of ['setInterval','clearInterval','setTimeout','clearTimeout'])browser[name]=function(){assert.equal(this,browser,'native timer must keep its Window receiver');nativeCalls++;return 123;};
+ const ctx=vm.createContext({window:browser,Date,document:{getElementById:el},PAScanProgress:{browserTimers:P.browserTimers,create:o=>{for(const name of ['setInterval','clearInterval','setTimeout','clearTimeout'])o[name](()=>{},1);opts.push(o);return {cancel(){}};}},activeScanMonitor:null,scanMonitorGeneration:0,scannerReport:null,lastKnownScanId:null,scanStartTime:null,setInterval:browser.setInterval,clearInterval:browser.clearInterval,setTimeout:browser.setTimeout,clearTimeout:browser.clearTimeout,loadScannerStatus:async()=>null,loadProperties:async()=>{reloads++;await gate.promise;},loadGeoCatalog:async()=>{},localStorage:{getItem:()=>null}});
  vm.runInContext(extract('closeScanToast')+'\n'+extract('startBackgroundScanMonitor'),ctx);
  ctx.startBackgroundScanMonitor('first');const old=opts[0].onFinish({status:'success'});await flush();ctx.startBackgroundScanMonitor('second');const generation=ctx.scanMonitorGeneration;gate.resolve();await old;
  assert.equal(ctx.scanMonitorGeneration,generation);assert.equal(reloads,1);
+ assert.equal(nativeCalls,8);
  assert.ok(html.indexOf('src="scan-progress.js')<html.indexOf('function startBackgroundScanMonitor'));
  console.log('PASS scan timer: delayed ticks, terminal states, independent run status, cancellation, hung sources, frozen refresh and old/new scan race');
 })().catch(e=>{console.error(e);process.exitCode=1;});
