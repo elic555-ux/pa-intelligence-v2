@@ -12,3 +12,6 @@ assert.ok(!m.render({...c,education:{...c.education,source_url:'https://untruste
 console.log('PASS Official context rejects foreign parcels, postal school inference and untrusted performance URLs; zero and escaped labels preserved');
 
 assert.equal(m.district(c,p,county,now),'Penn Hills SD');assert.equal(m.district({...c,education:{...c.education,district_match_basis:'postal_city'}},p,county,now),null);
+const erie={...c,parcel_id:'18053067021800',county_record:{county:'Erie'}};
+assert.ok(m.valid(erie,p,{parcel_id:erie.parcel_id},now));
+assert.equal(m.valid({...erie,parcel_id:'bad'},p,null,now),false);

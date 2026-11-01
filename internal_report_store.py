@@ -200,7 +200,12 @@ def allegheny(p):
         if str(row.get("PROPERTYUNIT") or "").strip():
             continue
         q = {"address": addr, "city": row.get("PROPERTYCITY"), "state": row.get("PROPERTYSTATE"), "zip": row.get("PROPERTYZIP")}
-        if same_address(p, q):
+        # Listings may use the municipality instead of the county's postal city.
+        # Accept that only when street, state and ZIP still match exactly and
+        # the supplied city equals the official municipality name.
+        muni = re.sub(r'\s+(?:municipality|borough|boro|township)$', '', norm(row.get('MUNIDESC')))
+        municipality_match = norm(p.get('city')) == muni and same_address(p, {**q, 'city': p.get('city')})
+        if same_address(p, q) or municipality_match:
             matches.append(row)
     if len(matches) != 1:
         return {"status": "ambiguous_identity" if matches else "county_record_not_found"}
@@ -340,9 +345,11 @@ def profile(p, root=Path("COMPS_REPORTS"), allow_public=True, refresh=False):
         if record.get("status") == "matched":
             write(path, record)
         result["county_record"] = record
-    except (OSError, ValueError, TypeError, KeyError):
+    except (OSError, ValueError, TypeError, KeyError) as error:
         # A free-source outage must not invalidate a saved profile or spend API quota.
         if isinstance(saved, dict) and same_address(p, saved.get("subject", {})):
             result["county_record"] = {**saved, "source_mode": "stale_internal_cache"}
         result["public_source_error"] = "county_source_unavailable"
+        result["public_source_error_type"] = type(error).__name__
+        result["public_source_http_status"] = getattr(error, 'code', None)
     return result

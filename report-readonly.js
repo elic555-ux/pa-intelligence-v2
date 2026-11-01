@@ -35,15 +35,18 @@
   }
   function renderPhotos(){
     const photos=state.media,view=$('photos-view');
-    if(!photos.length){view.innerHTML=missing('לא התקבלו תמונות מקור מאומתות לנכס הזה.');return;}
+    const sourceUrl=M.url(state.property.url||state.property.source_url);
+    const sourceLink=sourceUrl?'<p class="source-links"><a href="'+e(sourceUrl)+'" target="_blank" rel="noopener noreferrer">צפייה בתמונות במודעת המקור</a></p>':'';
+    if(!photos.length){view.innerHTML=missing('תמונות אינן זמינות בדוח כרגע.')+sourceLink;return;}
     view.innerHTML='<div class="gallery">'+photos.map((p,i)=>'<img '+(i?'loading="lazy" ':'')+'src="'+e(p.url)+'" alt="'+e('תמונת מקור '+(i+1)+' — '+state.property.address)+'" data-report-photo="'+i+'">').join('')+'</div><p id="photos-summary" class="source-note"></p><p id="photos-unavailable" class="missing" hidden></p>';
+    view.insertAdjacentHTML('beforeend',sourceLink);
     const summary=$('photos-summary'),unavailable=$('photos-unavailable'),loaded=new Set(),failed=new Set();
     function update(){
       const pending=photos.length-loaded.size-failed.size;
       const sources=[...new Set([...loaded].map(i=>photos[i].source||photos[i].source_name||'מודעת הנכס'))];
       summary.textContent=(loaded.size?'מוצגות '+loaded.size+' תמונות מקור. '+sources.join(' · ')+'. ':pending?'ממתין לטעינת תמונות המקור. ':'לא נטענו תמונות מקור כרגע. ')+(pending?pending+' תמונות טרם נטענו. ':'')+'מועד האיסוף אינו בהכרח מועד הצילום.';
       unavailable.hidden=!failed.size;
-      unavailable.textContent=failed.size+' קישורי תמונות נוספים אינם נטענים כרגע מהספק.';
+      unavailable.textContent=loaded.size?failed.size+' תמונות נוספות אינן זמינות כרגע.':'ספק התמונות אינו מאפשר טעינה כרגע; ניתן לפתוח את מודעת המקור.';
     }
     view.querySelectorAll('img').forEach(img=>{
       const index=Number(img.dataset.reportPhoto);
@@ -94,7 +97,8 @@
   }
   function renderAnalysis(){
     const p=state.property,m=M.metrics(p,state.analysis,state.report,F,state.reference);
-    let out='<div class="metric-grid">'+metric('שכירות שנתית ברוטו',m.annualRent)+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות ומימון',M.percent)+metric('NOI שנתי',m.noi,'דורש הוצאות מלאות ומתועדות')+metric('Cap Rate',m.capRate,'לפני מימון',M.percent)+'</div>'+renderPropertyTaxes();
+    const metrics=[['שכירות שנתית ברוטו',m.annualRent,'',money],['תשואה ברוטו',m.grossYield,'לפני הוצאות ומימון',M.percent],['NOI שנתי',m.noi,'דורש הוצאות מלאות ומתועדות',money],['Cap Rate',m.capRate,'לפני מימון',M.percent]].filter(x=>x[1]!==null);
+    let out=(metrics.length?'<div class="metric-grid">'+metrics.map(x=>metric(...x)).join('')+'</div>':missing('אין די נתוני מקור לתחשיב. החוסרים מרוכזים בסיכום.'))+renderPropertyTaxes();
     $('analysis-view').innerHTML=out;
   }
   function renderSummary(){
@@ -163,7 +167,14 @@
     if(state.historical)return;
     const p=state.property,base=M.matches(state.analysis,p)?state.analysis:{property_id:String(p.id),property:p};
     try{const context=await repoJson('COMPS_REPORTS/public_context/'+await key(p.id)+'.json');
-      if(root.PAReportPublicContext?.valid(context,p,state.county,state.reference))state.analysis={...base,public_context:context};
+      if(root.PAReportPublicContext?.valid(context,p,state.county,state.reference)){
+        state.analysis={...base,public_context:context};
+        const sales=context.closed_sales;
+        if(sales?.property_id===String(p.id)&&sales.source_name==='Allegheny County / WPRDC'&&sales.subject_location?.parcel_id===context.parcel_id&&
+          M.fresh(sales.observed_at,7,state.reference)&&(!base.closed_sales?.observed_at||Date.parse(sales.observed_at)>=Date.parse(base.closed_sales.observed_at))){
+          state.analysis={...state.analysis,closed_sales:sales,generated_at:context.generated_at};
+        }
+      }
     }catch(_){/* Preserve the last matching context on a temporary source failure. */}
     if(!M.matches(state.analysis,p))return;
     const point=state.analysis.closed_sales?.subject_location||state.analysis.public_context?.parcel_location;

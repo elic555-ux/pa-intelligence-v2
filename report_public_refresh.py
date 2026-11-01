@@ -35,19 +35,30 @@ def refresh(root=Path('COMPS_REPORTS'), property_ids=None):
         profile=store.profile(p,root,allow_public=True)
         county=profile.get('county_record') or {}
         if county.get('status')!='matched' or not store.same_address(p,county.get('subject',{})):
-            out.append({'property_id':property_id,'status':'county_identity_unavailable'});continue
+            out.append({'property_id':property_id,'status':'county_identity_unavailable',
+                'county_status':county.get('status'),'source_error':profile.get('public_source_error'),
+                'error_type':profile.get('public_source_error_type'),'http_status':profile.get('public_source_http_status')});continue
         try: point=closed_sales.parcel_point(county.get('parcel_id')) or {}
         except (OSError, ValueError, TypeError): point={}
         area=report_area.collect(point,root)
         context=report_public_context.collect(p,county,point,root,allow_public=True)
         context['county_record']=county
+        if county.get('county')=='Allegheny':
+            try:
+                subject={**p,**{k:v for k,v in (county.get('fields') or {}).items() if k in ('sqft','beds','baths') and v is not None}}
+                context['closed_sales']=closed_sales.collect(subject,county)
+            except (OSError,ValueError,TypeError,KeyError):
+                context['closed_sales']={'status':'source_unavailable','property_id':property_id,'comparables':[]}
         target=root/'public_context'/(key(property_id)+'.json');target.parent.mkdir(parents=True,exist_ok=True)
         target.write_text(json.dumps(context,ensure_ascii=False,indent=2),encoding='utf-8')
         # Area snapshots are written by report_area. Never rewrite historical reports.
         out.append({'property_id':property_id,'census':area.get('status'),
             'education':context.get('education',{}).get('status'),
             'crime':context.get('crime',{}).get('status')})
-    return {'census_key_configured':bool(report_area.os.environ.get('CENSUS_API_KEY','').strip()),'properties':out}
+    result={'census_key_configured':bool(report_area.os.environ.get('CENSUS_API_KEY','').strip()),'properties':out}
+    root.mkdir(parents=True,exist_ok=True)
+    (root/'public_refresh_status.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+    return result
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--property-id',action='append');parser.add_argument('--request-file',type=Path)

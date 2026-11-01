@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
 const model=require('./report-readonly-model.js'),financials=require('./report-financials.js');
 const controller=fs.readFileSync(__dirname+'/report-readonly.js','utf8');
-async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null,inventoryOnly=false,anonymous=false}={}){
+async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null,inventoryOnly=false,anonymous=false,publicSales=false}={}){
  const property={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203',county:'Allegheny',property_type:'Single Family',price:135000,url:'https://example.com/listing',last_source_check:new Date().toISOString()};
  if(scenario)property.investment_scenario=scenario;
  const elements=new Map(),posts=[],timers=[],reads=[];
@@ -20,6 +20,12 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
    setTimeout:fn=>timers.push(fn),addEventListener(){},
    fetch:async(url,options={})=>{
      reads.push(url);
+     if(publicSales&&url.startsWith('COMPS_REPORTS/public_context/')){
+       const parcel='0012E00199000000',date=new Date(Date.now()-1000).toISOString();
+       const point={parcel_id:parcel};
+       const c={version:'official-public-context-1',property_id:property.id,property,parcel_id:parcel,generated_at:date,county_record:{status:'matched',subject:property,parcel_id:parcel,county:'Allegheny',fields:{municipality:'Pittsburgh'}},closed_sales:{property_id:property.id,source_name:'Allegheny County / WPRDC',observed_at:date,subject_location:point,policy:{radius_miles:1},comparables:[{kind:'recorded_sale',amount:100000,address:'Verified public sale',sale_date:date,recorded_date:date,distance_miles:.2,validation:'county_validated',source_url:'https://data.wprdc.org/'}]}};
+       return new Response(JSON.stringify(c),{status:200});
+     }
      if(anonymous&&ready&&url.startsWith('COMPS_REPORTS/expanded_reports/'))return new Response(JSON.stringify({property_id:property.id,property,generated_at:new Date().toISOString(),sources:{rent:{status:'accepted',estimate:{status:'provider_estimate',value:1500},observed_at:new Date(Date.now()-1000).toISOString(),comparables:[]}}}),{status:200});
      if(url==='properties.json')return new Response(JSON.stringify([property]),{status:200});
      if(options.method==='POST'){posts.push({url,body:JSON.parse(options.body)});return new Response(null,{status:204});}
@@ -35,7 +41,7 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  for(let i=0;i<150;i++){
    await new Promise(resolve=>setTimeout(resolve,1));
    const text=element('report-status').textContent;
-   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה')||(anonymous&&text.includes('דוח מידע לצפייה')))return{posts,timers,shared,reads,status:text,rehabHtml:element('rehab-view').innerHTML,analysisHtml:element('analysis-view').innerHTML,scenarioHtml:element('scenario-view [data-rs-results]').innerHTML};
+   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה')||(anonymous&&text.includes('דוח מידע לצפייה')))return{posts,timers,shared,reads,status:text,rehabHtml:element('rehab-view').innerHTML,analysisHtml:element('analysis-view').innerHTML,photosHtml:element('photos-view').innerHTML,comparisonsHtml:element('comparisons-view').innerHTML,scenarioHtml:element('scenario-view [data-rs-results]').innerHTML};
  }
  throw Error('Controller did not reach a settled collection state: '+element('report-status').textContent);
 }
@@ -46,6 +52,12 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  assert.ok(!publicResult.reads.some(u=>u.includes('api.github.com')));
  assert.equal(publicResult.posts.length,0);
  console.log('PASS Anonymous viewing renders published report sources without GitHub API quota or dispatch');
+ const freeSales=await simulate(new Map(),{anonymous:true,publicSales:true});
+ assert.ok(freeSales.comparisonsHtml.includes('Verified public sale'));assert.equal(freeSales.posts.length,0);
+ const empty=await simulate(new Map(),{anonymous:true});
+ assert.ok(!empty.analysisHtml.includes('class="metric"'));
+ assert.ok(empty.photosHtml.includes('https://example.com/listing'));
+ console.log('PASS Free recorded sales reach comparisons; empty calculations stay compact and missing photos link to source');
  const shared=new Map();
  let result=await simulate(shared,{collect:true});assert.equal(result.posts.length,1);assert.equal(result.timers.length,1);
  const first=JSON.parse(result.posts[0].body.inputs.payload).request_id;

@@ -30,4 +30,27 @@ class PublicRefreshTest(unittest.TestCase):
             result=refresh.refresh(self.root,['qa'])
         self.assertEqual(result['properties'][0]['status'],'county_identity_unavailable')
 
+    def test_municipality_alias_keeps_exact_street_zip_and_unique_county_match(self):
+        p={**self.p,'address':'106 Marshall Dr','city':'Penn Hills','zip':'15235'}
+        row={'PARID':'0370M00344000000','PROPERTYHOUSENUM':'106','PROPERTYADDRESS':'MARSHALL DR',
+            'PROPERTYCITY':'PITTSBURGH','PROPERTYSTATE':'PA','PROPERTYZIP':'15235','MUNIDESC':'Penn Hills  '}
+        def lookup(rows,subject=p):
+            with patch.object(refresh.store,'public_get',return_value=json.dumps({'success':True,'result':{'records':rows}})):
+                return refresh.store.allegheny(subject)
+        self.assertEqual(lookup([row])['status'],'matched')
+        self.assertEqual(lookup([row])['subject']['city'],'Penn Hills')
+        self.assertEqual(lookup([row,row])['status'],'ambiguous_identity')
+        self.assertNotEqual(lookup([{**row,'PROPERTYZIP':'15236'}])['status'],'matched')
+        self.assertNotEqual(lookup([{**row,'PROPERTYADDRESS':'OTHER ST'}])['status'],'matched')
+        self.assertNotEqual(lookup([row],{**p,'city':'Verona'})['status'],'matched')
+
+    def test_free_sales_are_collected_with_county_facts_and_preserved_in_context(self):
+        county={**self.county,'county':'Allegheny','fields':{'sqft':751,'beds':2}}
+        sales={'property_id':'qa','status':'available','comparables':[{'amount':100000}]}
+        with patch.object(refresh.store,'profile',return_value={'county_record':county}),patch.object(refresh.closed_sales,'parcel_point',return_value={}),patch.object(refresh.closed_sales,'collect',return_value=sales) as collect,patch.object(refresh.report_area,'collect',return_value={'status':'available'}),patch.object(refresh.report_public_context,'collect',return_value={'property_id':'qa'}):
+            refresh.refresh(self.root,['qa'])
+        self.assertEqual(collect.call_args.args[0]['sqft'],751)
+        saved=json.loads((self.root/'public_context'/(refresh.key('qa')+'.json')).read_text())
+        self.assertEqual(saved['closed_sales'],sales)
+
 if __name__=='__main__':unittest.main()
