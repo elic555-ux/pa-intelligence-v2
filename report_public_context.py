@@ -33,6 +33,7 @@ def district_key(s):
     text=norm(s)
     # County SCHOOLDESC uses the historical township name for this district.
     if text=='penn hills twp':return 'penn hills'
+    text=re.sub(r'\s+boro$', ' borough', text)
     return re.sub(r'\s+(?:school district|sd)$','',text)
 def read(path):
     try:
@@ -261,7 +262,8 @@ def parcel_school_district(county,root,allow_public,now):
     parcel=county.get('parcel_id')
     if not re.fullmatch(r'[A-Z0-9]{16}',str(parcel or '')):return None
     path=Path(root)/'official_education'/'parcels'/(parcel+'.json');cached=read(path)
-    if cached and cached.get('version')==EDUCATION_VERSION and cached.get('parcel_id')==parcel and current(cached,now):return cached
+    if cached and cached.get('version')==EDUCATION_VERSION and cached.get('parcel_id')==parcel and current(cached,now):
+        return {**cached,'district_key':district_key(cached.get('district'))}
     if not allow_public:return None
     url='https://data.wprdc.org/api/3/action/datastore_search?'+urlencode({
         'resource_id':ASSESSMENT,'filters':json.dumps({'PARID':parcel}),'fields':'PARID,SCHOOLDESC','limit':2})
