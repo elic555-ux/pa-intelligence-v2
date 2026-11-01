@@ -282,9 +282,6 @@ class ScanControlsTests(unittest.TestCase):
             with self.subTest(failure=failure):
                 self.run_ui_case("scheduled-save", failure)
 
-    def test_monitor_failure_after_dispatch_does_not_claim_launch_failure(self):
-        self.run_ui_case("manual-dispatch", "monitor-start")
-
     def test_dispatch_failure_keeps_form_open(self):
         for failure in ("dispatch-http", "dispatch-network"):
             with self.subTest(failure=failure):
@@ -315,6 +312,12 @@ class ScanControlsTests(unittest.TestCase):
                                   "source_location": "Millcreek"}, scopes))
         self.assertEqual(reject({"source_scan_area": "Erie", "city": "Erie",
                                  "source_location": "Millcreek"}, scopes), "location")
+
+
+class ScanDispatchAcknowledgementTests(unittest.TestCase):
+    def test_monitor_failure_after_dispatch_does_not_claim_launch_failure(self):
+        self.config=json.loads((ROOT / "scan_config.json").read_text(encoding="utf-8"))
+        ScanControlsTests.run_ui_case(self,"manual-dispatch","monitor-start")
 
 
 if __name__ == "__main__":
