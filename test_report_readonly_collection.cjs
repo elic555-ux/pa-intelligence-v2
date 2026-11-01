@@ -3,13 +3,13 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
 const model=require('./report-readonly-model.js'),financials=require('./report-financials.js');
 const controller=fs.readFileSync(__dirname+'/report-readonly.js','utf8');
-async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null,inventoryOnly=false}={}){
+async function simulate(shared,{collect=false,ready=false,storageFailure=false,rehab=null,scenario=null,inventoryOnly=false,anonymous=false}={}){
  const property={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203',county:'Allegheny',property_type:'Single Family',price:135000,url:'https://example.com/listing',last_source_check:new Date().toISOString()};
  if(scenario)property.investment_scenario=scenario;
- const elements=new Map(),posts=[],timers=[];
+ const elements=new Map(),posts=[],timers=[],reads=[];
  function element(id){if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:'',hidden:false,dataset:{},classList:{toggle(){}},addEventListener(){},querySelector(sel){return element(id+' '+sel);},querySelectorAll(){return[];},scrollIntoView(){},insertAdjacentHTML(){}});return elements.get(id);}
  const location=new URL('http://localhost/report.html?id=qa-1'+(collect?'&collect=1':''));
- const storage={getItem:key=>key==='pa_github_token'?'test-pat-not-real':shared.get(key)||null,setItem(key,value){if(storageFailure)throw Error('quota');shared.set(key,value);},removeItem:key=>shared.delete(key)};
+ const storage={getItem:key=>key==='pa_github_token'?(anonymous?null:'test-pat-not-real'):shared.get(key)||null,setItem(key,value){if(storageFailure)throw Error('quota');shared.set(key,value);},removeItem:key=>shared.delete(key)};
  const context={URL,URLSearchParams,Uint8Array,TextDecoder,TextEncoder,Date,crypto:crypto.webcrypto,
    atob:text=>Buffer.from(text,'base64').toString('binary'),localStorage:storage,location,
    history:{replaceState(_,__,value){location.href=new URL(value,location).href;}},
@@ -19,6 +19,8 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
    supabase:{createClient(){return {from(){return {select(){return {eq:async()=>({data:inventoryOnly?[]:[{deal_data:property}],error:null})};}};}};}},
    setTimeout:fn=>timers.push(fn),addEventListener(){},
    fetch:async(url,options={})=>{
+     reads.push(url);
+     if(anonymous&&ready&&url.startsWith('COMPS_REPORTS/expanded_reports/'))return new Response(JSON.stringify({property_id:property.id,property,generated_at:new Date().toISOString(),sources:{rent:{status:'accepted',estimate:{status:'provider_estimate',value:1500},observed_at:new Date(Date.now()-1000).toISOString(),comparables:[]}}}),{status:200});
      if(url==='properties.json')return new Response(JSON.stringify([property]),{status:200});
      if(options.method==='POST'){posts.push({url,body:JSON.parse(options.body)});return new Response(null,{status:204});}
      if(ready&&url.includes('/expanded_receipts/')){
@@ -33,11 +35,17 @@ async function simulate(shared,{collect=false,ready=false,storageFailure=false,r
  for(let i=0;i<150;i++){
    await new Promise(resolve=>setTimeout(resolve,1));
    const text=element('report-status').textContent;
-   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה'))return{posts,timers,shared,status:text,rehabHtml:element('rehab-view').innerHTML,analysisHtml:element('analysis-view').innerHTML,scenarioHtml:element('scenario-view [data-rs-results]').innerHTML};
+   if(timers.length||text.includes('האיסוף הסתיים')||text.includes('בקשת איסוף חדשה לא נשלחה')||(anonymous&&text.includes('דוח מידע לצפייה')))return{posts,timers,shared,reads,status:text,rehabHtml:element('rehab-view').innerHTML,analysisHtml:element('analysis-view').innerHTML,scenarioHtml:element('scenario-view [data-rs-results]').innerHTML};
  }
  throw Error('Controller did not reach a settled collection state: '+element('report-status').textContent);
 }
 (async()=>{
+ const publicResult=await simulate(new Map(),{anonymous:true,ready:true});
+ assert.ok(publicResult.analysisHtml.includes('$18,000'));
+ assert.ok(publicResult.reads.some(u=>u.startsWith('COMPS_REPORTS/expanded_reports/')));
+ assert.ok(!publicResult.reads.some(u=>u.includes('api.github.com')));
+ assert.equal(publicResult.posts.length,0);
+ console.log('PASS Anonymous viewing renders published report sources without GitHub API quota or dispatch');
  const shared=new Map();
  let result=await simulate(shared,{collect:true});assert.equal(result.posts.length,1);assert.equal(result.timers.length,1);
  const first=JSON.parse(result.posts[0].body.inputs.payload).request_id;

@@ -30,7 +30,7 @@
     const fields=c?.fields||{};
     $('property-view').innerHTML='<div class="metric-grid">'+metric('מחיר מבוקש',m.price,'מחיר הפרסום שנשמר')+metric('מחיר ל־SqFt',m.price!==null&&n(fields.sqft??p.sqft)>0?m.price/n(fields.sqft??p.sqft):null,'לפי המחיר והשטח הרשומים',M.unitMoney)+metric('אומדן שכירות חודשי',m.rent,'אומדן או נתון שמור עם מקור')+metric('תשואה ברוטו',m.grossYield,'לפני הוצאות ומימון',M.percent)+'</div>'+
       '<p class="summary">'+e([p.address+', '+p.city,m.price!==null?'מחיר מבוקש '+money(m.price):'מחיר פרסום עדכני לא אומת',m.rent!==null?'שכירות לפי המקור '+money(m.rent)+' לחודש':'מקור שכירות עדיין חסר',m.grossYield!==null?'תשואה ברוטו '+M.percent(m.grossYield):null].filter(Boolean).join(' · '))+'.</p>'+
-      '<div class="property-facts">'+[['חדרים',fields.beds??p.beds],['רחצה',fields.baths??p.baths],['שטח SqFt',fields.sqft??p.sqft],['שנת בנייה',fields.year_built??p.year_built],['סוג הנכס',p.property_type||p.type],['סטטוס בפרסום',p.listing_status||p.status]].map(([k,v])=>'<div><span>'+e(k)+'</span><b>'+e(v??'לא פורסם')+'</b></div>').join('')+'</div>'+
+      '<div class="property-facts">'+[['חדרים',fields.beds??p.beds],['רחצה',fields.baths??p.baths],['שטח SqFt',fields.sqft??p.sqft],['שנת בנייה',fields.year_built??p.year_built],['סוג הנכס',p.property_type||p.type],['סטטוס בפרסום',M.listingStatus(p)]].map(([k,v])=>'<div><span>'+e(k)+'</span><b>'+e(v??'לא פורסם')+'</b></div>').join('')+'</div>'+
       '<div class="source-links">'+(M.url(p.url||p.source_url)?'<a href="'+e(M.url(p.url||p.source_url))+'" target="_blank" rel="noopener noreferrer">מודעת המקור</a>':'')+'<span>נבדק בפרסום: '+e(date(p.last_source_check))+'</span></div>';
   }
   function renderPhotos(){
@@ -136,7 +136,14 @@
   function clearPending(p,id){try{if(readPending(p)?.request_id===id)localStorage.removeItem(pendingKey(p));}catch(_){}}
   async function repoJson(path){
     if(!/^(?:COMPS_REPORTS\/)[a-zA-Z0-9_./-]+\.json$/.test(path)||path.includes('..'))throw new Error('Invalid report path');
-    const headers={Accept:'application/vnd.github+json'};if(token())headers.Authorization='Bearer '+token();
+    const credential=token();
+    if(!credential){
+      const response=await fetch(path,{cache:'no-store'});
+      if(response.status===404)return null;
+      if(!response.ok)throw new Error('קריאת המקור לא הושלמה ('+response.status+')');
+      return response.json();
+    }
+    const headers={Accept:'application/vnd.github+json',Authorization:'Bearer '+credential};
     const response=await fetch(REPO+'/contents/'+path+'?ref=main',{headers,cache:'no-store'});
     if(response.status===404)return null;if(!response.ok)throw new Error('קריאת המקור לא הושלמה ('+response.status+')');
     const body=await response.json();if(body.encoding!=='base64'||typeof body.content!=='string')throw new Error('מבנה קובץ המקור אינו תקין');
