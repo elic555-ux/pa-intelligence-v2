@@ -13,6 +13,8 @@ on:
       - 'report_public_refresh.py'
       - 'report-scenarios.js'
       - 'report-public-context.js'
+      - 'report-area-grades.js'
+      - 'test_report_area_grades.cjs'
       - 'test_report_scenarios.cjs'
       - 'test_report_public_context.py'
       - 'test_report_public_refresh.py'
@@ -77,6 +79,7 @@ jobs:
           node-version: '22'
       - name: Check report module syntax
         run: |
+          node --check report-area-grades.js
           node --check report-readonly.js
           node --check report-readonly-model.js
           node --check report-financials.js
@@ -94,6 +97,7 @@ jobs:
         run: |
           node test_report_scenarios.cjs
           node test_report_public_context.cjs
+          node test_report_area_grades.cjs
           node test_report_readonly.cjs
           node test_report_photo_inputs.cjs
           node test_report_photo_coverage.cjs
@@ -119,3 +123,4 @@ jobs:
           print({'census_status':r['status'],'source_period':r.get('source_period'),'usable_metrics':sum(x.get('value') is not None for x in r.get('metrics',[]))})
           assert r['status'] in {'available','partial'}, 'Live official Census request failed'
           PY
+
