@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='10.3.0';
+  const VERSION='10.3.1';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -14,6 +14,12 @@
   const money=x=>number(x)===null?'חסר נתון':Number(x).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
   const unitMoney=x=>number(x)===null?'חסר נתון':Number(x).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2});
   const percent=x=>number(x)===null?'חסר נתון':Number(x).toFixed(1)+'%';
+  function listingStatus(p){
+    const value=[p.listing_status,p.market_status,p.status].find(x=>typeof x==='string'&&x.trim());
+    if(!value)return null;
+    const key=value.trim().toLowerCase();
+    return ({active:'פעיל',pending:'בהמתנה',contingent:'מותנה',sold:'נמכר',off_market:'מחוץ לשוק',inactive:'לא פעיל'})[key]||value.trim();
+  }
   function url(x){try{const u=new URL(x);return u.protocol==='https:'&&!u.username&&!u.password?u.href:null;}catch(_){return null;}}
   function identity(p){return [String(p.id||''),String(p.address||'').trim().toLowerCase(),String(p.city||'').trim().toLowerCase(),String(p.state||p.source_state||'PA').toUpperCase(),String(p.zip||'').slice(0,5)];}
   function matches(a,p){return !!a&&JSON.stringify(identity({...a.property,id:a.property_id||a.property?.id}))===JSON.stringify(identity(p));}
@@ -145,6 +151,6 @@
     if(!matches(a,p)||!fresh(a.financing?.observed_at,7,now))return [];
     return (a.financing.products||[]).filter(r=>r.status==='published_terms'&&r.is_personal_quote===false&&url(r.source_url)&&fresh(r.observed_at,7,now));
   }
-  return {VERSION,SECTIONS,propertyConflicts,currentValue,priceHistory,officialArea,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
+  return {VERSION,SECTIONS,listingStatus,propertyConflicts,currentValue,priceHistory,officialArea,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
 });
 

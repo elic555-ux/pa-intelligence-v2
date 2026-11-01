@@ -6,6 +6,7 @@ const m=require('./report-readonly-model.js'),f=require('./report-financials.js'
 
 const now=Date.parse('2026-10-25T12:00:00Z');
 
+
 let passed=0;function test(name,run){run();passed++;console.log('PASS '+name);}
 
 const p={id:'qa-1',address:'18 Main St',city:'Pittsburgh',state:'PA',zip:'15203',price:100000,last_source_check:'2026-10-24T10:00:00Z',url:'https://example.com/listing'};
@@ -75,4 +76,12 @@ test('Expanded report has no manual calculators and retains compact expandable a
  assert.ok(!/PAReportScenarios|investment_scenario|\.mount\(/.test(controller));
  assert.ok(controller.includes('<details class="area-details"><summary>פירוט נתוני האזור והמקורות</summary>'));
  assert.ok(!controller.includes('<details class="area-details" open'));
+});
+
+test('Scanner market status appears and explicit listing status takes precedence',()=>{
+ assert.equal(m.listingStatus({market_status:'active'}),'פעיל');
+ assert.equal(m.listingStatus({listing_status:'pending',market_status:'active'}),'בהמתנה');
+ assert.equal(m.listingStatus({listing_status:' ',market_status:'sold'}),'נמכר');
+ assert.equal(m.listingStatus({market_status:null}),null);
+ assert.equal(m.listingStatus({status:'custom source value'}),'custom source value');
 });
