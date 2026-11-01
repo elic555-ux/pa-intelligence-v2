@@ -31,6 +31,8 @@ def quarter(t): return f'{t.year}-Q{(t.month-1)//3+1}'
 def norm(s): return re.sub(r'[^a-z0-9]+',' ',str(s or '').lower()).strip()
 def district_key(s):
     text=norm(s)
+    # County SCHOOLDESC uses the historical township name for this district.
+    if text=='penn hills twp':return 'penn hills'
     return re.sub(r'\s+(?:school district|sd)$','',text)
 def read(path):
     try:

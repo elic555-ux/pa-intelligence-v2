@@ -4,6 +4,9 @@ from unittest.mock import patch
 import report_public_refresh as refresh
 
 class PublicRefreshTest(unittest.TestCase):
+    def test_historical_county_school_label_maps_only_the_known_district(self):
+        self.assertEqual(refresh.report_public_context.district_key('Penn Hills Twp'),'penn hills')
+        self.assertEqual(refresh.report_public_context.district_key('Other Twp'),'other twp')
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.base=Path(self.tmp.name);self.root=self.base/'COMPS_REPORTS'
