@@ -7,6 +7,17 @@ class PublicRefreshTest(unittest.TestCase):
     def test_historical_county_school_label_maps_only_the_known_district(self):
         self.assertEqual(refresh.report_public_context.district_key('Penn Hills Twp'),'penn hills')
         self.assertEqual(refresh.report_public_context.district_key('Other Twp'),'other twp')
+        self.assertEqual(refresh.report_public_context.district_key('Plum Boro'),'plum borough')
+    def test_cached_school_label_is_canonicalized_without_network_or_new_timestamp(self):
+        from datetime import datetime,timezone
+        m=refresh.report_public_context
+        now=datetime(2026,11,1,tzinfo=timezone.utc)
+        record={'version':m.EDUCATION_VERSION,'parcel_id':'0012E00199000000','district':'Penn Hills Twp',
+            'district_key':'penn hills twp','checked_quarter':'2026-Q4','observed_at':'2026-10-31T10:00:00+00:00'}
+        with patch.object(m,'read',return_value=record),patch.object(m.store,'public_get',side_effect=AssertionError('network')):
+            result=m.parcel_school_district({'parcel_id':record['parcel_id']},self.root,True,now)
+        self.assertEqual(result['district_key'],'penn hills')
+        self.assertEqual(result['observed_at'],record['observed_at'])
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.base=Path(self.tmp.name);self.root=self.base/'COMPS_REPORTS'
