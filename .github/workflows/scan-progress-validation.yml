@@ -1,0 +1,21 @@
+name: Manual Scan Progress Validation
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'scan-progress.js'
+      - 'test_scan_progress.cjs'
+      - '.github/workflows/scan-progress-validation.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check scan-progress.js
+      - run: node test_scan_progress.cjs
