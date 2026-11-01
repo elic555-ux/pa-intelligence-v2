@@ -69,10 +69,11 @@
     const district=root.PAReportPublicContext?.district(a?.public_context,p,state.county,state.reference);
     const estimate=(label,row)=>fact(label,row?money(row.value):'לא זמין')+(row?'<small class="source-note">טעות דגימה: ±'+e(n(row.margin_of_error)===null?'לא פורסמה':money(row.margin_of_error))+'</small>':'');
     let out='<p class="area-location">'+e([point?.neighborhood,state.county?.fields?.municipality||point?.municipality||p.city].filter(Boolean).join(' · '))+'</p>';
+    out+=root.PAReportAreaGrades?.render(state.county,point,state.historical?state.reference:Date.now())||'';
     out+='<div class="facts area-key-facts"><div>'+estimate('הכנסה חציונית למשק בית · לשנה',income)+'</div><div>'+estimate('שכירות אזורית חציונית · לחודש',rent)+'</div>'+fact('מחוז חינוך לפי רישום החלקה',district||'לא אומת')+'</div>';
     out+='<p class="source-note">'+(area?'Census · <bdi>'+e(area.source_period)+'</bdi> · ':'')+'נתוני אזור סטטיסטי; אינם אומדן לנכס או לרחוב.</p>';
     if(area?.status==='cached_stale')out+=missing('מוצגת גרסה קודמת; עדכון המקור לא הושלם.');
-    out+='<p class="source-note">פשיעה: אין נתון עדכני מאומת.</p><details class="area-details"><summary>פירוט נתוני האזור והמקורות</summary>';
+    out+='<details class="area-details"><summary>פירוט נתוני האזור והמקורות</summary>';
     if(area){
       out+='<p class="source-note">'+e(area.geography_name)+'</p><div class="table-scroll"><table><thead><tr><th>מדד רשמי</th><th>אומדן שפורסם</th><th>טעות דגימה ±</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+e(x.label)+'</td><td>'+e(x.unit?.startsWith('USD')?money(x.value):Number(x.value).toLocaleString('en-US'))+'</td><td>'+e(n(x.margin_of_error)===null?'לא זמין':x.margin_of_error)+'</td></tr>').join('')+'</tbody></table></div>'+source(area.source_name,area.observed_at,area.source_url);
     }else out+=missing('נתוני Census תואמים עדיין אינם זמינים.');
@@ -233,3 +234,4 @@
   $('print-report').addEventListener('click',()=>root.print());
   root.addEventListener('hashchange',openHash);load();
 })(window);
+

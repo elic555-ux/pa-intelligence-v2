@@ -1,6 +1,6 @@
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PAReadonlyReport=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const VERSION='10.2.0';
+  const VERSION='10.3.0';
   const SECTIONS=Object.freeze([
     ['property',1,'פרטי הנכס והמחיר המבוקש','overview'],['photos',2,'תמונות הנכס','overview'],
     ['county',3,'רישום המחוז ופרטי החלקה','overview'],['area',4,'שכונה ואזור','overview'],
@@ -147,3 +147,4 @@
   }
   return {VERSION,SECTIONS,propertyConflicts,currentValue,priceHistory,officialArea,esc,object,number,money,unitMoney,percent,url,identity,matches,fresh,pendingRequest,recordedSales,rentSource,rehabSource,metrics,financing,propertyTaxes,photoCoverage,photoReview,interiorAssessments};
 });
+
